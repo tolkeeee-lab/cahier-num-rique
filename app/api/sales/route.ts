@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import OpenAI from 'openai'
 import { randomUUID } from 'crypto'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-)
+// Mock database en mémoire (à remplacer par Supabase plus tard)
+let salesDatabase: any[] = []
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -70,63 +67,25 @@ export async function POST(request: NextRequest) {
       minute: '2-digit',
     })
 
-    // Insérer la vente
-    const { error: saleError } = await supabase
-      .from('sales')
-      .insert([
-        {
-          id: saleId,
-          date: dateStr,
-          time: timeStr,
-          client_name: parsedData.nom_client,
-          total_amount: parsedData.total_facture,
-          paid_amount: parsedData.montant_paye,
-          debt_amount: parsedData.montant_dette,
-          status: parsedData.montant_dette > 0 ? 'debt' : 'paid',
-          created_at: now.toISOString(),
-        },
-      ])
-
-    if (saleError) {
-      console.error('Erreur Supabase (sales):', saleError)
-      throw new Error("Erreur lors de l'enregistrement de la vente")
-    }
-
-    // Insérer les articles
-    const articlesData = parsedData.articles.map((article) => ({
-      id: randomUUID(),
-      sale_id: saleId,
-      product_name: article.nom,
-      quantity: article.quantite,
-      unit_price: article.prix_unitaire,
-      subtotal: article.quantite * article.prix_unitaire,
+    // Mock: Ajouter à la base de données en mémoire
+    const sale = {
+      id: saleId,
+      date: dateStr,
+      time: timeStr,
+      client_name: parsedData.nom_client,
+      total_amount: parsedData.total_facture,
+      paid_amount: parsedData.montant_paye,
+      debt_amount: parsedData.montant_dette,
+      status: parsedData.montant_dette > 0 ? 'debt' : 'paid',
+      articles: parsedData.articles.map((a) => ({
+        product_name: a.nom,
+        quantity: a.quantite,
+        unit_price: a.prix_unitaire,
+      })),
       created_at: now.toISOString(),
-    }))
-
-    const { error: articlesError } = await supabase
-      .from('sold_articles')
-      .insert(articlesData)
-
-    if (articlesError) {
-      console.error('Erreur Supabase (sold_articles):', articlesError)
-      throw new Error("Erreur lors de l'enregistrement des articles")
     }
 
-    // Si il y a une dette, insérer dans la table debts
-    if (parsedData.montant_dette > 0) {
-      await supabase
-        .from('debts')
-        .insert([
-          {
-            id: randomUUID(),
-            sale_id: saleId,
-            client_name: parsedData.nom_client,
-            amount_owed: parsedData.montant_dette,
-            status: 'pending',
-            created_at: now.toISOString(),
-          },
-        ])
-    }
+    salesDatabase.push(sale)
 
     const response: SaleResponse = {
       id: saleId,
@@ -163,57 +122,26 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const dateParam = searchParams.get('date')
-    const clientParam = searchParams.get('client')
 
-    let query = supabase
-      .from('sales')
-      .select(
-        `
-        id,
-        date,
-        time,
-        client_name,
-        total_amount,
-        paid_amount,
-        debt_amount,
-        status,
-        sold_articles:sold_articles(
-          product_name,
-          quantity,
-          unit_price
-        )
-      `
-      )
-      .order('created_at', { ascending: false })
+    let filteredSales = [...salesDatabase]
 
+    // Filtre par date
     if (dateParam === 'today') {
       const today = new Date().toISOString().split('T')[0]
-      query = query.eq('date', today)
-    } else if (dateParam) {
-      query = query.eq('date', dateParam)
+      filteredSales = filteredSales.filter((s) => s.date === today)
     }
 
-    if (clientParam) {
-      query = query.ilike('client_name', `%${clientParam}%`)
-    }
+    // Trier par date/heure décroissante
+    filteredSales.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
 
-    const { data, error } = await query
-
-    if (error) {
-      console.error('Erreur Supabase:', error)
-      throw new Error('Erreur lors de la lecture des ventes')
-    }
-
-    const sales = (data || []).map((sale: any) => ({
+    const sales = filteredSales.map((sale: any) => ({
       id: sale.id,
       date: sale.date,
       time: sale.time,
       client: sale.client_name,
-      articles: (sale.sold_articles || []).map((article: any) => ({
-        name: article.product_name,
-        quantity: article.quantity,
-        unit_price: article.unit_price,
-      })),
+      articles: sale.articles,
       total: sale.total_amount,
       paid: sale.paid_amount,
       debt: sale.debt_amount,
