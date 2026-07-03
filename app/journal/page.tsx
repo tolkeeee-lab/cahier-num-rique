@@ -278,7 +278,7 @@ export default function JournalPage() {
     if (!input.trim()) return
 
     // Format: [quantité] [article] à/a/@ [montant]
-    const match = input.match(/(\d+)\s+([^0-9àa@\s][^0-9àa@]*?)\s+(?:à|a|@)\s+(\d+)/i)
+    const match = input.match(/(\d+)\s+(.+?)\s+(?:à|a|@)\s+(\d+)/i)
     if (match) {
       const quantity = parseInt(match[1], 10)
       const item = match[2].trim()

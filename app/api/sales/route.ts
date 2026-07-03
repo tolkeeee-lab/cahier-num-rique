@@ -477,7 +477,7 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
   let totalFacture = 0
   
   // Format: [quantité] [nom] à [prix] (ex: "10 mèches à 2000" ou "3 sacs de riz à 12000")
-  const articleRegex = /(\d+)\s+([^0-9àa@\s][^0-9àa@]*?)\s+(?:à|a|@)\s+(\d+)/gi
+  const articleRegex = /(\d+)\s+(.+?)\s+(?:à|a|@)\s+(\d+)/gi
   let match
   
   while ((match = articleRegex.exec(text)) !== null) {
