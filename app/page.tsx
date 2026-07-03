@@ -617,7 +617,7 @@ export default function Home() {
                 Option 1 : Prix unitaire
               </div>
               <div className="handwritten text-emerald-800 text-base mt-1">
-                {calculationQuery.amount} F l'unité × {calculationQuery.quantity} articles
+                Chaque {calculationQuery.item} coûte {calculationQuery.amount} F ({calculationQuery.amount} F × {calculationQuery.quantity})
               </div>
               <div className="font-mono text-emerald-950 font-extrabold text-sm mt-0.5">
                 Total à enregistrer = {formatPrice(calculationQuery.quantity * calculationQuery.amount)}
@@ -652,7 +652,7 @@ export default function Home() {
                 Option 2 : Prix global
               </div>
               <div className="handwritten text-purple-800 text-base mt-1">
-                Le lot complet de {calculationQuery.quantity} coûte {calculationQuery.amount} F
+                Le lot complet de {calculationQuery.quantity} {calculationQuery.item} coûte {calculationQuery.amount} F (soit {Math.round(calculationQuery.amount / calculationQuery.quantity)} F par {calculationQuery.item})
               </div>
               <div className="font-mono text-purple-950 font-extrabold text-sm mt-0.5">
                 Total à enregistrer = {formatPrice(calculationQuery.amount)}
