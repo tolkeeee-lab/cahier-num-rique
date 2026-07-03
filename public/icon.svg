@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient (Emerald Leather) -->
+    <linearGradient id="coverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="100%" stop-color="#012b1c" />
+    </linearGradient>
+    
+    <!-- Gold Gradient for stitches and title -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="30%" stop-color="#fbbf24" />
+      <stop offset="70%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <!-- Metal rings gradient -->
+    <linearGradient id="metalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#78350f" />
+      <stop offset="30%" stop-color="#fbbf24" />
+      <stop offset="70%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- App Icon Background (Emerald cover with rounded corners) -->
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="url(#coverGrad)" stroke="#02311f" stroke-width="6" />
+
+  <!-- Gold foil inner border (stitching visual) -->
+  <rect x="56" y="56" width="400" height="400" rx="68" fill="none" stroke="url(#goldGrad)" stroke-width="4" stroke-dasharray="12,8" opacity="0.8" />
+
+  <!-- Left Spine Stitches border shadow -->
+  <line x1="120" y1="56" x2="120" y2="456" stroke="#011b11" stroke-width="8" opacity="0.6" />
+  <line x1="120" y1="56" x2="120" y2="456" stroke="url(#goldGrad)" stroke-width="2" stroke-dasharray="8,6" opacity="0.7" />
+
+  <!-- Gold Notebook Emboss in the Center -->
+  <g filter="url(#shadow)">
+    <!-- Closed Notebook Cover -->
+    <path d="M190 140 H380 C395 140 400 145 400 160 V360 C400 375 395 380 380 380 H190 Z" fill="#012b1c" stroke="url(#goldGrad)" stroke-width="3" />
+    
+    <!-- Pages edge visual -->
+    <path d="M380 145 H385 V375 H380 Z" fill="#fdfaf2" opacity="0.9" />
+
+    <!-- Ribbon bookmark (Gold ribbon hanging out) -->
+    <path d="M290 340 V410 L305 395 L320 410 V340 Z" fill="url(#goldGrad)" />
+    
+    <!-- Pen lock visual (Stylo Bic mockup on the side) -->
+    <rect x="400" y="210" width="16" height="90" rx="8" fill="#1d4ed8" stroke="url(#goldGrad)" stroke-width="1.5" />
+    <path d="M400 210 L408 190 L416 210 Z" fill="url(#goldGrad)" />
+
+    <!-- Padlock Emboss on the book cover (Security symbol) -->
+    <rect x="255" y="220" width="50" height="40" rx="8" fill="url(#goldGrad)" />
+    <path d="M265 220 V200 C265 185 295 185 295 200 V220" fill="none" stroke="url(#goldGrad)" stroke-width="5" stroke-linecap="round" />
+    <circle cx="280" cy="240" r="4" fill="#78350f" />
+    <path d="M280 244 V252" stroke="#78350f" stroke-width="2" stroke-linecap="round" />
+  </g>
+
+  <!-- Brass binder rings visual overlapping from the left border -->
+  <g>
+    <!-- Ring 1 -->
+    <rect x="8" y="90" width="40" height="12" rx="6" fill="url(#metalGrad)" filter="url(#shadow)" />
+    <circle cx="28" cy="96" r="3" fill="#fffbeb" opacity="0.5" />
+    <!-- Ring 2 -->
+    <rect x="8" y="200" width="40" height="12" rx="6" fill="url(#metalGrad)" filter="url(#shadow)" />
+    <circle cx="28" cy="206" r="3" fill="#fffbeb" opacity="0.5" />
+    <!-- Ring 3 -->
+    <rect x="8" y="310" width="40" height="12" rx="6" fill="url(#metalGrad)" filter="url(#shadow)" />
+    <circle cx="28" cy="316" r="3" fill="#fffbeb" opacity="0.5" />
+    <!-- Ring 4 -->
+    <rect x="8" y="410" width="40" height="12" rx="6" fill="url(#metalGrad)" filter="url(#shadow)" />
+    <circle cx="28" cy="416" r="3" fill="#fffbeb" opacity="0.5" />
+  </g>
+
+</svg>
