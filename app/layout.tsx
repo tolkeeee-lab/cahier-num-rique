@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Playpen_Sans, JetBrains_Mono } from 'next/font/google'
+import { Inter, Caveat, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
 const inter = Inter({
@@ -7,9 +7,9 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
-const playpen = Playpen_Sans({
+const caveat = Caveat({
   subsets: ['latin'],
-  variable: '--font-playpen',
+  variable: '--font-caveat',
 })
 
 const jetbrains = JetBrains_Mono({
@@ -29,8 +29,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="fr" className={`${inter.variable} ${playpen.variable} ${jetbrains.variable}`}>
-      <body className="font-sans antialiased bg-[#f4efe6] text-gray-900 min-h-screen">
+    <html lang="fr" className={`${inter.variable} ${caveat.variable} ${jetbrains.variable}`}>
+      <body className="font-sans antialiased bg-[#141210] text-gray-900 min-h-screen">
         {children}
       </body>
     </html>

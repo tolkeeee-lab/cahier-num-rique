@@ -40,27 +40,27 @@ const PENS = [
   { 
     id: 'red', 
     name: 'Rouge (Dépense / Cash Out)', 
-    color: '#dc2626', 
-    bg: 'bg-red-600', 
-    border: 'border-red-600', 
+    color: '#e11d48', 
+    bg: 'bg-rose-600', 
+    border: 'border-rose-600', 
     textClass: 'ink-red', 
     placeholder: 'Stylo Rouge : Écrivez une dépense... (ex: Achat ampoules boutique 4500 ou Facture électricité 12000)' 
   },
   { 
     id: 'green', 
     name: 'Vert (Achat Stock Cash)', 
-    color: '#15803d', 
-    bg: 'bg-green-700', 
-    border: 'border-green-700', 
+    color: '#047857', 
+    bg: 'bg-emerald-700', 
+    border: 'border-emerald-700', 
     textClass: 'ink-green', 
     placeholder: 'Stylo Vert : Écrivez un achat de stock payé cash... (ex: 5 cartons lait à 15000 pour boutique)' 
   },
   { 
     id: 'purple', 
     name: 'Violet (Crédit Grossiste)', 
-    color: '#6d28d9', 
-    bg: 'bg-purple-700', 
-    border: 'border-purple-700', 
+    color: '#701a75', 
+    bg: 'bg-fuchsia-800', 
+    border: 'border-fuchsia-800', 
     textClass: 'ink-purple', 
     placeholder: 'Stylo Violet : Écrivez un achat à crédit chez un grossiste... (ex: Grossiste Chantal 3 cartons Peak crédit 35000)' 
   },

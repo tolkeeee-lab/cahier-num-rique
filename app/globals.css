@@ -9,22 +9,23 @@
 }
 
 body {
-  background-color: #f4efe6;
+  background: radial-gradient(circle at center, #231d1a 0%, #141210 100%);
   font-family: var(--font-inter), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Lined notebook paper styling */
+/* Seyes Ivory paper styling */
 .lined-paper {
-  background-color: #fffdf9;
+  background-color: #fdfaf2;
   background-image: 
     /* Vertical red margin line at 80px */
-    linear-gradient(to right, transparent 80px, rgba(239, 68, 68, 0.3) 80px, rgba(239, 68, 68, 0.3) 82px, transparent 82px),
-    /* Horizontal blue lines every 36px (2.25rem) */
-    linear-gradient(to bottom, transparent 35px, rgba(56, 189, 248, 0.2) 35px, rgba(56, 189, 248, 0.2) 36px, transparent 36px);
+    linear-gradient(to right, transparent 80px, rgba(225, 29, 72, 0.38) 80px, rgba(225, 29, 72, 0.38) 82px, transparent 82px),
+    /* Horizontal blue lines Seyes every 36px */
+    linear-gradient(to bottom, transparent 35px, rgba(14, 165, 233, 0.28) 35px, rgba(14, 165, 233, 0.28) 36px, transparent 36px);
   background-size: 100% 100%, 100% 36px;
   background-attachment: local;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.05);
 }
 
 /* Lined text align classes */
@@ -38,48 +39,96 @@ body {
   align-items: center;
 }
 
-/* Bic pen inks */
+/* Bic pen inks premium hex values */
 .ink-blue {
   color: #1d4ed8;
-  font-family: var(--font-playpen), cursive;
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(29, 78, 216, 0.15);
 }
 
 .ink-red {
-  color: #dc2626;
-  font-family: var(--font-playpen), cursive;
-  text-shadow: 0 0 0.5px rgba(220, 38, 38, 0.15);
+  color: #e11d48;
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 0.5px rgba(225, 29, 72, 0.15);
 }
 
 .ink-green {
-  color: #15803d;
-  font-family: var(--font-playpen), cursive;
-  text-shadow: 0 0 0.5px rgba(21, 128, 61, 0.15);
+  color: #047857;
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 0.5px rgba(4, 120, 87, 0.15);
 }
 
 .ink-purple {
-  color: #6d28d9;
-  font-family: var(--font-playpen), cursive;
-  text-shadow: 0 0 0.5px rgba(109, 40, 217, 0.15);
+  color: #701a75;
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 0.5px rgba(112, 26, 117, 0.15);
 }
 
 .ink-yellow {
-  color: #b45309; /* Dark Amber to be readable on white paper */
-  font-family: var(--font-playpen), cursive;
+  color: #b45309;
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(180, 83, 9, 0.15);
 }
 
-/* Notebook Cover Texture */
+/* Notebook Cover Texture (Emerald Leather) */
 .notebook-cover-left {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: linear-gradient(135deg, #064e3b 0%, #012b1c 100%);
   position: relative;
-  box-shadow: inset -5px 0 10px rgba(0,0,0,0.5), 5px 0 15px rgba(0,0,0,0.3);
+  box-shadow: inset -10px 0 20px rgba(0,0,0,0.8), 5px 0 15px rgba(0,0,0,0.4);
+  border-right: 2px border #022c1b;
 }
 
-/* Ring Binding effects */
+/* Brass Screw details */
+.brass-screw {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f59e0b 0%, #d97706 40%, #78350f 100%);
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.6), inset -1px -1px 2px rgba(0,0,0,0.4);
+  position: relative;
+}
+.brass-screw::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 2px;
+  width: 10px;
+  height: 1.5px;
+  background-color: #78350f;
+  transform: rotate(45deg);
+}
+
+/* Brass Medallion */
+.brass-medallion {
+  background: radial-gradient(circle at 35% 35%, #fffbeb 0%, #f59e0b 30%, #d97706 70%, #78350f 100%);
+  border: 2px solid #b45309;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.4);
+  color: #78350f;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* Spiral brass binder loops */
 .spiral-ring {
-  background: linear-gradient(to bottom, #d1d5db 0%, #9ca3af 45%, #374151 55%, #d1d5db 100%);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background: linear-gradient(to right, #78350f 0%, #b45309 15%, #fbbf24 45%, #fffbeb 55%, #d97706 80%, #78350f 100%);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255,255,255,0.2);
+  border-radius: 4px;
+  position: relative;
+  z-index: 20;
 }
 
 textarea {
@@ -93,10 +142,22 @@ textarea:focus {
 
 /* Handwritten class helper */
 .handwritten {
-  font-family: var(--font-playpen), cursive;
+  font-family: var(--font-caveat), cursive;
 }
 
 /* Monospace numbers helper */
 .mono-numbers {
   font-family: var(--font-mono), monospace;
+}
+
+/* Cartoony folder tabs */
+.notebook-tab {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.08);
+  font-weight: 700;
+  transition: all 0.2s ease-in-out;
+}
+.notebook-tab:hover {
+  transform: translateY(-2px);
 }
