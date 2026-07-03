@@ -97,6 +97,13 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [postItWarning, setPostItWarning] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState('')
+  const [calculationQuery, setCalculationQuery] = useState<{
+    quantity: number
+    item: string
+    amount: number
+    rawText: string
+    penColor: string
+  } | null>(null)
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -173,10 +180,17 @@ export default function Home() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim()) return
+  const parseClientName = (text: string): string => {
+    const clientRegex = /(?:pour|de|client|grossiste|fournisseur|a)\s+([A-Za-z]+)/i
+    const clientMatch = text.match(clientRegex)
+    if (clientMatch) {
+      const name = clientMatch[1].trim()
+      return name.charAt(0).toUpperCase() + name.slice(1)
+    }
+    return "Client anonyme"
+  }
 
+  const submitTransaction = async (bodyData: { text: string; penColor: string; overrideData?: any }) => {
     setLoading(true)
     setPostItWarning(null)
 
@@ -184,10 +198,7 @@ export default function Home() {
       const response = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text: input.trim(),
-          penColor: selectedPen 
-        }),
+        body: JSON.stringify(bodyData),
       })
 
       const data = await response.json()
@@ -209,6 +220,35 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim()) return
+
+    // Format: [quantité] [article] à/a/@ [montant]
+    const match = input.match(/(\d+)\s+([^0-9àa@\s][^0-9àa@]*?)\s+(?:à|a|@)\s+(\d+)/i)
+    if (match) {
+      const quantity = parseInt(match[1], 10)
+      const item = match[2].trim()
+      const amount = parseInt(match[3], 10)
+
+      if (quantity > 1) {
+        setCalculationQuery({
+          quantity,
+          item,
+          amount,
+          rawText: input.trim(),
+          penColor: selectedPen
+        })
+        return
+      }
+    }
+
+    await submitTransaction({
+      text: input.trim(),
+      penColor: selectedPen
+    })
   }
 
   const handleSaleCrossedOut = () => {
@@ -528,6 +568,104 @@ export default function Home() {
             className="mt-4 px-4 py-1.5 bg-amber-800 hover:bg-amber-900 text-white font-semibold text-xs rounded shadow handwritten"
           >
             Fermer l'alerte
+          </button>
+        </div>
+      )}
+
+      {/* Sticky calculation helper post-it card rendered over the center of the screen */}
+      {calculationQuery && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[420px] bg-amber-100 border-2 border-amber-300 shadow-2xl p-6 -rotate-1 transition-all flex flex-col items-center text-center">
+          <div className="absolute -top-3 w-20 h-6 bg-gray-300 bg-opacity-70 rotate-2"></div>
+          
+          <h4 className="font-bold text-amber-900 text-lg uppercase tracking-wide handwritten mb-2 text-2xl">
+            🧮 Aide au Calcul
+          </h4>
+          
+          <p className="text-gray-800 text-sm font-medium leading-relaxed handwritten text-lg mb-4">
+            Vous écrivez : <span className="underline italic">"{calculationQuery.rawText}"</span>.
+            <br />
+            Comment souhaitez-vous calculer <strong>{calculationQuery.amount} F</strong> pour les <strong>{calculationQuery.quantity} {calculationQuery.item}</strong> ?
+          </p>
+
+          <div className="w-full flex flex-col gap-3">
+            {/* Option A (Unitaire) */}
+            <button
+              type="button"
+              onClick={async () => {
+                const total = calculationQuery.quantity * calculationQuery.amount
+                const clientName = parseClientName(calculationQuery.rawText)
+                await submitTransaction({
+                  text: calculationQuery.rawText,
+                  penColor: calculationQuery.penColor,
+                  overrideData: {
+                    articles: [{
+                      name: calculationQuery.item,
+                      quantity: calculationQuery.quantity,
+                      unit_price: calculationQuery.amount
+                    }],
+                    total_amount: total,
+                    paid_amount: (calculationQuery.penColor === 'yellow' || calculationQuery.penColor === 'purple') ? 0 : total,
+                    debt_amount: (calculationQuery.penColor === 'yellow' || calculationQuery.penColor === 'purple') ? total : 0,
+                    client_name: clientName
+                  }
+                })
+                setCalculationQuery(null)
+              }}
+              className="w-full p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl text-left transition-all hover:scale-[1.01]"
+            >
+              <div className="font-bold text-emerald-950 text-xs uppercase font-sans">
+                Option 1 : Prix unitaire
+              </div>
+              <div className="handwritten text-emerald-800 text-base mt-1">
+                {calculationQuery.amount} F l'unité × {calculationQuery.quantity} articles
+              </div>
+              <div className="font-mono text-emerald-950 font-extrabold text-sm mt-0.5">
+                Total à enregistrer = {formatPrice(calculationQuery.quantity * calculationQuery.amount)}
+              </div>
+            </button>
+
+            {/* Option B (Total) */}
+            <button
+              type="button"
+              onClick={async () => {
+                const clientName = parseClientName(calculationQuery.rawText)
+                await submitTransaction({
+                  text: calculationQuery.rawText,
+                  penColor: calculationQuery.penColor,
+                  overrideData: {
+                    articles: [{
+                      name: calculationQuery.item,
+                      quantity: calculationQuery.quantity,
+                      unit_price: Math.round(calculationQuery.amount / calculationQuery.quantity)
+                    }],
+                    total_amount: calculationQuery.amount,
+                    paid_amount: (calculationQuery.penColor === 'yellow' || calculationQuery.penColor === 'purple') ? 0 : calculationQuery.amount,
+                    debt_amount: (calculationQuery.penColor === 'yellow' || calculationQuery.penColor === 'purple') ? calculationQuery.amount : 0,
+                    client_name: clientName
+                  }
+                })
+                setCalculationQuery(null)
+              }}
+              className="w-full p-3 bg-purple-50 hover:bg-purple-100 border border-purple-300 rounded-xl text-left transition-all hover:scale-[1.01]"
+            >
+              <div className="font-bold text-purple-950 text-xs uppercase font-sans">
+                Option 2 : Prix global
+              </div>
+              <div className="handwritten text-purple-800 text-base mt-1">
+                Le lot complet de {calculationQuery.quantity} coûte {calculationQuery.amount} F
+              </div>
+              <div className="font-mono text-purple-950 font-extrabold text-sm mt-0.5">
+                Total à enregistrer = {formatPrice(calculationQuery.amount)}
+              </div>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setCalculationQuery(null)}
+            className="mt-5 text-gray-500 hover:text-gray-800 font-bold text-xs uppercase tracking-wider font-sans underline"
+          >
+            Annuler et corriger
           </button>
         </div>
       )}

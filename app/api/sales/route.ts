@@ -66,9 +66,9 @@ function calculateCash(list: any[]): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, penColor } = await request.json()
+    const { text, penColor, overrideData } = await request.json()
 
-    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+    if ((!text || typeof text !== 'string' || text.trim().length === 0) && !overrideData) {
       return NextResponse.json(
         { error: 'Texte de transaction invalide' },
         { status: 400 }
@@ -77,17 +77,32 @@ export async function POST(request: NextRequest) {
 
     const color = penColor || 'blue'
 
-    // 1. Parser le texte (IA ou Regex local)
+    // 1. Parser le texte ou utiliser les données pré-calculées
     let parsedData: ParsedSale | null = null
-    const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'mock-key-for-build'
 
-    if (hasApiKey) {
-      parsedData = await parseTextWithOpenAI(text, color)
-    }
+    if (overrideData) {
+      parsedData = {
+        articles: (overrideData.articles || []).map((a: any) => ({
+          nom: a.name || a.nom,
+          quantite: a.quantity || a.quantite,
+          prix_unitaire: a.unit_price || a.prix_unitaire
+        })),
+        total_facture: overrideData.total_amount,
+        montant_paye: overrideData.paid_amount,
+        montant_dette: overrideData.debt_amount,
+        nom_client: overrideData.client_name || overrideData.nom_client || "Client anonyme"
+      }
+    } else {
+      const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'mock-key-for-build'
 
-    // Fallback sur le parseur Regex local si pas de clé ou si l'IA échoue
-    if (!parsedData) {
-      parsedData = parseTextLocally(text, color)
+      if (hasApiKey) {
+        parsedData = await parseTextWithOpenAI(text, color)
+      }
+
+      // Fallback sur le parseur Regex local si pas de clé ou si l'IA échoue
+      if (!parsedData) {
+        parsedData = parseTextLocally(text, color)
+      }
     }
 
     // 2. Déterminer le type de transaction
