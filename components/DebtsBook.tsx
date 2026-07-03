@@ -165,7 +165,7 @@ export function DebtsBook({ onRefreshTotals, onError }: DebtsBookProps) {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       
       {/* Sidebar - Liste des Débiteurs/Grossistes */}
-      <div className="md:col-span-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col h-[600px]">
+      <div className="md:col-span-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col h-[520px]">
         {/* Sub Navigation */}
         <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
           <button
@@ -274,7 +274,7 @@ export function DebtsBook({ onRefreshTotals, onError }: DebtsBookProps) {
       </div>
 
       {/* Main Panel - Fiche de Dette Lignée */}
-      <div className="md:col-span-2 flex flex-col h-[600px] bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="md:col-span-2 flex flex-col h-[520px] bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         {selectedEntity ? (
           <div className="flex flex-col h-full">
             {/* Header de la Fiche */}

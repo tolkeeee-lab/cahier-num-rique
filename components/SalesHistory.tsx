@@ -33,7 +33,7 @@ interface SalesHistoryProps {
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: 0,
-  }).format(price) + ' FCFA'
+  }).format(price) + ' F'
 }
 
 export function SalesHistory({ sales, onSaleCrossedOut, onError }: SalesHistoryProps) {
@@ -76,7 +76,22 @@ export function SalesHistory({ sales, onSaleCrossedOut, onError }: SalesHistoryP
     }
   }
 
-  // Obtenir la classe de couleur de stylo appropriée
+  // Grouper les écritures par date
+  const groupedSales: { [dateStr: string]: Sale[] } = {}
+  sales.forEach((sale) => {
+    // Convertir la date YYYY-MM-DD en format lisible (ex: Dimanche 28 juin 2026)
+    const dateObj = new Date(sale.date)
+    const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
+    let formattedDate = dateObj.toLocaleDateString('fr-FR', options)
+    // Capitaliser la première lettre
+    formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)
+
+    if (!groupedSales[formattedDate]) {
+      groupedSales[formattedDate] = []
+    }
+    groupedSales[formattedDate].push(sale)
+  })
+
   const getPenClass = (penColor: string, status: string) => {
     if (status === 'crossed_out') {
       return 'line-through opacity-30 decoration-red-600 decoration-2 select-none'
@@ -94,70 +109,143 @@ export function SalesHistory({ sales, onSaleCrossedOut, onError }: SalesHistoryP
 
   const getTransactionTypeText = (type: string) => {
     switch (type) {
-      case 'cash_in': return 'Vente Cash'
-      case 'cash_out': return 'Dépense'
-      case 'purchase_cash': return 'Achat Stock Cash'
-      case 'purchase_credit': return 'Achat Crédit (Grossiste)'
-      case 'sale_credit': return 'Vente Crédit (Client)'
-      case 'payment_client': return 'Remboursement reçu d\'un Client'
-      case 'payment_supplier': return 'Remboursement versé à un Grossiste'
-      default: return 'Transaction'
+      case 'cash_in': return 'VENTE'
+      case 'cash_out': return 'DÉPENSE'
+      case 'purchase_cash': return 'STOCK CASH'
+      case 'purchase_credit': return 'STOCK CRÉDIT'
+      case 'sale_credit': return 'CRÉDIT CLIENT'
+      case 'payment_client': return 'PAIEMENT CLIENT'
+      case 'payment_supplier': return 'PAIEMENT GROSSISTE'
+      default: return 'VENTE'
+    }
+  }
+
+  const getTypeBadgeStyle = (type: string) => {
+    switch (type) {
+      case 'cash_in':
+      case 'payment_client':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'cash_out':
+      case 'payment_supplier':
+        return 'bg-rose-100 text-rose-800 border-rose-200'
+      case 'purchase_cash':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      case 'purchase_credit':
+        return 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200'
+      case 'sale_credit':
+        return 'bg-amber-100 text-amber-800 border-amber-200'
+      default:
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+    }
+  }
+
+  const getAmountBadgeStyle = (type: string, isCrossed: boolean) => {
+    if (isCrossed) return 'border-gray-200 text-gray-400 opacity-40 bg-gray-50'
+    switch (type) {
+      case 'cash_in':
+      case 'payment_client':
+        return 'border-emerald-300 text-emerald-700 bg-emerald-50'
+      case 'cash_out':
+      case 'payment_supplier':
+      case 'purchase_cash':
+        return 'border-red-300 text-red-700 bg-red-50'
+      case 'purchase_credit':
+        return 'border-fuchsia-300 text-fuchsia-700 bg-fuchsia-50'
+      case 'sale_credit':
+        return 'border-amber-300 text-amber-700 bg-amber-50'
+      default:
+        return 'border-emerald-300 text-emerald-700 bg-emerald-50'
     }
   }
 
   return (
-    <div className="relative lined-paper rounded-2xl border border-gray-200 shadow-md p-2 pl-24 pr-4 py-6 overflow-hidden min-h-[300px]">
+    <div className="relative pl-24 pr-4 py-4 min-h-[300px] w-full">
       {/* Red vertical margin line represented in absolute coordinates */}
       <div className="absolute left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
 
       <div className="lined-text-container space-y-0 text-lg">
-        {sales.map((sale) => {
-          const isCrossed = sale.status === 'crossed_out'
-          const penClass = getPenClass(sale.pen_color, sale.status)
-          const typeText = getTransactionTypeText(sale.type)
-
-          return (
-            <div 
-              key={sale.id} 
-              className="lined-item group relative flex items-center justify-between border-b border-transparent hover:bg-gray-50 hover:bg-opacity-50 px-2 rounded-lg transition-all"
-              style={{ minHeight: '54px' }}
-            >
-              {/* Contenu textuel rédigé */}
-              <div className="flex-1 pr-4 py-1">
-                <div className={`leading-relaxed ${penClass}`}>
-                  <span className="text-xs uppercase tracking-wider font-mono mr-2 bg-gray-100 bg-opacity-70 px-1.5 py-0.5 rounded text-gray-500 font-sans border border-gray-200 no-underline select-none">
-                    {sale.time} • {typeText}
-                  </span>
-                  <span className="font-semibold">{sale.client}</span> : {sale.notes}
-                  {sale.articles && sale.articles.length > 0 && (
-                    <span className="text-sm opacity-85 block ml-14 font-handwritten no-underline">
-                      └─ {sale.articles.map(a => `${a.quantity}x ${a.name} (@${a.unit_price} F)`).join(', ')}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Montant financier & bouton d'action */}
-              <div className="flex items-center gap-4 flex-shrink-0">
-                <div className={`font-mono text-base font-bold whitespace-nowrap ${isCrossed ? 'line-through opacity-30' : 'text-gray-900'}`}>
-                  {sale.type === 'cash_out' || sale.type === 'purchase_cash' || sale.type === 'payment_supplier' ? '-' : '+'}
-                  {formatPrice(sale.total)}
-                </div>
-
-                {!isCrossed && (
-                  <button
-                    onClick={() => handleCrossOut(sale.id)}
-                    disabled={deletingId === sale.id}
-                    title="Rayer cette écriture"
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all disabled:opacity-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+        {Object.entries(groupedSales).map(([dateStr, salesList]) => (
+          <div key={dateStr} className="space-y-0">
+            
+            {/* Center aligned Date Badge on a line */}
+            <div className="lined-item justify-center my-2" style={{ minHeight: '54px' }}>
+              <span className="bg-[#fffbeb] border border-amber-200 text-gray-700 font-handwritten text-sm px-4 py-1 rounded-2xl shadow-sm select-none z-10 no-underline">
+                📅 {dateStr}
+              </span>
             </div>
-          )
-        })}
+
+            {salesList.map((sale) => {
+              const isCrossed = sale.status === 'crossed_out'
+              const penClass = getPenClass(sale.pen_color, sale.status)
+              const typeText = getTransactionTypeText(sale.type)
+              const typeBadge = getTypeBadgeStyle(sale.type)
+              const amountBadge = getAmountBadgeStyle(sale.type, isCrossed)
+
+              return (
+                <div 
+                  key={sale.id} 
+                  className="lined-item group relative flex items-start justify-between border-b border-transparent hover:bg-gray-50 hover:bg-opacity-40 px-2 rounded-lg transition-all"
+                  style={{ minHeight: '80px', paddingBottom: '8px', paddingTop: '8px' }}
+                >
+                  
+                  {/* Timestamp located strictly on the left of the margin */}
+                  <div className="absolute left-[-68px] w-14 text-right font-mono text-[10px] text-gray-400 font-bold select-none pr-1 pt-1.5 no-underline">
+                    {sale.time}
+                  </div>
+
+                  {/* Main text content to the right of the margin */}
+                  <div className="flex-grow pl-2 pr-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Raw transaction input typed text */}
+                      <span className={`font-semibold leading-relaxed ${penClass}`}>
+                        {sale.notes}
+                      </span>
+                      
+                      {/* Operation badge type */}
+                      <span className={`text-[8px] font-bold border px-1.5 py-0.5 rounded-md font-sans tracking-wide ${typeBadge} no-underline`}>
+                        {typeText}
+                      </span>
+                    </div>
+
+                    {/* Extracted articles list */}
+                    {sale.articles && sale.articles.length > 0 && (
+                      <div className="text-xs text-gray-500 font-handwritten mt-1 space-y-0.5 ml-2 no-underline">
+                        {sale.articles.map((a, idx) => (
+                          <div key={idx} className="flex items-center gap-1 opacity-80">
+                            <span>📦</span>
+                            <span>{a.quantity}x {a.name} à {a.unit_price} F</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Amount Badge on the far right */}
+                  <div className="flex items-center gap-3 flex-shrink-0 pt-0.5">
+                    <div className={`font-mono text-xs font-bold border rounded-lg px-2.5 py-1 ${amountBadge}`}>
+                      {sale.type === 'cash_out' || sale.type === 'purchase_cash' || sale.type === 'payment_supplier' ? '-' : '+'}
+                      {formatPrice(sale.total)}
+                    </div>
+
+                    {/* Strike through / delete button */}
+                    {!isCrossed && (
+                      <button
+                        onClick={() => handleCrossOut(sale.id)}
+                        disabled={deletingId === sale.id}
+                        title="Rayer cette écriture"
+                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                </div>
+              )
+            })}
+
+          </div>
+        ))}
       </div>
     </div>
   )
