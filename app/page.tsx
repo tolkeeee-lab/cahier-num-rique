@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
 import { TrendingUp, Notebook, BookText, BarChart3, Send, Loader, AlertTriangle } from 'lucide-react'
+import { supabaseClient } from '@/lib/supabaseClient'
+import { AuthScreen } from '@/components/AuthScreen'
+import { User } from '@supabase/supabase-js'
 
 interface Sale {
   id: string
@@ -84,6 +87,10 @@ const PENS = [
 ]
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [localDemo, setLocalDemo] = useState(false)
+
   const [sales, setSales] = useState<Sale[]>([])
   const [tiroirCaisse, setTiroirCaisse] = useState(0)
   const [argentDehors, setArgentDehors] = useState(0)
@@ -108,7 +115,25 @@ export default function Home() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadFinancialData()
+    // 1. Lire la session active
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setAuthLoading(false)
+    })
+
+    // 2. Ecouter les changements d'état
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setAuthLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (user || localDemo) {
+      loadFinancialData()
+    }
     // Mettre à jour l'horloge
     const updateTime = () => {
       const now = new Date()
@@ -117,7 +142,15 @@ export default function Home() {
     updateTime()
     const interval = setInterval(updateTime, 60000)
     return () => clearInterval(interval)
-  }, [])
+  }, [user, localDemo])
+
+  const handleLogout = async () => {
+    if (localDemo) {
+      setLocalDemo(false)
+    } else {
+      await supabaseClient.auth.signOut()
+    }
+  }
 
   // Faire défiler vers le bas lors de la mise à jour des ventes
   useEffect(() => {
@@ -263,6 +296,18 @@ export default function Home() {
   const spiralRings = Array.from({ length: 20 })
   const currentPen = PENS.find(p => p.id === selectedPen) || PENS[0]
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#141210] flex items-center justify-center">
+        <Loader className="w-8 h-8 text-amber-600 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!user && !localDemo) {
+    return <AuthScreen onBypass={() => setLocalDemo(true)} />
+  }
+
   return (
     <main className="min-h-screen py-8 px-4 max-w-7xl mx-auto flex flex-col gap-6 relative">
       
@@ -351,9 +396,18 @@ export default function Home() {
                 <h1 className="text-2xl font-bold text-gray-900 font-handwritten flex items-center gap-1.5 text-3xl">
                   📖 Cahier de Caisse Intelligent
                 </h1>
-                <p className="text-[10px] text-gray-400 font-mono mt-0.5 uppercase tracking-wide">
-                  200 PAGES • SANS MOBILE MONEY • 100% CASH
-                </p>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wide">
+                    200 PAGES • SANS MOBILE MONEY • 100% CASH
+                  </p>
+                  <span className="text-gray-300 text-[10px] select-none">•</span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-[10px] text-red-600 hover:text-red-800 font-bold uppercase tracking-wider underline transition-colors"
+                  >
+                    Fermer le cahier (Déconnexion)
+                  </button>
+                </div>
               </div>
 
               {/* Three Pillars KPIs inside the page header */}
