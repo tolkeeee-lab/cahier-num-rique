@@ -2,13 +2,14 @@
 
 import React, { useState } from 'react'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
-import { Loader, AlertTriangle, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react'
+import { Loader, AlertTriangle, Eye, EyeOff, Lock, ArrowRight, UserPlus, LogIn } from 'lucide-react'
 
 interface AuthScreenProps {
   onBypass: () => void
+  onLoginSuccess?: (user: any) => void
 }
 
-export function AuthScreen({ onBypass }: AuthScreenProps) {
+export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -30,28 +31,68 @@ export function AuthScreen({ onBypass }: AuthScreenProps) {
     setSuccess(null)
 
     try {
-      if (isSignUp) {
-        // Sign Up
-        const { error: signUpError } = await supabaseClient.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: name || 'Propriétaire',
+      if (isConfigured) {
+        // --- AUTH SUPABASE ---
+        if (isSignUp) {
+          const { error: signUpError } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                full_name: name || 'Propriétaire',
+              },
             },
-          },
-        })
-        if (signUpError) throw signUpError
-        setSuccess('✓ Compte créé ! Veuillez vous connecter.')
-        setIsSignUp(false)
+          })
+          if (signUpError) throw signUpError
+          setSuccess('✓ Compte créé avec succès ! Connectez-vous maintenant.')
+          setIsSignUp(false)
+        } else {
+          const { data, error: loginError } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password,
+          })
+          if (loginError) throw loginError
+          if (onLoginSuccess && data.user) {
+            onLoginSuccess(data.user)
+          }
+          setSuccess('✓ Connexion réussie !')
+        }
       } else {
-        // Login
-        const { error: loginError } = await supabaseClient.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (loginError) throw loginError
-        setSuccess('✓ Connexion réussie !')
+        // --- AUTH LOCAL STORAGE FALLBACK ---
+        const storedUsers = JSON.parse(localStorage.getItem('cahier_mock_users') || '[]')
+        
+        if (isSignUp) {
+          // Inscription locale
+          const userExists = storedUsers.some((u: any) => u.email === email)
+          if (userExists) {
+            throw new Error('Cet e-mail est déjà utilisé localement.')
+          }
+          
+          const newUser = {
+            id: Math.random().toString(36).substring(2, 9),
+            email,
+            password,
+            full_name: name || 'Propriétaire'
+          }
+          
+          storedUsers.push(newUser)
+          localStorage.setItem('cahier_mock_users', JSON.stringify(storedUsers))
+          setSuccess('✓ Compte local créé ! Connectez-vous maintenant.')
+          setIsSignUp(false)
+        } else {
+          // Connexion locale
+          const matchedUser = storedUsers.find((u: any) => u.email === email && u.password === password)
+          if (!matchedUser) {
+            throw new Error('Identifiants locaux incorrects. Veuillez créer un compte.')
+          }
+          
+          // Sauvegarder la session mock
+          localStorage.setItem('cahier_mock_session', JSON.stringify(matchedUser))
+          if (onLoginSuccess) {
+            onLoginSuccess(matchedUser)
+          }
+          setSuccess('✓ Connexion locale réussie !')
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue.')
@@ -87,7 +128,7 @@ export function AuthScreen({ onBypass }: AuthScreenProps) {
             Cahier de Caisse
           </h2>
           <span className="text-[10px] text-[#f59e0b] opacity-60 tracking-[0.3em] font-mono uppercase mt-1">
-            Système Intelligent
+            {isConfigured ? "Système Connecté" : "Système Local Autonome"}
           </span>
         </div>
 
@@ -103,6 +144,13 @@ export function AuthScreen({ onBypass }: AuthScreenProps) {
               Cahier No. 200 • Afrique de l'Ouest
             </p>
           </div>
+
+          {!isConfigured && (
+            <div className="mb-4 p-2.5 bg-sky-50 border border-sky-200 text-sky-850 rounded-xl text-[10px] leading-normal font-sans font-medium flex items-start gap-1.5">
+              <span className="text-xs">💡</span>
+              <span>Mode local actif : vous pouvez vous inscrire et vous connecter sans base de données externe. Vos données restent dans ce navigateur.</span>
+            </div>
+          )}
 
           {error && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-start gap-2 mb-4 font-sans font-medium">
@@ -175,47 +223,43 @@ export function AuthScreen({ onBypass }: AuthScreenProps) {
               </div>
             </div>
 
-            {isConfigured ? (
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 py-3 bg-[#064e3b] hover:bg-[#043c2d] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-1.5"
-              >
-                {loading ? (
-                  <Loader className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <span>{isSignUp ? "Créer mon Compte" : "Ouvrir mon Cahier"}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            ) : (
-              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl space-y-2 mt-2">
-                <p className="text-[10px] font-bold flex items-center gap-1">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                  DATABASE DE DEMO ACTIVE
-                </p>
-                <p className="text-[10px] leading-normal opacity-80">
-                  Supabase n'est pas encore configuré sur ce projet. Vous pouvez accéder directement au carnet en mode démo locale ci-dessous.
-                </p>
-              </div>
-            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 py-3 bg-[#064e3b] hover:bg-[#043c2d] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-1.5"
+            >
+              {loading ? (
+                <Loader className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <span>{isSignUp ? "Créer mon Compte" : "Ouvrir mon Cahier"}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              )}
+            </button>
           </form>
 
-          {/* Toggle Login/SignUp */}
-          {isConfigured && (
-            <button
-              onClick={() => {
-                setIsSignUp(!isSignUp)
-                setError(null)
-                setSuccess(null)
-              }}
-              className="mt-4 text-center text-xs text-[#064e3b] font-bold hover:underline"
-            >
-              {isSignUp ? "← Déjà un compte ? Se connecter" : "Créer un nouveau cahier de caisse →"}
-            </button>
-          )}
+          {/* Toggle Login/SignUp - Toujours visible pour permettre l'inscription ! */}
+          <button
+            onClick={() => {
+              setIsSignUp(!isSignUp)
+              setError(null)
+              setSuccess(null)
+            }}
+            className="mt-4 text-center text-xs text-[#064e3b] font-bold hover:underline flex items-center justify-center gap-1"
+          >
+            {isSignUp ? (
+              <>
+                <LogIn className="w-3 h-3" />
+                <span>Déjà un compte ? Se connecter</span>
+              </>
+            ) : (
+              <>
+                <UserPlus className="w-3 h-3" />
+                <span>Créer un nouveau cahier de caisse</span>
+              </>
+            )}
+          </button>
 
         </div>
 
@@ -224,7 +268,7 @@ export function AuthScreen({ onBypass }: AuthScreenProps) {
           onClick={onBypass}
           className="mt-6 text-[10px] font-bold uppercase tracking-widest text-[#f59e0b] opacity-75 hover:opacity-100 transition-opacity flex items-center gap-1"
         >
-          <span>Accéder au mode local (Démo)</span>
+          <span>Accéder directement sans compte (Mode Invité)</span>
           <ArrowRight className="w-3 h-3" />
         </button>
 
