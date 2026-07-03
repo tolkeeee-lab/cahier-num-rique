@@ -1,7 +1,7 @@
 'use client'
 
-import React from 'react'
-import { CheckCircle, AlertCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 
 interface Article {
   name: string
@@ -18,113 +18,146 @@ interface Sale {
   total: number
   paid: number
   debt: number
-  status: 'paid' | 'debt'
+  status: 'paid' | 'debt' | 'crossed_out'
+  type: string
+  pen_color: string
+  notes: string
 }
 
 interface SalesHistoryProps {
   sales: Sale[]
+  onSaleCrossedOut?: (id: string) => void
+  onError?: (err: string) => void
 }
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'XOF',
     minimumFractionDigits: 0,
-  }).format(price)
+  }).format(price) + ' FCFA'
 }
 
-export function SalesHistory({ sales }: SalesHistoryProps) {
+export function SalesHistory({ sales, onSaleCrossedOut, onError }: SalesHistoryProps) {
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   if (sales.length === 0) return null
 
-  const totals = sales.reduce(
-    (acc, sale) => ({
-      totalSales: acc.totalSales + sale.total,
-      totalPaid: acc.totalPaid + sale.paid,
-      totalDebt: acc.totalDebt + sale.debt,
-    }),
-    { totalSales: 0, totalPaid: 0, totalDebt: 0 }
-  )
+  const handleCrossOut = async (id: string) => {
+    if (!window.confirm('Voulez-vous vraiment rayer cette écriture de votre cahier ?')) {
+      return
+    }
+
+    setDeletingId(id)
+    try {
+      const response = await fetch('/api/sales', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'cross_out' }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (onError) {
+          onError(data.error || 'Erreur lors de la suppression')
+        } else {
+          alert(data.error || 'Erreur')
+        }
+        return
+      }
+
+      if (onSaleCrossedOut) {
+        onSaleCrossedOut(id)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur réseau'
+      if (onError) onError(msg)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  // Obtenir la classe de couleur de stylo appropriée
+  const getPenClass = (penColor: string, status: string) => {
+    if (status === 'crossed_out') {
+      return 'line-through opacity-30 decoration-red-600 decoration-2 select-none'
+    }
+    switch (penColor) {
+      case 'red': return 'ink-red'
+      case 'green': return 'ink-green'
+      case 'purple': return 'ink-purple'
+      case 'yellow': return 'ink-yellow'
+      case 'blue':
+      default:
+        return 'ink-blue'
+    }
+  }
+
+  const getTransactionTypeText = (type: string) => {
+    switch (type) {
+      case 'cash_in': return 'Vente Cash'
+      case 'cash_out': return 'Dépense'
+      case 'purchase_cash': return 'Achat Stock Cash'
+      case 'purchase_credit': return 'Achat Crédit (Grossiste)'
+      case 'sale_credit': return 'Vente Crédit (Client)'
+      case 'payment_client': return 'Remboursement reçu d\'un Client'
+      case 'payment_supplier': return 'Remboursement versé à un Grossiste'
+      default: return 'Transaction'
+    }
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Total</p>
-          <p className="text-lg font-bold text-blue-900 mt-1">
-            {formatPrice(totals.totalSales)}
-          </p>
-        </div>
-        <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-          <p className="text-xs text-green-600 font-semibold uppercase tracking-wide">Encaissé</p>
-          <p className="text-lg font-bold text-green-900 mt-1">
-            {formatPrice(totals.totalPaid)}
-          </p>
-        </div>
-        <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-          <p className="text-xs text-red-600 font-semibold uppercase tracking-wide">Dettes</p>
-          <p className="text-lg font-bold text-red-900 mt-1">
-            {formatPrice(totals.totalDebt)}
-          </p>
-        </div>
-      </div>
+    <div className="relative lined-paper rounded-2xl border border-gray-200 shadow-md p-2 pl-24 pr-4 py-6 overflow-hidden min-h-[300px]">
+      {/* Red vertical margin line represented in absolute coordinates */}
+      <div className="absolute left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
 
-      <div className="space-y-3">
-        {sales.map((sale) => (
-          <div
-            key={sale.id}
-            className={`rounded-lg border p-4 transition-colors ${
-              sale.status === 'paid'
-                ? 'bg-green-50 border-green-200'
-                : 'bg-red-50 border-red-200'
-            }`}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="font-semibold text-gray-900">{sale.client}</h3>
-                <p className="text-xs text-gray-600 mt-1">
-                  {sale.time} • {sale.date}
-                </p>
-              </div>
-              {sale.status === 'paid' ? (
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-              )}
-            </div>
+      <div className="lined-text-container space-y-0 text-lg">
+        {sales.map((sale) => {
+          const isCrossed = sale.status === 'crossed_out'
+          const penClass = getPenClass(sale.pen_color, sale.status)
+          const typeText = getTransactionTypeText(sale.type)
 
-            <div className="space-y-1 mb-3 pb-3 border-b border-gray-300 border-opacity-50">
-              {sale.articles.map((article, idx) => (
-                <div key={idx} className="flex justify-between text-sm">
-                  <span className="text-gray-700">
-                    {article.quantity}x {article.name}
+          return (
+            <div 
+              key={sale.id} 
+              className="lined-item group relative flex items-center justify-between border-b border-transparent hover:bg-gray-50 hover:bg-opacity-50 px-2 rounded-lg transition-all"
+              style={{ minHeight: '54px' }}
+            >
+              {/* Contenu textuel rédigé */}
+              <div className="flex-1 pr-4 py-1">
+                <div className={`leading-relaxed ${penClass}`}>
+                  <span className="text-xs uppercase tracking-wider font-mono mr-2 bg-gray-100 bg-opacity-70 px-1.5 py-0.5 rounded text-gray-500 font-sans border border-gray-200 no-underline select-none">
+                    {sale.time} • {typeText}
                   </span>
-                  <span className="text-gray-900 font-medium">
-                    {formatPrice(article.quantity * article.unit_price)}
-                  </span>
+                  <span className="font-semibold">{sale.client}</span> : {sale.notes}
+                  {sale.articles && sale.articles.length > 0 && (
+                    <span className="text-sm opacity-85 block ml-14 font-handwritten no-underline">
+                      └─ {sale.articles.map(a => `${a.quantity}x ${a.name} (@${a.unit_price} F)`).join(', ')}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
 
-            <div className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-700">Total facture:</span>
-                <span className="font-semibold text-gray-900">{formatPrice(sale.total)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className={sale.status === 'paid' ? 'text-green-700' : 'text-red-700'}>
-                  {sale.status === 'paid' ? '✓ Encaissé:' : '⚠️ Dû:'}
-                </span>
-                <span
-                  className={`font-semibold ${
-                    sale.status === 'paid' ? 'text-green-900' : 'text-red-900'
-                  }`}
-                >
-                  {formatPrice(sale.status === 'paid' ? sale.paid : sale.debt)}
-                </span>
+              {/* Montant financier & bouton d'action */}
+              <div className="flex items-center gap-4 flex-shrink-0">
+                <div className={`font-mono text-base font-bold whitespace-nowrap ${isCrossed ? 'line-through opacity-30' : 'text-gray-900'}`}>
+                  {sale.type === 'cash_out' || sale.type === 'purchase_cash' || sale.type === 'payment_supplier' ? '-' : '+'}
+                  {formatPrice(sale.total)}
+                </div>
+
+                {!isCrossed && (
+                  <button
+                    onClick={() => handleCrossOut(sale.id)}
+                    disabled={deletingId === sale.id}
+                    title="Rayer cette écriture"
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

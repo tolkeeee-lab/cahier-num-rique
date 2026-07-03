@@ -8,21 +8,82 @@
   box-sizing: border-box;
 }
 
-html {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+body {
+  background-color: #f4efe6;
+  font-family: var(--font-inter), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  background-color: #f9fafb;
+/* Lined notebook paper styling */
+.lined-paper {
+  background-color: #fffdf9;
+  background-image: 
+    /* Vertical red margin line at 80px */
+    linear-gradient(to right, transparent 80px, rgba(239, 68, 68, 0.3) 80px, rgba(239, 68, 68, 0.3) 82px, transparent 82px),
+    /* Horizontal blue lines every 36px (2.25rem) */
+    linear-gradient(to bottom, transparent 35px, rgba(56, 189, 248, 0.2) 35px, rgba(56, 189, 248, 0.2) 36px, transparent 36px);
+  background-size: 100% 100%, 100% 36px;
+  background-attachment: local;
+}
+
+/* Lined text align classes */
+.lined-text-container {
+  line-height: 36px;
+}
+
+.lined-item {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+/* Bic pen inks */
+.ink-blue {
+  color: #1d4ed8;
+  font-family: var(--font-playpen), cursive;
+  text-shadow: 0 0 0.5px rgba(29, 78, 216, 0.15);
+}
+
+.ink-red {
+  color: #dc2626;
+  font-family: var(--font-playpen), cursive;
+  text-shadow: 0 0 0.5px rgba(220, 38, 38, 0.15);
+}
+
+.ink-green {
+  color: #15803d;
+  font-family: var(--font-playpen), cursive;
+  text-shadow: 0 0 0.5px rgba(21, 128, 61, 0.15);
+}
+
+.ink-purple {
+  color: #6d28d9;
+  font-family: var(--font-playpen), cursive;
+  text-shadow: 0 0 0.5px rgba(109, 40, 217, 0.15);
+}
+
+.ink-yellow {
+  color: #b45309; /* Dark Amber to be readable on white paper */
+  font-family: var(--font-playpen), cursive;
+  text-shadow: 0 0 0.5px rgba(180, 83, 9, 0.15);
+}
+
+/* Notebook Cover Texture */
+.notebook-cover-left {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  position: relative;
+  box-shadow: inset -5px 0 10px rgba(0,0,0,0.5), 5px 0 15px rgba(0,0,0,0.3);
+}
+
+/* Ring Binding effects */
+.spiral-ring {
+  background: linear-gradient(to bottom, #d1d5db 0%, #9ca3af 45%, #374151 55%, #d1d5db 100%);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 textarea {
   resize: vertical;
-  font-family: inherit;
 }
 
 input:focus,
@@ -30,8 +91,12 @@ textarea:focus {
   outline: none;
 }
 
-@media (max-width: 640px) {
-  body {
-    font-size: 16px;
-  }
+/* Handwritten class helper */
+.handwritten {
+  font-family: var(--font-playpen), cursive;
+}
+
+/* Monospace numbers helper */
+.mono-numbers {
+  font-family: var(--font-mono), monospace;
 }

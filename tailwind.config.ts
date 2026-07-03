@@ -6,7 +6,13 @@ const config: Config = {
     './components/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)', 'sans-serif'],
+        handwritten: ['var(--font-playpen)', 'cursive'],
+        mono: ['var(--font-mono)', 'monospace'],
+      },
+    },
   },
   plugins: [],
 }
