@@ -623,60 +623,6 @@ export default function JournalPage() {
 
       {/* Main Tabbed Cahier Layout Container */}
       <div className="flex-grow flex flex-col relative z-10 max-w-5xl mx-auto w-full h-full">
-        
-        {/* Desktop tabs — hidden on mobile */}
-        <div className="hidden md:flex pl-20 -mb-[2px] relative z-10 select-none">
-          <button
-            onClick={() => setActiveTab('cahier')}
-            className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-              activeTab === 'cahier'
-                ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
-                : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
-            }`}
-          >
-            <Notebook className="w-3.5 h-3.5" />
-            MON CAHIER
-          </button>
-          {mappedUser?.role !== 'employee' && (
-            <button
-              onClick={() => setActiveTab('dettes')}
-              className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 -ml-1 ${
-                activeTab === 'dettes'
-                  ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
-                  : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
-              }`}
-            >
-              <BookText className="w-3.5 h-3.5" />
-              LIVRE DES DETTES
-            </button>
-          )}
-          {mappedUser?.role !== 'employee' && (
-            <button
-              onClick={() => setActiveTab('trends')}
-              className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 -ml-1 ${
-                (activeTab === 'trends')
-                  ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
-                  : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              ANALYSE MARCHÉ
-            </button>
-          )}
-          {mappedUser?.role !== 'employee' && (
-            <button
-              onClick={() => setActiveTab('archives')}
-              className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 -ml-1 ${
-                activeTab === 'archives'
-                  ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
-                  : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
-              }`}
-            >
-              <FolderArchive className="w-3.5 h-3.5" />
-              PLACARD D'ARCHIVE
-            </button>
-          )}
-        </div>
 
         {/* Notebook Main Open Plate Chassis */}
         <div className="bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-gray-300 shadow-none md:shadow-2xl flex relative z-0 h-dvh md:h-[720px] overflow-hidden">
@@ -720,16 +666,16 @@ export default function JournalPage() {
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-xl md:text-3xl">📖</span>
-                  <h1 className="text-base md:text-3xl font-bold text-gray-900 font-handwritten truncate">
-                    {mappedUser?.name || 'Cahier de Caisse'}
+                  <h1 className="text-base md:text-2xl font-bold text-gray-900 font-handwritten truncate">
+                    Cahier de Caisse Intelligent
                   </h1>
-                  {/* Role badge */}
+                  {/* Role + boutique badge */}
                   <span className={`hidden sm:inline text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border flex-shrink-0 ${
                     mappedUser?.role === 'employee' 
                       ? 'bg-blue-50 text-blue-700 border-blue-200' 
                       : 'bg-amber-50 text-amber-700 border-amber-200'
                   }`}>
-                    {mappedUser?.role === 'employee' ? '🙋' : '👑'}
+                    {mappedUser?.role === 'employee' ? '🙋' : '👑'} {mappedUser?.name}
                   </span>
                 </div>
                 <button
