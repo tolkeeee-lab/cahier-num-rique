@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
 import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive } from 'lucide-react'
-import { supabaseClient } from '@/lib/supabaseClient'
+import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { AuthScreen } from '@/components/AuthScreen'
 
 interface Sale {
@@ -86,6 +86,7 @@ const PENS = [
 ]
 
 export default function JournalPage() {
+  const isConfigured = isSupabaseClientConfigured()
   const [user, setUser] = useState<any>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [localDemo, setLocalDemo] = useState(false)
@@ -180,21 +181,37 @@ export default function JournalPage() {
 
   const loadFinancialData = async () => {
     try {
-      // 1. Charger toutes les ventes
-      const response = await fetch('/api/sales')
-      if (!response.ok) throw new Error('Erreur lors du chargement des écritures')
-      const data = await response.json()
-      const salesList = data.sales || []
+      let salesList = []
+      let clientsList = []
+      let suppliersList = []
 
-      // 2. Charger les dettes clients (argent dehors)
-      const clientsRes = await fetch('/api/debts?type=client')
-      const clientsData = await clientsRes.json()
-      const clientsList = clientsData.clients || []
+      const online = typeof window !== 'undefined' ? window.navigator.onLine : false
 
-      // 3. Charger les dettes fournisseurs (nos dettes)
-      const suppliersRes = await fetch('/api/debts?type=supplier')
-      const suppliersData = await suppliersRes.json()
-      const suppliersList = suppliersData.suppliers || []
+      if (isConfigured && online) {
+        // En ligne -> charger via le réseau
+        const response = await fetch('/api/sales')
+        if (!response.ok) throw new Error('Erreur lors du chargement des écritures')
+        const data = await response.json()
+        salesList = data.sales || []
+
+        const clientsRes = await fetch('/api/debts?type=client')
+        const clientsData = await clientsRes.json()
+        clientsList = clientsData.clients || []
+
+        const suppliersRes = await fetch('/api/debts?type=supplier')
+        const suppliersData = await suppliersRes.json()
+        suppliersList = suppliersData.suppliers || []
+
+        // Mettre en cache dans localStorage pour le mode hors-ligne
+        localStorage.setItem('cahier_offline_sales', JSON.stringify(salesList))
+        localStorage.setItem('cahier_offline_clients', JSON.stringify(clientsList))
+        localStorage.setItem('cahier_offline_suppliers', JSON.stringify(suppliersList))
+      } else {
+        // Hors-ligne -> charger les caches
+        salesList = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
+        clientsList = JSON.parse(localStorage.getItem('cahier_offline_clients') || '[]')
+        suppliersList = JSON.parse(localStorage.getItem('cahier_offline_suppliers') || '[]')
+      }
 
       // Calculer le tiroir caisse
       let cash = 0
@@ -211,8 +228,8 @@ export default function JournalPage() {
         }
       }
 
-      const clientDebtsSum = clientsList.reduce((sum: number, c: any) => sum + c.amount, 0)
-      const supplierDebtsSum = suppliersList.reduce((sum: number, s: any) => sum + s.amount, 0)
+      const clientDebtsSum = clientsList.reduce((sum: number, c: any) => sum + (c.amount || c.amount_owed || 0), 0)
+      const supplierDebtsSum = suppliersList.reduce((sum: number, s: any) => sum + (s.amount || s.amount_owed || 0), 0)
 
       setTiroirCaisse(cash)
       setArgentDehors(clientDebtsSum)
@@ -222,14 +239,40 @@ export default function JournalPage() {
       const todayStr = new Date().toISOString().split('T')[0]
       const todaysSales = salesList.filter((s: any) => s.date === todayStr)
       
-      // Trier par heure croissante pour avoir l'effet d'écriture chronologique de bas en haut ou haut en bas
-      // Le plus ancien en haut, le plus récent en bas pour le défilement
       setSales(todaysSales.reverse())
       setAllSales(salesList)
 
     } catch (err) {
-      console.error('Erreur:', err)
-      setPostItWarning('Impossible de charger les statistiques financières.')
+      console.warn('Echec de chargement réseau, chargement du cache hors-ligne...', err)
+      const salesList = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
+      const clientsList = JSON.parse(localStorage.getItem('cahier_offline_clients') || '[]')
+      const suppliersList = JSON.parse(localStorage.getItem('cahier_offline_suppliers') || '[]')
+
+      let cash = 0
+      for (const item of salesList) {
+        if (item.status === 'crossed_out') continue
+        const type = item.type
+        const paid = item.paid ?? 0
+        const total = item.total ?? 0
+
+        if (type === 'cash_in' || type === 'payment_client') {
+          cash += paid
+        } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
+          cash -= total
+        }
+      }
+
+      const clientDebtsSum = clientsList.reduce((sum: number, c: any) => sum + (c.amount || c.amount_owed || 0), 0)
+      const supplierDebtsSum = suppliersList.reduce((sum: number, s: any) => sum + (s.amount || s.amount_owed || 0), 0)
+
+      setTiroirCaisse(cash)
+      setArgentDehors(clientDebtsSum)
+      setNosDettes(supplierDebtsSum)
+
+      const todayStr = new Date().toISOString().split('T')[0]
+      const todaysSales = salesList.filter((s: any) => s.date === todayStr)
+      setSales(todaysSales.reverse())
+      setAllSales(salesList)
     }
   }
 
@@ -310,26 +353,180 @@ export default function JournalPage() {
     return merged.slice(0, 5)
   }
 
+  const parseTextLocallyClientSide = (text: string, penColor: string) => {
+    const articles: any[] = []
+    let totalFacture = 0
+    
+    const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/gi
+    let match
+    
+    while ((match = articleRegex.exec(text)) !== null) {
+      const qty = parseInt(match[1], 10)
+      const name = match[2].trim() || "Article(s)"
+      const price = parseInt(match[3], 10)
+
+      if (qty > 1 && qty >= price) {
+        continue
+      }
+
+      articles.push({
+        nom: name,
+        quantite: qty,
+        prix_unitaire: price
+      })
+      totalFacture += qty * price
+    }
+    
+    if (articles.length === 0) {
+      const amountRegex = /(?:total|montant|somme|de)?\s*(\d{3,7})(?:\s*f|\s*fcfa|\s*cfa|\s*francs)?/i
+      const amountMatch = text.match(amountRegex)
+      if (amountMatch) {
+        const amount = parseInt(amountMatch[1], 10)
+        totalFacture = amount
+        articles.push({
+          nom: "Transaction générale",
+          quantite: 1,
+          prix_unitaire: amount
+        })
+      }
+    }
+
+    let nomClient = "Client anonyme"
+    const clientRegex = /(?:pour|de|client|grossiste|fournisseur|a)\s+([A-Za-z]+)/i
+    const clientMatch = text.match(clientRegex)
+    if (clientMatch) {
+      nomClient = clientMatch[1].trim()
+      nomClient = nomClient.charAt(0).toUpperCase() + nomClient.slice(1)
+    }
+
+    return {
+      nom_client: nomClient,
+      articles,
+      total_facture: totalFacture,
+      montant_paye: (penColor === 'yellow' || penColor === 'purple') ? 0 : totalFacture,
+      montant_dette: (penColor === 'yellow' || penColor === 'purple') ? totalFacture : 0
+    }
+  }
+
   const submitTransaction = async (bodyData: { text: string; penColor: string; overrideData?: any }) => {
     setLoading(true)
     setPostItWarning(null)
 
+    const online = typeof window !== 'undefined' ? window.navigator.onLine : false
+
     try {
-      const response = await fetch('/api/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyData),
-      })
+      if (isConfigured && online) {
+        // Mode en ligne -> Envoyer à l'API
+        const response = await fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData),
+        })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (!response.ok) {
-        if (data.isSafeguardTriggered) {
-          setPostItWarning(data.error)
-        } else {
-          throw new Error(data.error || 'Erreur lors de l\'enregistrement')
+        if (!response.ok) {
+          if (data.isSafeguardTriggered) {
+            setPostItWarning(data.error)
+          } else {
+            throw new Error(data.error || 'Erreur lors de l\'enregistrement')
+          }
+          return
         }
-        return
+      } else {
+        // Mode hors-ligne / local fallback -> Enregistrer localement dans le cache localStorage
+        let parsed: any = null
+        const color = bodyData.penColor
+        const text = bodyData.text
+
+        if (bodyData.overrideData) {
+          parsed = {
+            nom_client: bodyData.overrideData.client_name || "Client anonyme",
+            articles: bodyData.overrideData.articles.map((a: any) => ({
+              nom: a.name || a.nom,
+              quantite: a.quantity || a.quantite,
+              prix_unitaire: a.unit_price || a.prix_unitaire
+            })),
+            total_facture: bodyData.overrideData.total_amount,
+            montant_paye: bodyData.overrideData.paid_amount,
+            montant_dette: bodyData.overrideData.debt_amount
+          }
+        } else {
+          parsed = parseTextLocallyClientSide(text, color)
+        }
+
+        // Déterminer le type
+        let type = 'cash_in'
+        if (color === 'red') type = 'cash_out'
+        else if (color === 'green') type = 'purchase_cash'
+        else if (color === 'purple') type = 'purchase_credit'
+        else if (color === 'yellow') type = 'sale_credit'
+
+        // Safeguard tiroir caisse
+        const isExpense = type === 'cash_out' || type === 'purchase_cash'
+        const expenseAmount = parsed.total_facture
+
+        if (isExpense && tiroirCaisse < expenseAmount) {
+          setPostItWarning(`Opération bloquée : Solde insuffisant dans le tiroir-caisse. Il vous manque ${expenseAmount - tiroirCaisse} FCFA.`)
+          return
+        }
+
+        // Créer l'objet transaction
+        const now = new Date()
+        const newSale = {
+          id: Math.random().toString(36).substring(2, 9),
+          date: now.toISOString().split('T')[0],
+          time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          client: parsed.nom_client, // mapping standard de l'objet
+          total: parsed.total_facture, // mapping standard de l'objet
+          paid: parsed.montant_paye, // mapping standard de l'objet
+          debt: parsed.montant_dette, // mapping standard de l'objet
+          status: parsed.montant_dette > 0 ? 'debt' : 'paid',
+          type: type,
+          pen_color: color,
+          notes: text,
+          articles: parsed.articles.map((a: any) => ({
+            name: a.nom,
+            quantity: a.quantite,
+            unit_price: a.prix_unitaire
+          })),
+          created_at: now.toISOString(),
+          is_synced: false
+        }
+
+        // Insérer dans les ventes caches
+        const offlineSales = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
+        offlineSales.push(newSale)
+        localStorage.setItem('cahier_offline_sales', JSON.stringify(offlineSales))
+
+        // Mettre à jour les dettes si nécessaire
+        if (parsed.montant_dette > 0) {
+          if (type === 'sale_credit') {
+            const clientsList = JSON.parse(localStorage.getItem('cahier_offline_clients') || '[]')
+            const existingClient = clientsList.find((c: any) => c.client_name?.toLowerCase() === parsed.nom_client.toLowerCase())
+            if (existingClient) {
+              existingClient.amount = (existingClient.amount || 0) + parsed.montant_dette
+            } else {
+              clientsList.push({
+                client_name: parsed.nom_client,
+                amount: parsed.montant_dette
+              })
+            }
+            localStorage.setItem('cahier_offline_clients', JSON.stringify(clientsList))
+          } else if (type === 'purchase_credit') {
+            const suppliersList = JSON.parse(localStorage.getItem('cahier_offline_suppliers') || '[]')
+            const existingSupplier = suppliersList.find((s: any) => s.client_name?.toLowerCase() === parsed.nom_client.toLowerCase())
+            if (existingSupplier) {
+              existingSupplier.amount = (existingSupplier.amount || 0) + parsed.montant_dette
+            } else {
+              suppliersList.push({
+                client_name: parsed.nom_client,
+                amount: parsed.montant_dette
+              })
+            }
+            localStorage.setItem('cahier_offline_suppliers', JSON.stringify(suppliersList))
+          }
+        }
       }
 
       setInput('')

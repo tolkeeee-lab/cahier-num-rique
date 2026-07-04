@@ -36,7 +36,7 @@ function formatPrice(price: number): string {
   }).format(price) + ' F'
 }
 
-export function SalesHistory({ sales, onSaleCrossedOut, onError }: SalesHistoryProps) {
+export function SalesHistory({ sales, onSaleCrossedOut }: SalesHistoryProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   if (sales.length === 0) return null
@@ -47,30 +47,45 @@ export function SalesHistory({ sales, onSaleCrossedOut, onError }: SalesHistoryP
     }
 
     setDeletingId(id)
+    const online = typeof window !== 'undefined' ? window.navigator.onLine : false
+
     try {
-      const response = await fetch('/api/sales', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action: 'cross_out' }),
-      })
+      if (online) {
+        const response = await fetch('/api/sales', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action: 'cross_out' }),
+        })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (!response.ok) {
-        if (onError) {
-          onError(data.error || 'Erreur lors de la suppression')
-        } else {
-          alert(data.error || 'Erreur')
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de la suppression')
         }
-        return
+      } else {
+        // Fallback hors-ligne local
+        const offlineSales = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
+        const idx = offlineSales.findIndex((s: any) => s.id === id)
+        if (idx > -1) {
+          offlineSales[idx].status = 'crossed_out'
+          localStorage.setItem('cahier_offline_sales', JSON.stringify(offlineSales))
+        }
       }
 
       if (onSaleCrossedOut) {
         onSaleCrossedOut(id)
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur réseau'
-      if (onError) onError(msg)
+      console.warn("Échec réseau, rature locale appliquée :", err)
+      const offlineSales = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
+      const idx = offlineSales.findIndex((s: any) => s.id === id)
+      if (idx > -1) {
+        offlineSales[idx].status = 'crossed_out'
+        localStorage.setItem('cahier_offline_sales', JSON.stringify(offlineSales))
+      }
+      if (onSaleCrossedOut) {
+        onSaleCrossedOut(id)
+      }
     } finally {
       setDeletingId(null)
     }
