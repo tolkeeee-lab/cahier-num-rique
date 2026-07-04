@@ -113,6 +113,10 @@ export default function JournalPage() {
     penColor: string
   } | null>(null)
 
+  const [showChangeCalc, setShowChangeCalc] = useState(false)
+  const [changeTotal, setChangeTotal] = useState('')
+  const [changeReceived, setChangeReceived] = useState('')
+
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -793,6 +797,130 @@ export default function JournalPage() {
                       )}
                     </button>
                   </form>
+
+                  {/* Petit Post-it collé pour le calcul de la monnaie */}
+                  <div className={`absolute right-4 bottom-20 z-20 transition-all duration-300 ${
+                    showChangeCalc ? 'w-64 bg-amber-100 border border-amber-300 shadow-xl p-4 rotate-1 rounded-sm' : 'w-36 bg-amber-200 hover:bg-[#fef08a] border border-amber-300 shadow-md p-2 cursor-pointer rotate-2 text-center rounded-sm'
+                  } select-none`}>
+                    {/* Ruban adhésif */}
+                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-4 bg-gray-300 bg-opacity-60 -rotate-2"></div>
+                    
+                    {!showChangeCalc ? (
+                      <div onClick={() => {
+                        if (sales.length > 0) {
+                          setChangeTotal(sales[0].total.toString())
+                        }
+                        setShowChangeCalc(true)
+                      }} className="pt-2">
+                        <span className="text-xl">💵</span>
+                        <p className="font-handwritten font-bold text-amber-900 text-xs mt-1">Calculer la monnaie</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col text-left">
+                        <div className="flex justify-between items-center border-b border-amber-200 pb-1 mb-2">
+                          <span className="font-handwritten font-bold text-amber-900 text-sm">💵 Rendu de Monnaie</span>
+                          <button type="button" onClick={() => setShowChangeCalc(false)} className="text-[10px] text-amber-700 hover:text-amber-900 font-bold font-mono">X</button>
+                        </div>
+
+                        {/* Input Total */}
+                        <div className="mb-2">
+                          <label className="text-[9px] uppercase font-bold text-amber-800 tracking-wider font-sans">À payer (FCFA) :</label>
+                          <input 
+                            type="number"
+                            placeholder="Ex: 6000"
+                            value={changeTotal}
+                            onChange={(e) => setChangeTotal(e.target.value)}
+                            className="w-full bg-white bg-opacity-70 border border-amber-300 rounded px-1.5 py-0.5 text-xs font-mono outline-none focus:border-amber-500"
+                          />
+                          {sales.length > 0 && sales[0].total !== parseInt(changeTotal) && (
+                            <button 
+                              type="button"
+                              onClick={() => setChangeTotal(sales[0].total.toString())}
+                              className="text-[8px] font-mono text-amber-800 underline mt-0.5 block"
+                            >
+                              Dernier total ({sales[0].total} F)
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Input Client Paid */}
+                        <div className="mb-2">
+                          <label className="text-[9px] uppercase font-bold text-amber-800 tracking-wider font-sans">Reçu du client :</label>
+                          <input 
+                            type="number"
+                            placeholder="Ex: 10000"
+                            value={changeReceived}
+                            onChange={(e) => setChangeReceived(e.target.value)}
+                            className="w-full bg-white bg-opacity-70 border border-amber-300 rounded px-1.5 py-0.5 text-xs font-mono outline-none focus:border-amber-500"
+                          />
+                          
+                          {/* Quick Cash Buttons */}
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {[1000, 2000, 5000, 10000].map(val => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => setChangeReceived(val.toString())}
+                                className="text-[8px] font-mono bg-white bg-opacity-90 border border-amber-300 px-1 rounded hover:bg-amber-50 text-amber-950 font-bold"
+                              >
+                                {val} F
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Result Section */}
+                        {parseInt(changeReceived) > 0 && (
+                          <div className="mt-2 pt-2 border-t border-dashed border-amber-300">
+                            {parseInt(changeReceived) >= (parseInt(changeTotal) || 0) ? (
+                              <div>
+                                <div className="text-[9px] uppercase font-bold text-amber-800 tracking-wider font-sans">À rendre :</div>
+                                <div className="font-handwritten text-xl font-bold text-emerald-800 mt-0.5">
+                                  {parseInt(changeReceived) - (parseInt(changeTotal) || 0)} F
+                                </div>
+                                <div className="text-[8px] font-mono text-gray-700 mt-1 leading-tight">
+                                  {/* Calcul des billets */}
+                                  {(() => {
+                                    const diff = parseInt(changeReceived) - (parseInt(changeTotal) || 0)
+                                    if (diff === 0) return "Compte juste, rien à rendre."
+                                    
+                                    const bills = []
+                                    let rem = diff
+                                    
+                                    const denom = [
+                                      { value: 10000, label: '10k F' },
+                                      { value: 5000, label: '5k F' },
+                                      { value: 2000, label: '2k F' },
+                                      { value: 1000, label: '1k F' },
+                                      { value: 500, label: '500 F' },
+                                    ]
+                                    
+                                    denom.forEach(d => {
+                                      const count = Math.floor(rem / d.value)
+                                      if (count > 0) {
+                                        bills.push(`${count}x ${d.label}`)
+                                        rem %= d.value
+                                      }
+                                    })
+
+                                    if (rem > 0) {
+                                      bills.push(`${rem} F`)
+                                    }
+
+                                    return "💵 Rendre : " + bills.join(" + ")
+                                  })()}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-[9px] font-sans font-bold text-red-700">
+                                Reçu insuffisant.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                 </div>
               )}
