@@ -346,19 +346,23 @@ export default function JournalPage() {
     e.preventDefault()
     if (!input.trim()) return
 
-    // Format: [quantité] [article] à/a/@ [montant]
-    const match = input.match(/(\d+)\s+(.+?)\s+(?:à|a|@)\s+(\d+)/i)
+    // 1. Nettoyer les espaces, points et virgules entre les chiffres (ex: "12 000" ou "12.000" -> "12000")
+    const sanitizedInput = input.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
+
+    // 2. Chercher le motif de calcul avec nom d'article optionnel
+    const match = sanitizedInput.match(/(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/i)
     if (match) {
       const quantity = parseInt(match[1], 10)
-      const item = match[2].trim()
+      const item = match[2].trim() || "Article(s)"
       const amount = parseInt(match[3], 10)
 
-      if (quantity > 1) {
+      // Seulement si la quantité est cohérente (supérieure à 1, plus petite que le montant, et max 1000)
+      if (quantity > 1 && quantity < amount && quantity <= 1000) {
         setCalculationQuery({
           quantity,
           item,
           amount,
-          rawText: input.trim(),
+          rawText: sanitizedInput,
           penColor: selectedPen
         })
         return
@@ -366,7 +370,7 @@ export default function JournalPage() {
     }
 
     await submitTransaction({
-      text: input.trim(),
+      text: sanitizedInput,
       penColor: selectedPen
     })
   }

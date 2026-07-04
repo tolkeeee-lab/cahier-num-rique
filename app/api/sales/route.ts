@@ -94,14 +94,16 @@ export async function POST(request: NextRequest) {
       }
     } else {
       const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'mock-key-for-build'
+      // Nettoyer les espaces, points et virgules entre les chiffres (ex: "12 000" -> "12000")
+      const sanitizedText = text.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
 
       if (hasApiKey) {
-        parsedData = await parseTextWithOpenAI(text, color)
+        parsedData = await parseTextWithOpenAI(sanitizedText, color)
       }
 
       // Fallback sur le parseur Regex local si pas de clé ou si l'IA échoue
       if (!parsedData) {
-        parsedData = parseTextLocally(text, color)
+        parsedData = parseTextLocally(sanitizedText, color)
       }
     }
 
@@ -477,13 +479,19 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
   let totalFacture = 0
   
   // Format: [quantité] [nom] à [prix] (ex: "10 mèches à 2000" ou "3 sacs de riz à 12000")
-  const articleRegex = /(\d+)\s+(.+?)\s+(?:à|a|@)\s+(\d+)/gi
+  const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/gi
   let match
   
   while ((match = articleRegex.exec(text)) !== null) {
     const qty = parseInt(match[1], 10)
-    const name = match[2].trim()
+    const name = match[2].trim() || "Article(s)"
     const price = parseInt(match[3], 10)
+
+    // Ignorer si c'est un faux positif (ex: la quantité est supérieure ou égale au prix unitaire)
+    if (qty > 1 && qty >= price) {
+      continue
+    }
+
     articles.push({
       nom: name,
       quantite: qty,
