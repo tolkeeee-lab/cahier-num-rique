@@ -30,12 +30,13 @@ interface ParsedSale {
 }
 
 // Calcule le solde actuel du tiroir-caisse (Cash)
-async function getCurrentCash(): Promise<number> {
+async function getCurrentCash(shopId: string): Promise<number> {
   if (isSupabaseConfigured()) {
     try {
       const { data, error } = await supabase
         .from('sales')
         .select('type, paid_amount, total_amount, status')
+        .eq('shop_id', shopId)
         .neq('status', 'crossed_out')
 
       if (error) throw error
@@ -44,7 +45,7 @@ async function getCurrentCash(): Promise<number> {
       console.error('Erreur lecture cash Supabase, repli sur local:', e)
     }
   }
-  return calculateCash(salesDatabase)
+  return calculateCash(salesDatabase.filter(s => s.shop_id === shopId))
 }
 
 function calculateCash(list: any[]): number {
@@ -67,6 +68,7 @@ function calculateCash(list: any[]): number {
 export async function POST(request: NextRequest) {
   try {
     const { text, penColor, overrideData } = await request.json()
+    const shopId = request.headers.get('x-shop-id') || 'default-shop'
 
     if ((!text || typeof text !== 'string' || text.trim().length === 0) && !overrideData) {
       return NextResponse.json(
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
     else if (color === 'yellow') type = 'sale_credit'
 
     // 3. Vérification des règles de solvabilité (Anti-solde négatif)
-    const currentCash = await getCurrentCash()
+    const currentCash = await getCurrentCash(shopId)
     const isExpense = type === 'cash_out' || type === 'purchase_cash'
     const expenseAmount = parsedData.total_facture
 
@@ -141,6 +143,7 @@ export async function POST(request: NextRequest) {
 
     const newSale = {
       id: saleId,
+      shop_id: shopId,
       date: dateStr,
       time: timeStr,
       client_name: parsedData.nom_client,
@@ -169,6 +172,7 @@ export async function POST(request: NextRequest) {
           .insert([
             {
               id: saleId,
+              shop_id: shopId,
               date: dateStr,
               time: timeStr,
               client_name: parsedData.nom_client,
@@ -212,6 +216,7 @@ export async function POST(request: NextRequest) {
               {
                 id: randomUUID(),
                 sale_id: saleId,
+                shop_id: shopId,
                 client_name: parsedData.nom_client,
                 amount_owed: parsedData.montant_dette,
                 status: 'pending',
@@ -229,6 +234,7 @@ export async function POST(request: NextRequest) {
             .insert([
               {
                 id: randomUUID(),
+                shop_id: shopId,
                 supplier_name: parsedData.nom_client, // Utilise le nom extrait du grossiste
                 amount: parsedData.montant_dette,
                 description: `Achat à crédit: ${text}`,
@@ -241,6 +247,7 @@ export async function POST(request: NextRequest) {
             .from('supplier_debts')
             .select('amount_owed')
             .eq('supplier_name', parsedData.nom_client)
+            .eq('shop_id', shopId)
             .single()
 
           if (currentDebt) {
@@ -248,12 +255,14 @@ export async function POST(request: NextRequest) {
               .from('supplier_debts')
               .update({ amount_owed: currentDebt.amount_owed + parsedData.montant_dette })
               .eq('supplier_name', parsedData.nom_client)
+              .eq('shop_id', shopId)
           } else {
             await supabase
               .from('supplier_debts')
               .insert([
                 {
                   id: randomUUID(),
+                  shop_id: shopId,
                   supplier_name: parsedData.nom_client,
                   amount_owed: parsedData.montant_dette,
                   paid_amount: 0,
@@ -303,6 +312,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const dateParam = searchParams.get('date')
+    const shopId = request.headers.get('x-shop-id') || 'default-shop'
 
     let sales = []
 
@@ -328,6 +338,7 @@ export async function GET(request: NextRequest) {
               unit_price
             )
           `)
+          .eq('shop_id', shopId)
           .order('created_at', { ascending: false })
 
         if (dateParam === 'today') {
@@ -358,10 +369,10 @@ export async function GET(request: NextRequest) {
         }))
       } catch (e) {
         console.error('Erreur lecture Supabase GET, repli sur local:', e)
-        sales = getLocalSales(dateParam)
+        sales = getLocalSales(dateParam, shopId)
       }
     } else {
-      sales = getLocalSales(dateParam)
+      sales = getLocalSales(dateParam, shopId)
     }
 
     return NextResponse.json({ sales })
@@ -378,6 +389,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const { id, action } = await request.json()
+    const shopId = request.headers.get('x-shop-id') || 'default-shop'
 
     if (action !== 'cross_out') {
       return NextResponse.json({ error: 'Action non reconnue' }, { status: 400 })
@@ -386,10 +398,10 @@ export async function PATCH(request: NextRequest) {
     // 1. Récupérer la transaction
     let transaction: any = null
     if (isSupabaseConfigured()) {
-      const { data } = await supabase.from('sales').select('*').eq('id', id).single()
+      const { data } = await supabase.from('sales').select('*').eq('id', id).eq('shop_id', shopId).single()
       transaction = data
     } else {
-      transaction = salesDatabase.find(s => s.id === id)
+      transaction = salesDatabase.find(s => s.id === id && s.shop_id === shopId)
     }
 
     if (!transaction) {
@@ -402,7 +414,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 2. Vérifier si rayer cette vente viole la règle du solde positif du tiroir-caisse
-    const currentCash = await getCurrentCash()
+    const currentCash = await getCurrentCash(shopId)
     const cashImpact = calculateSingleTransactionCashImpact(transaction)
 
     // Si on raye un cash-in (vente), on "retire" du cash. Si le solde devient négatif, on bloque.
@@ -423,6 +435,7 @@ export async function PATCH(request: NextRequest) {
         .from('sales')
         .update({ status: 'crossed_out' })
         .eq('id', id)
+        .eq('shop_id', shopId)
 
       if (error) throw error
 
@@ -432,11 +445,12 @@ export async function PATCH(request: NextRequest) {
           .from('debts')
           .update({ status: 'paid', notes: 'Annulé/Rayé' })
           .eq('sale_id', id)
+          .eq('shop_id', shopId)
       }
     }
 
     // Mettre à jour le cache local/mock
-    const idx = salesDatabase.findIndex(s => s.id === id)
+    const idx = salesDatabase.findIndex(s => s.id === id && s.shop_id === shopId)
     if (idx !== -1) {
       salesDatabase[idx].status = 'crossed_out'
     }
@@ -464,8 +478,8 @@ function calculateSingleTransactionCashImpact(item: any): number {
   return 0
 }
 
-function getLocalSales(dateParam: string | null): any[] {
-  let filtered = [...salesDatabase]
+function getLocalSales(dateParam: string | null, shopId: string): any[] {
+  let filtered = salesDatabase.filter(s => s.shop_id === shopId)
   if (dateParam === 'today') {
     const today = new Date().toISOString().split('T')[0]
     filtered = filtered.filter(s => s.date === today)

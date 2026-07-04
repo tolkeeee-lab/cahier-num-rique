@@ -23,6 +23,7 @@ interface EntityDebts {
 interface DebtsBookProps {
   onRefreshTotals: () => void
   onError: (msg: string) => void
+  shopId?: string
 }
 
 function formatPrice(price: number): string {
@@ -31,7 +32,7 @@ function formatPrice(price: number): string {
   }).format(price) + ' FCFA'
 }
 
-export function DebtsBook({ onRefreshTotals, onError }: DebtsBookProps) {
+export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) {
   const [activeSubTab, setActiveSubTab] = useState<'client' | 'supplier'>('client')
   const [searchQuery, setSearchQuery] = useState('')
   const [entities, setEntities] = useState<EntityDebts[]>([])
@@ -52,7 +53,9 @@ export function DebtsBook({ onRefreshTotals, onError }: DebtsBookProps) {
   const loadDebts = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/debts?type=${activeSubTab}`)
+      const headers: Record<string, string> = {}
+      if (shopId) headers['x-shop-id'] = shopId
+      const response = await fetch(`/api/debts?type=${activeSubTab}`, { headers })
       if (!response.ok) throw new Error('Erreur lors du chargement des dettes')
       const data = await response.json()
       
@@ -85,9 +88,11 @@ export function DebtsBook({ onRefreshTotals, onError }: DebtsBookProps) {
 
     setActionLoading(true)
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (shopId) headers['x-shop-id'] = shopId
       const response = await fetch('/api/debts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           name: selectedEntityName,
           amount: amountNum,
@@ -127,9 +132,11 @@ export function DebtsBook({ onRefreshTotals, onError }: DebtsBookProps) {
 
     setActionLoading(true)
     try {
+      const headers2: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (shopId) headers2['x-shop-id'] = shopId
       const response = await fetch('/api/debts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers2,
         body: JSON.stringify({
           name: selectedEntityName,
           amount: amountNum,

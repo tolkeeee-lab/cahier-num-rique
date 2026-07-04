@@ -88,8 +88,24 @@ const PENS = [
 export default function JournalPage() {
   const isConfigured = isSupabaseClientConfigured()
   const [user, setUser] = useState<any>(null)
+  
+  const getMappedUser = (rawUser: any) => {
+    if (!rawUser) return null
+    const meta = rawUser.user_metadata || {}
+    return {
+      id: rawUser.id,
+      email: rawUser.email,
+      name: meta.full_name || rawUser.full_name || 'Utilisateur',
+      role: meta.role || rawUser.role || 'owner',
+      shop_id: meta.shop_id || rawUser.shop_id || rawUser.id || 'default-shop'
+    }
+  }
+
+  const mappedUser = getMappedUser(user)
   const [authLoading, setAuthLoading] = useState(true)
-  const [localDemo, setLocalDemo] = useState(false)
+  const [demoRole, setDemoRole] = useState<'owner' | 'employee' | null>(null)
+  // localDemo kept for backward compat - true when using demo bypass
+  const localDemo = demoRole !== null
 
   const [sales, setSales] = useState<Sale[]>([])
   const [tiroirCaisse, setTiroirCaisse] = useState(0)
@@ -169,7 +185,8 @@ export default function JournalPage() {
   const handleLogout = async () => {
     localStorage.removeItem('cahier_mock_session')
     if (localDemo) {
-      setLocalDemo(false)
+      setDemoRole(null)
+      setUser(null)
     } else {
       await supabaseClient.auth.signOut()
       setUser(null)
@@ -184,37 +201,40 @@ export default function JournalPage() {
   }, [sales, activeTab])
 
   const loadFinancialData = async () => {
+    if (!mappedUser) return
     try {
       let salesList = []
       let clientsList = []
       let suppliersList = []
 
       const online = typeof window !== 'undefined' ? window.navigator.onLine : false
+      const shopId = mappedUser.shop_id
 
       if (isConfigured && online) {
         // En ligne -> charger via le réseau
-        const response = await fetch('/api/sales')
+        const headers = { 'x-shop-id': shopId }
+        const response = await fetch('/api/sales', { headers })
         if (!response.ok) throw new Error('Erreur lors du chargement des écritures')
         const data = await response.json()
         salesList = data.sales || []
 
-        const clientsRes = await fetch('/api/debts?type=client')
+        const clientsRes = await fetch('/api/debts?type=client', { headers })
         const clientsData = await clientsRes.json()
         clientsList = clientsData.clients || []
 
-        const suppliersRes = await fetch('/api/debts?type=supplier')
+        const suppliersRes = await fetch('/api/debts?type=supplier', { headers })
         const suppliersData = await suppliersRes.json()
         suppliersList = suppliersData.suppliers || []
 
         // Mettre en cache dans localStorage pour le mode hors-ligne
-        localStorage.setItem('cahier_offline_sales', JSON.stringify(salesList))
-        localStorage.setItem('cahier_offline_clients', JSON.stringify(clientsList))
-        localStorage.setItem('cahier_offline_suppliers', JSON.stringify(suppliersList))
+        localStorage.setItem(`cahier_offline_sales_${shopId}`, JSON.stringify(salesList))
+        localStorage.setItem(`cahier_offline_clients_${shopId}`, JSON.stringify(clientsList))
+        localStorage.setItem(`cahier_offline_suppliers_${shopId}`, JSON.stringify(suppliersList))
       } else {
         // Hors-ligne -> charger les caches
-        salesList = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
-        clientsList = JSON.parse(localStorage.getItem('cahier_offline_clients') || '[]')
-        suppliersList = JSON.parse(localStorage.getItem('cahier_offline_suppliers') || '[]')
+        salesList = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
+        clientsList = JSON.parse(localStorage.getItem(`cahier_offline_clients_${shopId}`) || '[]')
+        suppliersList = JSON.parse(localStorage.getItem(`cahier_offline_suppliers_${shopId}`) || '[]')
       }
 
       // Calculer le tiroir caisse
@@ -248,9 +268,10 @@ export default function JournalPage() {
 
     } catch (err) {
       console.warn('Echec de chargement réseau, chargement du cache hors-ligne...', err)
-      const salesList = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
-      const clientsList = JSON.parse(localStorage.getItem('cahier_offline_clients') || '[]')
-      const suppliersList = JSON.parse(localStorage.getItem('cahier_offline_suppliers') || '[]')
+      const shopId = mappedUser.shop_id
+      const salesList = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
+      const clientsList = JSON.parse(localStorage.getItem(`cahier_offline_clients_${shopId}`) || '[]')
+      const suppliersList = JSON.parse(localStorage.getItem(`cahier_offline_suppliers_${shopId}`) || '[]')
 
       let cash = 0
       for (const item of salesList) {
@@ -388,17 +409,22 @@ export default function JournalPage() {
   }
 
   const submitTransaction = async (bodyData: { text: string; penColor: string; overrideData?: any }) => {
+    if (!mappedUser) return
     setLoading(true)
     setPostItWarning(null)
 
     const online = typeof window !== 'undefined' ? window.navigator.onLine : false
+    const shopId = mappedUser.shop_id
 
     try {
       if (isConfigured && online) {
         // Mode en ligne -> Envoyer à l'API
         const response = await fetch('/api/sales', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId
+          },
           body: JSON.stringify(bodyData),
         })
 
@@ -454,6 +480,7 @@ export default function JournalPage() {
         const now = new Date()
         const newSale = {
           id: Math.random().toString(36).substring(2, 9),
+          shop_id: shopId,
           date: now.toISOString().split('T')[0],
           time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
           client: parsed.nom_client, // mapping standard de l'objet
@@ -474,14 +501,14 @@ export default function JournalPage() {
         }
 
         // Insérer dans les ventes caches
-        const offlineSales = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
+        const offlineSales = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
         offlineSales.push(newSale)
-        localStorage.setItem('cahier_offline_sales', JSON.stringify(offlineSales))
+        localStorage.setItem(`cahier_offline_sales_${shopId}`, JSON.stringify(offlineSales))
 
         // Mettre à jour les dettes si nécessaire
         if (parsed.montant_dette > 0) {
           if (type === 'sale_credit') {
-            const clientsList = JSON.parse(localStorage.getItem('cahier_offline_clients') || '[]')
+            const clientsList = JSON.parse(localStorage.getItem(`cahier_offline_clients_${shopId}`) || '[]')
             const existingClient = clientsList.find((c: any) => c.client_name?.toLowerCase() === parsed.nom_client.toLowerCase())
             if (existingClient) {
               existingClient.amount = (existingClient.amount || 0) + parsed.montant_dette
@@ -491,9 +518,9 @@ export default function JournalPage() {
                 amount: parsed.montant_dette
               })
             }
-            localStorage.setItem('cahier_offline_clients', JSON.stringify(clientsList))
+            localStorage.setItem(`cahier_offline_clients_${shopId}`, JSON.stringify(clientsList))
           } else if (type === 'purchase_credit') {
-            const suppliersList = JSON.parse(localStorage.getItem('cahier_offline_suppliers') || '[]')
+            const suppliersList = JSON.parse(localStorage.getItem(`cahier_offline_suppliers_${shopId}`) || '[]')
             const existingSupplier = suppliersList.find((s: any) => s.client_name?.toLowerCase() === parsed.nom_client.toLowerCase())
             if (existingSupplier) {
               existingSupplier.amount = (existingSupplier.amount || 0) + parsed.montant_dette
@@ -503,7 +530,7 @@ export default function JournalPage() {
                 amount: parsed.montant_dette
               })
             }
-            localStorage.setItem('cahier_offline_suppliers', JSON.stringify(suppliersList))
+            localStorage.setItem(`cahier_offline_suppliers_${shopId}`, JSON.stringify(suppliersList))
           }
         }
       }
@@ -572,20 +599,33 @@ export default function JournalPage() {
   }
 
   if (!user && !localDemo) {
-    return <AuthScreen onBypass={() => setLocalDemo(true)} onLoginSuccess={(usr) => setUser(usr)} />
+    return <AuthScreen 
+      onBypass={(role) => {
+        setDemoRole(role)
+        // Create a synthetic demo user so mappedUser resolves correctly
+        setUser({
+          id: `demo-${role}-001`,
+          email: `demo-${role}@cahier.local`,
+          full_name: role === 'owner' ? '👑 Démo Propriétaire' : '🙋 Démo Gérant',
+          role: role,
+          shop_id: role === 'owner' ? 'demo-owner-shop' : 'demo-owner-shop'
+        })
+      }}
+      onLoginSuccess={(usr) => setUser(usr)}
+    />
   }
 
   return (
-    <main className="min-h-screen py-8 px-4 max-w-7xl mx-auto flex flex-col gap-6 relative">
+    <main className="min-h-dvh md:min-h-screen md:py-8 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative">
       
       {/* Lamp Highlight overlay for desk immersion */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-amber-500 opacity-[0.03] rounded-full blur-[120px] pointer-events-none z-0"></div>
 
       {/* Main Tabbed Cahier Layout Container */}
-      <div className="flex-grow flex flex-col relative z-10 max-w-5xl mx-auto w-full">
+      <div className="flex-grow flex flex-col relative z-10 max-w-5xl mx-auto w-full h-full">
         
-        {/* School board divider tabs (Onglets d'écolier cartonné) */}
-        <div className="flex pl-20 -mb-[2px] relative z-10 select-none">
+        {/* Desktop tabs — hidden on mobile */}
+        <div className="hidden md:flex pl-20 -mb-[2px] relative z-10 select-none">
           <button
             onClick={() => setActiveTab('cahier')}
             className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
@@ -597,46 +637,52 @@ export default function JournalPage() {
             <Notebook className="w-3.5 h-3.5" />
             MON CAHIER
           </button>
-          <button
-            onClick={() => setActiveTab('dettes')}
-            className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 -ml-1 ${
-              activeTab === 'dettes'
-                ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
-                : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
-            }`}
-          >
-            <BookText className="w-3.5 h-3.5" />
-            LIVRE DES DETTES
-          </button>
-          <button
-            onClick={() => setActiveTab('trends')}
-            className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 -ml-1 ${
-              (activeTab === 'trends')
-                ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
-                : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            ANALYSE MARCHÉ
-          </button>
-          <button
-            onClick={() => setActiveTab('archives')}
-            className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 -ml-1 ${
-              activeTab === 'archives'
-                ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
-                : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
-            }`}
-          >
-            <FolderArchive className="w-3.5 h-3.5" />
-            PLACARD D'ARCHIVE
-          </button>
+          {mappedUser?.role !== 'employee' && (
+            <button
+              onClick={() => setActiveTab('dettes')}
+              className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 -ml-1 ${
+                activeTab === 'dettes'
+                  ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
+                  : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
+              }`}
+            >
+              <BookText className="w-3.5 h-3.5" />
+              LIVRE DES DETTES
+            </button>
+          )}
+          {mappedUser?.role !== 'employee' && (
+            <button
+              onClick={() => setActiveTab('trends')}
+              className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 -ml-1 ${
+                (activeTab === 'trends')
+                  ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
+                  : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              ANALYSE MARCHÉ
+            </button>
+          )}
+          {mappedUser?.role !== 'employee' && (
+            <button
+              onClick={() => setActiveTab('archives')}
+              className={`notebook-tab px-6 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 -ml-1 ${
+                activeTab === 'archives'
+                  ? 'bg-[#fdfaf2] text-gray-900 border-t border-x border-gray-300 pb-3.5 z-20'
+                  : 'bg-[#cfc8bc] text-gray-700 border border-gray-300 hover:bg-[#dcd6c9]'
+              }`}
+            >
+              <FolderArchive className="w-3.5 h-3.5" />
+              PLACARD D'ARCHIVE
+            </button>
+          )}
         </div>
 
         {/* Notebook Main Open Plate Chassis */}
-        <div className="bg-[#fdfaf2] rounded-3xl border border-gray-300 shadow-2xl flex relative z-0 h-[720px] overflow-hidden">
+        <div className="bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-gray-300 shadow-none md:shadow-2xl flex relative z-0 h-dvh md:h-[720px] overflow-hidden">
           
-          {/* Left leather cover binder spine */}
-          <div className="w-16 notebook-cover-left flex flex-col items-center justify-between py-12 z-10 flex-shrink-0 select-none">
+          {/* Left leather cover binder spine — hidden on mobile */}
+          <div className="hidden md:flex w-16 notebook-cover-left flex-col items-center justify-between py-12 z-10 flex-shrink-0 select-none">
             {/* Top brass screw */}
             <div className="brass-screw"></div>
             
@@ -655,8 +701,8 @@ export default function JournalPage() {
             <div className="brass-screw"></div>
           </div>
 
-          {/* Copper/Brass Spiral loops column (absolute positioned over the spine border) */}
-          <div className="absolute left-[54px] top-0 bottom-0 w-5 flex flex-col items-center justify-around py-6 z-20 pointer-events-none">
+          {/* Spiral loops — hidden on mobile */}
+          <div className="hidden md:flex absolute left-[54px] top-0 bottom-0 w-5 flex-col items-center justify-around py-6 z-20 pointer-events-none">
             {spiralRings.map((_, i) => (
               <div 
                 key={i} 
@@ -669,40 +715,101 @@ export default function JournalPage() {
           <div className="flex-1 flex flex-col h-full bg-[#fdfaf2] relative">
             
             {/* Header Area Inside the page */}
-            <div className="p-6 pb-4 border-b border-dashed border-sky-300 border-opacity-40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 select-none">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 font-handwritten flex items-center gap-1.5 text-3xl">
-                  📖 Cahier de Caisse Intelligent
-                </h1>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wide">
-                    200 PAGES • SANS MOBILE MONEY • 100% CASH
-                  </p>
-                  <span className="text-gray-300 text-[10px] select-none">•</span>
-                  <button
-                    onClick={handleLogout}
-                    className="text-[10px] text-red-600 hover:text-red-800 font-bold uppercase tracking-wider underline transition-colors"
-                  >
-                    Fermer le cahier (Déconnexion)
-                  </button>
+            <div className="px-3 py-2 md:p-6 md:pb-4 border-b border-dashed border-sky-300 border-opacity-40 select-none">
+              {/* Top row: title + logout */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xl md:text-3xl">📖</span>
+                  <h1 className="text-base md:text-3xl font-bold text-gray-900 font-handwritten truncate">
+                    {mappedUser?.name || 'Cahier de Caisse'}
+                  </h1>
+                  {/* Role badge */}
+                  <span className={`hidden sm:inline text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                    mappedUser?.role === 'employee' 
+                      ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}>
+                    {mappedUser?.role === 'employee' ? '🙋' : '👑'}
+                  </span>
                 </div>
+                <button
+                  onClick={handleLogout}
+                  title="Déconnexion"
+                  className="flex-shrink-0 text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-wider border border-red-200 rounded-full px-2 py-1 transition-colors"
+                >
+                  Quitter
+                </button>
               </div>
 
-              {/* Three Pillars KPIs inside the page header */}
-              <div className="flex gap-3 flex-wrap">
-                <div className="bg-[#fffdf9] border border-emerald-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm">
-                  <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wide">💰 Argent dans le tiroir (Cash)</span>
-                  <span className="font-mono text-sm font-bold text-emerald-950 mt-0.5">{formatPrice(tiroirCaisse)}</span>
+              {/* KPIs — horizontal scroll on mobile */}
+              <div className="flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
+                <div className="bg-[#fffdf9] border border-emerald-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
+                  <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wide whitespace-nowrap">💰 Tiroir Cash</span>
+                  <span className="font-mono text-sm font-bold text-emerald-950 mt-0.5 whitespace-nowrap">{formatPrice(tiroirCaisse)}</span>
                 </div>
-                <div className="bg-[#fffdf9] border border-rose-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm">
-                  <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wide">🔴 Argent dehors (Crédits)</span>
-                  <span className="font-mono text-sm font-bold text-rose-950 mt-0.5">{formatPrice(argentDehors)}</span>
+                <div className="bg-[#fffdf9] border border-rose-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
+                  <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wide whitespace-nowrap">🔴 Crédits dehors</span>
+                  <span className="font-mono text-sm font-bold text-rose-950 mt-0.5 whitespace-nowrap">{formatPrice(argentDehors)}</span>
                 </div>
-                <div className="bg-[#fffdf9] border border-purple-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm">
-                  <span className="text-[8px] font-bold text-purple-700 uppercase tracking-wide">🟣 Nos Dettes (Fournisseurs)</span>
-                  <span className="font-mono text-sm font-bold text-purple-950 mt-0.5">{formatPrice(nosDettes)}</span>
+                <div className="bg-[#fffdf9] border border-purple-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
+                  <span className="text-[8px] font-bold text-purple-700 uppercase tracking-wide whitespace-nowrap">🟣 Nos Dettes</span>
+                  <span className="font-mono text-sm font-bold text-purple-950 mt-0.5 whitespace-nowrap">{formatPrice(nosDettes)}</span>
                 </div>
               </div>
+            </div>
+
+            {/* In-page horizontal tab bar — scrollable, matches desktop look inside the page */}
+            <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-200 bg-[#f7f3ea] select-none flex-shrink-0">
+              <button
+                onClick={() => setActiveTab('cahier')}
+                className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                  activeTab === 'cahier'
+                    ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
+                }`}
+              >
+                <Notebook className="w-3.5 h-3.5" />
+                Mon Cahier
+              </button>
+              {mappedUser?.role !== 'employee' && (
+                <button
+                  onClick={() => setActiveTab('dettes')}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                    activeTab === 'dettes'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
+                  }`}
+                >
+                  <BookText className="w-3.5 h-3.5" />
+                  Livre des Dettes
+                </button>
+              )}
+              {mappedUser?.role !== 'employee' && (
+                <button
+                  onClick={() => setActiveTab('trends')}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                    activeTab === 'trends'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  Analyse Marché
+                </button>
+              )}
+              {mappedUser?.role !== 'employee' && (
+                <button
+                  onClick={() => setActiveTab('archives')}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                    activeTab === 'archives'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
+                  }`}
+                >
+                  <FolderArchive className="w-3.5 h-3.5" />
+                  Placard d'Archive
+                </button>
+              )}
             </div>
 
             {/* Content view based on active tab */}
@@ -711,33 +818,38 @@ export default function JournalPage() {
               {activeTab === 'cahier' && (
                 <div className="flex-1 flex flex-col h-full overflow-hidden relative">
                   
-                  {/* Bic 4-couleurs selector bar inside the page */}
-                  <div className="px-6 py-3 border-b border-gray-100 flex flex-wrap items-center gap-4 bg-white bg-opacity-40 select-none z-10">
-                    <span className="text-xs font-bold text-gray-500 font-mono tracking-wider">
-                      🖊️ CHOISI TON STYLO BIC :
+                  {/* Pen selector — compact circles on mobile, pills on desktop */}
+                  <div className="px-3 md:px-6 py-2 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-4 bg-white bg-opacity-40 select-none z-10 overflow-x-auto scrollbar-hide">
+                    <span className="hidden md:block text-xs font-bold text-gray-500 font-mono tracking-wider flex-shrink-0">
+                      🖊️ STYLO BIC :
                     </span>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex gap-2 md:gap-2 flex-nowrap">
                       {PENS.map((pen) => {
                         const isSelected = selectedPen === pen.id
                         return (
                           <button
                             key={pen.id}
                             type="button"
-                            onClick={() => {
-                              setSelectedPen(pen.id)
-                            }}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold tracking-wide transition-all ${
+                            title={pen.name}
+                            onClick={() => setSelectedPen(pen.id)}
+                            className={`flex items-center gap-1.5 transition-all flex-shrink-0 ${
                               isSelected
                                 ? `${pen.bg} ${pen.border} text-white shadow-sm scale-105`
                                 : 'bg-white bg-opacity-65 border-gray-200 text-gray-600 hover:bg-white'
-                            }`}
+                            } 
+                            md:px-3 md:py-1 md:rounded-full md:border md:text-[10px] md:font-bold md:tracking-wide
+                            px-2.5 py-2.5 rounded-full border`}
                           >
-                            <span className={`w-2 h-2 rounded-full ${pen.dotBg}`}></span>
-                            {pen.name}
+                            <span className={`w-2.5 h-2.5 md:w-2 md:h-2 rounded-full flex-shrink-0 ${pen.dotBg}`}></span>
+                            <span className="hidden md:inline text-[10px] font-bold tracking-wide">{pen.name}</span>
                           </button>
                         )
                       })}
                     </div>
+                    {/* Show current pen label on mobile */}
+                    <span className="md:hidden text-[10px] font-bold text-gray-600 flex-shrink-0 ml-1">
+                      {PENS.find(p => p.id === selectedPen)?.name}
+                    </span>
                   </div>
 
                   {/* Scrollable Seyes lined area inside the page */}
@@ -750,6 +862,8 @@ export default function JournalPage() {
                         sales={sales} 
                         onSaleCrossedOut={handleSaleCrossedOut} 
                         onError={handleError} 
+                        shopId={mappedUser?.shop_id}
+                        isEmployee={mappedUser?.role === 'employee'}
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center p-24 text-center min-h-[350px] no-underline">
@@ -766,15 +880,16 @@ export default function JournalPage() {
                   {/* Sticky writing input bar pinned to the bottom of the page */}
                   <form 
                     onSubmit={handleSubmit}
-                    className="absolute bottom-0 left-0 right-0 bg-[#fefdfa] border-t border-gray-200 py-3 px-6 pl-24 flex items-center gap-4 z-10 shadow-lg"
+                    className="absolute bottom-0 left-0 right-0 bg-[#fefdfa] border-t border-gray-200 py-3 px-3 md:px-6 md:pl-24 flex items-center gap-2 md:gap-4 z-10 shadow-lg"
                   >
-                    {/* Red margin overlay line over the bottom bar for seamless notebook look */}
-                    <div className="absolute left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
+                    {/* Red margin line — desktop only */}
+                    <div className="hidden md:block absolute left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
 
-                    {/* Clock time representation on the left margin */}
-                    <div className="absolute left-4 font-mono text-xs text-gray-400 font-bold select-none w-14 text-right pr-2">
+                    {/* Clock — desktop only in left margin, mobile inline badge */}
+                    <div className="hidden md:block absolute left-4 font-mono text-xs text-gray-400 font-bold select-none w-14 text-right pr-2">
                       ⏰ {currentTime}
                     </div>
+                    <span className="md:hidden text-[10px] font-mono text-gray-400 font-bold flex-shrink-0">⏰</span>
 
                     <input
                       type="text"
@@ -796,143 +911,137 @@ export default function JournalPage() {
                         <Send className="w-4 h-4" />
                       )}
                     </button>
-                  </form>
 
-                  {/* Petit Post-it collé pour le calcul de la monnaie */}
-                  <div className={`absolute right-4 bottom-20 z-20 transition-all duration-300 ${
-                    showChangeCalc ? 'w-64 bg-amber-100 border border-amber-300 shadow-xl p-4 rotate-1 rounded-sm' : 'w-36 bg-amber-200 hover:bg-[#fef08a] border border-amber-300 shadow-md p-2 cursor-pointer rotate-2 text-center rounded-sm'
-                  } select-none`}>
-                    {/* Ruban adhésif */}
-                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-4 bg-gray-300 bg-opacity-60 -rotate-2"></div>
-                    
-                    {!showChangeCalc ? (
-                      <div onClick={() => {
-                        if (sales.length > 0) {
-                          setChangeTotal(sales[0].total.toString())
-                        }
-                        setShowChangeCalc(true)
-                      }} className="pt-2">
-                        <span className="text-xl">💵</span>
-                        <p className="font-handwritten font-bold text-amber-900 text-xs mt-1">Calculer la monnaie</p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col text-left">
-                        <div className="flex justify-between items-center border-b border-amber-200 pb-1 mb-2">
-                          <span className="font-handwritten font-bold text-amber-900 text-sm">💵 Rendu de Monnaie</span>
-                          <button type="button" onClick={() => setShowChangeCalc(false)} className="text-[10px] text-amber-700 hover:text-amber-900 font-bold font-mono">X</button>
+                    {/* Post-it calculette de monnaie — INSIDE the form, s'ouvre vers le haut */}
+                    <div className={`absolute right-4 bottom-full mb-2 z-30 transition-all duration-300 ${
+                      showChangeCalc
+                        ? 'w-64 bg-amber-100 border border-amber-300 shadow-xl p-4 rotate-1 rounded-sm'
+                        : 'w-36 bg-amber-200 hover:bg-[#fef08a] border border-amber-300 shadow-md p-2 cursor-pointer rotate-2 text-center rounded-sm'
+                    } select-none`}>
+                      {/* Ruban adhésif */}
+                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-4 bg-gray-300 bg-opacity-60 -rotate-2"></div>
+
+                      {!showChangeCalc ? (
+                        <div onClick={() => {
+                          if (sales.length > 0) {
+                            setChangeTotal(sales[0].total.toString())
+                          }
+                          setShowChangeCalc(true)
+                        }} className="pt-2">
+                          <span className="text-xl">💵</span>
+                          <p className="font-handwritten font-bold text-amber-900 text-xs mt-1">Calculer la monnaie</p>
                         </div>
-
-                        {/* Input Total */}
-                        <div className="mb-2">
-                          <label className="text-[9px] uppercase font-bold text-amber-800 tracking-wider font-sans">À payer (FCFA) :</label>
-                          <input 
-                            type="number"
-                            placeholder="Ex: 6000"
-                            value={changeTotal}
-                            onChange={(e) => setChangeTotal(e.target.value)}
-                            className="w-full bg-white bg-opacity-70 border border-amber-300 rounded px-1.5 py-0.5 text-xs font-mono outline-none focus:border-amber-500"
-                          />
-                          {sales.length > 0 && sales[0].total !== parseInt(changeTotal) && (
-                            <button 
-                              type="button"
-                              onClick={() => setChangeTotal(sales[0].total.toString())}
-                              className="text-[8px] font-mono text-amber-800 underline mt-0.5 block"
-                            >
-                              Dernier total ({sales[0].total} F)
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Input Client Paid */}
-                        <div className="mb-2">
-                          <label className="text-[9px] uppercase font-bold text-amber-800 tracking-wider font-sans">Reçu du client :</label>
-                          <input 
-                            type="number"
-                            placeholder="Ex: 10000"
-                            value={changeReceived}
-                            onChange={(e) => setChangeReceived(e.target.value)}
-                            className="w-full bg-white bg-opacity-70 border border-amber-300 rounded px-1.5 py-0.5 text-xs font-mono outline-none focus:border-amber-500"
-                          />
-                          
-                          {/* Quick Cash Buttons */}
-                          <div className="flex gap-1 mt-1 flex-wrap">
-                            {[1000, 2000, 5000, 10000].map(val => (
-                              <button
-                                key={val}
-                                type="button"
-                                onClick={() => setChangeReceived(val.toString())}
-                                className="text-[8px] font-mono bg-white bg-opacity-90 border border-amber-300 px-1 rounded hover:bg-amber-50 text-amber-950 font-bold"
-                              >
-                                {val} F
-                              </button>
-                            ))}
+                      ) : (
+                        <div className="flex flex-col text-left">
+                          <div className="flex justify-between items-center border-b border-amber-200 pb-1 mb-2">
+                            <span className="font-handwritten font-bold text-amber-900 text-sm">💵 Rendu de Monnaie</span>
+                            <button type="button" onClick={() => setShowChangeCalc(false)} className="text-[10px] text-amber-700 hover:text-amber-900 font-bold font-mono">X</button>
                           </div>
-                        </div>
 
-                        {/* Result Section */}
-                        {parseInt(changeReceived) > 0 && (
-                          <div className="mt-2 pt-2 border-t border-dashed border-amber-300">
-                            {parseInt(changeReceived) >= (parseInt(changeTotal) || 0) ? (
-                              <div>
-                                <div className="text-[9px] uppercase font-bold text-amber-800 tracking-wider font-sans">À rendre :</div>
-                                <div className="font-handwritten text-xl font-bold text-emerald-800 mt-0.5">
-                                  {parseInt(changeReceived) - (parseInt(changeTotal) || 0)} F
-                                </div>
-                                <div className="text-[8px] font-mono text-gray-700 mt-1 leading-tight">
-                                  {/* Calcul des billets */}
-                                  {(() => {
-                                    const diff = parseInt(changeReceived) - (parseInt(changeTotal) || 0)
-                                    if (diff === 0) return "Compte juste, rien à rendre."
-                                    
-                                    const bills = []
-                                    let rem = diff
-                                    
-                                    const denom = [
-                                      { value: 10000, label: '10k F' },
-                                      { value: 5000, label: '5k F' },
-                                      { value: 2000, label: '2k F' },
-                                      { value: 1000, label: '1k F' },
-                                      { value: 500, label: '500 F' },
-                                    ]
-                                    
-                                    denom.forEach(d => {
-                                      const count = Math.floor(rem / d.value)
-                                      if (count > 0) {
-                                        bills.push(`${count}x ${d.label}`)
-                                        rem %= d.value
-                                      }
-                                    })
-
-                                    if (rem > 0) {
-                                      bills.push(`${rem} F`)
-                                    }
-
-                                    return "💵 Rendre : " + bills.join(" + ")
-                                  })()}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-[9px] font-sans font-bold text-red-700">
-                                Reçu insuffisant.
-                              </div>
+                          {/* Input Total */}
+                          <div className="mb-2">
+                            <label className="text-[9px] uppercase font-bold text-amber-800 tracking-wider font-sans">À payer (FCFA) :</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 6000"
+                              value={changeTotal}
+                              onChange={(e) => setChangeTotal(e.target.value)}
+                              className="w-full bg-white bg-opacity-70 border border-amber-300 rounded px-1.5 py-0.5 text-xs font-mono outline-none focus:border-amber-500"
+                            />
+                            {sales.length > 0 && sales[0].total !== parseInt(changeTotal) && (
+                              <button
+                                type="button"
+                                onClick={() => setChangeTotal(sales[0].total.toString())}
+                                className="text-[8px] font-mono text-amber-800 underline mt-0.5 block"
+                              >
+                                Dernier total ({sales[0].total} F)
+                              </button>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+
+                          {/* Input Client Paid */}
+                          <div className="mb-2">
+                            <label className="text-[9px] uppercase font-bold text-amber-800 tracking-wider font-sans">Reçu du client :</label>
+                            <input
+                              type="number"
+                              placeholder="Ex: 10000"
+                              value={changeReceived}
+                              onChange={(e) => setChangeReceived(e.target.value)}
+                              className="w-full bg-white bg-opacity-70 border border-amber-300 rounded px-1.5 py-0.5 text-xs font-mono outline-none focus:border-amber-500"
+                            />
+
+                            {/* Quick Cash Buttons */}
+                            <div className="flex gap-1 mt-1 flex-wrap">
+                              {[1000, 2000, 5000, 10000].map(val => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => setChangeReceived(val.toString())}
+                                  className="text-[8px] font-mono bg-white bg-opacity-90 border border-amber-300 px-1 rounded hover:bg-amber-50 text-amber-950 font-bold"
+                                >
+                                  {val} F
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Result Section */}
+                          {parseInt(changeReceived) > 0 && (
+                            <div className="mt-2 pt-2 border-t border-dashed border-amber-300">
+                              {parseInt(changeReceived) >= (parseInt(changeTotal) || 0) ? (
+                                <div>
+                                  <div className="text-[9px] uppercase font-bold text-amber-800 tracking-wider font-sans">À rendre :</div>
+                                  <div className="font-handwritten text-xl font-bold text-emerald-800 mt-0.5">
+                                    {parseInt(changeReceived) - (parseInt(changeTotal) || 0)} F
+                                  </div>
+                                  <div className="text-[8px] font-mono text-gray-700 mt-1 leading-tight">
+                                    {(() => {
+                                      const diff = parseInt(changeReceived) - (parseInt(changeTotal) || 0)
+                                      if (diff === 0) return "Compte juste, rien à rendre."
+                                      const bills: string[] = []
+                                      let rem = diff
+                                      const denom = [
+                                        { value: 10000, label: '10k F' },
+                                        { value: 5000, label: '5k F' },
+                                        { value: 2000, label: '2k F' },
+                                        { value: 1000, label: '1k F' },
+                                        { value: 500, label: '500 F' },
+                                      ]
+                                      denom.forEach(d => {
+                                        const count = Math.floor(rem / d.value)
+                                        if (count > 0) {
+                                          bills.push(`${count}x ${d.label}`)
+                                          rem %= d.value
+                                        }
+                                      })
+                                      if (rem > 0) bills.push(`${rem} F`)
+                                      return "💵 Rendre : " + bills.join(" + ")
+                                    })()}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-[9px] font-sans font-bold text-red-700">
+                                  Reçu insuffisant.
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </form>
 
                 </div>
               )}
 
               {activeTab === 'dettes' && (
-                <div className="flex-1 overflow-hidden p-6 flex flex-col">
-                  <DebtsBook onRefreshTotals={loadFinancialData} onError={handleError} />
+                <div className="flex-1 overflow-hidden p-3 md:p-6 flex flex-col pb-16 md:pb-0">
+                  <DebtsBook onRefreshTotals={loadFinancialData} onError={handleError} shopId={mappedUser?.shop_id} />
                 </div>
               )}
 
               {activeTab === 'trends' && (
-                <div className="flex-grow p-6 overflow-y-auto flex flex-col h-full">
+                <div className="flex-grow p-3 md:p-6 overflow-y-auto flex flex-col h-full pb-16 md:pb-0">
                   
                   {/* Secondary navigation bar inside the page */}
                   <div className="flex gap-4 mb-6 select-none">
@@ -1038,7 +1147,7 @@ export default function JournalPage() {
 
               {/* PLACARD D'ARCHIVE */}
               {activeTab === 'archives' && (
-                <div className="flex-grow p-6 overflow-y-auto flex flex-col h-full">
+                <div className="flex-grow p-3 md:p-6 overflow-y-auto flex flex-col h-full pb-16 md:pb-0">
                   
                   {/* Secondary navigation bar inside the page */}
                   <div className="flex gap-4 mb-6 select-none">
@@ -1072,6 +1181,8 @@ export default function JournalPage() {
                         sales={allSales} 
                         onSaleCrossedOut={handleSaleCrossedOut} 
                         onError={handleError} 
+                        shopId={mappedUser?.shop_id}
+                        isEmployee={mappedUser?.role === 'employee'}
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center p-24 text-center min-h-[350px]">
@@ -1097,7 +1208,7 @@ export default function JournalPage() {
 
       {/* Sticky warning post-it card rendered over the center of the screen */}
       {postItWarning && (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-80 bg-amber-200 border-2 border-amber-300 shadow-2xl p-6 rotate-2 transition-all flex flex-col items-center text-center">
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-sm bg-amber-200 border-2 border-amber-300 shadow-2xl p-6 rotate-2 transition-all flex flex-col items-center text-center">
           <div className="absolute -top-3 w-16 h-6 bg-gray-300 bg-opacity-70 -rotate-3"></div>
           <AlertTriangle className="w-8 h-8 text-amber-700 mb-2" />
           <h4 className="font-bold text-amber-900 text-lg uppercase tracking-wide handwritten mb-2">
@@ -1118,7 +1229,7 @@ export default function JournalPage() {
 
       {/* Sticky calculation helper post-it card rendered over the center of the screen */}
       {calculationQuery && (
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[420px] bg-amber-100 border-2 border-amber-300 shadow-2xl p-6 -rotate-1 transition-all flex flex-col items-center text-center">
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[92vw] max-w-[420px] bg-amber-100 border-2 border-amber-300 shadow-2xl p-4 md:p-6 -rotate-1 transition-all flex flex-col items-center text-center max-h-[90vh] overflow-y-auto">
           <div className="absolute -top-3 w-20 h-6 bg-gray-300 bg-opacity-70 rotate-2"></div>
           
           <h4 className="font-bold text-amber-900 text-lg uppercase tracking-wide handwritten mb-2 text-2xl">

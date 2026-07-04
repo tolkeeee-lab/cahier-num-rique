@@ -17,8 +17,8 @@ const isSupabaseConfigured = () => {
 }
 
 // Calcule le solde du tiroir-caisse
-async function getCurrentCash(): Promise<number> {
-  const salesList = await getAllSales()
+async function getCurrentCash(shopId: string): Promise<number> {
+  const salesList = await getAllSales(shopId)
   let cash = 0
   for (const item of salesList) {
     if (item.status === 'crossed_out') continue
@@ -35,22 +35,23 @@ async function getCurrentCash(): Promise<number> {
   return cash
 }
 
-async function getAllSales(): Promise<any[]> {
+async function getAllSales(shopId: string): Promise<any[]> {
   if (isSupabaseConfigured()) {
     try {
-      const { data } = await supabase.from('sales').select('*')
+      const { data } = await supabase.from('sales').select('*').eq('shop_id', shopId)
       return data || []
     } catch (e) {
       console.error('Erreur Supabase dans debts API:', e)
     }
   }
-  return globalRef.salesDatabase
+  return globalRef.salesDatabase.filter((s: any) => s.shop_id === shopId)
 }
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // client ou supplier
+    const shopId = request.headers.get('x-shop-id') || 'default-shop'
 
     if (type === 'supplier') {
       // 1. Liste des grossistes (fournisseurs)
@@ -59,6 +60,7 @@ export async function GET(request: NextRequest) {
           const { data: debts, error: dError } = await supabase
             .from('supplier_debts')
             .select('*')
+            .eq('shop_id', shopId)
             .order('supplier_name', { ascending: true })
 
           if (dError) throw dError
@@ -67,6 +69,7 @@ export async function GET(request: NextRequest) {
           const { data: txs } = await supabase
             .from('supplier_transactions')
             .select('*')
+            .eq('shop_id', shopId)
             .order('created_at', { ascending: false })
 
           const list = (debts || []).map((d: any) => ({
@@ -93,7 +96,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Repli Local en mémoire
-      const list = getLocalSuppliers()
+      const list = getLocalSuppliers(shopId)
       return NextResponse.json({ suppliers: list })
 
     } else {
@@ -104,6 +107,7 @@ export async function GET(request: NextRequest) {
           const { data: debts, error: dError } = await supabase
             .from('debts')
             .select('*')
+            .eq('shop_id', shopId)
             .order('client_name', { ascending: true })
 
           if (dError) throw dError
@@ -112,6 +116,7 @@ export async function GET(request: NextRequest) {
           const { data: sales } = await supabase
             .from('sales')
             .select('*')
+            .eq('shop_id', shopId)
             .in('type', ['sale_credit', 'payment_client'])
             .neq('status', 'crossed_out')
 
@@ -149,7 +154,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Repli Local en mémoire
-      const list = getLocalClients()
+      const list = getLocalClients(shopId)
       return NextResponse.json({ clients: list })
     }
   } catch (error) {
@@ -161,6 +166,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { name, amount, type, action, description } = await request.json()
+    const shopId = request.headers.get('x-shop-id') || 'default-shop'
 
     if (!name || !amount || amount <= 0 || !type || !action) {
       return NextResponse.json({ error: 'Données incomplètes' }, { status: 400 })
@@ -173,7 +179,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Vérification solvabilité si remboursement de dette fournisseur (retrait du tiroir)
     if (type === 'supplier' && action === 'pay') {
-      const currentCash = await getCurrentCash()
+      const currentCash = await getCurrentCash(shopId)
       if (currentCash < amount) {
         return NextResponse.json({
           error: `Opération refusée : solde insuffisant dans le tiroir-caisse (${currentCash} FCFA dispo, besoin de ${amount} FCFA).`,
@@ -208,6 +214,7 @@ export async function POST(request: NextRequest) {
 
     const newSale = {
       id: saleId,
+      shop_id: shopId,
       date: dateStr,
       time: timeStr,
       client_name: name,
@@ -231,6 +238,7 @@ export async function POST(request: NextRequest) {
           .insert([
             {
               id: saleId,
+              shop_id: shopId,
               date: dateStr,
               time: timeStr,
               client_name: name,
@@ -255,6 +263,7 @@ export async function POST(request: NextRequest) {
               .from('debts')
               .select('*')
               .eq('client_name', name)
+              .eq('shop_id', shopId)
               .eq('status', 'pending')
 
             let remainingPayment = amount
@@ -269,6 +278,7 @@ export async function POST(request: NextRequest) {
                 .from('debts')
                 .update({ paid_amount: newPaidAmount, status: newStatus })
                 .eq('id', debt.id)
+                .eq('shop_id', shopId)
 
               remainingPayment -= paymentToApply
             }
@@ -280,6 +290,7 @@ export async function POST(request: NextRequest) {
                 {
                   id: randomUUID(),
                   sale_id: saleId,
+                  shop_id: shopId,
                   client_name: name,
                   amount_owed: amount,
                   status: 'pending',
@@ -294,6 +305,7 @@ export async function POST(request: NextRequest) {
             .insert([
               {
                 id: randomUUID(),
+                shop_id: shopId,
                 supplier_name: name,
                 amount: action === 'credit' ? amount : -amount,
                 description: text,
@@ -306,6 +318,7 @@ export async function POST(request: NextRequest) {
             .from('supplier_debts')
             .select('*')
             .eq('supplier_name', name)
+            .eq('shop_id', shopId)
             .single()
 
           if (sDebt) {
@@ -320,12 +333,14 @@ export async function POST(request: NextRequest) {
                 status: newOwed <= 0 ? 'paid' : 'pending'
               })
               .eq('supplier_name', name)
+              .eq('shop_id', shopId)
           } else {
             await supabase
               .from('supplier_debts')
               .insert([
                 {
                   id: randomUUID(),
+                  shop_id: shopId,
                   supplier_name: name,
                   amount_owed: action === 'credit' ? amount : 0,
                   paid_amount: action === 'pay' ? amount : 0,
@@ -351,8 +366,8 @@ export async function POST(request: NextRequest) {
 }
 
 // Helpers locaux en mémoire pour l'extraction dynamique
-function getLocalClients() {
-  const sales = globalRef.salesDatabase.filter((s: any) => s.status !== 'crossed_out')
+function getLocalClients(shopId: string) {
+  const sales = globalRef.salesDatabase.filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
   const clientNames = Array.from(new Set(sales.filter((s: any) => s.type === 'sale_credit' || s.type === 'payment_client').map((s: any) => s.client_name)))
   
   return clientNames.map(name => {
@@ -382,8 +397,8 @@ function getLocalClients() {
   })
 }
 
-function getLocalSuppliers() {
-  const sales = globalRef.salesDatabase.filter((s: any) => s.status !== 'crossed_out')
+function getLocalSuppliers(shopId: string) {
+  const sales = globalRef.salesDatabase.filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
   const supplierNames = Array.from(new Set(sales.filter((s: any) => s.type === 'purchase_credit' || s.type === 'payment_supplier').map((s: any) => s.client_name)))
 
   return supplierNames.map(name => {

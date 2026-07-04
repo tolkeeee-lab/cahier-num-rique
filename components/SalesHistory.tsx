@@ -28,6 +28,8 @@ interface SalesHistoryProps {
   sales: Sale[]
   onSaleCrossedOut?: (id: string) => void
   onError?: (err: string) => void
+  shopId?: string
+  isEmployee?: boolean
 }
 
 function formatPrice(price: number): string {
@@ -36,24 +38,30 @@ function formatPrice(price: number): string {
   }).format(price) + ' F'
 }
 
-export function SalesHistory({ sales, onSaleCrossedOut }: SalesHistoryProps) {
+export function SalesHistory({ sales, onSaleCrossedOut, shopId, isEmployee }: SalesHistoryProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   if (sales.length === 0) return null
 
   const handleCrossOut = async (id: string) => {
+    if (isEmployee) return // Sécurité double côté client
+
     if (!window.confirm('Voulez-vous vraiment rayer cette écriture de votre cahier ?')) {
       return
     }
 
     setDeletingId(id)
     const online = typeof window !== 'undefined' ? window.navigator.onLine : false
+    const sId = shopId || 'default-shop'
 
     try {
       if (online) {
         const response = await fetch('/api/sales', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-shop-id': sId
+          },
           body: JSON.stringify({ id, action: 'cross_out' }),
         })
 
@@ -64,11 +72,11 @@ export function SalesHistory({ sales, onSaleCrossedOut }: SalesHistoryProps) {
         }
       } else {
         // Fallback hors-ligne local
-        const offlineSales = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
+        const offlineSales = JSON.parse(localStorage.getItem(`cahier_offline_sales_${sId}`) || '[]')
         const idx = offlineSales.findIndex((s: any) => s.id === id)
         if (idx > -1) {
           offlineSales[idx].status = 'crossed_out'
-          localStorage.setItem('cahier_offline_sales', JSON.stringify(offlineSales))
+          localStorage.setItem(`cahier_offline_sales_${sId}`, JSON.stringify(offlineSales))
         }
       }
 
@@ -77,11 +85,11 @@ export function SalesHistory({ sales, onSaleCrossedOut }: SalesHistoryProps) {
       }
     } catch (err) {
       console.warn("Échec réseau, rature locale appliquée :", err)
-      const offlineSales = JSON.parse(localStorage.getItem('cahier_offline_sales') || '[]')
+      const offlineSales = JSON.parse(localStorage.getItem(`cahier_offline_sales_${sId}`) || '[]')
       const idx = offlineSales.findIndex((s: any) => s.id === id)
       if (idx > -1) {
         offlineSales[idx].status = 'crossed_out'
-        localStorage.setItem('cahier_offline_sales', JSON.stringify(offlineSales))
+        localStorage.setItem(`cahier_offline_sales_${sId}`, JSON.stringify(offlineSales))
       }
       if (onSaleCrossedOut) {
         onSaleCrossedOut(id)
@@ -243,7 +251,7 @@ export function SalesHistory({ sales, onSaleCrossedOut }: SalesHistoryProps) {
                     </div>
 
                     {/* Strike through / delete button */}
-                    {!isCrossed && (
+                    {!isCrossed && !isEmployee && (
                       <button
                         onClick={() => handleCrossOut(sale.id)}
                         disabled={deletingId === sale.id}

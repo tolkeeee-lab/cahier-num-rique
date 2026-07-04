@@ -5,7 +5,7 @@ import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient
 import { Loader, AlertTriangle, Eye, EyeOff, Lock, ArrowRight, UserPlus, LogIn } from 'lucide-react'
 
 interface AuthScreenProps {
-  onBypass: () => void
+  onBypass: (role: 'owner' | 'employee') => void
   onLoginSuccess?: (user: any) => void
 }
 
@@ -14,6 +14,8 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+  const [role, setRole] = useState<'owner' | 'employee'>('owner')
+  const [shopCode, setShopCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   
   const [loading, setLoading] = useState(false)
@@ -34,17 +36,27 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
       if (isConfigured) {
         // --- AUTH SUPABASE ---
         if (isSignUp) {
+          const generatedShopId = role === 'owner' 
+            ? `SHOP-${Math.floor(100000 + Math.random() * 900000)}` 
+            : shopCode.trim()
+
+          if (role === 'employee' && !shopCode.trim()) {
+            throw new Error('Le Code Boutique est obligatoire pour les employés.')
+          }
+
           const { error: signUpError } = await supabaseClient.auth.signUp({
             email,
             password,
             options: {
               data: {
-                full_name: name || 'Propriétaire',
+                full_name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
+                role: role,
+                shop_id: generatedShopId
               },
             },
           })
           if (signUpError) throw signUpError
-          setSuccess('✓ Compte créé avec succès ! Connectez-vous maintenant.')
+          setSuccess(`✓ Compte créé ! ${role === 'owner' ? `Notez votre Code Boutique : ${generatedShopId} (à donner à vos employés).` : ''} Connectez-vous maintenant.`)
           setIsSignUp(false)
         } else {
           const { data, error: loginError } = await supabaseClient.auth.signInWithPassword({
@@ -68,16 +80,32 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
             throw new Error('Cet e-mail est déjà utilisé localement.')
           }
           
+          let employeeShopId = shopCode.trim()
+          if (role === 'owner') {
+            employeeShopId = `SHOP-${Math.floor(100000 + Math.random() * 900000)}`
+          } else {
+            if (!shopCode.trim()) {
+              throw new Error('Le Code Boutique est obligatoire pour les employés.')
+            }
+            // Vérifier si la boutique existe
+            const shopExists = storedUsers.some((u: any) => u.role === 'owner' && u.shop_id === employeeShopId)
+            if (!shopExists) {
+              throw new Error('Ce Code Boutique n\'existe pas localement. Veuillez d\'abord inscrire le Propriétaire.')
+            }
+          }
+
           const newUser = {
             id: Math.random().toString(36).substring(2, 9),
             email,
             password,
-            full_name: name || 'Propriétaire'
+            full_name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
+            role,
+            shop_id: employeeShopId
           }
           
           storedUsers.push(newUser)
           localStorage.setItem('cahier_mock_users', JSON.stringify(storedUsers))
-          setSuccess('✓ Compte local créé ! Connectez-vous maintenant.')
+          setSuccess(`✓ Compte local créé ! ${role === 'owner' ? `Notez votre Code Boutique : ${employeeShopId} (à donner à vos employés).` : ''} Connectez-vous maintenant.`)
           setIsSignUp(false)
         } else {
           // Connexion locale
@@ -128,7 +156,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
             Cahier de Caisse
           </h2>
           <span className="text-[10px] text-[#f59e0b] opacity-60 tracking-[0.3em] font-mono uppercase mt-1">
-            {isConfigured ? "Système Connecté" : "Système Local Autonome"}
+            {isConfigured ? "Système Connecté (SaaS)" : "Système Local Autonome"}
           </span>
         </div>
 
@@ -138,7 +166,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
           {/* Label visual guidelines */}
           <div className="text-center pb-4 mb-4 border-b border-[#e2dcd0] border-dashed">
             <h3 className="font-handwritten text-2xl text-gray-800 font-bold">
-              {isSignUp ? "Création du Propriétaire" : "Registre de Caisse"}
+              {isSignUp ? "Création du Compte" : "Registre de Caisse"}
             </h3>
             <p className="text-[10px] text-gray-400 font-mono mt-1 uppercase tracking-wider">
               Cahier No. 200 • Afrique de l'Ouest
@@ -146,9 +174,9 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
           </div>
 
           {!isConfigured && (
-            <div className="mb-4 p-2.5 bg-sky-50 border border-sky-200 text-sky-850 rounded-xl text-[10px] leading-normal font-sans font-medium flex items-start gap-1.5">
+            <div className="mb-4 p-2.5 bg-[#fef3c7] border border-amber-200 text-amber-950 rounded-xl text-[10px] leading-normal font-sans font-medium flex items-start gap-1.5">
               <span className="text-xs">💡</span>
-              <span>Mode local actif : vous pouvez vous inscrire et vous connecter sans base de données externe. Vos données restent dans ce navigateur.</span>
+              <span>Mode local actif : les comptes créés restent dans ce navigateur et les données de caisse sont isolées par Code Boutique.</span>
             </div>
           )}
 
@@ -166,6 +194,40 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
           )}
 
           <form onSubmit={handleAuth} className="space-y-4 font-sans">
+            
+            {/* Rôle Selector - Seul à l'inscription */}
+            {isSignUp && (
+              <div className="space-y-1.5 select-none">
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                  Je suis :
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRole('owner')}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                      role === 'owner'
+                        ? 'bg-[#064e3b] text-white border-[#064e3b]'
+                        : 'bg-[#fdfbf7] text-gray-600 border-[#dcd6c9] hover:bg-gray-50'
+                    }`}
+                  >
+                    👑 Propriétaire
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole('employee')}
+                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${
+                      role === 'employee'
+                        ? 'bg-[#064e3b] text-white border-[#064e3b]'
+                        : 'bg-[#fdfbf7] text-gray-600 border-[#dcd6c9] hover:bg-gray-50'
+                    }`}
+                  >
+                    🙋 Employé / Gérant
+                  </button>
+                </div>
+              </div>
+            )}
+
             {isSignUp && (
               <div>
                 <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">
@@ -175,12 +237,33 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                   <input
                     type="text"
                     required
-                    placeholder="Boutique Chantal et Fils"
+                    placeholder={role === 'owner' ? "Boutique Chantal et Fils" : "Ex: Mamadou Sylla"}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-3 pr-4 py-2.5 text-sm bg-[#fdfbf7] border border-[#dcd6c9] rounded-xl focus:border-gray-600 text-gray-800 transition-all font-medium placeholder-gray-300"
                   />
                 </div>
+              </div>
+            )}
+
+            {isSignUp && role === 'employee' && (
+              <div>
+                <label className="text-[9px] font-bold text-amber-700 uppercase tracking-widest pl-1 flex items-center gap-1">
+                  🔑 Code Boutique du Propriétaire
+                </label>
+                <div className="relative mt-1">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: SHOP-123456"
+                    value={shopCode}
+                    onChange={(e) => setShopCode(e.target.value)}
+                    className="w-full pl-3 pr-4 py-2.5 text-sm bg-[#fffbeb] border border-amber-300 rounded-xl focus:border-amber-500 text-amber-950 font-bold tracking-wider placeholder-amber-200"
+                  />
+                </div>
+                <p className="text-[8px] text-amber-600 font-mono mt-1 leading-normal">
+                  Demandez ce code à votre propriétaire pour lier votre travail à son cahier.
+                </p>
               </div>
             )}
 
@@ -263,14 +346,25 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
 
         </div>
 
-        {/* Local Demo Bypass Button */}
-        <button
-          onClick={onBypass}
-          className="mt-6 text-[10px] font-bold uppercase tracking-widest text-[#f59e0b] opacity-75 hover:opacity-100 transition-opacity flex items-center gap-1"
-        >
-          <span>Accéder directement sans compte (Mode Invité)</span>
-          <ArrowRight className="w-3 h-3" />
-        </button>
+        {/* Local Demo Bypass Buttons */}
+        <div className="mt-6 flex flex-col items-center gap-2 select-none w-full">
+          <span className="text-[8px] font-mono text-gray-400 uppercase tracking-widest">Entrée rapide sans compte :</span>
+          <div className="flex gap-4">
+            <button
+              onClick={() => onBypass('owner')}
+              className="text-[10px] font-bold uppercase tracking-widest text-[#f59e0b] hover:text-white transition-colors"
+            >
+              👑 Démo Proprio
+            </button>
+            <span className="text-gray-500 text-[10px]">•</span>
+            <button
+              onClick={() => onBypass('employee')}
+              className="text-[10px] font-bold uppercase tracking-widest text-[#f59e0b] hover:text-white transition-colors"
+            >
+              🙋 Démo Gérant
+            </button>
+          </div>
+        </div>
 
         {/* Closed cover visual spine stitches footer */}
         <div className="text-[9px] text-[#f59e0b] opacity-40 font-mono tracking-widest mt-8 uppercase select-none">
