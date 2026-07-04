@@ -294,23 +294,15 @@ export default function JournalPage() {
     let grossiste = allSales.filter(s => s.type === 'payment_supplier').reduce((sum, s) => sum + s.total, 0)
     let energie = allSales.filter(s => s.type === 'cash_out' && (s.notes.toLowerCase().includes('sbee') || s.notes.toLowerCase().includes('courant') || s.notes.toLowerCase().includes('elec') || s.notes.toLowerCase().includes('ampoule') || s.notes.toLowerCase().includes('transport'))).reduce((sum, s) => sum + s.total, 0)
 
-    // Fallbacks si base vide pour correspondre à l'image de démonstration
-    if (alimentation === 0) alimentation = 100500
-    if (stockMarchandise === 0) stockMarchandise = 75000
-    if (stockCredit === 0) stockCredit = 35000
-    if (remboursement === 0) remboursement = 15000
-    if (grossiste === 0) grossiste = 15000
-    if (energie === 0) energie = 5000
-
     const total = alimentation + stockMarchandise + stockCredit + remboursement + grossiste + energie
 
     return [
-      { name: 'Alimentation', amount: alimentation, percentage: Math.round((alimentation / total) * 100), color: 'bg-blue-600' },
-      { name: 'Stock / Marchandise', amount: stockMarchandise, percentage: Math.round((stockMarchandise / total) * 100), color: 'bg-emerald-600' },
-      { name: 'Stock Crédit', amount: stockCredit, percentage: Math.round((stockCredit / total) * 100), color: 'bg-rose-600' },
-      { name: 'Remboursement', amount: remboursement, percentage: Math.round((remboursement / total) * 100), color: 'bg-teal-600' },
-      { name: 'Grossiste', amount: grossiste, percentage: Math.round((grossiste / total) * 100), color: 'bg-purple-600' },
-      { name: 'Énergie / SBEE', amount: energie, percentage: Math.round((energie / total) * 100), color: 'bg-red-500' },
+      { name: 'Alimentation', amount: alimentation, percentage: total > 0 ? Math.round((alimentation / total) * 100) : 0, color: 'bg-blue-600' },
+      { name: 'Stock / Marchandise', amount: stockMarchandise, percentage: total > 0 ? Math.round((stockMarchandise / total) * 100) : 0, color: 'bg-emerald-600' },
+      { name: 'Stock Crédit', amount: stockCredit, percentage: total > 0 ? Math.round((stockCredit / total) * 100) : 0, color: 'bg-rose-600' },
+      { name: 'Remboursement', amount: remboursement, percentage: total > 0 ? Math.round((remboursement / total) * 100) : 0, color: 'bg-teal-600' },
+      { name: 'Grossiste', amount: grossiste, percentage: total > 0 ? Math.round((grossiste / total) * 100) : 0, color: 'bg-purple-600' },
+      { name: 'Énergie / SBEE', amount: energie, percentage: total > 0 ? Math.round((energie / total) * 100) : 0, color: 'bg-red-500' },
     ]
   }
 
@@ -329,28 +321,11 @@ export default function JournalPage() {
       })
     })
 
-    const realItems = Object.entries(itemMap).map(([name, data]) => ({
+    return Object.entries(itemMap).map(([name, data]) => ({
       name,
       qty: data.qty,
       amount: data.amount
-    })).sort((a, b) => b.amount - a.amount)
-
-    const mockItems = [
-      { name: 'Cartons pâtes', amount: 75000, qty: 20 },
-      { name: 'Carton lait Peak', amount: 73000, qty: 2 },
-      { name: 'Riz Maman 50kg', amount: 44000, qty: 2 },
-      { name: 'Condiments divers', amount: 12500, qty: 1 },
-      { name: 'Huile de table (litre)', amount: 6000, qty: 3 }
-    ]
-
-    const merged = [...realItems]
-    mockItems.forEach(mock => {
-      if (merged.length < 5 && !merged.some(item => item.name.toLowerCase() === mock.name.toLowerCase())) {
-        merged.push(mock)
-      }
-    })
-
-    return merged.slice(0, 5)
+    })).sort((a, b) => b.amount - a.amount).slice(0, 5)
   }
 
   const parseTextLocallyClientSide = (text: string, penColor: string) => {
@@ -868,17 +843,25 @@ export default function JournalPage() {
                       </div>
 
                       <div className="space-y-4 pt-2">
-                        {getCategoryTotals().map((cat) => (
-                          <div key={cat.name} className="space-y-1">
-                            <div className="flex justify-between text-xs font-bold text-gray-800">
-                              <span className="font-handwritten text-lg">{cat.name}</span>
-                              <span className="font-mono">{formatPrice(cat.amount)} ({cat.percentage}%)</span>
+                        {getCategoryTotals().reduce((sum, c) => sum + c.amount, 0) > 0 ? (
+                          getCategoryTotals().map((cat) => (
+                            <div key={cat.name} className="space-y-1">
+                              <div className="flex justify-between text-xs font-bold text-gray-800">
+                                <span className="font-handwritten text-lg">{cat.name}</span>
+                                <span className="font-mono">{formatPrice(cat.amount)} ({cat.percentage}%)</span>
+                              </div>
+                              <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden border border-gray-300">
+                                <div className={`h-full ${cat.color} rounded-full`} style={{ width: `${cat.percentage}%` }}></div>
+                              </div>
                             </div>
-                            <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden border border-gray-300">
-                              <div className={`h-full ${cat.color} rounded-full`} style={{ width: `${cat.percentage}%` }}></div>
-                            </div>
+                          ))
+                        ) : (
+                          <div className="p-8 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center">
+                            <span className="text-3xl mb-2">📊</span>
+                            <p className="font-handwritten text-lg text-gray-500 font-bold">Aucune activité enregistrée.</p>
+                            <p className="text-[10px] text-gray-400 font-mono mt-1">Vos statistiques de caisse s'afficheront ici en temps réel.</p>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
 
@@ -891,25 +874,33 @@ export default function JournalPage() {
                       </div>
 
                       <div className="space-y-3 pt-2">
-                        {getTopItems().map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-3 border-b border-gray-100 pb-2">
-                            {/* Circular number index */}
-                            <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center font-mono font-bold text-xs flex-shrink-0 select-none">
-                              {idx + 1}
+                        {getTopItems().length > 0 ? (
+                          getTopItems().map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-3 border-b border-gray-100 pb-2">
+                              {/* Circular number index */}
+                              <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center font-mono font-bold text-xs flex-shrink-0 select-none">
+                                {idx + 1}
+                              </div>
+                              {/* Item Name */}
+                              <div className="flex-grow">
+                                <span className="font-handwritten text-lg text-gray-800 font-bold leading-none block">
+                                  {item.name}
+                                </span>
+                              </div>
+                              {/* Price / Qty */}
+                              <div className="text-right flex flex-col font-mono">
+                                <span className="text-xs font-bold text-emerald-700">{formatPrice(item.amount)}</span>
+                                <span className="text-[10px] text-gray-400">Qté : {item.qty} {item.qty > 1 ? 'units' : 'unit'}</span>
+                              </div>
                             </div>
-                            {/* Item Name */}
-                            <div className="flex-grow">
-                              <span className="font-handwritten text-lg text-gray-800 font-bold leading-none block">
-                                {item.name}
-                              </span>
-                            </div>
-                            {/* Price / Qty */}
-                            <div className="text-right flex flex-col font-mono">
-                              <span className="text-xs font-bold text-emerald-700">{formatPrice(item.amount)}</span>
-                              <span className="text-[10px] text-gray-400">Qté : {item.qty} {item.qty > 1 ? 'units' : 'unit'}</span>
-                            </div>
+                          ))
+                        ) : (
+                          <div className="p-8 border border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-center">
+                            <span className="text-3xl mb-2">📦</span>
+                            <p className="font-handwritten text-lg text-gray-500 font-bold">Aucune vente enregistrée.</p>
+                            <p className="text-[10px] text-gray-400 font-mono mt-1">Les produits vendus avec leur quantité s'afficheront ici.</p>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
 
