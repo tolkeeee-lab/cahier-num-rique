@@ -284,28 +284,36 @@ export default function JournalPage() {
       const shopId = mappedUser.shop_id
 
       if (isConfigured && online) {
-        // En ligne -> synchroniser d'abord les données locales non synchronisées
-        await syncOfflineData()
+        try {
+          // En ligne -> synchroniser d'abord les données locales non synchronisées
+          await syncOfflineData()
 
-        // Charger ensuite via le réseau
-        const headers = { 'x-shop-id': shopId }
-        const response = await fetch('/api/sales', { headers })
-        if (!response.ok) throw new Error('Erreur lors du chargement des écritures')
-        const data = await response.json()
-        salesList = data.sales || []
+          // Charger ensuite via le réseau
+          const headers = { 'x-shop-id': shopId }
+          const response = await fetch('/api/sales', { headers })
+          if (!response.ok) throw new Error('Erreur lors du chargement des écritures')
+          const data = await response.json()
+          salesList = data.sales || []
 
-        const clientsRes = await fetch('/api/debts?type=client', { headers })
-        const clientsData = await clientsRes.json()
-        clientsList = clientsData.clients || []
+          const clientsRes = await fetch('/api/debts?type=client', { headers })
+          const clientsData = await clientsRes.json()
+          clientsList = clientsData.clients || []
 
-        const suppliersRes = await fetch('/api/debts?type=supplier', { headers })
-        const suppliersData = await suppliersRes.json()
-        suppliersList = suppliersData.suppliers || []
+          const suppliersRes = await fetch('/api/debts?type=supplier', { headers })
+          const suppliersData = await suppliersRes.json()
+          suppliersList = suppliersData.suppliers || []
 
-        // Mettre en cache dans localStorage pour le mode hors-ligne
-        localStorage.setItem(`cahier_offline_sales_${shopId}`, JSON.stringify(salesList))
-        localStorage.setItem(`cahier_offline_clients_${shopId}`, JSON.stringify(clientsList))
-        localStorage.setItem(`cahier_offline_suppliers_${shopId}`, JSON.stringify(suppliersList))
+          // Mettre en cache dans localStorage pour le mode hors-ligne
+          localStorage.setItem(`cahier_offline_sales_${shopId}`, JSON.stringify(salesList))
+          localStorage.setItem(`cahier_offline_clients_${shopId}`, JSON.stringify(clientsList))
+          localStorage.setItem(`cahier_offline_suppliers_${shopId}`, JSON.stringify(suppliersList))
+        } catch (apiError) {
+          console.warn('[API Fallback] Échec de chargement réseau, repli sur local storage :', apiError)
+          // Charger les caches en cas d'erreur de base de données (ex: table non créée)
+          salesList = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
+          clientsList = JSON.parse(localStorage.getItem(`cahier_offline_clients_${shopId}`) || '[]')
+          suppliersList = JSON.parse(localStorage.getItem(`cahier_offline_suppliers_${shopId}`) || '[]')
+        }
       } else {
         // Hors-ligne -> charger les caches
         salesList = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
