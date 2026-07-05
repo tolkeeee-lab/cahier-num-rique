@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import OpenAI from 'openai'
 import { randomUUID } from 'crypto'
-
-// Mock database en mémoire en cas d'absence de Supabase
-let salesDatabase: any[] = []
+import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'mock-key-for-build',
@@ -45,7 +43,7 @@ async function getCurrentCash(shopId: string): Promise<number> {
       console.error('Erreur lecture cash Supabase, repli sur local:', e)
     }
   }
-  return calculateCash(salesDatabase.filter(s => s.shop_id === shopId))
+  return calculateCash(getLocalDb().filter(s => s.shop_id === shopId))
 }
 
 function calculateCash(list: any[]): number {
@@ -279,7 +277,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Toujours pousser sur le mock local en cas de repli ou pour tests locaux rapides
-    salesDatabase.push(newSale)
+    const db = getLocalDb()
+    db.push(newSale)
+    saveLocalDb(db)
 
     return NextResponse.json({ 
       sale: {
@@ -401,7 +401,7 @@ export async function PATCH(request: NextRequest) {
       const { data } = await supabase.from('sales').select('*').eq('id', id).eq('shop_id', shopId).single()
       transaction = data
     } else {
-      transaction = salesDatabase.find(s => s.id === id && s.shop_id === shopId)
+      transaction = getLocalDb().find(s => s.id === id && s.shop_id === shopId)
     }
 
     if (!transaction) {
@@ -450,9 +450,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Mettre à jour le cache local/mock
-    const idx = salesDatabase.findIndex(s => s.id === id && s.shop_id === shopId)
+    const db = getLocalDb()
+    const idx = db.findIndex(s => s.id === id && s.shop_id === shopId)
     if (idx !== -1) {
-      salesDatabase[idx].status = 'crossed_out'
+      db[idx].status = 'crossed_out'
+      saveLocalDb(db)
     }
 
     return NextResponse.json({ success: true })
@@ -479,6 +481,7 @@ function calculateSingleTransactionCashImpact(item: any): number {
 }
 
 function getLocalSales(dateParam: string | null, shopId: string): any[] {
+  const salesDatabase = getLocalDb()
   let filtered = salesDatabase.filter(s => s.shop_id === shopId)
   if (dateParam === 'today') {
     const today = new Date().toISOString().split('T')[0]

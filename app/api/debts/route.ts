@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
-
-// Import de la base de données en mémoire pour le fallback
-// Note: On peut interroger l'API sales ou utiliser des variables partagées.
-// Pour partager proprement l'état en mémoire en Node.js, on peut utiliser un cache global
-const globalRef = global as any
-if (!globalRef.salesDatabase) {
-  globalRef.salesDatabase = []
-}
+import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -44,7 +37,7 @@ async function getAllSales(shopId: string): Promise<any[]> {
       console.error('Erreur Supabase dans debts API:', e)
     }
   }
-  return globalRef.salesDatabase.filter((s: any) => s.shop_id === shopId)
+  return getLocalDb().filter((s: any) => s.shop_id === shopId)
 }
 
 export async function GET(request: NextRequest) {
@@ -355,8 +348,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Toujours pousser sur le cache en mémoire local pour la synchronisation
-    globalRef.salesDatabase.push(newSale)
+    // Toujours pousser sur le cache local pour la synchronisation
+    const db = getLocalDb()
+    db.push(newSale)
+    saveLocalDb(db)
 
     return NextResponse.json({ success: true, sale: newSale })
   } catch (error) {
@@ -367,7 +362,7 @@ export async function POST(request: NextRequest) {
 
 // Helpers locaux en mémoire pour l'extraction dynamique
 function getLocalClients(shopId: string) {
-  const sales = globalRef.salesDatabase.filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
+  const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
   const clientNames = Array.from(new Set(sales.filter((s: any) => s.type === 'sale_credit' || s.type === 'payment_client').map((s: any) => s.client_name)))
   
   return clientNames.map(name => {
@@ -398,7 +393,7 @@ function getLocalClients(shopId: string) {
 }
 
 function getLocalSuppliers(shopId: string) {
-  const sales = globalRef.salesDatabase.filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
+  const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
   const supplierNames = Array.from(new Set(sales.filter((s: any) => s.type === 'purchase_credit' || s.type === 'payment_supplier').map((s: any) => s.client_name)))
 
   return supplierNames.map(name => {
