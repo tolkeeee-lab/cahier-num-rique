@@ -200,6 +200,79 @@ export default function JournalPage() {
     }
   }, [sales, activeTab])
 
+  // Écouter l'état du réseau pour synchroniser dès le retour en ligne
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleOnline = () => {
+      console.log("[Network] Connexion rétablie, lancement de la synchronisation...")
+      loadFinancialData()
+    }
+    window.addEventListener('online', handleOnline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+    }
+  }, [mappedUser, isConfigured])
+
+  const syncOfflineData = async () => {
+    if (!mappedUser) return
+    const shopId = mappedUser.shop_id
+    const online = typeof window !== 'undefined' ? window.navigator.onLine : false
+    if (!online) return
+
+    try {
+      const offlineSales = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
+      const unsyncedSales = offlineSales.filter((s: any) => s.is_synced === false)
+
+      if (unsyncedSales.length === 0) return
+
+      console.log(`[Offline Sync] Synchronisation de ${unsyncedSales.length} écritures hors-ligne...`)
+
+      for (const sale of unsyncedSales) {
+        const bodyData = {
+          text: sale.notes || '',
+          penColor: sale.pen_color || 'blue',
+          overrideData: {
+            articles: (sale.articles || []).map((a: any) => ({
+              name: a.name || a.nom,
+              quantity: a.quantity || a.quantite,
+              unit_price: a.unit_price || a.prix_unitaire
+            })),
+            total_amount: sale.total,
+            paid_amount: sale.paid,
+            debt_amount: sale.debt,
+            client_name: sale.client || 'Client anonyme'
+          }
+        }
+
+        const response = await fetch('/api/sales', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId
+          },
+          body: JSON.stringify(bodyData)
+        })
+
+        if (!response.ok) {
+          throw new Error('Erreur lors de la synchronisation réseau d\'une transaction')
+        }
+
+        sale.is_synced = true
+      }
+
+      // Mettre à jour le cache local pour marquer les ventes comme synchronisées
+      const updatedSales = offlineSales.map((s: any) => {
+        const found = unsyncedSales.find((us: any) => us.id === s.id)
+        if (found) return { ...s, is_synced: true }
+        return s
+      })
+      localStorage.setItem(`cahier_offline_sales_${shopId}`, JSON.stringify(updatedSales))
+      console.log('[Offline Sync] Synchronisation terminée avec succès !')
+    } catch (err) {
+      console.error('[Offline Sync] Échec de la synchronisation :', err)
+    }
+  }
+
   const loadFinancialData = async () => {
     if (!mappedUser) return
     try {
@@ -211,7 +284,10 @@ export default function JournalPage() {
       const shopId = mappedUser.shop_id
 
       if (isConfigured && online) {
-        // En ligne -> charger via le réseau
+        // En ligne -> synchroniser d'abord les données locales non synchronisées
+        await syncOfflineData()
+
+        // Charger ensuite via le réseau
         const headers = { 'x-shop-id': shopId }
         const response = await fetch('/api/sales', { headers })
         if (!response.ok) throw new Error('Erreur lors du chargement des écritures')
