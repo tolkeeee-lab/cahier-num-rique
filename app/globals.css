@@ -27,26 +27,40 @@ body {
   overflow-x: hidden;
 }
 
+:root {
+  --margin-left: 80px;
+  --line-height: 36px;
+  --font-size-ink: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --margin-left: 40px;
+    --line-height: 26px;
+    --font-size-ink: 0.95rem;
+  }
+}
+
 /* Seyes Ivory paper styling */
 .lined-paper {
   background-color: #fdfaf2;
   background-image: 
-    /* Vertical red margin line at 80px */
-    linear-gradient(to right, transparent 80px, rgba(225, 29, 72, 0.38) 80px, rgba(225, 29, 72, 0.38) 82px, transparent 82px),
-    /* Horizontal blue lines Seyes every 36px */
-    linear-gradient(to bottom, transparent 35px, rgba(14, 165, 233, 0.28) 35px, rgba(14, 165, 233, 0.28) 36px, transparent 36px);
-  background-size: 100% 100%, 100% 36px;
+    /* Vertical red margin line at var(--margin-left) */
+    linear-gradient(to right, transparent var(--margin-left), rgba(225, 29, 72, 0.38) var(--margin-left), rgba(225, 29, 72, 0.38) calc(var(--margin-left) + 2px), transparent calc(var(--margin-left) + 2px)),
+    /* Horizontal blue lines Seyes every var(--line-height) */
+    linear-gradient(to bottom, transparent calc(var(--line-height) - 1px), rgba(14, 165, 233, 0.28) calc(var(--line-height) - 1px), rgba(14, 165, 233, 0.28) var(--line-height), transparent var(--line-height));
+  background-size: 100% 100%, 100% var(--line-height);
   background-attachment: local;
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.05);
 }
 
 /* Lined text align classes */
 .lined-text-container {
-  line-height: 36px;
+  line-height: var(--line-height);
 }
 
 .lined-item {
-  min-height: 36px;
+  min-height: var(--line-height);
   display: flex;
   align-items: center;
 }
@@ -55,7 +69,7 @@ body {
 .ink-blue {
   color: #1d4ed8;
   font-family: var(--font-caveat), cursive;
-  font-size: 1.25rem;
+  font-size: var(--font-size-ink);
   font-weight: 500;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(29, 78, 216, 0.15);
@@ -64,7 +78,7 @@ body {
 .ink-red {
   color: #e11d48;
   font-family: var(--font-caveat), cursive;
-  font-size: 1.25rem;
+  font-size: var(--font-size-ink);
   font-weight: 500;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(225, 29, 72, 0.15);
@@ -73,7 +87,7 @@ body {
 .ink-green {
   color: #047857;
   font-family: var(--font-caveat), cursive;
-  font-size: 1.25rem;
+  font-size: var(--font-size-ink);
   font-weight: 500;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(4, 120, 87, 0.15);
@@ -82,7 +96,7 @@ body {
 .ink-purple {
   color: #701a75;
   font-family: var(--font-caveat), cursive;
-  font-size: 1.25rem;
+  font-size: var(--font-size-ink);
   font-weight: 500;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(112, 26, 117, 0.15);
@@ -91,7 +105,7 @@ body {
 .ink-yellow {
   color: #b45309;
   font-family: var(--font-caveat), cursive;
-  font-size: 1.25rem;
+  font-size: var(--font-size-ink);
   font-weight: 500;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(180, 83, 9, 0.15);
