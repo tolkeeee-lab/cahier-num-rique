@@ -625,7 +625,7 @@ export default function JournalPage() {
       <div className="flex-grow flex flex-col relative z-10 max-w-5xl mx-auto w-full h-full">
 
         {/* Notebook Main Open Plate Chassis */}
-        <div className="bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-gray-300 shadow-none md:shadow-2xl flex relative z-0 h-dvh md:h-[720px] overflow-hidden">
+        <div className="bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-gray-300 shadow-none md:shadow-2xl flex relative z-0 h-dvh md:h-[720px] overflow-hidden w-full max-w-full">
           
           {/* Left leather cover binder spine */}
           <div className="flex w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-12 z-10 flex-shrink-0 select-none">
@@ -658,7 +658,7 @@ export default function JournalPage() {
           </div>
 
           {/* Right Page ( Ivory Seyes Lined Paper ) */}
-          <div className="flex-1 flex flex-col h-full bg-[#fdfaf2] relative">
+          <div className="flex-1 min-w-0 flex flex-col h-full bg-[#fdfaf2] relative">
             
             {/* Header Area Inside the page */}
             <div className="px-3 py-2 md:p-6 md:pb-4 border-b border-dashed border-sky-300 border-opacity-40 select-none">
@@ -762,7 +762,7 @@ export default function JournalPage() {
             <div className="flex-1 overflow-hidden flex flex-col">
               
               {activeTab === 'cahier' && (
-                <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+                <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden relative">
                   
                   {/* Pen selector — compact circles on mobile, pills on desktop */}
                   <div className="px-3 md:px-6 py-2 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-4 bg-white bg-opacity-40 select-none z-10 overflow-x-auto scrollbar-hide">
