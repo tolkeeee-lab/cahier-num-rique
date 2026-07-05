@@ -62,9 +62,11 @@ export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) 
       const list = activeSubTab === 'supplier' ? data.suppliers : data.clients
       setEntities(list || [])
       
-      // Si aucune entité sélectionnée mais qu'il y en a, sélectionner la première par défaut
+      // Si aucune entité sélectionnée mais qu'il y en a, sélectionner la première par défaut (seulement sur bureau)
       if (list && list.length > 0 && !selectedEntityName) {
-        setSelectedEntityName(list[0].name)
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+          setSelectedEntityName(list[0].name)
+        }
       }
     } catch (e) {
       console.error(e)
@@ -172,7 +174,7 @@ export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       
       {/* Sidebar - Liste des Débiteurs/Grossistes */}
-      <div className="md:col-span-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col h-[520px]">
+      <div className={`md:col-span-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col h-[520px] ${selectedEntityName ? 'hidden md:flex' : 'flex'}`}>
         {/* Sub Navigation */}
         <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
           <button
@@ -281,18 +283,27 @@ export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) 
       </div>
 
       {/* Main Panel - Fiche de Dette Lignée */}
-      <div className="md:col-span-2 flex flex-col h-[520px] bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className={`md:col-span-2 flex flex-col h-[520px] bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden ${selectedEntityName ? 'flex' : 'hidden md:flex'}`}>
         {selectedEntity ? (
           <div className="flex flex-col h-full">
             {/* Header de la Fiche */}
             <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-              <div>
-                <span className="text-[10px] uppercase font-mono tracking-wider text-gray-400">
-                  {activeSubTab === 'supplier' ? 'Fiche de Dette Fournisseur (Nos Dettes)' : 'Fiche de Crédit Client (Argent Dehors)'}
-                </span>
-                <h3 className="text-xl font-bold text-gray-900 font-handwritten mt-0.5">
-                  {activeSubTab === 'supplier' ? 'Grossiste' : 'Client'} : {selectedEntity.name}
-                </h3>
+              <div className="flex items-start gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedEntityName(null)}
+                  className="md:hidden mt-0.5 px-3 py-1.5 bg-gray-250 hover:bg-gray-300 text-gray-800 rounded-xl text-[10px] font-extrabold uppercase tracking-wider flex items-center justify-center transition-colors border border-gray-300"
+                >
+                  ← Retour
+                </button>
+                <div>
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-gray-400">
+                    {activeSubTab === 'supplier' ? 'Fiche de Dette Fournisseur (Nos Dettes)' : 'Fiche de Crédit Client (Argent Dehors)'}
+                  </span>
+                  <h3 className="text-xl font-bold text-gray-900 font-handwritten mt-0.5">
+                    {activeSubTab === 'supplier' ? 'Grossiste' : 'Client'} : {selectedEntity.name}
+                  </h3>
+                </div>
               </div>
               <div className="text-right">
                 <span className="text-[10px] uppercase font-mono tracking-wider text-gray-400">
@@ -305,9 +316,9 @@ export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) 
             </div>
 
             {/* Lignes de Cahier Lignées pour l'Historique */}
-            <div className="flex-1 overflow-y-auto lined-paper pl-24 pr-4 py-6 relative">
+            <div className="flex-1 overflow-y-auto lined-paper pl-12 md:pl-24 pr-4 py-6 relative">
               {/* Ligne rouge de marge */}
-              <div className="absolute left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
+              <div className="absolute left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
 
               <span className="text-[10px] uppercase font-mono tracking-wider text-gray-400 select-none block mb-3 no-underline">
                 📄 HISTORIQUE DES ENGAGEMENTS :

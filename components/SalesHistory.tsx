@@ -182,9 +182,9 @@ export function SalesHistory({ sales, onSaleCrossedOut, shopId, isEmployee }: Sa
   }
 
   return (
-    <div className="relative pl-24 pr-4 py-4 min-h-[300px] w-full">
+    <div className="relative pl-12 md:pl-24 pr-4 py-4 min-h-[300px] w-full">
       {/* Red vertical margin line represented in absolute coordinates */}
-      <div className="absolute left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
+      <div className="absolute left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
 
       <div className="lined-text-container space-y-0 text-lg">
         {Object.entries(groupedSales).map(([dateStr, salesList]) => (
@@ -212,7 +212,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, shopId, isEmployee }: Sa
                 >
                   
                   {/* Timestamp located strictly on the left of the margin */}
-                  <div className="absolute left-[-68px] w-14 text-right font-mono text-[10px] text-gray-400 font-bold select-none pr-1 pt-1.5 no-underline">
+                  <div className="absolute left-[-38px] md:left-[-68px] w-8 md:w-14 text-right font-mono text-[10px] text-gray-400 font-bold select-none pr-1.5 md:pr-1 pt-1.5 no-underline">
                     {sale.time}
                   </div>
 

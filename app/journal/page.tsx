@@ -616,7 +616,7 @@ export default function JournalPage() {
   }
 
   return (
-    <main className="min-h-dvh md:min-h-screen md:py-8 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative">
+    <main className="min-h-dvh md:min-h-screen md:py-8 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative overflow-x-hidden">
       
       {/* Lamp Highlight overlay for desk immersion */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-amber-500 opacity-[0.03] rounded-full blur-[120px] pointer-events-none z-0"></div>
@@ -801,7 +801,7 @@ export default function JournalPage() {
                   {/* Scrollable Seyes lined area inside the page */}
                   <div 
                     ref={scrollContainerRef}
-                    className="flex-1 overflow-y-auto lined-paper pb-20 scroll-smooth"
+                    className="flex-1 overflow-y-auto lined-paper scroll-smooth"
                   >
                     {sales.length > 0 ? (
                       <SalesHistory 
@@ -822,11 +822,11 @@ export default function JournalPage() {
                       </div>
                     )}
                   </div>
-
+ 
                   {/* Sticky writing input bar pinned to the bottom of the page */}
                   <form 
                     onSubmit={handleSubmit}
-                    className="absolute bottom-0 left-0 right-0 bg-[#fefdfa] border-t border-gray-200 py-3 px-3 md:px-6 md:pl-24 flex items-center gap-2 md:gap-4 z-10 shadow-lg"
+                    className="relative bg-[#fefdfa] border-t border-gray-200 py-3 px-3 md:px-6 md:pl-24 flex items-center gap-2 md:gap-4 z-10 shadow-lg"
                   >
                     {/* Red margin line — desktop only */}
                     <div className="hidden md:block absolute left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
