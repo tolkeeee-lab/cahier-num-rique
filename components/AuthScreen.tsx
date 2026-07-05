@@ -24,6 +24,34 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
 
   const isConfigured = isSupabaseClientConfigured()
 
+  const [isOnline, setIsOnline] = useState(true)
+  const [lastActiveUser, setLastActiveUser] = useState<any>(null)
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+    setIsOnline(window.navigator.onLine)
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+    const cached = localStorage.getItem('cahier_last_active_user')
+    if (cached) {
+      try {
+        setLastActiveUser(JSON.parse(cached))
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  }, [])
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password) return
@@ -33,7 +61,8 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
     setSuccess(null)
 
     try {
-      if (isConfigured) {
+      const online = typeof window !== 'undefined' ? window.navigator.onLine : false
+      if (isConfigured && online) {
         // --- AUTH SUPABASE ---
         if (isSignUp) {
           const generatedShopId = role === 'owner' 
@@ -193,7 +222,30 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
             </div>
           )}
 
+          {!isOnline && (
+            <div className="mb-4 p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-[10px] leading-normal font-sans font-semibold flex items-start gap-1.5">
+              <span className="text-xs">⚠️</span>
+              <span>Vous êtes hors-ligne. Les requêtes de connexion Supabase Cloud sont suspendues. Vous pouvez continuer à utiliser votre cahier en mode local de secours.</span>
+            </div>
+          )}
+
           <form onSubmit={handleAuth} className="space-y-4 font-sans">
+            
+            {!isOnline && lastActiveUser && (
+              <div className="pb-3 border-b border-[#e2dcd0] border-dashed mb-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onLoginSuccess) {
+                      onLoginSuccess(lastActiveUser)
+                    }
+                  }}
+                  className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-1.5 border border-amber-500"
+                >
+                  <span>⚡ Continuer hors-ligne ({lastActiveUser.name || lastActiveUser.full_name || 'Ma Boutique'})</span>
+                </button>
+              </div>
+            )}
             
             {/* Rôle Selector - Seul à l'inscription */}
             {isSignUp && (

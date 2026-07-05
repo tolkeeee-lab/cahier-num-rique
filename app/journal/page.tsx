@@ -169,6 +169,12 @@ export default function JournalPage() {
   }, [])
 
   useEffect(() => {
+    if (user) {
+      localStorage.setItem('cahier_last_active_user', JSON.stringify(user))
+    }
+  }, [user])
+
+  useEffect(() => {
     if (user || localDemo) {
       loadFinancialData()
     }
