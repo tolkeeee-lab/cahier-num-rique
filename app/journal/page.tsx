@@ -627,32 +627,32 @@ export default function JournalPage() {
         {/* Notebook Main Open Plate Chassis */}
         <div className="bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-gray-300 shadow-none md:shadow-2xl flex relative z-0 h-dvh md:h-[720px] overflow-hidden">
           
-          {/* Left leather cover binder spine — hidden on mobile */}
-          <div className="hidden md:flex w-16 notebook-cover-left flex-col items-center justify-between py-12 z-10 flex-shrink-0 select-none">
+          {/* Left leather cover binder spine */}
+          <div className="flex w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-12 z-10 flex-shrink-0 select-none">
             {/* Top brass screw */}
             <div className="brass-screw"></div>
             
             {/* Vertical gold letter spine title */}
-            <div className="font-extrabold text-[9px] text-[#f59e0b] font-sans tracking-[0.4em] uppercase select-none my-auto whitespace-nowrap [writing-mode:vertical-lr] rotate-180 text-center opacity-85">
+            <div className="font-extrabold text-[7px] md:text-[9px] text-[#f59e0b] font-sans tracking-[0.2em] md:tracking-[0.4em] uppercase select-none my-auto whitespace-nowrap [writing-mode:vertical-lr] rotate-180 text-center opacity-85">
               Cahier de Caisse Intelligent
             </div>
 
             {/* Middle brass medallion */}
-            <div className="w-10 h-10 rounded-full brass-medallion flex flex-col items-center justify-center text-[9px] font-bold font-mono my-4 shadow-md">
-              <span>200</span>
-              <span className="text-[5px] uppercase tracking-tighter">PAGES</span>
+            <div className="w-7 h-7 md:w-10 md:h-10 rounded-full brass-medallion flex flex-col items-center justify-center text-[7px] md:text-[9px] font-bold font-mono my-2 md:my-4 shadow-md">
+              <span className="scale-[0.8] md:scale-100">200</span>
+              <span className="text-[4px] md:text-[5px] uppercase tracking-tighter -mt-0.5 md:mt-0 select-none">PAGES</span>
             </div>
 
             {/* Bottom brass screw */}
             <div className="brass-screw"></div>
           </div>
 
-          {/* Spiral loops — hidden on mobile */}
-          <div className="hidden md:flex absolute left-[54px] top-0 bottom-0 w-5 flex-col items-center justify-around py-6 z-20 pointer-events-none">
+          {/* Spiral loops */}
+          <div className="flex absolute left-[32px] md:left-[54px] top-0 bottom-0 w-4 md:w-5 flex-col items-center justify-around py-4 md:py-6 z-20 pointer-events-none">
             {spiralRings.map((_, i) => (
               <div 
                 key={i} 
-                className="w-8 h-3.5 spiral-ring"
+                className="w-5 md:w-8 h-2 md:h-3.5 spiral-ring"
               ></div>
             ))}
           </div>
@@ -826,16 +826,15 @@ export default function JournalPage() {
                   {/* Sticky writing input bar pinned to the bottom of the page */}
                   <form 
                     onSubmit={handleSubmit}
-                    className="relative bg-[#fefdfa] border-t border-gray-200 py-3 px-3 md:px-6 md:pl-24 flex items-center gap-2 md:gap-4 z-10 shadow-lg"
+                    className="relative bg-[#fefdfa] border-t border-gray-200 py-3 pl-12 md:pl-24 pr-3 md:pr-6 flex items-center gap-2 md:gap-4 z-10 shadow-lg"
                   >
-                    {/* Red margin line — desktop only */}
-                    <div className="hidden md:block absolute left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
-
-                    {/* Clock — desktop only in left margin, mobile inline badge */}
-                    <div className="hidden md:block absolute left-4 font-mono text-xs text-gray-400 font-bold select-none w-14 text-right pr-2">
+                    {/* Red margin line — responsive */}
+                    <div className="absolute left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
+ 
+                    {/* Clock — positioned in left margin */}
+                    <div className="absolute left-1 md:left-4 font-mono text-[9px] md:text-xs text-gray-400 font-bold select-none w-8 md:w-14 text-right pr-1 md:pr-2">
                       ⏰ {currentTime}
                     </div>
-                    <span className="md:hidden text-[10px] font-mono text-gray-400 font-bold flex-shrink-0">⏰</span>
 
                     <input
                       type="text"
