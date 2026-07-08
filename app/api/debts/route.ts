@@ -75,8 +75,8 @@ export async function GET(request: NextRequest) {
               .filter((t: any) => t.supplier_name === d.supplier_name)
               .map((t: any) => ({
                 id: t.id,
-                date: new Date(t.created_at).toISOString().split('T')[0],
-                time: new Date(t.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                date: new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t.created_at)),
+                time: new Date(t.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Porto-Novo' }),
                 description: t.description,
                 amount: t.amount
               }))
@@ -166,8 +166,8 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date()
-    const dateStr = now.toISOString().split('T')[0]
-    const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    const dateStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+    const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Porto-Novo' })
     const saleId = randomUUID()
 
     // 1. Vérification solvabilité si remboursement de dette fournisseur (retrait du tiroir)

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Caveat, JetBrains_Mono } from 'next/font/google'
+import { Inter, Itim, JetBrains_Mono } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
 
@@ -8,9 +8,10 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
-const caveat = Caveat({
+const itim = Itim({
+  weight: '400',
   subsets: ['latin'],
-  variable: '--font-caveat',
+  variable: '--font-itim',
 })
 
 const jetbrains = JetBrains_Mono({
@@ -36,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="fr" className={`${inter.variable} ${caveat.variable} ${jetbrains.variable}`}>
+    <html lang="fr" className={`${inter.variable} ${itim.variable} ${jetbrains.variable}`}>
       <body className="font-sans antialiased bg-[#141210] text-gray-900 min-h-screen">
         {children}
         

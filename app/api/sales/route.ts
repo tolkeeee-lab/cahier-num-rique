@@ -133,10 +133,11 @@ export async function POST(request: NextRequest) {
     // 4. Préparer l'objet transaction
     const saleId = randomUUID()
     const now = new Date()
-    const dateStr = now.toISOString().split('T')[0]
+    const dateStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
     const timeStr = now.toLocaleTimeString('fr-FR', {
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Africa/Porto-Novo'
     })
 
     const newSale = {
@@ -342,7 +343,7 @@ export async function GET(request: NextRequest) {
           .order('created_at', { ascending: false })
 
         if (dateParam === 'today') {
-          const today = new Date().toISOString().split('T')[0]
+          const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
           query = query.eq('date', today)
         }
 
@@ -484,7 +485,7 @@ function getLocalSales(dateParam: string | null, shopId: string): any[] {
   const salesDatabase = getLocalDb()
   let filtered = salesDatabase.filter(s => s.shop_id === shopId)
   if (dateParam === 'today') {
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
     filtered = filtered.filter(s => s.date === today)
   }
   return filtered.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -496,7 +497,7 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
   let totalFacture = 0
   
   // Format: [quantité] [nom] à [prix] (ex: "10 mèches à 2000" ou "3 sacs de riz à 12000")
-  const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/gi
+  const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@|\s)\s*(\d+)/gi
   let match
   
   while ((match = articleRegex.exec(text)) !== null) {

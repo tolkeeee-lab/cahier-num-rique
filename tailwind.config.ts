@@ -9,7 +9,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ['var(--font-inter)', 'sans-serif'],
-        handwritten: ['var(--font-caveat)', 'cursive'],
+        handwritten: ['var(--font-itim)', 'cursive'],
         mono: ['var(--font-mono)', 'monospace'],
       },
     },

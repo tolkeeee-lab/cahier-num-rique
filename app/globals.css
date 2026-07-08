@@ -68,45 +68,45 @@ body {
 /* Bic pen inks premium hex values */
 .ink-blue {
   color: #1d4ed8;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-itim), cursive;
   font-size: var(--font-size-ink);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(29, 78, 216, 0.15);
 }
 
 .ink-red {
   color: #e11d48;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-itim), cursive;
   font-size: var(--font-size-ink);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(225, 29, 72, 0.15);
 }
 
 .ink-green {
   color: #047857;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-itim), cursive;
   font-size: var(--font-size-ink);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(4, 120, 87, 0.15);
 }
 
 .ink-purple {
   color: #701a75;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-itim), cursive;
   font-size: var(--font-size-ink);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(112, 26, 117, 0.15);
 }
 
 .ink-yellow {
   color: #b45309;
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-itim), cursive;
   font-size: var(--font-size-ink);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: 0.02em;
   text-shadow: 0 0 0.5px rgba(180, 83, 9, 0.15);
 }
@@ -168,7 +168,7 @@ textarea:focus {
 
 /* Handwritten class helper */
 .handwritten {
-  font-family: var(--font-caveat), cursive;
+  font-family: var(--font-itim), cursive;
 }
 
 /* Monospace numbers helper */

@@ -181,7 +181,7 @@ export default function JournalPage() {
     // Mettre à jour l'horloge
     const updateTime = () => {
       const now = new Date()
-      setCurrentTime(now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
+      setCurrentTime(now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Porto-Novo' }))
     }
     updateTime()
     const interval = setInterval(updateTime, 60000)
@@ -350,7 +350,7 @@ export default function JournalPage() {
       setNosDettes(supplierDebtsSum)
 
       // Filtrer les ventes pour afficher seulement celles d'aujourd'hui dans le journal
-      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
       const todaysSales = salesList.filter((s: any) => s.date === todayStr)
       
       setSales(todaysSales.reverse())
@@ -384,7 +384,7 @@ export default function JournalPage() {
       setArgentDehors(clientDebtsSum)
       setNosDettes(supplierDebtsSum)
 
-      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
       const todaysSales = salesList.filter((s: any) => s.date === todayStr)
       setSales(todaysSales.reverse())
       setAllSales(salesList)
@@ -447,7 +447,7 @@ export default function JournalPage() {
     const articles: any[] = []
     let totalFacture = 0
     
-    const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/gi
+    const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@|\s)\s*(\d+)/gi
     let match
     
     while ((match = articleRegex.exec(text)) !== null) {
@@ -568,11 +568,13 @@ export default function JournalPage() {
 
         // Créer l'objet transaction
         const now = new Date()
+        const dateStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+        const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Porto-Novo' })
         const newSale = {
           id: Math.random().toString(36).substring(2, 9),
           shop_id: shopId,
-          date: now.toISOString().split('T')[0],
-          time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          date: dateStr,
+          time: timeStr,
           client: parsed.nom_client, // mapping standard de l'objet
           total: parsed.total_facture, // mapping standard de l'objet
           paid: parsed.montant_paye, // mapping standard de l'objet
@@ -643,7 +645,7 @@ export default function JournalPage() {
     const sanitizedInput = input.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
 
     // 2. Chercher le motif de calcul avec nom d'article optionnel
-    const match = sanitizedInput.match(/(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/i)
+    const match = sanitizedInput.match(/(\d+)\s*(.*?)\s*(?:à|a|@|\s)\s*(\d+)/i)
     if (match) {
       const quantity = parseInt(match[1], 10)
       const item = match[2].trim() || "Article(s)"
