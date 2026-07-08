@@ -174,7 +174,7 @@ export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       
       {/* Sidebar - Liste des Débiteurs/Grossistes */}
-      <div className={`md:col-span-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col h-[520px] ${selectedEntityName ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`md:col-span-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col h-[400px] md:h-[520px] ${selectedEntityName ? 'hidden md:flex' : 'flex'}`}>
         {/* Sub Navigation */}
         <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
           <button
@@ -283,7 +283,7 @@ export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) 
       </div>
 
       {/* Main Panel - Fiche de Dette Lignée */}
-      <div className={`md:col-span-2 flex flex-col h-[520px] bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden ${selectedEntityName ? 'flex' : 'hidden md:flex'}`}>
+      <div className={`md:col-span-2 flex flex-col h-[400px] md:h-[520px] bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden ${selectedEntityName ? 'flex' : 'hidden md:flex'}`}>
         {selectedEntity ? (
           <div className="flex flex-col h-full">
             {/* Header de la Fiche */}
@@ -356,10 +356,10 @@ export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) 
             </div>
 
             {/* Formulaires d'Actions au bas de la fiche */}
-            <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-2 md:p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
               
               {/* Formulaire de remboursement */}
-              <form onSubmit={handlePaySubmit} className="space-y-2 p-3 bg-white rounded-xl border border-gray-200 flex flex-col justify-between">
+              <form onSubmit={handlePaySubmit} className="space-y-2 p-2 md:p-3 bg-white rounded-xl border border-gray-200 flex flex-col justify-between">
                 <span className="text-[10px] font-bold text-gray-500 flex items-center gap-1">
                   🟢 {activeSubTab === 'supplier' ? 'REMBOURSER NOTRE DETTE' : 'ENCAISSER NOTRE DU'}
                 </span>
@@ -388,7 +388,7 @@ export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) 
               </form>
 
               {/* Formulaire d'ajout de crédit */}
-              <form onSubmit={handleCreditSubmit} className="space-y-2 p-3 bg-white rounded-xl border border-gray-200 flex flex-col justify-between">
+              <form onSubmit={handleCreditSubmit} className="space-y-2 p-2 md:p-3 bg-white rounded-xl border border-gray-200 flex flex-col justify-between">
                 <span className="text-[10px] font-bold text-purple-700 flex items-center gap-1">
                   🟣 {activeSubTab === 'supplier' ? 'ACHETER DU STOCK A CREDIT' : 'DONNER CREDIT CLIENT'}
                 </span>
