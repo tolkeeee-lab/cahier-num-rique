@@ -1,9 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Background Gradient (Emerald Leather) -->
+    <!-- Background Gradient (Gold/Amber) -->
     <linearGradient id="coverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#064e3b" />
-      <stop offset="100%" stop-color="#012b1c" />
+      <stop offset="0%" stop-color="#fff5d6" />
+      <stop offset="30%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
     </linearGradient>
     
     <!-- Gold Gradient for stitches and title -->
@@ -12,6 +13,18 @@
       <stop offset="30%" stop-color="#fbbf24" />
       <stop offset="70%" stop-color="#d97706" />
       <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <!-- Blue Notebook Cover Gradient -->
+    <linearGradient id="blueCoverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </linearGradient>
+
+    <!-- Red Ribbon Gradient -->
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="100%" stop-color="#be123c" />
     </linearGradient>
 
     <!-- Metal rings gradient -->
@@ -28,36 +41,39 @@
     </filter>
   </defs>
 
-  <!-- App Icon Background (Emerald cover with rounded corners) -->
-  <rect x="24" y="24" width="464" height="464" rx="96" fill="url(#coverGrad)" stroke="#02311f" stroke-width="6" />
+  <!-- App Icon Background (Vibrant gold/amber with rounded corners) -->
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="url(#coverGrad)" stroke="#b45309" stroke-width="6" />
 
-  <!-- Gold foil inner border (stitching visual) -->
-  <rect x="56" y="56" width="400" height="400" rx="68" fill="none" stroke="url(#goldGrad)" stroke-width="4" stroke-dasharray="12,8" opacity="0.8" />
+  <!-- Dark blue inner border (stitching visual) -->
+  <rect x="56" y="56" width="400" height="400" rx="68" fill="none" stroke="#1e3a8a" stroke-width="4" stroke-dasharray="12,8" opacity="0.25" />
 
   <!-- Left Spine Stitches border shadow -->
-  <line x1="120" y1="56" x2="120" y2="456" stroke="#011b11" stroke-width="8" opacity="0.6" />
-  <line x1="120" y1="56" x2="120" y2="456" stroke="url(#goldGrad)" stroke-width="2" stroke-dasharray="8,6" opacity="0.7" />
+  <line x1="120" y1="56" x2="120" y2="456" stroke="#b45309" stroke-width="8" opacity="0.25" />
+  <line x1="120" y1="56" x2="120" y2="456" stroke="#1e3a8a" stroke-width="2" stroke-dasharray="8,6" opacity="0.4" />
 
-  <!-- Gold Notebook Emboss in the Center -->
+  <!-- Notebook in the Center -->
   <g filter="url(#shadow)">
-    <!-- Closed Notebook Cover -->
-    <path d="M190 140 H380 C395 140 400 145 400 160 V360 C400 375 395 380 380 380 H190 Z" fill="#012b1c" stroke="url(#goldGrad)" stroke-width="3" />
+    <!-- Closed Notebook Cover (Deep Blue) -->
+    <path d="M190 140 H380 C395 140 400 145 400 160 V360 C400 375 395 380 380 380 H190 Z" fill="url(#blueCoverGrad)" stroke="url(#goldGrad)" stroke-width="3" />
     
     <!-- Pages edge visual -->
     <path d="M380 145 H385 V375 H380 Z" fill="#fdfaf2" opacity="0.9" />
 
-    <!-- Ribbon bookmark (Gold ribbon hanging out) -->
-    <path d="M290 340 V410 L305 395 L320 410 V340 Z" fill="url(#goldGrad)" />
+    <!-- Ribbon bookmark (Red ribbon hanging out) -->
+    <path d="M290 340 V410 L305 395 L320 410 V340 Z" fill="url(#redGrad)" />
     
     <!-- Pen lock visual (Stylo Bic mockup on the side) -->
     <rect x="400" y="210" width="16" height="90" rx="8" fill="#1d4ed8" stroke="url(#goldGrad)" stroke-width="1.5" />
     <path d="M400 210 L408 190 L416 210 Z" fill="url(#goldGrad)" />
 
-    <!-- Padlock Emboss on the book cover (Security symbol) -->
-    <rect x="255" y="220" width="50" height="40" rx="8" fill="url(#goldGrad)" />
-    <path d="M265 220 V200 C265 185 295 185 295 200 V220" fill="none" stroke="url(#goldGrad)" stroke-width="5" stroke-linecap="round" />
-    <circle cx="280" cy="240" r="4" fill="#78350f" />
-    <path d="M280 244 V252" stroke="#78350f" stroke-width="2" stroke-linecap="round" />
+    <!-- Lined School Label -->
+    <rect x="220" y="210" width="130" height="80" rx="8" fill="#fdfaf2" stroke="url(#goldGrad)" stroke-width="2" />
+    <!-- Blue line guides on label -->
+    <line x1="230" y1="242" x2="340" y2="242" stroke="#0ea5e9" stroke-width="1.5" stroke-dasharray="2,2" opacity="0.4" />
+    <line x1="230" y1="267" x2="340" y2="267" stroke="#0ea5e9" stroke-width="1.5" stroke-dasharray="2,2" opacity="0.4" />
+    <!-- Label text -->
+    <text x="285" y="234" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="bold" fill="#1e3a8a" text-anchor="middle" letter-spacing="1">CAHIER</text>
+    <text x="285" y="260" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="bold" fill="#d97706" text-anchor="middle" letter-spacing="0.5">NUMÉRIQUE</text>
   </g>
 
   <!-- Brass binder rings visual overlapping from the left border -->
