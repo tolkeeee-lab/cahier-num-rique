@@ -113,6 +113,7 @@ export default function JournalPage() {
   const [nosDettes, setNosDettes] = useState(0)
   
   const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives'>('cahier')
+  const [cahierFilter, setCahierFilter] = useState<'all' | 'credit'>('all')
   const [allSales, setAllSales] = useState<Sale[]>([])
   
   // Sales Input fields inside page context
@@ -204,7 +205,7 @@ export default function JournalPage() {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
     }
-  }, [sales, activeTab])
+  }, [sales, activeTab, cahierFilter])
 
   // Écouter l'état du réseau pour synchroniser dès le retour en ligne
   useEffect(() => {
@@ -707,6 +708,20 @@ export default function JournalPage() {
     />
   }
 
+  // Filtrer les ventes du jour pour l'affichage (Tout vs Crédits)
+  const filteredSalesForCahier = sales.filter((s) => {
+    if (cahierFilter === 'all') return true
+    return (
+      s.pen_color === 'yellow' ||
+      s.pen_color === 'purple' ||
+      s.type === 'sale_credit' ||
+      s.type === 'purchase_credit' ||
+      s.type === 'payment_client' ||
+      s.type === 'payment_supplier' ||
+      s.debt > 0
+    )
+  })
+
   return (
     <main className="min-h-dvh md:min-h-screen md:py-8 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative overflow-x-hidden">
       
@@ -890,14 +905,40 @@ export default function JournalPage() {
                     </span>
                   </div>
 
+                  {/* Segmented Filter control (Tout le cahier vs Crédits) */}
+                  <div className="px-3 md:px-6 py-1.5 border-b border-gray-200 bg-[#f4ebe0] bg-opacity-65 flex items-center gap-2 select-none z-10 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setCahierFilter('all')}
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                        cahierFilter === 'all'
+                          ? 'bg-gray-800 text-white shadow-sm font-extrabold'
+                          : 'bg-white bg-opacity-65 text-gray-500 hover:text-gray-855 border border-gray-200'
+                      }`}
+                    >
+                      📖 Tout le cahier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCahierFilter('credit')}
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                        cahierFilter === 'credit'
+                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                          : 'bg-white bg-opacity-65 text-gray-500 hover:text-gray-855 border border-gray-200'
+                      }`}
+                    >
+                      🟡 Crédits & Dettes
+                    </button>
+                  </div>
+
                   {/* Scrollable Seyes lined area inside the page */}
                   <div 
                     ref={scrollContainerRef}
                     className="flex-1 overflow-y-auto lined-paper scroll-smooth"
                   >
-                    {sales.length > 0 ? (
+                    {filteredSalesForCahier.length > 0 ? (
                       <SalesHistory 
-                        sales={sales} 
+                        sales={filteredSalesForCahier} 
                         onSaleCrossedOut={handleSaleCrossedOut} 
                         onError={handleError} 
                         shopId={mappedUser?.shop_id}
@@ -906,10 +947,14 @@ export default function JournalPage() {
                     ) : (
                       <div className="flex flex-col items-center justify-center p-24 text-center min-h-[350px] no-underline">
                         <p className="font-handwritten text-3xl text-gray-400">
-                          Cahier vierge pour aujourd'hui
+                          {cahierFilter === 'credit' 
+                            ? "Aucun crédit enregistré aujourd'hui" 
+                            : "Cahier vierge pour aujourd'hui"}
                         </p>
                         <p className="text-xs text-gray-400 mt-2 font-mono">
-                          Sélectionnez une couleur d'encre et tapez une écriture ci-dessous.
+                          {cahierFilter === 'credit'
+                            ? "Vos écritures de ventes ou d'achats à crédit s'afficheront ici."
+                            : "Sélectionnez une couleur d'encre et tapez une écriture ci-dessous."}
                         </p>
                       </div>
                     )}
