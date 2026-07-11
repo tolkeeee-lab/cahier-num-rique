@@ -1,3 +1,12 @@
+/**
+ * localDb.ts — Fallback JSON fichier côté SERVEUR uniquement
+ *
+ * Ce module fournit un stockage de secours (fichier JSON local) utilisé par
+ * les API Routes (server-side) quand Supabase n'est pas configuré.
+ *
+ * ⚠️ NE PAS importer ce fichier côté client (composants React, hooks).
+ *    Pour la persistance côté client (mode hors-ligne navigateur), utiliser lib/offlineDb.ts.
+ */
 import fs from 'fs'
 import path from 'path'
 

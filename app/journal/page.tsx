@@ -3,9 +3,25 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive } from 'lucide-react'
+import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle } from 'lucide-react'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { AuthScreen } from '@/components/AuthScreen'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import {
+  generateOfflineId,
+  getOfflineSales,
+  saveOfflineSale,
+  replaceOfflineSales,
+  getPendingSync,
+  markAsSynced,
+  markSyncError,
+  getOfflineClients,
+  replaceOfflineClients,
+  getOfflineSuppliers,
+  replaceOfflineSuppliers,
+  addOrUpdateOfflineClientDebt,
+  addOrUpdateOfflineSupplierDebt,
+} from '@/lib/offlineDb'
 
 interface Sale {
   id: string
@@ -85,6 +101,17 @@ const PENS = [
   },
 ]
 
+type FilterId = 'all' | 'blue' | 'red' | 'green' | 'purple' | 'yellow'
+
+const FILTERS: { id: FilterId; label: string }[] = [
+  { id: 'all',    label: 'TOUT' },
+  { id: 'blue',   label: 'ENTRÉES' },
+  { id: 'red',    label: 'DÉPENSES' },
+  { id: 'green',  label: 'STOCK CASH' },
+  { id: 'purple', label: 'STOCK CRÉDIT' },
+  { id: 'yellow', label: 'CRÉDIT CLIENT' },
+]
+
 export default function JournalPage() {
   const isConfigured = isSupabaseClientConfigured()
   const [user, setUser] = useState<any>(null)
@@ -107,14 +134,20 @@ export default function JournalPage() {
   // localDemo kept for backward compat - true when using demo bypass
   const localDemo = demoRole !== null
 
+  // ── Réseau & Sync ──────────────────────────────────────────────────────────
+  const shopId = mappedUser?.shop_id
+  const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopId)
+
   const [sales, setSales] = useState<Sale[]>([])
   const [tiroirCaisse, setTiroirCaisse] = useState(0)
   const [argentDehors, setArgentDehors] = useState(0)
   const [nosDettes, setNosDettes] = useState(0)
+  const [soldeDuJour, setSoldeDuJour] = useState(0)
   
   const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives'>('cahier')
-  const [cahierFilter, setCahierFilter] = useState<'all' | 'credit'>('all')
   const [allSales, setAllSales] = useState<Sale[]>([])
+  const [journalFilter, setJournalFilter] = useState<FilterId>('all')
+  const [archiveFilter, setArchiveFilter] = useState<FilterId>('all')
   
   // Sales Input fields inside page context
   const [input, setInput] = useState('')
@@ -137,28 +170,75 @@ export default function JournalPage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // 1. Lire la session active Supabase ou Mock local
-    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        setAuthLoading(false)
-      } else {
+    const initAuth = async () => {
+      try {
+        // Essayer de récupérer la session Supabase avec timeout
+        const sessionPromise = supabaseClient.auth.getSession()
+        const timeoutPromise = new Promise<{ data: { session: null } }>(resolve =>
+          setTimeout(() => resolve({ data: { session: null } }), 4000)
+        )
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any
+
+        if (session?.user) {
+          setUser(session.user)
+          setAuthLoading(false)
+          return
+        }
+
+        // Pas de session Supabase → essayer le cache local (mock session ou dernière session)
         const localSession = localStorage.getItem('cahier_mock_session')
         if (localSession) {
-          setUser(JSON.parse(localSession))
+          try { setUser(JSON.parse(localSession)) } catch {}
+          setAuthLoading(false)
+          return
+        }
+
+        // ⚠️ Clé du fix offline : relire l'utilisateur du dernier accès
+        // Si on est offline et qu'on refresh, getSession() retourne null MAIS on a
+        // le dernier utilisateur actif en cache → on l'utilise au lieu de déconnecter
+        const isCurrentlyOffline = typeof window !== 'undefined' && !window.navigator.onLine
+        const lastActiveUser = localStorage.getItem('cahier_last_active_user')
+        if (isCurrentlyOffline && lastActiveUser) {
+          console.info('[Auth] Offline refresh — restauration depuis cahier_last_active_user')
+          try {
+            setUser(JSON.parse(lastActiveUser))
+            setAuthLoading(false)
+            return
+          } catch {}
+        }
+
+        // Vraiment pas de session → montrer l'écran de login
+        setUser(null)
+        setAuthLoading(false)
+      } catch (err) {
+        console.error('[Auth] Erreur d\'initialisation:', err)
+        // En cas d'erreur inattendue, essayer le cache
+        const lastActiveUser = localStorage.getItem('cahier_last_active_user')
+        if (lastActiveUser) {
+          try { setUser(JSON.parse(lastActiveUser)) } catch {}
         }
         setAuthLoading(false)
       }
-    })
+    }
 
-    // 2. Ecouter les changements d'état Supabase
+    initAuth()
+
+    // Écouter les changements d'état Supabase
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user)
       } else {
+        // ⚠️ Ne pas déconnecter si on est offline (faux SIGNED_OUT dû au timeout réseau)
+        const isCurrentlyOffline = typeof window !== 'undefined' && !window.navigator.onLine
+        if (isCurrentlyOffline) {
+          console.info('[Auth] Offline SIGNED_OUT ignoré — on garde la session locale')
+          setAuthLoading(false)
+          return
+        }
+
         const localSession = localStorage.getItem('cahier_mock_session')
         if (localSession) {
-          setUser(JSON.parse(localSession))
+          try { setUser(JSON.parse(localSession)) } catch {}
         } else {
           setUser(null)
         }
@@ -175,6 +255,7 @@ export default function JournalPage() {
     }
   }, [user])
 
+
   useEffect(() => {
     if (user || localDemo) {
       loadFinancialData()
@@ -182,7 +263,7 @@ export default function JournalPage() {
     // Mettre à jour l'horloge
     const updateTime = () => {
       const now = new Date()
-      setCurrentTime(now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Porto-Novo' }))
+      setCurrentTime(now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
     }
     updateTime()
     const interval = setInterval(updateTime, 60000)
@@ -205,36 +286,32 @@ export default function JournalPage() {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
     }
-  }, [sales, activeTab, cahierFilter])
+  }, [sales, activeTab])
 
-  // Écouter l'état du réseau pour synchroniser dès le retour en ligne
+  // Synchronisation automatique au retour en ligne
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const handleOnline = () => {
-      console.log("[Network] Connexion rétablie, lancement de la synchronisation...")
-      loadFinancialData()
+    if (isOnline && mappedUser && isConfigured) {
+      syncOfflineData().then(() => loadFinancialData())
     }
-    window.addEventListener('online', handleOnline)
-    return () => {
-      window.removeEventListener('online', handleOnline)
-    }
-  }, [mappedUser, isConfigured])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline])
 
   const syncOfflineData = async () => {
     if (!mappedUser) return
-    const shopId = mappedUser.shop_id
-    const online = typeof window !== 'undefined' ? window.navigator.onLine : false
-    if (!online) return
+    const sid = mappedUser.shop_id
+    if (!isOnline) return
 
-    try {
-      const offlineSales = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
-      const unsyncedSales = offlineSales.filter((s: any) => s.is_synced === false)
+    const pending = getPendingSync(sid)
+    if (pending.length === 0) return
 
-      if (unsyncedSales.length === 0) return
+    setSyncStatus('syncing')
+    console.log(`[Offline Sync] Synchronisation de ${pending.length} écriture(s) hors-ligne...`)
 
-      console.log(`[Offline Sync] Synchronisation de ${unsyncedSales.length} écritures hors-ligne...`)
+    let successCount = 0
+    let errorCount = 0
 
-      for (const sale of unsyncedSales) {
+    for (const sale of pending) {
+      try {
         const bodyData = {
           text: sale.notes || '',
           penColor: sale.pen_color || 'blue',
@@ -242,61 +319,66 @@ export default function JournalPage() {
             articles: (sale.articles || []).map((a: any) => ({
               name: a.name || a.nom,
               quantity: a.quantity || a.quantite,
-              unit_price: a.unit_price || a.prix_unitaire
+              unit_price: a.unit_price || a.prix_unitaire,
             })),
             total_amount: sale.total,
             paid_amount: sale.paid,
             debt_amount: sale.debt,
-            client_name: sale.client || 'Client anonyme'
-          }
+            client_name: sale.client || 'Client anonyme',
+          },
         }
 
         const response = await fetch('/api/sales', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-shop-id': shopId
+            'x-shop-id': sid,
           },
-          body: JSON.stringify(bodyData)
+          body: JSON.stringify(bodyData),
         })
 
         if (!response.ok) {
-          throw new Error('Erreur lors de la synchronisation réseau d\'une transaction')
+          const errData = await response.json().catch(() => ({}))
+          throw new Error(errData?.error || `Statut HTTP ${response.status}`)
         }
 
-        sale.is_synced = true
+        markAsSynced(sid, sale.id)
+        successCount++
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Erreur inconnue'
+        markSyncError(sid, sale.id, msg)
+        console.error(`[Offline Sync] Échec pour la transaction ${sale.id} :`, msg)
+        errorCount++
       }
+    }
 
-      // Mettre à jour le cache local pour marquer les ventes comme synchronisées
-      const updatedSales = offlineSales.map((s: any) => {
-        const found = unsyncedSales.find((us: any) => us.id === s.id)
-        if (found) return { ...s, is_synced: true }
-        return s
-      })
-      localStorage.setItem(`cahier_offline_sales_${shopId}`, JSON.stringify(updatedSales))
-      console.log('[Offline Sync] Synchronisation terminée avec succès !')
-    } catch (err) {
-      console.error('[Offline Sync] Échec de la synchronisation :', err)
+    refreshPendingCount(sid)
+
+    if (errorCount === 0) {
+      setSyncStatus('success')
+      console.log(`[Offline Sync] ✅ ${successCount} écriture(s) synchronisée(s).`)
+      // Réinitialiser le badge après 3 secondes
+      setTimeout(() => setSyncStatus('idle'), 3000)
+    } else {
+      setSyncStatus('error')
+      console.warn(`[Offline Sync] ⚠️ ${successCount} réussie(s), ${errorCount} échoué(s).`)
+      setTimeout(() => setSyncStatus('idle'), 5000)
     }
   }
 
   const loadFinancialData = async () => {
     if (!mappedUser) return
     try {
-      let salesList = []
-      let clientsList = []
-      let suppliersList = []
+      let salesList: any[] = []
+      let clientsList: any[] = []
+      let suppliersList: any[] = []
 
-      const online = typeof window !== 'undefined' ? window.navigator.onLine : false
-      const shopId = mappedUser.shop_id
+      const sid = mappedUser.shop_id
 
-      if (isConfigured && online) {
+      if (isConfigured && isOnline) {
         try {
-          // En ligne -> synchroniser d'abord les données locales non synchronisées
-          await syncOfflineData()
-
-          // Charger ensuite via le réseau
-          const headers = { 'x-shop-id': shopId }
+          // En ligne -> charger via le réseau
+          const headers = { 'x-shop-id': sid }
           const response = await fetch('/api/sales', { headers })
           if (!response.ok) throw new Error('Erreur lors du chargement des écritures')
           const data = await response.json()
@@ -310,22 +392,22 @@ export default function JournalPage() {
           const suppliersData = await suppliersRes.json()
           suppliersList = suppliersData.suppliers || []
 
-          // Mettre en cache dans localStorage pour le mode hors-ligne
-          localStorage.setItem(`cahier_offline_sales_${shopId}`, JSON.stringify(salesList))
-          localStorage.setItem(`cahier_offline_clients_${shopId}`, JSON.stringify(clientsList))
-          localStorage.setItem(`cahier_offline_suppliers_${shopId}`, JSON.stringify(suppliersList))
+          // Mettre en cache via offlineDb pour le mode hors-ligne
+          replaceOfflineSales(sid, salesList)
+          replaceOfflineClients(sid, clientsList)
+          replaceOfflineSuppliers(sid, suppliersList)
+          refreshPendingCount(sid)
         } catch (apiError) {
-          console.warn('[API Fallback] Échec de chargement réseau, repli sur local storage :', apiError)
-          // Charger les caches en cas d'erreur de base de données (ex: table non créée)
-          salesList = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
-          clientsList = JSON.parse(localStorage.getItem(`cahier_offline_clients_${shopId}`) || '[]')
-          suppliersList = JSON.parse(localStorage.getItem(`cahier_offline_suppliers_${shopId}`) || '[]')
+          console.warn('[API Fallback] Échec de chargement réseau, repli sur cache local :', apiError)
+          salesList = getOfflineSales(sid)
+          clientsList = getOfflineClients(sid)
+          suppliersList = getOfflineSuppliers(sid)
         }
       } else {
-        // Hors-ligne -> charger les caches
-        salesList = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
-        clientsList = JSON.parse(localStorage.getItem(`cahier_offline_clients_${shopId}`) || '[]')
-        suppliersList = JSON.parse(localStorage.getItem(`cahier_offline_suppliers_${shopId}`) || '[]')
+        // Hors-ligne -> charger le cache offlineDb
+        salesList = getOfflineSales(sid)
+        clientsList = getOfflineClients(sid)
+        suppliersList = getOfflineSuppliers(sid)
       }
 
       // Calculer le tiroir caisse
@@ -351,26 +433,40 @@ export default function JournalPage() {
       setNosDettes(supplierDebtsSum)
 
       // Filtrer les ventes pour afficher seulement celles d'aujourd'hui dans le journal
-      const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+      const todayStr = new Date().toISOString().split('T')[0]
       const todaysSales = salesList.filter((s: any) => s.date === todayStr)
+
+      // Solde du jour (uniquement les transactions d'aujourd'hui)
+      let cashToday = 0
+      for (const item of todaysSales) {
+        if (item.status === 'crossed_out') continue
+        const type = item.type
+        const paid = item.paid ?? 0
+        const total = item.total ?? 0
+        if (type === 'cash_in' || type === 'payment_client') {
+          cashToday += paid
+        } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
+          cashToday -= total
+        }
+      }
+      setSoldeDuJour(cashToday)
       
       setSales(todaysSales.reverse())
       setAllSales(salesList)
 
     } catch (err) {
-      console.warn('Echec de chargement réseau, chargement du cache hors-ligne...', err)
-      const shopId = mappedUser.shop_id
-      const salesList = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
-      const clientsList = JSON.parse(localStorage.getItem(`cahier_offline_clients_${shopId}`) || '[]')
-      const suppliersList = JSON.parse(localStorage.getItem(`cahier_offline_suppliers_${shopId}`) || '[]')
+      console.warn('[loadFinancialData] Repli sur cache hors-ligne :', err)
+      const sid = mappedUser.shop_id
+      const fallbackSales = getOfflineSales(sid)
+      const fallbackClients = getOfflineClients(sid)
+      const fallbackSuppliers = getOfflineSuppliers(sid)
 
       let cash = 0
-      for (const item of salesList) {
+      for (const item of fallbackSales) {
         if (item.status === 'crossed_out') continue
         const type = item.type
         const paid = item.paid ?? 0
         const total = item.total ?? 0
-
         if (type === 'cash_in' || type === 'payment_client') {
           cash += paid
         } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
@@ -378,17 +474,30 @@ export default function JournalPage() {
         }
       }
 
-      const clientDebtsSum = clientsList.reduce((sum: number, c: any) => sum + (c.amount || c.amount_owed || 0), 0)
-      const supplierDebtsSum = suppliersList.reduce((sum: number, s: any) => sum + (s.amount || s.amount_owed || 0), 0)
-
       setTiroirCaisse(cash)
-      setArgentDehors(clientDebtsSum)
-      setNosDettes(supplierDebtsSum)
+      setArgentDehors(fallbackClients.reduce((sum: number, c: any) => sum + (c.amount || c.amount_owed || 0), 0))
+      setNosDettes(fallbackSuppliers.reduce((sum: number, s: any) => sum + (s.amount || s.amount_owed || 0), 0))
 
-      const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
-      const todaysSales = salesList.filter((s: any) => s.date === todayStr)
-      setSales(todaysSales.reverse())
-      setAllSales(salesList)
+      const todayStr = new Date().toISOString().split('T')[0]
+      const todayFallback = fallbackSales.filter((s: any) => s.date === todayStr)
+
+      // Solde du jour — fallback hors-ligne
+      let cashTodayFallback = 0
+      for (const item of todayFallback) {
+        if (item.status === 'crossed_out') continue
+        const type = item.type
+        const paid = item.paid ?? 0
+        const total = item.total ?? 0
+        if (type === 'cash_in' || type === 'payment_client') {
+          cashTodayFallback += paid
+        } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
+          cashTodayFallback -= total
+        }
+      }
+      setSoldeDuJour(cashTodayFallback)
+
+      setSales(todayFallback.reverse())
+      setAllSales(fallbackSales)
     }
   }
 
@@ -448,7 +557,7 @@ export default function JournalPage() {
     const articles: any[] = []
     let totalFacture = 0
     
-    const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@|\s)\s*(\d+)/gi
+    const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/gi
     let match
     
     while ((match = articleRegex.exec(text)) !== null) {
@@ -530,22 +639,23 @@ export default function JournalPage() {
           return
         }
       } else {
-        // Mode hors-ligne / local fallback -> Enregistrer localement dans le cache localStorage
+        // Mode hors-ligne -> Enregistrer localement via offlineDb
         let parsed: any = null
         const color = bodyData.penColor
         const text = bodyData.text
+        const sid = mappedUser.shop_id
 
         if (bodyData.overrideData) {
           parsed = {
-            nom_client: bodyData.overrideData.client_name || "Client anonyme",
+            nom_client: bodyData.overrideData.client_name || 'Client anonyme',
             articles: bodyData.overrideData.articles.map((a: any) => ({
               nom: a.name || a.nom,
               quantite: a.quantity || a.quantite,
-              prix_unitaire: a.unit_price || a.prix_unitaire
+              prix_unitaire: a.unit_price || a.prix_unitaire,
             })),
             total_facture: bodyData.overrideData.total_amount,
             montant_paye: bodyData.overrideData.paid_amount,
-            montant_dette: bodyData.overrideData.debt_amount
+            montant_dette: bodyData.overrideData.debt_amount,
           }
         } else {
           parsed = parseTextLocallyClientSide(text, color)
@@ -560,72 +670,50 @@ export default function JournalPage() {
 
         // Safeguard tiroir caisse
         const isExpense = type === 'cash_out' || type === 'purchase_cash'
-        const expenseAmount = parsed.total_facture
-
-        if (isExpense && tiroirCaisse < expenseAmount) {
-          setPostItWarning(`Opération bloquée : Solde insuffisant dans le tiroir-caisse. Il vous manque ${expenseAmount - tiroirCaisse} FCFA.`)
+        if (isExpense && tiroirCaisse < parsed.total_facture) {
+          setPostItWarning(
+            `Opération bloquée : Solde insuffisant dans le tiroir-caisse. Il vous manque ${parsed.total_facture - tiroirCaisse} FCFA.`
+          )
           return
         }
 
-        // Créer l'objet transaction
+        // Créer l'objet transaction avec UUID propre
         const now = new Date()
-        const dateStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
-        const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Porto-Novo' })
         const newSale = {
-          id: Math.random().toString(36).substring(2, 9),
-          shop_id: shopId,
-          date: dateStr,
-          time: timeStr,
-          client: parsed.nom_client, // mapping standard de l'objet
-          total: parsed.total_facture, // mapping standard de l'objet
-          paid: parsed.montant_paye, // mapping standard de l'objet
-          debt: parsed.montant_dette, // mapping standard de l'objet
-          status: parsed.montant_dette > 0 ? 'debt' : 'paid',
-          type: type,
+          id: generateOfflineId(),
+          shop_id: sid,
+          date: now.toISOString().split('T')[0],
+          time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          client: parsed.nom_client,
+          total: parsed.total_facture,
+          paid: parsed.montant_paye,
+          debt: parsed.montant_dette,
+          status: (parsed.montant_dette > 0 ? 'debt' : 'paid') as 'paid' | 'debt' | 'crossed_out',
+          type,
           pen_color: color,
           notes: text,
           articles: parsed.articles.map((a: any) => ({
             name: a.nom,
             quantity: a.quantite,
-            unit_price: a.prix_unitaire
+            unit_price: a.prix_unitaire,
           })),
           created_at: now.toISOString(),
-          is_synced: false
+          is_synced: false,
         }
 
-        // Insérer dans les ventes caches
-        const offlineSales = JSON.parse(localStorage.getItem(`cahier_offline_sales_${shopId}`) || '[]')
-        offlineSales.push(newSale)
-        localStorage.setItem(`cahier_offline_sales_${shopId}`, JSON.stringify(offlineSales))
+        // Persister via offlineDb
+        saveOfflineSale(sid, newSale)
 
-        // Mettre à jour les dettes si nécessaire
+        // Mettre à jour les dettes locales si nécessaire
         if (parsed.montant_dette > 0) {
           if (type === 'sale_credit') {
-            const clientsList = JSON.parse(localStorage.getItem(`cahier_offline_clients_${shopId}`) || '[]')
-            const existingClient = clientsList.find((c: any) => c.client_name?.toLowerCase() === parsed.nom_client.toLowerCase())
-            if (existingClient) {
-              existingClient.amount = (existingClient.amount || 0) + parsed.montant_dette
-            } else {
-              clientsList.push({
-                client_name: parsed.nom_client,
-                amount: parsed.montant_dette
-              })
-            }
-            localStorage.setItem(`cahier_offline_clients_${shopId}`, JSON.stringify(clientsList))
+            addOrUpdateOfflineClientDebt(sid, parsed.nom_client, parsed.montant_dette)
           } else if (type === 'purchase_credit') {
-            const suppliersList = JSON.parse(localStorage.getItem(`cahier_offline_suppliers_${shopId}`) || '[]')
-            const existingSupplier = suppliersList.find((s: any) => s.client_name?.toLowerCase() === parsed.nom_client.toLowerCase())
-            if (existingSupplier) {
-              existingSupplier.amount = (existingSupplier.amount || 0) + parsed.montant_dette
-            } else {
-              suppliersList.push({
-                client_name: parsed.nom_client,
-                amount: parsed.montant_dette
-              })
-            }
-            localStorage.setItem(`cahier_offline_suppliers_${shopId}`, JSON.stringify(suppliersList))
+            addOrUpdateOfflineSupplierDebt(sid, parsed.nom_client, parsed.montant_dette)
           }
         }
+
+        refreshPendingCount(sid)
       }
 
       setInput('')
@@ -646,7 +734,7 @@ export default function JournalPage() {
     const sanitizedInput = input.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
 
     // 2. Chercher le motif de calcul avec nom d'article optionnel
-    const match = sanitizedInput.match(/(\d+)\s*(.*?)\s*(?:à|a|@|\s)\s*(\d+)/i)
+    const match = sanitizedInput.match(/(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/i)
     if (match) {
       const quantity = parseInt(match[1], 10)
       const item = match[2].trim() || "Article(s)"
@@ -683,6 +771,10 @@ export default function JournalPage() {
   const spiralRings = Array.from({ length: 20 })
   const currentPen = PENS.find(p => p.id === selectedPen) || PENS[0]
 
+  // Écritures filtrées selon l'onglet de filtre actif
+  const filteredSales = journalFilter === 'all' ? sales : sales.filter(s => s.pen_color === journalFilter)
+  const filteredAllSales = archiveFilter === 'all' ? allSales : allSales.filter(s => s.pen_color === archiveFilter)
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#141210] flex items-center justify-center">
@@ -707,20 +799,6 @@ export default function JournalPage() {
       onLoginSuccess={(usr) => setUser(usr)}
     />
   }
-
-  // Filtrer les ventes du jour pour l'affichage (Tout vs Crédits)
-  const filteredSalesForCahier = sales.filter((s) => {
-    if (cahierFilter === 'all') return true
-    return (
-      s.pen_color === 'yellow' ||
-      s.pen_color === 'purple' ||
-      s.type === 'sale_credit' ||
-      s.type === 'purchase_credit' ||
-      s.type === 'payment_client' ||
-      s.type === 'payment_supplier' ||
-      s.debt > 0
-    )
-  })
 
   return (
     <main className="min-h-dvh md:min-h-screen md:py-8 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative overflow-x-hidden">
@@ -785,17 +863,81 @@ export default function JournalPage() {
                     {mappedUser?.role === 'employee' ? '🙋' : '👑'} {mappedUser?.name}
                   </span>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  title="Déconnexion"
-                  className="flex-shrink-0 text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-wider border border-red-200 rounded-full px-2 py-1 transition-colors"
-                >
-                  Quitter
-                </button>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* ── Bandeau de statut réseau ── */}
+                  {syncStatus === 'syncing' && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded-full animate-pulse">
+                      <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />
+                      <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wide">Sync...</span>
+                    </div>
+                  )}
+                  {syncStatus === 'success' && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 border border-emerald-200 rounded-full">
+                      <CheckCircle className="w-3 h-3 text-emerald-500" />
+                      <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wide">Synchronisé</span>
+                    </div>
+                  )}
+                  {syncStatus === 'error' && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-orange-50 border border-orange-200 rounded-full">
+                      <AlertTriangle className="w-3 h-3 text-orange-500" />
+                      <span className="text-[9px] font-bold text-orange-600 uppercase tracking-wide">Erreur sync</span>
+                    </div>
+                  )}
+                  {syncStatus === 'idle' && !isOnline && (
+                    <div
+                      title={`${pendingCount} écriture(s) en attente de synchronisation`}
+                      className="flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-full"
+                    >
+                      <WifiOff className="w-3 h-3 text-red-500" />
+                      <span className="text-[9px] font-bold text-red-600 uppercase tracking-wide">
+                        Hors-ligne{pendingCount > 0 ? ` · ${pendingCount}` : ''}
+                      </span>
+                    </div>
+                  )}
+                  {syncStatus === 'idle' && isOnline && pendingCount > 0 && (
+                    <div
+                      title={`${pendingCount} écriture(s) hors-ligne à synchroniser`}
+                      className="flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 rounded-full cursor-pointer hover:bg-amber-100 transition-colors"
+                      onClick={() => syncOfflineData().then(() => loadFinancialData())}
+                    >
+                      <RefreshCw className="w-3 h-3 text-amber-500" />
+                      <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wide">{pendingCount} en attente</span>
+                    </div>
+                  )}
+                  {syncStatus === 'idle' && isOnline && pendingCount === 0 && (
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-full opacity-60" title="En ligne">
+                      <Wifi className="w-3 h-3 text-emerald-500" />
+                      <span className="hidden sm:inline text-[9px] font-bold text-emerald-600 uppercase tracking-wide">En ligne</span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleLogout}
+                    title="Déconnexion"
+                    className="text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-wider border border-red-200 rounded-full px-2 py-1 transition-colors"
+                  >
+                    Quitter
+                  </button>
+                </div>
               </div>
 
               {/* KPIs — horizontal scroll on mobile */}
               <div className="flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
+                {/* Solde du jour */}
+                <div className={`border rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0 ${
+                  soldeDuJour >= 0
+                    ? 'bg-[#f0f9ff] border-sky-300'
+                    : 'bg-[#fff5f5] border-rose-300'
+                }`}>
+                  <span className="text-[8px] font-bold text-sky-700 uppercase tracking-wide whitespace-nowrap">☀️ Aujourd'hui</span>
+                  <span className={`font-mono text-sm font-bold mt-0.5 whitespace-nowrap ${
+                    soldeDuJour >= 0 ? 'text-sky-900' : 'text-rose-700'
+                  }`}>
+                    {soldeDuJour >= 0 ? '+' : ''}{formatPrice(soldeDuJour)}
+                  </span>
+                </div>
+                {/* Tiroir cash global */}
                 <div className="bg-[#fffdf9] border border-emerald-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
                   <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wide whitespace-nowrap">💰 Tiroir Cash</span>
                   <span className="font-mono text-sm font-bold text-emerald-950 mt-0.5 whitespace-nowrap">{formatPrice(tiroirCaisse)}</span>
@@ -884,7 +1026,7 @@ export default function JournalPage() {
                             key={pen.id}
                             type="button"
                             title={pen.name}
-                            onClick={() => setSelectedPen(pen.id)}
+                            onClick={() => { setSelectedPen(pen.id); setJournalFilter(pen.id as FilterId) }}
                             className={`flex items-center gap-1.5 transition-all flex-shrink-0 ${
                               isSelected
                                 ? `${pen.bg} ${pen.border} text-white shadow-sm scale-105`
@@ -905,30 +1047,50 @@ export default function JournalPage() {
                     </span>
                   </div>
 
-                  {/* Segmented Filter control (Tout le cahier vs Crédits) */}
-                  <div className="px-3 md:px-6 py-1.5 border-b border-gray-200 bg-[#f4ebe0] bg-opacity-65 flex items-center gap-2 select-none z-10 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setCahierFilter('all')}
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        cahierFilter === 'all'
-                          ? 'bg-gray-800 text-white shadow-sm font-extrabold'
-                          : 'bg-white bg-opacity-65 text-gray-500 hover:text-gray-855 border border-gray-200'
-                      }`}
-                    >
-                      📖 Tout le cahier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCahierFilter('credit')}
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        cahierFilter === 'credit'
-                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                          : 'bg-white bg-opacity-65 text-gray-500 hover:text-gray-855 border border-gray-200'
-                      }`}
-                    >
-                      🟡 Crédits & Dettes
-                    </button>
+                  {/* ── Barre de filtre par type d'écriture ── */}
+                  <div className="px-3 md:px-6 py-1.5 border-b border-gray-200 flex items-center gap-2 bg-[#f5f1e8] select-none overflow-x-auto scrollbar-hide flex-shrink-0">
+                    <span className="hidden md:block text-[10px] font-bold text-gray-400 font-mono tracking-wider flex-shrink-0 uppercase">
+                      Voir :
+                    </span>
+                    <div className="flex gap-1.5 flex-nowrap">
+                      {FILTERS.map((f) => {
+                        const isActive = journalFilter === f.id
+                        const pen = PENS.find(p => p.id === f.id)
+                        const count = f.id === 'all'
+                          ? sales.length
+                          : sales.filter(s => s.pen_color === f.id).length
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => {
+                              setJournalFilter(f.id)
+                              if (f.id !== 'all') setSelectedPen(f.id)
+                            }}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all flex-shrink-0 ${
+                              isActive
+                                ? pen
+                                  ? `${pen.bg} ${pen.border} text-white shadow-sm scale-105`
+                                  : 'bg-gray-800 border-gray-800 text-white shadow-sm scale-105'
+                                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                            }`}
+                          >
+                            {pen
+                              ? <span className={`w-2 h-2 rounded-full flex-shrink-0 ${pen.dotBg}`} />
+                              : <span className="text-[10px]">📖</span>
+                            }
+                            <span className="tracking-wide">{f.label}</span>
+                            {count > 0 && (
+                              <span className={`px-1 rounded-full text-[8px] font-mono font-bold min-w-[14px] text-center ${
+                                isActive ? 'bg-white bg-opacity-30 text-white' : 'bg-gray-100 text-gray-500'
+                              }`}>
+                                {count}
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
 
                   {/* Scrollable Seyes lined area inside the page */}
@@ -936,9 +1098,9 @@ export default function JournalPage() {
                     ref={scrollContainerRef}
                     className="flex-1 overflow-y-auto lined-paper scroll-smooth"
                   >
-                    {filteredSalesForCahier.length > 0 ? (
+                    {filteredSales.length > 0 ? (
                       <SalesHistory 
-                        sales={filteredSalesForCahier} 
+                        sales={filteredSales} 
                         onSaleCrossedOut={handleSaleCrossedOut} 
                         onError={handleError} 
                         shopId={mappedUser?.shop_id}
@@ -947,14 +1109,16 @@ export default function JournalPage() {
                     ) : (
                       <div className="flex flex-col items-center justify-center p-24 text-center min-h-[350px] no-underline">
                         <p className="font-handwritten text-3xl text-gray-400">
-                          {cahierFilter === 'credit' 
-                            ? "Aucun crédit enregistré aujourd'hui" 
-                            : "Cahier vierge pour aujourd'hui"}
+                          {journalFilter === 'all'
+                            ? "Cahier vierge pour aujourd'hui"
+                            : `Aucune écriture « ${FILTERS.find(f => f.id === journalFilter)?.label} » aujourd'hui`
+                          }
                         </p>
                         <p className="text-xs text-gray-400 mt-2 font-mono">
-                          {cahierFilter === 'credit'
-                            ? "Vos écritures de ventes ou d'achats à crédit s'afficheront ici."
-                            : "Sélectionnez une couleur d'encre et tapez une écriture ci-dessous."}
+                          {journalFilter === 'all'
+                            ? "Sélectionnez une couleur d'encre et tapez une écriture ci-dessous."
+                            : "Changez de filtre ou tapez une nouvelle écriture avec ce stylo."
+                          }
                         </p>
                       </div>
                     )}
@@ -1256,11 +1420,54 @@ export default function JournalPage() {
                     </p>
                   </div>
 
+                  {/* ── Barre de filtre archives ── */}
+                  <div className="px-3 md:px-6 py-1.5 border-b border-gray-200 flex items-center gap-2 bg-[#f5f1e8] select-none overflow-x-auto scrollbar-hide flex-shrink-0">
+                    <span className="hidden md:block text-[10px] font-bold text-gray-400 font-mono tracking-wider flex-shrink-0 uppercase">
+                      Filtrer :
+                    </span>
+                    <div className="flex gap-1.5 flex-nowrap">
+                      {FILTERS.map((f) => {
+                        const isActive = archiveFilter === f.id
+                        const pen = PENS.find(p => p.id === f.id)
+                        const count = f.id === 'all'
+                          ? allSales.length
+                          : allSales.filter(s => s.pen_color === f.id).length
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setArchiveFilter(f.id)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all flex-shrink-0 ${
+                              isActive
+                                ? pen
+                                  ? `${pen.bg} ${pen.border} text-white shadow-sm scale-105`
+                                  : 'bg-gray-800 border-gray-800 text-white shadow-sm scale-105'
+                                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                            }`}
+                          >
+                            {pen
+                              ? <span className={`w-2 h-2 rounded-full flex-shrink-0 ${pen.dotBg}`} />
+                              : <span className="text-[10px]">📖</span>
+                            }
+                            <span className="tracking-wide">{f.label}</span>
+                            {count > 0 && (
+                              <span className={`px-1 rounded-full text-[8px] font-mono font-bold min-w-[14px] text-center ${
+                                isActive ? 'bg-white bg-opacity-30 text-white' : 'bg-gray-100 text-gray-500'
+                              }`}>
+                                {count}
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                   {/* Scrollable Seyes lined area showing all historical sales */}
                   <div className="flex-grow overflow-y-auto lined-paper pb-20 scroll-smooth">
-                    {allSales.length > 0 ? (
+                    {filteredAllSales.length > 0 ? (
                       <SalesHistory 
-                        sales={allSales} 
+                        sales={filteredAllSales} 
                         onSaleCrossedOut={handleSaleCrossedOut} 
                         onError={handleError} 
                         shopId={mappedUser?.shop_id}
@@ -1269,10 +1476,16 @@ export default function JournalPage() {
                     ) : (
                       <div className="flex flex-col items-center justify-center p-24 text-center min-h-[350px]">
                         <p className="font-handwritten text-3xl text-gray-400">
-                          Placard d'archives vide
+                          {archiveFilter === 'all'
+                            ? "Placard d'archives vide"
+                            : `Aucune archive « ${FILTERS.find(f => f.id === archiveFilter)?.label} »`
+                          }
                         </p>
                         <p className="text-xs text-gray-400 mt-2 font-mono">
-                          Aucune transaction enregistrée historiquement.
+                          {archiveFilter === 'all'
+                            ? 'Aucune transaction enregistrée historiquement.'
+                            : 'Essayez un autre filtre pour voir les autres types d\'écritures.'
+                          }
                         </p>
                       </div>
                     )}

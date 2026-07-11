@@ -23,7 +23,10 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
   themeColor: '#064e3b',
+  interactiveWidget: 'resizes-content',
 }
 
 export const metadata: Metadata = {
