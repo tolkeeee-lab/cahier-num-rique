@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle } from 'lucide-react'
+import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package } from 'lucide-react'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { AuthScreen } from '@/components/AuthScreen'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { StockManager } from '@/components/StockManager'
 import {
   generateOfflineId,
   getOfflineSales,
@@ -144,7 +145,7 @@ export default function JournalPage() {
   const [nosDettes, setNosDettes] = useState(0)
   const [soldeDuJour, setSoldeDuJour] = useState(0)
   
-  const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives'>('cahier')
+  const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives' | 'stock'>('cahier')
   const [allSales, setAllSales] = useState<Sale[]>([])
   const [journalFilter, setJournalFilter] = useState<FilterId>('all')
   const [archiveFilter, setArchiveFilter] = useState<FilterId>('all')
@@ -1005,6 +1006,19 @@ export default function JournalPage() {
                   Placard d'Archive
                 </button>
               )}
+              {mappedUser?.role !== 'employee' && (
+                <button
+                  onClick={() => setActiveTab('stock')}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                    activeTab === 'stock'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
+                  }`}
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  Stock
+                </button>
+              )}
             </div>
 
             {/* Content view based on active tab */}
@@ -1491,6 +1505,12 @@ export default function JournalPage() {
                     )}
                   </div>
 
+                </div>
+              )}
+
+              {activeTab === 'stock' && (
+                <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
+                  <StockManager shopId={mappedUser?.shop_id} onError={handleError} />
                 </div>
               )}
 

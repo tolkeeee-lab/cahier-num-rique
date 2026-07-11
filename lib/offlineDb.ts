@@ -37,11 +37,25 @@ export interface OfflineDebt {
   amount_owed?: number
 }
 
+export interface OfflineProduct {
+  id: string
+  shop_id: string
+  name: string
+  category: string
+  unit: string
+  alert_threshold: number
+  initial_stock: number
+  unit_cost: number
+  unit_price: number
+  created_at: string
+}
+
 // ─── Clés localStorage ────────────────────────────────────────────────────────
 
 const salesKey = (shopId: string) => `cahier_offline_sales_${shopId}`
 const clientsKey = (shopId: string) => `cahier_offline_clients_${shopId}`
 const suppliersKey = (shopId: string) => `cahier_offline_suppliers_${shopId}`
+const productsKey = (shopId: string) => `cahier_offline_products_${shopId}`
 
 // ─── Utilitaires ─────────────────────────────────────────────────────────────
 
@@ -196,3 +210,63 @@ export function getOfflineStats(shopId: string): {
     syncErrors: sales.filter((s) => !!s.sync_error).length,
   }
 }
+
+// ─── Opérations sur les Produits (Catalogue Stock) ───────────────────────────
+
+export function getOfflineProducts(shopId: string): OfflineProduct[] {
+  return readJson<OfflineProduct[]>(productsKey(shopId), [])
+}
+
+export function replaceOfflineProducts(shopId: string, products: OfflineProduct[]): void {
+  writeJson(productsKey(shopId), products)
+}
+
+export function saveOfflineProduct(shopId: string, product: OfflineProduct): void {
+  const products = getOfflineProducts(shopId)
+  const idx = products.findIndex((p) => p.id === product.id)
+  if (idx !== -1) {
+    products[idx] = product
+  } else {
+    products.push(product)
+  }
+  writeJson(productsKey(shopId), products)
+}
+
+export function deleteOfflineProduct(shopId: string, productId: string): void {
+  const products = getOfflineProducts(shopId).filter((p) => p.id !== productId)
+  writeJson(productsKey(shopId), products)
+}
+
+/**
+ * Calcule les niveaux de stock depuis les ventes hors-ligne.
+ * Entrées = purchase_cash / purchase_credit
+ * Sorties = cash_in / sale_credit
+ */
+export function computeOfflineStock(
+  shopId: string
+): Record<string, { total_in: number; total_out: number; movements: Array<{ date: string; type: 'in' | 'out'; quantity: number; unit_price: number; notes: string }> }> {
+  const sales = getOfflineSales(shopId)
+  const stockMap: Record<string, { total_in: number; total_out: number; movements: any[] }> = {}
+
+  for (const sale of sales) {
+    if (sale.status === 'crossed_out') continue
+    const isIn = sale.type === 'purchase_cash' || sale.type === 'purchase_credit'
+    const isOut = sale.type === 'cash_in' || sale.type === 'sale_credit'
+    if (!isIn && !isOut) continue
+
+    for (const article of sale.articles) {
+      const key = article.name.toLowerCase().trim()
+      if (!stockMap[key]) stockMap[key] = { total_in: 0, total_out: 0, movements: [] }
+      if (isIn) {
+        stockMap[key].total_in += article.quantity
+        stockMap[key].movements.push({ date: sale.date, type: 'in', quantity: article.quantity, unit_price: article.unit_price, notes: sale.notes })
+      } else {
+        stockMap[key].total_out += article.quantity
+        stockMap[key].movements.push({ date: sale.date, type: 'out', quantity: article.quantity, unit_price: article.unit_price, notes: sale.notes })
+      }
+    }
+  }
+
+  return stockMap
+}
+
