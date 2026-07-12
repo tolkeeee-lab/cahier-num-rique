@@ -965,6 +965,74 @@ export default function JournalPage() {
     }
   }
 
+  const resolveTransactionPricesFromCatalog = (text: string, penColor: string, sid: string) => {
+    const hasPrice = text.match(/\b(?:à|a|@)\s*\d+/i) || text.match(/\b\d+\s*(?:à|a|@)\s*\d+/i)
+    if (hasPrice) return null
+
+    const parts = text.split(/\s*(?:\+|,|\bet\b)\s*/i)
+    const resolvedArticles: any[] = []
+    const resolvedTextParts: string[] = []
+    const offlineProducts = getOfflineProducts(sid)
+
+    for (const part of parts) {
+      const trimmedPart = part.trim()
+      if (!trimmedPart) continue
+
+      let qty = 1
+      let productName = trimmedPart
+
+      const qtyMatch = trimmedPart.match(/^(\d+)\s+(.+)$/)
+      if (qtyMatch) {
+        qty = parseInt(qtyMatch[1], 10)
+        productName = qtyMatch[2].trim()
+      }
+
+      let searchName = productName
+      const packMatch = productName.match(/^(caissier|carton|sac|boite|boîte|paquet|unité|unite)\s+(?:de\s+)?(.+)$/i)
+      if (packMatch) {
+        searchName = packMatch[2].trim()
+      }
+
+      const product = offlineProducts.find(p => p.name.toLowerCase().trim() === searchName.toLowerCase().trim())
+      if (!product) {
+        return null
+      }
+
+      let unitPrice = 0
+      const isPurchase = ['green', 'purple'].includes(penColor)
+      
+      if (isPurchase) {
+        if (packMatch) {
+          unitPrice = product.unit_cost * (product.multiplier || 1)
+        } else {
+          unitPrice = product.unit_cost
+        }
+      } else {
+        unitPrice = product.unit_price
+      }
+
+      resolvedArticles.push({
+        nom: product.name,
+        quantite: qty,
+        prix_unitaire: unitPrice
+      })
+
+      if (packMatch) {
+        const packaging = packMatch[1]
+        resolvedTextParts.push(`${qty} ${packaging} de ${product.name} à ${unitPrice}`)
+      } else {
+        resolvedTextParts.push(`${qty} ${product.name} à ${unitPrice}`)
+      }
+    }
+
+    if (resolvedTextParts.length === 0) return null
+
+    return {
+      resolvedText: resolvedTextParts.join(', '),
+      articles: resolvedArticles
+    }
+  }
+
   const parseSimpleStockInput = (text: string) => {
     let cleaned = text.replace(/^(?:stock|achat)\s+de\s+/i, '').trim()
     
@@ -1113,16 +1181,36 @@ export default function JournalPage() {
     // 1. Nettoyer les espaces, points et virgules entre les chiffres (ex: "12 000" ou "12.000" -> "12000")
     const sanitizedInput = input.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
 
+    // Tenter de résoudre automatiquement les prix depuis le catalogue si aucun prix n'est écrit
+    const sid = mappedUser?.shop_id || 'default-shop'
+    const resolvedResult = resolveTransactionPricesFromCatalog(sanitizedInput, selectedPen, sid)
+    
+    let finalInput = sanitizedInput
+    if (resolvedResult) {
+      finalInput = resolvedResult.resolvedText
+    } else {
+      // Si l'entrée ressemble à un produit avec quantité (ex: "2 flag") sans prix et qu'on ne l'a pas résolu,
+      // c'est qu'il n'est pas dans le catalogue. Pour éviter une écriture à 0 F, on affiche une alerte.
+      const qtyProductMatch = sanitizedInput.replace(/^(?:stock|achat)\s+de\s+/i, '').trim().match(/^(\d+)\s+(.+)$/)
+      const hasPrice = sanitizedInput.match(/\b(?:à|a|@)\s*\d+/i) || sanitizedInput.match(/\b\d+\s*(?:à|a|@)\s*\d+/i)
+      
+      const isStockOp = sanitizedInput.match(/^(?:stock|achat)\s+de\s+/i) || selectedPen === 'green'
+      if (qtyProductMatch && !hasPrice && !isStockOp) {
+        const productNameClean = qtyProductMatch[2].split(/\s+(?:à|a|@|vente|prix)\b/i)[0].trim()
+        setPostItWarning(`Le produit « ${productNameClean} » n'a pas été trouvé dans le catalogue. Veuillez préciser le prix (ex: ${sanitizedInput} à 600) ou l'ajouter au stock.`)
+        return
+      }
+    }
+
     // Interception et aide à la saisie de stock / achat (produits existants vs nouveaux, avec ou sans prix)
-    const isStockOp = sanitizedInput.match(/^(?:stock|achat)\s+de\s+/i) || selectedPen === 'green'
+    const isStockOp = finalInput.match(/^(?:stock|achat)\s+de\s+/i) || selectedPen === 'green'
     if (isStockOp) {
-      const { qty, packaging, productName } = parseSimpleStockInput(sanitizedInput)
+      const { qty, packaging, productName } = parseSimpleStockInput(finalInput)
       
       if (productName && productName !== 'transaction générale') {
-        const sid = mappedUser?.shop_id || 'default-shop'
         const offlineProducts = getOfflineProducts(sid)
         const existing = offlineProducts.find(p => p.name.toLowerCase().trim() === productName.toLowerCase().trim())
-        const hasPrice = sanitizedInput.match(/\b\d+\s*(?:à|a|@)\s*\d+\b/i)
+        const hasPrice = finalInput.match(/\b\d+\s*(?:à|a|@)\s*\d+\b/i)
 
         if (existing) {
           if (!hasPrice) {
@@ -1138,7 +1226,7 @@ export default function JournalPage() {
             return
           } else {
             // Cas B : Prix écrit -> Alerte si différence avec le catalogue
-            const matchPrice = sanitizedInput.match(/(\d+)\s*(?:à|a|@)\s+(\d+)/i)
+            const matchPrice = finalInput.match(/(\d+)\s*(?:à|a|@)\s+(\d+)/i)
             if (matchPrice) {
               const enteredLotPrice = parseInt(matchPrice[2], 10)
               const expectedLotPrice = existing.unit_cost * (existing.multiplier || 1)
@@ -1148,7 +1236,7 @@ export default function JournalPage() {
                   product: existing,
                   newLotPrice: enteredLotPrice,
                   oldLotPrice: expectedLotPrice,
-                  rawText: sanitizedInput,
+                  rawText: finalInput,
                   penColor: selectedPen === 'green' ? 'green' : 'green' // Achat toujours vert
                 })
                 setShowPriceChangeDialog(true)
@@ -1188,11 +1276,11 @@ export default function JournalPage() {
     }
 
     // 2. Détecter s'il s'agit d'une définition de stock pour bypasser le dialogue d'aide au calcul
-    const isStockDefinition = /prix de vente|vente|l'unité|l'unite|unité|unite|bouteille|carton|boite|boîte|paquet|sac/i.test(sanitizedInput)
+    const isStockDefinition = /prix de vente|vente|l'unité|l'unite|unité|unite|bouteille|carton|boite|boîte|paquet|sac/i.test(finalInput)
 
     // 3. Chercher le motif de calcul avec nom d'article optionnel
     if (!isStockDefinition) {
-      const match = sanitizedInput.match(/(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/i)
+      const match = finalInput.match(/(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/i)
       if (match) {
         const quantity = parseInt(match[1], 10)
         const item = match[2].trim() || "Article(s)"
@@ -1204,7 +1292,7 @@ export default function JournalPage() {
             quantity,
             item,
             amount,
-            rawText: sanitizedInput,
+            rawText: finalInput,
             penColor: selectedPen
           })
           return
@@ -1213,7 +1301,7 @@ export default function JournalPage() {
     }
 
     await submitTransaction({
-      text: sanitizedInput,
+      text: finalInput,
       penColor: selectedPen
     })
   }
