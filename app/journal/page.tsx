@@ -179,6 +179,18 @@ export default function JournalPage() {
   const [adjustmentNote, setAdjustmentNote] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
+  // Stock guided wizard states
+  const [showStockWizard, setShowStockWizard] = useState(false)
+  const [wizardStep, setWizardStep] = useState(1)
+  const [wizardProductName, setWizardProductName] = useState('')
+  const [wizardQuantity, setWizardQuantity] = useState('1')
+  const [wizardPackaging, setWizardPackaging] = useState('unité')
+  const [wizardMultiplier, setWizardMultiplier] = useState('1')
+  const [wizardUnit, setWizardUnit] = useState('pièce')
+  const [wizardAlertThreshold, setWizardAlertThreshold] = useState('5')
+  const [wizardPurchasePrice, setWizardPurchasePrice] = useState('')
+  const [wizardSalePrice, setWizardSalePrice] = useState('')
+
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -934,12 +946,63 @@ export default function JournalPage() {
     }
   }
 
+  const handleConfirmStockWizard = async () => {
+    const qty = parseInt(wizardQuantity, 10) || 1
+    const mult = parseInt(wizardMultiplier, 10) || 1
+    const purchaseP = parseInt(wizardPurchasePrice, 10) || 0
+    const saleP = parseInt(wizardSalePrice, 10) || 0
+    
+    const finalMult = wizardPackaging === 'unité' ? 1 : mult
+    const finalPackaging = wizardPackaging === 'unité' ? 'unité' : wizardPackaging
+
+    let text = ''
+    if (finalPackaging === 'unité') {
+      text = `stock de ${qty} ${wizardProductName} à ${purchaseP} prix de vente à l'unité ${saleP}`
+    } else {
+      text = `stock de ${qty} ${finalPackaging} de ${wizardProductName} de ${finalMult} ${wizardUnit} à ${purchaseP} prix de vente à l'unité ${saleP}`
+    }
+
+    try {
+      await submitTransaction({
+        text,
+        penColor: 'green'
+      })
+      setShowStockWizard(false)
+      setInput('')
+    } catch (e) {
+      console.error(e)
+      setPostItWarning("Erreur lors de l'enregistrement du stock.")
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim()) return
 
     // 1. Nettoyer les espaces, points et virgules entre les chiffres (ex: "12 000" ou "12.000" -> "12000")
     const sanitizedInput = input.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
+
+    // Détecter si l'utilisateur saisit "stock de [produit]" ou "achat de [produit]" de manière incomplète
+    const stockPrefixMatch = sanitizedInput.match(/^(?:stock|achat)\s+de\s+(.+)$/i)
+    if (stockPrefixMatch) {
+      // Vérifier s'il s'agit d'une définition complète (contient quantité et prix, ex: "stock de 5 caissier de flag à 5900")
+      const isComplete = sanitizedInput.match(/\b\d+\s*(?:à|a|@)\s*\d+\b/i)
+      if (!isComplete) {
+        // C'est incomplet ! On ouvre l'assistant guidé
+        const extractedName = stockPrefixMatch[1].trim()
+        setWizardProductName(extractedName)
+        setWizardQuantity('1')
+        setWizardPackaging('unité')
+        setWizardMultiplier('1')
+        setWizardUnit('pièce')
+        setWizardAlertThreshold('5')
+        setWizardPurchasePrice('')
+        setWizardSalePrice('')
+        setWizardStep(1)
+        setShowStockWizard(true)
+        return
+      }
+    }
 
     // 2. Détecter s'il s'agit d'une définition de stock pour bypasser le dialogue d'aide au calcul
     const isStockDefinition = /prix de vente|vente|l'unité|l'unite|unité|unite|bouteille|carton|boite|boîte|paquet|sac/i.test(sanitizedInput)
@@ -2025,6 +2088,228 @@ export default function JournalPage() {
                 'Confirmer l\'opération'
               )}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Guided Stock Entry Wizard Post-It Modal */}
+      {showStockWizard && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-sm bg-amber-100 border-2 border-amber-300 shadow-2xl p-6 rotate-1 transition-all flex flex-col max-h-[90vh] overflow-y-auto">
+          {/* Ruban adhésif */}
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-gray-300 bg-opacity-70 -rotate-2"></div>
+          
+          <div className="flex justify-between items-center border-b border-amber-200 pb-2 mb-3">
+            <h4 className="font-bold text-amber-900 text-base uppercase tracking-wide font-handwritten text-xl flex items-center gap-1.5">
+              📦 Nouvel Achat de Stock
+            </h4>
+            <button 
+              type="button" 
+              onClick={() => {
+                setShowStockWizard(false)
+                setInput('')
+              }} 
+              className="text-xs text-amber-800 hover:text-amber-900 font-bold font-mono"
+            >
+              X
+            </button>
+          </div>
+
+          {/* Étape indicateur */}
+          <div className="text-[9px] uppercase font-mono font-bold text-amber-700 tracking-widest mb-3 select-none">
+            Question {wizardStep} sur 4
+          </div>
+
+          <div className="space-y-4 text-left">
+            {/* ÉTAPE 1 : Confirmation du produit */}
+            {wizardStep === 1 && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans block mb-1">
+                    Quel produit ajoutez-vous au stock ?
+                  </label>
+                  <input
+                    type="text"
+                    value={wizardProductName}
+                    onChange={(e) => setWizardProductName(e.target.value)}
+                    className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-handwritten outline-none focus:border-amber-500 text-gray-900 text-lg"
+                    placeholder="Ex: Flag, Riz, Spaghetti..."
+                    autoFocus
+                  />
+                </div>
+                <div className="text-[9.5px] text-amber-850 leading-tight italic">
+                  Nous avons extrait ce nom de votre saisie. Corrigez-le si nécessaire.
+                </div>
+              </div>
+            )}
+
+            {/* ÉTAPE 2 : Quantité & Emballage */}
+            {wizardStep === 2 && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-amber-855 tracking-wider font-sans block mb-1">
+                    Combien en achetez-vous ?
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={wizardQuantity}
+                    onChange={(e) => setWizardQuantity(e.target.value)}
+                    className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:border-amber-500 text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-amber-855 tracking-wider font-sans block mb-1">
+                    Conditionnement (Emballage) :
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {['unité', 'caissier', 'carton', 'sac', 'boîte', 'paquet'].map((pkg) => (
+                      <button
+                        key={pkg}
+                        type="button"
+                        onClick={() => {
+                          setWizardPackaging(pkg)
+                          if (pkg === 'unité') {
+                            setWizardMultiplier('1')
+                            setWizardUnit('pièce')
+                          } else if (pkg === 'caissier') {
+                            setWizardMultiplier('12')
+                            setWizardUnit('bouteille')
+                          } else if (pkg === 'carton') {
+                            setWizardMultiplier('24')
+                            setWizardUnit('paquet')
+                          } else if (pkg === 'sac') {
+                            setWizardMultiplier('50')
+                            setWizardUnit('kg')
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${
+                          wizardPackaging === pkg
+                            ? 'bg-amber-250 border-amber-400 text-amber-955 font-extrabold scale-105 shadow-sm'
+                            : 'bg-white bg-opacity-75 border-amber-300 text-amber-800'
+                        }`}
+                      >
+                        {pkg}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {wizardPackaging !== 'unité' && (
+                  <div className="bg-white bg-opacity-50 p-3 rounded-xl border border-amber-250 space-y-2">
+                    <label className="text-[10px] uppercase font-bold text-amber-855 tracking-wider font-sans block">
+                      Contenance (Nombre d'unités par {wizardPackaging}) :
+                    </label>
+                    <input
+                      type="number"
+                      min="2"
+                      value={wizardMultiplier}
+                      onChange={(e) => setWizardMultiplier(e.target.value)}
+                      className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-2.5 py-1.5 text-xs font-mono outline-none focus:border-amber-500 text-gray-900"
+                    />
+                    <div className="text-[9px] text-amber-700 leading-tight">
+                      Ex: 1 caissier = {wizardMultiplier || '12'} unités. Votre stock augmentera de <strong>{(parseInt(wizardQuantity, 10) || 1) * (parseInt(wizardMultiplier, 10) || 1)}</strong> unités de détail au total.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ÉTAPE 3 : Unités & Alertes */}
+            {wizardStep === 3 && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-amber-855 tracking-wider font-sans block mb-1">
+                    Unité de vente au détail (ex: bouteille, sachet) :
+                  </label>
+                  <input
+                    type="text"
+                    value={wizardUnit}
+                    onChange={(e) => setWizardUnit(e.target.value)}
+                    className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:border-amber-500 text-gray-900"
+                    placeholder="Ex: bouteille, paquet, kg..."
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-amber-855 tracking-wider font-sans block mb-1">
+                    Seuil d'alerte de stock (minimum) :
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={wizardAlertThreshold}
+                    onChange={(e) => setWizardAlertThreshold(e.target.value)}
+                    className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:border-amber-500 text-gray-900"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ÉTAPE 4 : Tarification */}
+            {wizardStep === 4 && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-amber-855 tracking-wider font-sans block mb-1">
+                    Prix d'achat pour un {wizardPackaging === 'unité' ? 'unité' : `lot (${wizardPackaging})`} (FCFA) :
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Ex: 5900"
+                    value={wizardPurchasePrice}
+                    onChange={(e) => setWizardPurchasePrice(e.target.value)}
+                    className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:border-amber-500 text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-amber-855 tracking-wider font-sans block mb-1">
+                    Prix de vente d'une {wizardUnit} (FCFA) :
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Ex: 600"
+                    value={wizardSalePrice}
+                    onChange={(e) => setWizardSalePrice(e.target.value)}
+                    className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:border-amber-500 text-gray-900"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Boutons d'actions du Wizard */}
+            <div className="flex gap-2 pt-2 border-t border-amber-200 mt-4 select-none">
+              {wizardStep > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setWizardStep(p => p - 1)}
+                  className="flex-1 py-2 px-3 border border-amber-350 text-amber-900 text-xs font-bold uppercase rounded-xl hover:bg-amber-50 transition-all active:scale-[0.98]"
+                >
+                  ⬅️ Retour
+                </button>
+              )}
+              {wizardStep < 4 ? (
+                <button
+                  type="button"
+                  disabled={wizardStep === 1 && !wizardProductName.trim()}
+                  onClick={() => setWizardStep(p => p + 1)}
+                  className="flex-1 py-2 px-3 bg-gray-950 hover:bg-black text-white text-xs font-bold uppercase rounded-xl transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Suivant ➡️
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!wizardPurchasePrice || !wizardSalePrice}
+                  onClick={handleConfirmStockWizard}
+                  className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase rounded-xl transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Confirmer 💾
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

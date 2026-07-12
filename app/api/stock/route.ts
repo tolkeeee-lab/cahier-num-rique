@@ -69,7 +69,7 @@ export async function GET(request: Request) {
       const key = (product.name as string).toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
       const mult = product.multiplier || 1
-      const currentStock = ((product.initial_stock || 0) + data.total_in - data.total_out) * mult
+      const currentStock = ((product.initial_stock || 0) * mult) + data.total_in - data.total_out
 
       return {
         ...product,

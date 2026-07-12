@@ -105,7 +105,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
       const key = p.name.toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
       const mult = p.multiplier || 1
-      return { ...p, total_in: data.total_in, total_out: data.total_out, current_stock: (p.initial_stock + data.total_in - data.total_out) * mult, movements: data.movements }
+      return { ...p, total_in: data.total_in, total_out: data.total_out, current_stock: ((p.initial_stock || 0) * mult) + data.total_in - data.total_out, movements: data.movements }
     })
 
     const orphanItems: StockItem[] = Object.entries(stockMap)
