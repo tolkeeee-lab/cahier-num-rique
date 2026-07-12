@@ -573,7 +573,7 @@ export default function JournalPage() {
     let match
     
     const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
-    const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)?(\d+)/i
+    const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:de\s+|a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)*(\d+)/i
 
     while ((match = articleRegex.exec(text)) !== null) {
       const qty = parseInt(match[1], 10)
@@ -744,6 +744,14 @@ export default function JournalPage() {
         else if (color === 'green') type = 'purchase_cash'
         else if (color === 'purple') type = 'purchase_credit'
         else if (color === 'yellow') type = 'sale_credit'
+
+        // Forcer en Achat Stock (purchase_cash / purchase_credit) si le texte commence par "stock" ou "achat"
+        const lowercaseText = text.trim().toLowerCase()
+        if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
+          if (type === 'cash_in' || type === 'sale_credit') {
+            type = 'purchase_cash'
+          }
+        }
 
         // Safeguard tiroir caisse
         const isExpense = type === 'cash_out' || type === 'purchase_cash'
