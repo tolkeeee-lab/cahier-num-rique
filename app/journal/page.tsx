@@ -191,6 +191,25 @@ export default function JournalPage() {
   const [wizardPurchasePrice, setWizardPurchasePrice] = useState('')
   const [wizardSalePrice, setWizardSalePrice] = useState('')
 
+  // Context-aware stock confirmation & price mismatch alert states
+  const [showStockConfirmation, setShowStockConfirmation] = useState(false)
+  const [stockConfirmationData, setStockConfirmationData] = useState<{
+    product: any
+    quantity: number
+    packaging: string
+    multiplier: number
+    unit: string
+  } | null>(null)
+
+  const [showPriceChangeDialog, setShowPriceChangeDialog] = useState(false)
+  const [priceChangeData, setPriceChangeData] = useState<{
+    product: any
+    newLotPrice: number
+    oldLotPrice: number
+    rawText: string
+    penColor: string
+  } | null>(null)
+
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -946,6 +965,118 @@ export default function JournalPage() {
     }
   }
 
+  const parseSimpleStockInput = (text: string) => {
+    let cleaned = text.replace(/^(?:stock|achat)\s+de\s+/i, '').trim()
+    
+    let qty = 1
+    let packaging: string | undefined = undefined
+    let productName = cleaned
+
+    const qtyMatch = cleaned.match(/^(\d+)\s+(.+)$/)
+    if (qtyMatch) {
+      qty = parseInt(qtyMatch[1], 10)
+      const rest = qtyMatch[2].trim()
+      const packMatch = rest.match(/^(caissier|carton|sac|boite|boîte|paquet|unité|unite)\s+(?:de\s+)?(.+)$/i)
+      if (packMatch) {
+        packaging = packMatch[1].toLowerCase()
+        productName = packMatch[2].trim()
+      } else {
+        productName = rest
+      }
+    } else {
+      const packMatch = cleaned.match(/^(caissier|carton|sac|boite|boîte|paquet|unité|unite)\s+(?:de\s+)?(.+)$/i)
+      if (packMatch) {
+        packaging = packMatch[1].toLowerCase()
+        productName = packMatch[2].trim()
+      }
+    }
+
+    // Retirer d'éventuels suffixes de prix
+    productName = productName.split(/\s+(?:à|a|@|vente|prix)\b/i)[0].trim()
+
+    return { qty, packaging, productName }
+  }
+
+  const handleConfirmSimpleStock = async () => {
+    if (!stockConfirmationData) return
+    const { product, quantity, packaging, multiplier, unit } = stockConfirmationData
+    const lotPrice = product.unit_cost * multiplier
+    const salePrice = product.unit_price
+
+    let text = ''
+    if (packaging === 'unité') {
+      text = `stock de ${quantity} ${product.name} à ${lotPrice} prix de vente à l'unité ${salePrice}`
+    } else {
+      text = `stock de ${quantity} ${packaging} de ${product.name} de ${multiplier} ${unit} à ${lotPrice} prix de vente à l'unité ${salePrice}`
+    }
+
+    try {
+      await submitTransaction({
+        text,
+        penColor: 'green'
+      })
+      setShowStockConfirmation(false)
+      setInput('')
+    } catch (e) {
+      console.error(e)
+      setPostItWarning("Erreur lors de l'enregistrement du stock.")
+    }
+  }
+
+  const handleConfirmPriceChange = async () => {
+    if (!priceChangeData) return
+    const { rawText, penColor } = priceChangeData
+    try {
+      await submitTransaction({
+        text: rawText,
+        penColor
+      })
+      setShowPriceChangeDialog(false)
+      setInput('')
+    } catch (e) {
+      console.error(e)
+      setPostItWarning("Erreur lors de l'enregistrement.")
+    }
+  }
+
+  const handleRejectPriceChange = async () => {
+    if (!priceChangeData || !mappedUser) return
+    const { product, rawText, penColor } = priceChangeData
+    const sid = mappedUser.shop_id
+    const isOnline = typeof window !== 'undefined' ? window.navigator.onLine : false
+
+    try {
+      await submitTransaction({
+        text: rawText,
+        penColor
+      })
+
+      const oldUnitCost = product.unit_cost
+      const oldUnitPrice = product.unit_price
+
+      if (isConfigured && isOnline) {
+        await fetch('/api/stock', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-shop-id': sid },
+          body: JSON.stringify({
+            id: product.id,
+            unit_cost: oldUnitCost,
+            unit_price: oldUnitPrice
+          })
+        })
+      } else {
+        const updated = { ...product, unit_cost: oldUnitCost, unit_price: oldUnitPrice }
+        saveOfflineProduct(sid, updated)
+      }
+
+      setShowPriceChangeDialog(false)
+      setInput('')
+    } catch (e) {
+      console.error(e)
+      setPostItWarning("Erreur lors de l'enregistrement.")
+    }
+  }
+
   const handleConfirmStockWizard = async () => {
     const qty = parseInt(wizardQuantity, 10) || 1
     const mult = parseInt(wizardMultiplier, 10) || 1
@@ -982,25 +1113,77 @@ export default function JournalPage() {
     // 1. Nettoyer les espaces, points et virgules entre les chiffres (ex: "12 000" ou "12.000" -> "12000")
     const sanitizedInput = input.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
 
-    // Détecter si l'utilisateur saisit "stock de [produit]" ou "achat de [produit]" de manière incomplète
-    const stockPrefixMatch = sanitizedInput.match(/^(?:stock|achat)\s+de\s+(.+)$/i)
-    if (stockPrefixMatch) {
-      // Vérifier s'il s'agit d'une définition complète (contient quantité et prix, ex: "stock de 5 caissier de flag à 5900")
-      const isComplete = sanitizedInput.match(/\b\d+\s*(?:à|a|@)\s*\d+\b/i)
-      if (!isComplete) {
-        // C'est incomplet ! On ouvre l'assistant guidé
-        const extractedName = stockPrefixMatch[1].trim()
-        setWizardProductName(extractedName)
-        setWizardQuantity('1')
-        setWizardPackaging('unité')
-        setWizardMultiplier('1')
-        setWizardUnit('pièce')
-        setWizardAlertThreshold('5')
-        setWizardPurchasePrice('')
-        setWizardSalePrice('')
-        setWizardStep(1)
-        setShowStockWizard(true)
-        return
+    // Interception et aide à la saisie de stock / achat (produits existants vs nouveaux, avec ou sans prix)
+    const isStockOp = sanitizedInput.match(/^(?:stock|achat)\s+de\s+/i) || selectedPen === 'green'
+    if (isStockOp) {
+      const { qty, packaging, productName } = parseSimpleStockInput(sanitizedInput)
+      
+      if (productName && productName !== 'transaction générale') {
+        const sid = mappedUser?.shop_id || 'default-shop'
+        const offlineProducts = getOfflineProducts(sid)
+        const existing = offlineProducts.find(p => p.name.toLowerCase().trim() === productName.toLowerCase().trim())
+        const hasPrice = sanitizedInput.match(/\b\d+\s*(?:à|a|@)\s*\d+\b/i)
+
+        if (existing) {
+          if (!hasPrice) {
+            // Cas A : Pas de prix écrit -> Confirmer rapidement avec les tarifs mémorisés
+            setStockConfirmationData({
+              product: existing,
+              quantity: qty,
+              packaging: packaging || existing.packaging_name || 'unité',
+              multiplier: existing.multiplier || 1,
+              unit: existing.unit || 'pièce'
+            })
+            setShowStockConfirmation(true)
+            return
+          } else {
+            // Cas B : Prix écrit -> Alerte si différence avec le catalogue
+            const matchPrice = sanitizedInput.match(/(\d+)\s*(?:à|a|@)\s+(\d+)/i)
+            if (matchPrice) {
+              const enteredLotPrice = parseInt(matchPrice[2], 10)
+              const expectedLotPrice = existing.unit_cost * (existing.multiplier || 1)
+              
+              if (Math.abs(enteredLotPrice - expectedLotPrice) > 5) {
+                setPriceChangeData({
+                  product: existing,
+                  newLotPrice: enteredLotPrice,
+                  oldLotPrice: expectedLotPrice,
+                  rawText: sanitizedInput,
+                  penColor: selectedPen === 'green' ? 'green' : 'green' // Achat toujours vert
+                })
+                setShowPriceChangeDialog(true)
+                return
+              }
+            }
+          }
+        } else {
+          // Produit inexistant
+          if (!hasPrice) {
+            // Pas de prix, on ouvre l'assistant guidé complet pré-rempli
+            setWizardProductName(productName)
+            setWizardQuantity(String(qty))
+            setWizardPackaging(packaging || 'unité')
+            if (packaging === 'caissier') {
+              setWizardMultiplier('12')
+              setWizardUnit('bouteille')
+            } else if (packaging === 'carton') {
+              setWizardMultiplier('24')
+              setWizardUnit('paquet')
+            } else if (packaging === 'sac') {
+              setWizardMultiplier('50')
+              setWizardUnit('kg')
+            } else {
+              setWizardMultiplier('1')
+              setWizardUnit('pièce')
+            }
+            setWizardAlertThreshold('5')
+            setWizardPurchasePrice('')
+            setWizardSalePrice('')
+            setWizardStep(2) // Étape 2 directe car le nom du produit est déjà renseigné
+            setShowStockWizard(true)
+            return
+          }
+        }
       }
     }
 
@@ -2309,6 +2492,168 @@ export default function JournalPage() {
                   Confirmer 💾
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prefilled Stock Confirmation Modal */}
+      {showStockConfirmation && stockConfirmationData && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-sm bg-amber-100 border-2 border-amber-300 shadow-2xl p-6 -rotate-1 transition-all flex flex-col max-h-[90vh] overflow-y-auto">
+          {/* Ruban adhésif */}
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-gray-300 bg-opacity-70 rotate-1"></div>
+          
+          <div className="flex justify-between items-center border-b border-amber-200 pb-2 mb-3">
+            <h4 className="font-bold text-amber-900 text-base uppercase tracking-wide font-handwritten text-xl flex items-center gap-1.5">
+              📦 Valider l'Achat de Stock
+            </h4>
+            <button 
+              type="button" 
+              onClick={() => {
+                setShowStockConfirmation(false)
+                setInput('')
+              }} 
+              className="text-xs text-amber-800 hover:text-amber-900 font-bold font-mono"
+            >
+              X
+            </button>
+          </div>
+
+          <div className="space-y-4 text-left">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans">Produit reconnu :</span>
+              <div className="font-mono text-base font-bold text-gray-800 mt-0.5">
+                {stockConfirmationData.product.name}
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans">Quantité à ajouter :</span>
+              <div className="font-mono text-sm text-gray-700 mt-0.5">
+                {stockConfirmationData.quantity} {stockConfirmationData.packaging}{stockConfirmationData.quantity > 1 ? 's' : ''} 
+                {stockConfirmationData.packaging !== 'unité' && (
+                  <span className="text-[11px] text-gray-500 block italic">
+                    (soit {stockConfirmationData.quantity * stockConfirmationData.multiplier} {stockConfirmationData.unit}s au total)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 bg-white bg-opacity-50 p-3 rounded-xl border border-amber-200">
+              <div>
+                <span className="text-[9px] uppercase font-bold text-amber-800">Prix d'achat lot :</span>
+                <div className="font-mono text-xs font-bold text-gray-900 mt-0.5">
+                  {formatPrice(stockConfirmationData.product.unit_cost * stockConfirmationData.multiplier)} / {stockConfirmationData.packaging}
+                </div>
+              </div>
+              <div>
+                <span className="text-[9px] uppercase font-bold text-amber-850">Prix de vente détail :</span>
+                <div className="font-mono text-xs font-bold text-gray-900 mt-0.5">
+                  {formatPrice(stockConfirmationData.product.unit_price)} / {stockConfirmationData.unit}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-amber-250 pt-2 text-right">
+              <span className="text-[10px] uppercase font-bold text-amber-850">Montant total de l'achat :</span>
+              <div className="font-mono text-lg font-bold text-emerald-800">
+                {formatPrice((stockConfirmationData.product.unit_cost * stockConfirmationData.multiplier) * stockConfirmationData.quantity)}
+              </div>
+            </div>
+
+            <div className="flex gap-2 select-none pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setWizardProductName(stockConfirmationData.product.name)
+                  setWizardQuantity(String(stockConfirmationData.quantity))
+                  setWizardPackaging(stockConfirmationData.packaging)
+                  setWizardMultiplier(String(stockConfirmationData.multiplier))
+                  setWizardUnit(stockConfirmationData.unit)
+                  setWizardAlertThreshold(String(stockConfirmationData.product.alert_threshold || 5))
+                  setWizardPurchasePrice(String(stockConfirmationData.product.unit_cost * stockConfirmationData.multiplier))
+                  setWizardSalePrice(String(stockConfirmationData.product.unit_price))
+                  setWizardStep(4)
+                  setShowStockWizard(true)
+                  setShowStockConfirmation(false)
+                }}
+                className="flex-1 py-2 px-3 border border-amber-350 text-amber-900 text-xs font-bold uppercase rounded-xl hover:bg-amber-50 transition-all active:scale-[0.98]"
+              >
+                ✏️ Modifier les Tarifs
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSimpleStock}
+                className="flex-grow py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold uppercase rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Confirmer l'Achat 💾
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price Discrepancy Alert Modal */}
+      {showPriceChangeDialog && priceChangeData && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-sm bg-amber-100 border-2 border-amber-300 shadow-2xl p-6 rotate-1 transition-all flex flex-col max-h-[90vh] overflow-y-auto">
+          {/* Ruban adhésif */}
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-red-300 bg-opacity-70 -rotate-1"></div>
+          
+          <div className="flex justify-between items-center border-b border-amber-200 pb-2 mb-3">
+            <h4 className="font-bold text-amber-955 text-base uppercase tracking-wide font-handwritten text-xl flex items-center gap-1.5">
+              ⚠️ Le prix d'achat a changé !
+            </h4>
+            <button 
+              type="button" 
+              onClick={() => {
+                setShowPriceChangeDialog(false)
+                setInput('')
+              }} 
+              className="text-xs text-amber-800 hover:text-amber-900 font-bold font-mono"
+            >
+              X
+            </button>
+          </div>
+
+          <div className="space-y-4 text-left">
+            <p className="text-xs text-amber-900 leading-normal">
+              Vous avez saisi un prix d'achat différent de celui enregistré dans votre catalogue pour le produit <strong>{priceChangeData.product.name}</strong>.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-amber-200 select-none">
+              <div>
+                <span className="text-[9px] uppercase font-bold text-amber-600 block">Ancien prix mémorisé :</span>
+                <span className="font-mono text-sm font-bold text-gray-500 line-through">
+                  {formatPrice(priceChangeData.oldLotPrice)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] uppercase font-bold text-red-600 block">Nouveau prix saisi :</span>
+                <span className="font-mono text-sm font-bold text-red-700">
+                  {formatPrice(priceChangeData.newLotPrice)}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-yellow-50 p-2.5 rounded-lg border border-yellow-200 text-[10px] text-amber-850 leading-snug">
+              Voulez-vous enregistrer ce nouveau prix comme le prix d'achat par défaut dans votre catalogue de stock ?
+            </div>
+
+            <div className="flex gap-2 select-none pt-2">
+              <button
+                type="button"
+                onClick={handleRejectPriceChange}
+                className="flex-1 py-2.5 px-3 border border-amber-350 text-amber-950 text-xs font-bold uppercase rounded-xl hover:bg-amber-50 transition-all active:scale-[0.98]"
+              >
+                Non, juste pour cette fois 👎
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPriceChange}
+                className="flex-grow py-2.5 px-3 bg-amber-900 hover:bg-amber-950 text-white text-xs font-bold uppercase rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Oui, mettre à jour 👍
+              </button>
             </div>
           </div>
         </div>
