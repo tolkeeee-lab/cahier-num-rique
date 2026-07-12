@@ -604,7 +604,10 @@ export default function JournalPage() {
     const articles: any[] = []
     let totalFacture = 0
     
-    const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/gi
+    const hasExplicitSeparator = /(?:^|\s)(?:à|a|@)(?:\s|$)/i.test(text)
+    const articleRegex = hasExplicitSeparator
+      ? /(\d+)\s*(.*?)\s*(?:à|a|@)\s*(\d+)/gi
+      : /(\d+)\s+(.+?)\s+(\d+)/gi
     let match
     
     const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i

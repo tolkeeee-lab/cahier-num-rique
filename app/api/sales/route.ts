@@ -569,7 +569,10 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
   let totalFacture = 0
   
   // Format: [quantité] [nom] à [prix] (ex: "10 mèches à 2000" ou "3 sacs de riz à 12000")
-  const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@|\s)\s*(\d+)/gi
+  const hasExplicitSeparator = /(?:^|\s)(?:à|a|@)(?:\s|$)/i.test(text)
+  const articleRegex = hasExplicitSeparator
+    ? /(\d+)\s*(.*?)\s*(?:à|a|@)\s*(\d+)/gi
+    : /(\d+)\s+(.+?)\s+(\d+)/gi
   let match
   
   const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
