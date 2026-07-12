@@ -293,12 +293,16 @@ export default function JournalPage() {
     }
   }
 
-  // Faire défiler vers le bas lors de la mise à jour des ventes
+  // Faire défiler vers le bas lors de la mise à jour des ventes ou de l'ouverture du calcul de monnaie
   useEffect(() => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+        }
+      }, 80)
     }
-  }, [sales, activeTab])
+  }, [sales, activeTab, showChangeCalc])
 
   // Synchronisation automatique au retour en ligne
   useEffect(() => {
@@ -1329,7 +1333,7 @@ export default function JournalPage() {
                   {/* Scrollable Seyes lined area inside the page */}
                   <div 
                     ref={scrollContainerRef}
-                    className="flex-1 overflow-y-auto lined-paper scroll-smooth"
+                    className={`flex-1 overflow-y-auto lined-paper scroll-smooth ${showChangeCalc ? 'pb-72' : 'pb-16'}`}
                   >
                     {filteredSales.length > 0 ? (
                       <SalesHistory 
