@@ -48,6 +48,8 @@ const EMPTY_FORM = {
   initial_stock: 0,
   unit_cost: 0,
   unit_price: 0,
+  multiplier: 1,
+  packaging_name: '',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -102,7 +104,8 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     const stockItems: StockItem[] = offlineProducts.map(p => {
       const key = p.name.toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
-      return { ...p, total_in: data.total_in, total_out: data.total_out, current_stock: p.initial_stock + data.total_in - data.total_out, movements: data.movements }
+      const mult = p.multiplier || 1
+      return { ...p, total_in: data.total_in, total_out: data.total_out, current_stock: (p.initial_stock + data.total_in - data.total_out) * mult, movements: data.movements }
     })
 
     const orphanItems: StockItem[] = Object.entries(stockMap)
@@ -144,6 +147,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
           id: p.id, shop_id: p.shop_id, name: p.name, category: p.category,
           unit: p.unit, alert_threshold: p.alert_threshold, initial_stock: p.initial_stock,
           unit_cost: p.unit_cost, unit_price: p.unit_price, created_at: p.created_at || '',
+          multiplier: p.multiplier || 1, packaging_name: p.packaging_name || '',
         })))
       }
     } catch (err) {
@@ -170,6 +174,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
       name: item.name, category: item.category, unit: item.unit,
       alert_threshold: item.alert_threshold, initial_stock: item.initial_stock,
       unit_cost: item.unit_cost, unit_price: item.unit_price,
+      multiplier: item.multiplier || 1, packaging_name: item.packaging_name || '',
     })
     setEditingItem(item)
     setShowAddModal(true)
@@ -410,7 +415,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                         <span className={`font-mono text-xs font-bold flex-shrink-0 ${colors.text}`}>
                           {item.current_stock <= 0
                             ? '⚠️ RUPTURE'
-                            : `${item.current_stock} ${item.unit}`}
+                            : `${item.current_stock} ${item.unit} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'lots'})` : ''}`}
                         </span>
                       </div>
                     </div>
@@ -454,6 +459,9 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                         <span>Seuil: <strong className="text-gray-700">{item.alert_threshold} {item.unit}</strong></span>
                         {item.unit_cost > 0 && <span>Achat: <strong className="text-gray-700">{formatPrice(item.unit_cost)}</strong></span>}
                         {item.unit_price > 0 && <span>Vente: <strong className="text-gray-700">{formatPrice(item.unit_price)}</strong></span>}
+                        {item.multiplier && item.multiplier > 1 && (
+                          <span>Conditionnement: <strong className="text-gray-700">1 {item.packaging_name || 'lot'} = {item.multiplier} {item.unit}</strong></span>
+                        )}
                         {item.unit_cost > 0 && item.current_stock > 0 && (
                           <span className="text-emerald-700">Valeur: <strong>{formatPrice(Math.max(0, item.current_stock) * item.unit_cost)}</strong></span>
                         )}
@@ -637,6 +645,53 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
                   />
                 </div>
+              </div>
+
+              {/* Conditionnement / Multiplicateur */}
+              <div className="border-t border-dashed border-gray-200 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">📦 Conditionnement / Lots</span>
+                  <input
+                    type="checkbox"
+                    checked={formData.multiplier > 1}
+                    onChange={e => {
+                      setFormData(p => ({
+                        ...p,
+                        multiplier: e.target.checked ? 50 : 1,
+                        packaging_name: e.target.checked ? 'sac' : '',
+                      }))
+                    }}
+                    className="rounded text-gray-800 focus:ring-gray-800"
+                  />
+                </div>
+
+                {formData.multiplier > 1 && (
+                  <div className="grid grid-cols-2 gap-3 bg-white p-3 border border-gray-200 rounded-xl shadow-inner">
+                    <div>
+                      <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Nom du lot</label>
+                      <input
+                        type="text"
+                        placeholder="ex: sac, carton, pack"
+                        value={formData.packaging_name}
+                        onChange={e => setFormData(p => ({ ...p, packaging_name: e.target.value }))}
+                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Contenance (Multiplicateur)</label>
+                      <input
+                        type="number"
+                        min="2"
+                        value={formData.multiplier}
+                        onChange={e => setFormData(p => ({ ...p, multiplier: Math.max(1, parseInt(e.target.value) || 1) }))}
+                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
+                      />
+                    </div>
+                    <div className="col-span-2 text-[8px] text-gray-400 leading-tight">
+                      Chaque entrée/sortie de ce produit comptée dans le journal fera automatiquement <strong>+{formData.multiplier} / -{formData.multiplier} {formData.unit}</strong>.
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -48,6 +48,8 @@ export interface OfflineProduct {
   unit_cost: number
   unit_price: number
   created_at: string
+  multiplier?: number
+  packaging_name?: string
 }
 
 // ─── Clés localStorage ────────────────────────────────────────────────────────
