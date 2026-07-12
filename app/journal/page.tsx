@@ -22,6 +22,8 @@ import {
   replaceOfflineSuppliers,
   addOrUpdateOfflineClientDebt,
   addOrUpdateOfflineSupplierDebt,
+  getOfflineProducts,
+  saveOfflineProduct,
 } from '@/lib/offlineDb'
 
 interface Sale {
@@ -561,6 +563,9 @@ export default function JournalPage() {
     const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/gi
     let match
     
+    const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
+    const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)?(\d+)/i
+
     while ((match = articleRegex.exec(text)) !== null) {
       const qty = parseInt(match[1], 10)
       const name = match[2].trim() || "Article(s)"
@@ -570,10 +575,42 @@ export default function JournalPage() {
         continue
       }
 
+      const packMatch = name.match(packRegex)
+      const salePriceMatch = text.match(salePriceRegex)
+
+      let finalQty = qty
+      let finalUnitPrice = price
+      let uniteAchat = undefined
+      let uniteVente = undefined
+      let quantiteParBoite = undefined
+      let prixVenteUnitaire = salePriceMatch ? parseInt(salePriceMatch[1], 10) : undefined
+      let simplifiedName = name
+
+      if (packMatch) {
+        const multiplier = parseInt(packMatch[1], 10)
+        uniteVente = packMatch[2].trim()
+        quantiteParBoite = multiplier
+        
+        const firstWord = name.split(/\s+/)[0]
+        if (['caissier', 'carton', 'sac', 'boite', 'boîte', 'paquet'].includes(firstWord.toLowerCase())) {
+          uniteAchat = firstWord
+          simplifiedName = name.replace(new RegExp(`^${firstWord}\\s+(?:de\\s+)?`, 'i'), '')
+        }
+        
+        simplifiedName = simplifiedName.replace(packRegex, '').replace(/\s+de\s*$/, '').trim()
+        
+        finalQty = qty * multiplier
+        finalUnitPrice = Math.round(price / multiplier)
+      }
+
       articles.push({
-        nom: name,
-        quantite: qty,
-        prix_unitaire: price
+        nom: simplifiedName,
+        quantite: finalQty,
+        prix_unitaire: finalUnitPrice,
+        unite_achat: uniteAchat,
+        unite_vente: uniteVente,
+        quantite_par_boite: quantiteParBoite,
+        prix_vente_unitaire: prixVenteUnitaire
       })
       totalFacture += qty * price
     }
@@ -600,12 +637,42 @@ export default function JournalPage() {
       nomClient = nomClient.charAt(0).toUpperCase() + nomClient.slice(1)
     }
 
+    let montantPaye = totalFacture
+    let montantDette = 0
+
+    const payeRegex = /(?:payé|paye|recu|donne)\s+(\d+)/i
+    const payeMatch = text.match(payeRegex)
+    if (payeMatch) {
+      montantPaye = parseInt(payeMatch[1], 10)
+    }
+
+    const resteRegex = /(?:reste|dette|credit|dû|du)\s+(\d+)/i
+    const resteMatch = text.match(resteRegex)
+    if (resteMatch) {
+      montantDette = parseInt(resteMatch[1], 10)
+      if (penColor === 'yellow' || penColor === 'purple') {
+        montantPaye = totalFacture - montantDette
+      }
+    }
+
+    if (penColor === 'yellow' || penColor === 'purple') {
+      if (!payeMatch && !resteMatch) {
+        montantPaye = 0
+        montantDette = totalFacture
+      } else {
+        montantDette = Math.max(0, totalFacture - montantPaye)
+      }
+    } else {
+      montantPaye = totalFacture
+      montantDette = 0
+    }
+
     return {
       nom_client: nomClient,
       articles,
       total_facture: totalFacture,
-      montant_paye: (penColor === 'yellow' || penColor === 'purple') ? 0 : totalFacture,
-      montant_dette: (penColor === 'yellow' || penColor === 'purple') ? totalFacture : 0
+      montant_paye: Math.max(0, montantPaye),
+      montant_dette: Math.max(0, montantDette)
     }
   }
 
@@ -714,6 +781,47 @@ export default function JournalPage() {
           }
         }
 
+        // ─── CRÉATION/MISE À JOUR DYNAMIQUE HORS-LIGNE DANS LE CATALOGUE STOCK ───
+        const isStockOp = ['purchase_cash', 'purchase_credit', 'cash_in', 'sale_credit'].includes(type)
+        if (isStockOp && parsed.articles.length > 0) {
+          for (const article of parsed.articles) {
+            const prodName = article.nom.trim()
+            if (!prodName) continue
+
+            const offlineProducts = getOfflineProducts(sid)
+            const existing = offlineProducts.find(p => p.name.toLowerCase().trim() === prodName.toLowerCase().trim())
+            
+            const unit = article.unite_vente || 'unité'
+            const isPurchase = ['purchase_cash', 'purchase_credit'].includes(type)
+            const isSale = ['cash_in', 'sale_credit'].includes(type)
+            
+            const unitCost = isPurchase ? article.prix_unitaire : undefined
+            const unitPrice = article.prix_vente_unitaire || (isSale ? article.prix_unitaire : undefined)
+
+            if (existing) {
+              const updated = { ...existing }
+              if (unitCost !== undefined && unitCost > 0) updated.unit_cost = unitCost
+              if (unitPrice !== undefined && unitPrice > 0) updated.unit_price = unitPrice
+              if (article.unite_vente) updated.unit = article.unite_vente
+              if (article.seuil_alerte !== undefined) updated.alert_threshold = article.seuil_alerte
+              saveOfflineProduct(sid, updated)
+            } else {
+              saveOfflineProduct(sid, {
+                id: generateOfflineId(),
+                shop_id: sid,
+                name: prodName,
+                category: 'Général',
+                unit: unit,
+                alert_threshold: article.seuil_alerte ?? 5,
+                initial_stock: 0,
+                unit_cost: unitCost ?? 0,
+                unit_price: unitPrice ?? 0,
+                created_at: new Date().toISOString()
+              })
+            }
+          }
+        }
+
         refreshPendingCount(sid)
       }
 
@@ -734,23 +842,28 @@ export default function JournalPage() {
     // 1. Nettoyer les espaces, points et virgules entre les chiffres (ex: "12 000" ou "12.000" -> "12000")
     const sanitizedInput = input.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
 
-    // 2. Chercher le motif de calcul avec nom d'article optionnel
-    const match = sanitizedInput.match(/(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/i)
-    if (match) {
-      const quantity = parseInt(match[1], 10)
-      const item = match[2].trim() || "Article(s)"
-      const amount = parseInt(match[3], 10)
+    // 2. Détecter s'il s'agit d'une définition de stock pour bypasser le dialogue d'aide au calcul
+    const isStockDefinition = /prix de vente|vente|l'unité|l'unite|unité|unite|bouteille|carton|boite|boîte|paquet|sac/i.test(sanitizedInput)
 
-      // Seulement si la quantité est cohérente (supérieure à 1, plus petite que le montant, et max 1000)
-      if (quantity > 1 && quantity < amount && quantity <= 1000) {
-        setCalculationQuery({
-          quantity,
-          item,
-          amount,
-          rawText: sanitizedInput,
-          penColor: selectedPen
-        })
-        return
+    // 3. Chercher le motif de calcul avec nom d'article optionnel
+    if (!isStockDefinition) {
+      const match = sanitizedInput.match(/(\d+)\s*(.*?)\s*(?:à|a|@)\s+(\d+)/i)
+      if (match) {
+        const quantity = parseInt(match[1], 10)
+        const item = match[2].trim() || "Article(s)"
+        const amount = parseInt(match[3], 10)
+
+        // Seulement si la quantité est cohérente (supérieure à 1, plus petite que le montant, et max 1000)
+        if (quantity > 1 && quantity < amount && quantity <= 1000) {
+          setCalculationQuery({
+            quantity,
+            item,
+            amount,
+            rawText: sanitizedInput,
+            penColor: selectedPen
+          })
+          return
+        }
       }
     }
 

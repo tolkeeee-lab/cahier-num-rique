@@ -20,12 +20,18 @@ interface ParsedSale {
     nom: string
     quantite: number
     prix_unitaire: number
+    unite_achat?: string
+    unite_vente?: string
+    quantite_par_boite?: number
+    prix_vente_unitaire?: number
+    seuil_alerte?: number
   }>
   total_facture: number
   montant_paye: number
   montant_dette: number
   nom_client: string
 }
+
 
 // Calcule le solde actuel du tiroir-caisse (Cash)
 async function getCurrentCash(shopId: string): Promise<number> {
@@ -271,6 +277,64 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // ─── CRÉATION/MISE À JOUR DYNAMIQUE DANS LE CATALOGUE STOCK ───
+        const isStockOp = ['purchase_cash', 'purchase_credit', 'cash_in', 'sale_credit'].includes(type)
+        if (isStockOp && parsedData.articles.length > 0) {
+          for (const article of parsedData.articles) {
+            const prodName = article.nom.trim()
+            if (!prodName) continue
+
+            // 1. Chercher si le produit existe déjà
+            const { data: existingProd } = await supabase
+              .from('products')
+              .select('*')
+              .eq('shop_id', shopId)
+              .ilike('name', prodName)
+              .maybeSingle()
+
+            const isPurchase = ['purchase_cash', 'purchase_credit'].includes(type)
+            const isSale = ['cash_in', 'sale_credit'].includes(type)
+            const unit = article.unite_vente || 'unité'
+            
+            const unitCost = isPurchase ? article.prix_unitaire : undefined
+            const unitPrice = article.prix_vente_unitaire || (isSale ? article.prix_unitaire : undefined)
+
+            if (existingProd) {
+              const updates: Record<string, any> = {
+                updated_at: new Date().toISOString()
+              }
+              if (unitCost !== undefined && unitCost > 0) updates.unit_cost = unitCost
+              if (unitPrice !== undefined && unitPrice > 0) updates.unit_price = unitPrice
+              if (article.unite_vente) updates.unit = article.unite_vente
+              if (article.seuil_alerte !== undefined) updates.alert_threshold = article.seuil_alerte
+
+              await supabase
+                .from('products')
+                .update(updates)
+                .eq('id', existingProd.id)
+                .eq('shop_id', shopId)
+            } else {
+              await supabase
+                .from('products')
+                .insert([
+                  {
+                    id: randomUUID(),
+                    shop_id: shopId,
+                    name: prodName,
+                    category: 'Général',
+                    unit: unit,
+                    alert_threshold: article.seuil_alerte ?? 5,
+                    initial_stock: 0,
+                    unit_cost: unitCost ?? 0,
+                    unit_price: unitPrice ?? 0,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  }
+                ])
+            }
+          }
+        }
+
         savedInSupabase = true
       } catch (e) {
         console.error('Erreur insertion Supabase, repli sur local:', e)
@@ -500,6 +564,9 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
   const articleRegex = /(\d+)\s*(.*?)\s*(?:à|a|@|\s)\s*(\d+)/gi
   let match
   
+  const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
+  const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)?(\d+)/i
+
   while ((match = articleRegex.exec(text)) !== null) {
     const qty = parseInt(match[1], 10)
     const name = match[2].trim() || "Article(s)"
@@ -510,10 +577,42 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
       continue
     }
 
+    const packMatch = name.match(packRegex)
+    const salePriceMatch = text.match(salePriceRegex)
+
+    let finalQty = qty
+    let finalUnitPrice = price
+    let uniteAchat = undefined
+    let uniteVente = undefined
+    let quantiteParBoite = undefined
+    let prixVenteUnitaire = salePriceMatch ? parseInt(salePriceMatch[1], 10) : undefined
+    let simplifiedName = name
+
+    if (packMatch) {
+      const multiplier = parseInt(packMatch[1], 10)
+      uniteVente = packMatch[2].trim()
+      quantiteParBoite = multiplier
+      
+      const firstWord = name.split(/\s+/)[0]
+      if (['caissier', 'carton', 'sac', 'boite', 'boîte', 'paquet'].includes(firstWord.toLowerCase())) {
+        uniteAchat = firstWord
+        simplifiedName = name.replace(new RegExp(`^${firstWord}\\s+(?:de\\s+)?`, 'i'), '')
+      }
+      
+      simplifiedName = simplifiedName.replace(packRegex, '').replace(/\s+de\s*$/, '').trim()
+      
+      finalQty = qty * multiplier
+      finalUnitPrice = Math.round(price / multiplier)
+    }
+
     articles.push({
-      nom: name,
-      quantite: qty,
-      prix_unitaire: price
+      nom: simplifiedName,
+      quantite: finalQty,
+      prix_unitaire: finalUnitPrice,
+      unite_achat: uniteAchat,
+      unite_vente: uniteVente,
+      quantite_par_boite: quantiteParBoite,
+      prix_vente_unitaire: prixVenteUnitaire
     })
     totalFacture += qty * price
   }
@@ -591,7 +690,16 @@ Règles STRICTES:
 1. Le JSON doit TOUJOURS avoir cette EXACTE structure:
 {
   "articles": [
-    { "nom": "nom_produit", "quantite": nombre, "prix_unitaire": nombre }
+    { 
+      "nom": "nom_simplifie_du_produit", 
+      "quantite": nombre, 
+      "prix_unitaire": nombre,
+      "unite_achat": "nom_unite_optionnel", 
+      "unite_vente": "nom_unite_optionnel", 
+      "quantite_par_boite": nombre_optionnel, 
+      "prix_vente_unitaire": nombre_optionnel, 
+      "seuil_alerte": nombre_optionnel
+    }
   ],
   "total_facture": nombre,
   "montant_paye": nombre,
@@ -599,15 +707,26 @@ Règles STRICTES:
   "nom_client": "nom"
 }
 
-2. En fonction de la couleur du Bic sélectionné (${penColor}) :
+2. Extraction simplifiée et conversion pour le stock :
+   - "nom" doit être le nom simplifié du produit sans les contenants ni les multiplicateurs (ex: "Flag" au lieu de "caissier de flag" ou "flag de 12 bouteilles").
+   - Si la transaction mentionne un conditionnement multiple (ex: "1 caissier de flag de 12 bouteille", "2 cartons de spaghetti de 20 paquets") :
+     * "quantite" doit être converti en unités de vente finales (ex: 1 caissier × 12 bouteilles = 12. 2 cartons × 20 paquets = 40).
+     * "prix_unitaire" doit être converti par rapport à l'unité de vente finale (ex: prix d'achat 5900 pour 12 bouteilles = 5900/12 ≈ 492 F).
+     * "unite_achat" doit extraire l'unité de gros (ex: "caissier", "carton").
+     * "unite_vente" doit extraire l'unité de détail (ex: "bouteille", "paquet").
+     * "quantite_par_boite" doit contenir le multiplicateur (ex: 12, 20).
+     * "prix_vente_unitaire" doit être extrait si mentionné (ex: "prix de vente a l'unite 600" ou "vente à 600" -> 600).
+   - S'il n'y a pas de conditionnement multiple ou de sous-unité mentionné, conserve la quantité et le prix unitaire d'origine, et mets "unite_vente" = "unité".
+
+3. En fonction de la couleur du Bic sélectionné (${penColor}) :
    - bleu: Vente Cash (montant_paye=total_facture, montant_dette=0)
    - rouge: Dépense (montant_paye=total_facture, montant_dette=0)
    - vert: Achat Stock Cash (montant_paye=total_facture, montant_dette=0)
    - violet: Crédit Grossiste (montant_paye=0, montant_dette=total_facture par défaut sauf si paiement partiel écrit)
    - jaune: Crédit Client (montant_paye=0, montant_dette=total_facture par défaut sauf si paiement partiel écrit)
 
-3. Extrais le nom de la personne si mentionné (ex: "Koffi", "Chantal"). Si absent, mets "Client anonyme".
-4. Ne RETOURNE que du JSON valide. Pas de texte supplémentaire.`
+4. Extrais le nom de la personne si mentionné (ex: "Koffi", "Chantal"). Si absent, mets "Client anonyme".
+5. Ne RETOURNE que du JSON valide. Pas de texte supplémentaire ni de balises Markdown.`
 
   try {
     const response = await openai.chat.completions.create({
