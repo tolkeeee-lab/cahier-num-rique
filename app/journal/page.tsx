@@ -172,6 +172,9 @@ export default function JournalPage() {
   
   // Cash drawer manual adjustment states
   const [showCashAdjustment, setShowCashAdjustment] = useState(false)
+  const [adjustmentType, setAdjustmentType] = useState<'flow' | 'count'>('flow')
+  const [flowAmount, setFlowAmount] = useState('')
+  const [flowDirection, setFlowDirection] = useState<'in' | 'out'>('in')
   const [physicalCash, setPhysicalCash] = useState('')
   const [adjustmentNote, setAdjustmentNote] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
@@ -842,43 +845,80 @@ export default function JournalPage() {
   }
 
   const handleSaveAdjustment = async () => {
-    const cashVal = parseInt(physicalCash, 10)
-    if (isNaN(cashVal) || cashVal < 0) return
+    if (adjustmentType === 'flow') {
+      const amtVal = parseInt(flowAmount, 10)
+      if (isNaN(amtVal) || amtVal <= 0) return
 
-    const diff = cashVal - tiroirCaisse
-    if (diff === 0) {
-      setShowCashAdjustment(false)
-      return
-    }
+      setActionLoading(true)
+      try {
+        const type = flowDirection === 'in' ? 'cash_in' : 'cash_out'
+        const penColor = flowDirection === 'in' ? 'blue' : 'red'
+        const desc = flowDirection === 'in' ? 'Apport caisse' : 'Retrait caisse'
+        const noteText = adjustmentNote.trim() ? ` - ${adjustmentNote.trim()}` : ''
+        const text = `${desc}: ${flowDirection === 'in' ? '+' : '-'}${amtVal} F${noteText}`
 
-    setActionLoading(true)
-    try {
-      const type = diff > 0 ? 'cash_in' : 'cash_out'
-      const penColor = diff > 0 ? 'blue' : 'red'
-      const text = `Ajustement caisse: Physique ${cashVal} F (Calculé: ${tiroirCaisse} F, Écart: ${diff > 0 ? '+' : ''}${diff} F)${adjustmentNote.trim() ? ` - ${adjustmentNote.trim()}` : ''}`
+        await submitTransaction({
+          text,
+          penColor,
+          overrideData: {
+            articles: [],
+            total_amount: amtVal,
+            paid_amount: amtVal,
+            debt_amount: 0,
+            client_name: 'Propriétaire',
+            type,
+            pen_color: penColor
+          }
+        })
 
-      await submitTransaction({
-        text,
-        penColor,
-        overrideData: {
-          articles: [],
-          total_amount: Math.abs(diff),
-          paid_amount: Math.abs(diff),
-          debt_amount: 0,
-          client_name: 'Propriétaire',
-          type,
-          pen_color: penColor
-        }
-      })
+        setShowCashAdjustment(false)
+        setFlowAmount('')
+        setAdjustmentNote('')
+      } catch (e) {
+        console.error(e)
+        setPostItWarning("Erreur lors de l'enregistrement de l'opération.")
+      } finally {
+        setActionLoading(false)
+      }
+    } else {
+      const cashVal = parseInt(physicalCash, 10)
+      if (isNaN(cashVal) || cashVal < 0) return
 
-      setShowCashAdjustment(false)
-      setPhysicalCash('')
-      setAdjustmentNote('')
-    } catch (e) {
-      console.error(e)
-      setPostItWarning("Erreur lors de l'ajustement de caisse.")
-    } finally {
-      setActionLoading(false)
+      const diff = cashVal - tiroirCaisse
+      if (diff === 0) {
+        setShowCashAdjustment(false)
+        return
+      }
+
+      setActionLoading(true)
+      try {
+        const type = diff > 0 ? 'cash_in' : 'cash_out'
+        const penColor = diff > 0 ? 'blue' : 'red'
+        const text = `Ajustement caisse: Physique ${cashVal} F (Calculé: ${tiroirCaisse} F, Écart: ${diff > 0 ? '+' : ''}${diff} F)${adjustmentNote.trim() ? ` - ${adjustmentNote.trim()}` : ''}`
+
+        await submitTransaction({
+          text,
+          penColor,
+          overrideData: {
+            articles: [],
+            total_amount: Math.abs(diff),
+            paid_amount: Math.abs(diff),
+            debt_amount: 0,
+            client_name: 'Propriétaire',
+            type,
+            pen_color: penColor
+          }
+        })
+
+        setShowCashAdjustment(false)
+        setPhysicalCash('')
+        setAdjustmentNote('')
+      } catch (e) {
+        console.error(e)
+        setPostItWarning("Erreur lors de l'ajustement de caisse.")
+      } finally {
+        setActionLoading(false)
+      }
     }
   }
 
@@ -1817,15 +1857,16 @@ export default function JournalPage() {
           {/* Ruban adhésif */}
           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-gray-300 bg-opacity-70 rotate-2"></div>
           
-          <div className="flex justify-between items-center border-b border-amber-200 pb-2 mb-4">
+          <div className="flex justify-between items-center border-b border-amber-200 pb-2 mb-3">
             <h4 className="font-bold text-amber-900 text-lg uppercase tracking-wide font-handwritten text-xl">
-              💰 Ajuster le Tiroir-Caisse
+              💰 Ajuster la Caisse
             </h4>
             <button 
               type="button" 
               onClick={() => {
                 setShowCashAdjustment(false)
                 setPhysicalCash('')
+                setFlowAmount('')
                 setAdjustmentNote('')
               }} 
               className="text-xs text-amber-800 hover:text-amber-900 font-bold font-mono"
@@ -1834,52 +1875,123 @@ export default function JournalPage() {
             </button>
           </div>
 
+          {/* Tab Selector */}
+          <div className="flex border-b border-amber-200 mb-4 select-none">
+            <button
+              type="button"
+              onClick={() => setAdjustmentType('flow')}
+              className={`flex-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-center border-b-2 transition-colors ${
+                adjustmentType === 'flow'
+                  ? 'border-amber-900 text-amber-900 font-extrabold'
+                  : 'border-transparent text-amber-600 hover:text-amber-800'
+              }`}
+            >
+              📥 Apport / Retrait
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdjustmentType('count')}
+              className={`flex-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-center border-b-2 transition-colors ${
+                adjustmentType === 'count'
+                  ? 'border-amber-900 text-amber-900 font-extrabold'
+                  : 'border-transparent text-amber-600 hover:text-amber-800'
+              }`}
+            >
+              🧮 Comptage Physique
+            </button>
+          </div>
+
           <div className="space-y-4 text-left">
-            <div>
-              <span className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans">Solde calculé actuel :</span>
-              <div className="font-mono text-lg font-bold text-gray-800 mt-0.5">
-                {formatPrice(tiroirCaisse)}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans block mb-1">
-                Espèces physiques comptées (FCFA) :
-              </label>
-              <input
-                type="number"
-                placeholder="Ex: 25000"
-                value={physicalCash}
-                onChange={(e) => setPhysicalCash(e.target.value)}
-                className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:border-amber-500 text-gray-900"
-              />
-            </div>
-
-            {physicalCash !== '' && (
-              <div>
-                <span className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans">Écart de caisse :</span>
-                <div className={`font-mono text-base font-bold mt-0.5 ${
-                  (parseInt(physicalCash, 10) - tiroirCaisse) >= 0 ? 'text-emerald-700' : 'text-rose-700'
-                }`}>
-                  {(parseInt(physicalCash, 10) - tiroirCaisse) >= 0 ? '+' : ''}
-                  {formatPrice(parseInt(physicalCash, 10) - tiroirCaisse)}
-                  <span className="text-[10px] font-sans font-medium block mt-0.5 opacity-80">
-                    {(parseInt(physicalCash, 10) - tiroirCaisse) >= 0 
-                      ? '✓ Excédent : Ajout de cash dans le tiroir' 
-                      : '⚠️ Déficit : Retrait de cash (perte/charge)'
-                    }
-                  </span>
+            {adjustmentType === 'flow' ? (
+              <>
+                {/* Selector for Flow Direction */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFlowDirection('in')}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold border text-center transition-all ${
+                      flowDirection === 'in'
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-extrabold shadow-sm scale-[1.02]'
+                        : 'bg-white bg-opacity-60 border-gray-250 text-gray-500'
+                    }`}
+                  >
+                    ➕ Apport (+ Cash)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFlowDirection('out')}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold border text-center transition-all ${
+                      flowDirection === 'out'
+                        ? 'bg-rose-50 border-rose-300 text-rose-800 font-extrabold shadow-sm scale-[1.02]'
+                        : 'bg-white bg-opacity-60 border-gray-250 text-gray-500'
+                    }`}
+                  >
+                    ➖ Retrait (- Cash)
+                  </button>
                 </div>
-              </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans block mb-1">
+                    Montant de l'opération (FCFA) :
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 40000"
+                    value={flowAmount}
+                    onChange={(e) => setFlowAmount(e.target.value)}
+                    className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:border-amber-500 text-gray-900"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans">Solde calculé actuel :</span>
+                  <div className="font-mono text-lg font-bold text-gray-800 mt-0.5">
+                    {formatPrice(tiroirCaisse)}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans block mb-1">
+                    Espèces physiques comptées (FCFA) :
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Ex: 25000"
+                    value={physicalCash}
+                    onChange={(e) => setPhysicalCash(e.target.value)}
+                    className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:border-amber-500 text-gray-900"
+                  />
+                </div>
+
+                {physicalCash !== '' && (
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans">Écart de caisse :</span>
+                    <div className={`font-mono text-base font-bold mt-0.5 ${
+                      (parseInt(physicalCash, 10) - tiroirCaisse) >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                    }`}>
+                      {(parseInt(physicalCash, 10) - tiroirCaisse) >= 0 ? '+' : ''}
+                      {formatPrice(parseInt(physicalCash, 10) - tiroirCaisse)}
+                      <span className="text-[10px] font-sans font-medium block mt-0.5 opacity-80">
+                        {(parseInt(physicalCash, 10) - tiroirCaisse) >= 0 
+                          ? '✓ Excédent : Ajout de cash dans le tiroir' 
+                          : '⚠️ Déficit : Retrait de cash (perte/charge)'
+                        }
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div>
               <label className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans block mb-1">
-                Note d'ajustement (optionnelle) :
+                Note d'ajustement / motif (optionnel) :
               </label>
               <input
                 type="text"
-                placeholder="Ex: Fond de caisse initial, Écart comptage..."
+                placeholder={adjustmentType === 'flow' ? "Ex: Apport personnel, Achat carburant..." : "Ex: Écart comptage de fin..."}
                 value={adjustmentNote}
                 onChange={(e) => setAdjustmentNote(e.target.value)}
                 className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-1.5 text-xs font-handwritten outline-none focus:border-amber-500 text-gray-900"
@@ -1888,7 +2000,7 @@ export default function JournalPage() {
 
             <button
               type="button"
-              disabled={physicalCash === '' || actionLoading}
+              disabled={actionLoading || (adjustmentType === 'flow' ? flowAmount === '' : physicalCash === '')}
               onClick={handleSaveAdjustment}
               className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gray-950 hover:bg-black text-white text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
             >
@@ -1898,7 +2010,7 @@ export default function JournalPage() {
                   Enregistrement...
                 </>
               ) : (
-                'Enregistrer l\'écart'
+                'Confirmer l\'opération'
               )}
             </button>
           </div>
