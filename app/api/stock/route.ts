@@ -68,7 +68,8 @@ export async function GET(request: Request) {
     const stockItems = (products || []).map((product: any) => {
       const key = (product.name as string).toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
-      const currentStock = (product.initial_stock || 0) + data.total_in - data.total_out
+      const mult = product.multiplier || 1
+      const currentStock = ((product.initial_stock || 0) + data.total_in - data.total_out) * mult
 
       return {
         ...product,
@@ -114,10 +115,9 @@ export async function POST(request: Request) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
   }
-
   try {
     const body = await request.json()
-    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price } = body
+    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Le nom du produit est obligatoire' }, { status: 400 })
@@ -134,6 +134,8 @@ export async function POST(request: Request) {
         initial_stock: initial_stock ?? 0,
         unit_cost: unit_cost ?? 0,
         unit_price: unit_price ?? 0,
+        multiplier: multiplier ?? 1,
+        packaging_name: packaging_name || '',
       })
       .select()
       .single()
@@ -157,7 +159,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json()
-    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price } = body
+    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name } = body
 
     if (!id) {
       return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
@@ -171,6 +173,8 @@ export async function PATCH(request: Request) {
     if (initial_stock !== undefined) updates.initial_stock = initial_stock
     if (unit_cost !== undefined) updates.unit_cost = unit_cost
     if (unit_price !== undefined) updates.unit_price = unit_price
+    if (multiplier !== undefined) updates.multiplier = multiplier
+    if (packaging_name !== undefined) updates.packaging_name = packaging_name
 
     const { data, error } = await supabase
       .from('products')
