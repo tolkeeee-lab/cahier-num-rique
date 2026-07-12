@@ -169,6 +169,12 @@ export default function JournalPage() {
   const [showChangeCalc, setShowChangeCalc] = useState(false)
   const [changeTotal, setChangeTotal] = useState('')
   const [changeReceived, setChangeReceived] = useState('')
+  
+  // Cash drawer manual adjustment states
+  const [showCashAdjustment, setShowCashAdjustment] = useState(false)
+  const [physicalCash, setPhysicalCash] = useState('')
+  const [adjustmentNote, setAdjustmentNote] = useState('')
+  const [actionLoading, setActionLoading] = useState(false)
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -835,6 +841,47 @@ export default function JournalPage() {
     }
   }
 
+  const handleSaveAdjustment = async () => {
+    const cashVal = parseInt(physicalCash, 10)
+    if (isNaN(cashVal) || cashVal < 0) return
+
+    const diff = cashVal - tiroirCaisse
+    if (diff === 0) {
+      setShowCashAdjustment(false)
+      return
+    }
+
+    setActionLoading(true)
+    try {
+      const type = diff > 0 ? 'cash_in' : 'cash_out'
+      const penColor = diff > 0 ? 'blue' : 'red'
+      const text = `Ajustement caisse: Physique ${cashVal} F (Calculé: ${tiroirCaisse} F, Écart: ${diff > 0 ? '+' : ''}${diff} F)${adjustmentNote.trim() ? ` - ${adjustmentNote.trim()}` : ''}`
+
+      await submitTransaction({
+        text,
+        penColor,
+        overrideData: {
+          articles: [],
+          total_amount: Math.abs(diff),
+          paid_amount: Math.abs(diff),
+          debt_amount: 0,
+          client_name: 'Propriétaire',
+          type,
+          pen_color: penColor
+        }
+      })
+
+      setShowCashAdjustment(false)
+      setPhysicalCash('')
+      setAdjustmentNote('')
+    } catch (e) {
+      console.error(e)
+      setPostItWarning("Erreur lors de l'ajustement de caisse.")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim()) return
@@ -1053,7 +1100,18 @@ export default function JournalPage() {
                 </div>
                 {/* Tiroir cash global */}
                 <div className="bg-[#fffdf9] border border-emerald-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
-                  <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wide whitespace-nowrap">💰 Tiroir Cash</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wide whitespace-nowrap">💰 Tiroir Cash</span>
+                    {mappedUser?.role !== 'employee' && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCashAdjustment(true)}
+                        className="text-[8px] font-bold text-blue-600 hover:text-blue-855 underline uppercase tracking-wider select-none"
+                      >
+                        Ajuster
+                      </button>
+                    )}
+                  </div>
                   <span className="font-mono text-sm font-bold text-emerald-950 mt-0.5 whitespace-nowrap">{formatPrice(tiroirCaisse)}</span>
                 </div>
                 <div className="bg-[#fffdf9] border border-rose-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
@@ -1750,6 +1808,100 @@ export default function JournalPage() {
           >
             Annuler et corriger
           </button>
+        </div>
+      )}
+
+      {/* Cash Drawer Manual Adjustment Post-It Modal */}
+      {showCashAdjustment && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-[90vw] max-w-sm bg-amber-100 border-2 border-amber-300 shadow-2xl p-6 -rotate-1 transition-all flex flex-col max-h-[90vh] overflow-y-auto">
+          {/* Ruban adhésif */}
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-6 bg-gray-300 bg-opacity-70 rotate-2"></div>
+          
+          <div className="flex justify-between items-center border-b border-amber-200 pb-2 mb-4">
+            <h4 className="font-bold text-amber-900 text-lg uppercase tracking-wide font-handwritten text-xl">
+              💰 Ajuster le Tiroir-Caisse
+            </h4>
+            <button 
+              type="button" 
+              onClick={() => {
+                setShowCashAdjustment(false)
+                setPhysicalCash('')
+                setAdjustmentNote('')
+              }} 
+              className="text-xs text-amber-800 hover:text-amber-900 font-bold font-mono"
+            >
+              X
+            </button>
+          </div>
+
+          <div className="space-y-4 text-left">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans">Solde calculé actuel :</span>
+              <div className="font-mono text-lg font-bold text-gray-800 mt-0.5">
+                {formatPrice(tiroirCaisse)}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans block mb-1">
+                Espèces physiques comptées (FCFA) :
+              </label>
+              <input
+                type="number"
+                placeholder="Ex: 25000"
+                value={physicalCash}
+                onChange={(e) => setPhysicalCash(e.target.value)}
+                className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-2 text-sm font-mono outline-none focus:border-amber-500 text-gray-900"
+              />
+            </div>
+
+            {physicalCash !== '' && (
+              <div>
+                <span className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans">Écart de caisse :</span>
+                <div className={`font-mono text-base font-bold mt-0.5 ${
+                  (parseInt(physicalCash, 10) - tiroirCaisse) >= 0 ? 'text-emerald-700' : 'text-rose-700'
+                }`}>
+                  {(parseInt(physicalCash, 10) - tiroirCaisse) >= 0 ? '+' : ''}
+                  {formatPrice(parseInt(physicalCash, 10) - tiroirCaisse)}
+                  <span className="text-[10px] font-sans font-medium block mt-0.5 opacity-80">
+                    {(parseInt(physicalCash, 10) - tiroirCaisse) >= 0 
+                      ? '✓ Excédent : Ajout de cash dans le tiroir' 
+                      : '⚠️ Déficit : Retrait de cash (perte/charge)'
+                    }
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="text-[10px] uppercase font-bold text-amber-850 tracking-wider font-sans block mb-1">
+                Note d'ajustement (optionnelle) :
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: Fond de caisse initial, Écart comptage..."
+                value={adjustmentNote}
+                onChange={(e) => setAdjustmentNote(e.target.value)}
+                className="w-full bg-white bg-opacity-75 border border-amber-300 rounded-xl px-3 py-1.5 text-xs font-handwritten outline-none focus:border-amber-500 text-gray-900"
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={physicalCash === '' || actionLoading}
+              onClick={handleSaveAdjustment}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gray-950 hover:bg-black text-white text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {actionLoading ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                'Enregistrer l\'écart'
+              )}
+            </button>
+          </div>
         </div>
       )}
 
