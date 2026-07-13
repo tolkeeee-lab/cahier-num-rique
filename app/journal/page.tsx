@@ -968,9 +968,26 @@ export default function JournalPage() {
     }
   }
 
+  const checkIfInputHasPrice = (text: string) => {
+    if (text.match(/\b(?:à|a|@)\s*\d+/i) || text.match(/\b\d+\s*(?:à|a|@)\s*\d+/i)) {
+      return true
+    }
+    const parts = text.split(/\s*(?:\+|,|\bet\b)\s*/i)
+    return parts.every(part => {
+      const match = part.trim().match(/(\d+)\s+(.+?)\s+(\d+)$/)
+      if (match) {
+        const qty = parseInt(match[1], 10)
+        const price = parseInt(match[3], 10)
+        if (price >= 10 && price > qty) {
+          return true
+        }
+      }
+      return false
+    })
+  }
+
   const resolveTransactionPricesFromCatalog = (text: string, penColor: string, sid: string) => {
-    const hasPrice = text.match(/\b(?:à|a|@)\s*\d+/i) || text.match(/\b\d+\s*(?:à|a|@)\s*\d+/i)
-    if (hasPrice) return null
+    if (checkIfInputHasPrice(text)) return null
 
     const parts = text.split(/\s*(?:\+|,|\bet\b)\s*/i)
     const resolvedArticles: any[] = []
@@ -1195,7 +1212,7 @@ export default function JournalPage() {
       // Si l'entrée ressemble à un produit avec quantité (ex: "2 flag") sans prix et qu'on ne l'a pas résolu,
       // c'est qu'il n'est pas dans le catalogue. Pour éviter une écriture à 0 F, on affiche une alerte.
       const qtyProductMatch = sanitizedInput.replace(/^(?:stock|achat)\s+de\s+/i, '').trim().match(/^(\d+)\s+(.+)$/)
-      const hasPrice = sanitizedInput.match(/\b(?:à|a|@)\s*\d+/i) || sanitizedInput.match(/\b\d+\s*(?:à|a|@)\s*\d+/i)
+      const hasPrice = checkIfInputHasPrice(sanitizedInput)
       
       const isStockOp = sanitizedInput.match(/^(?:stock|achat)\s+de\s+/i) || selectedPen === 'green'
       if (qtyProductMatch && !hasPrice && !isStockOp) {
@@ -1213,7 +1230,7 @@ export default function JournalPage() {
       if (productName && productName !== 'transaction générale') {
         const offlineProducts = getOfflineProducts(sid)
         const existing = offlineProducts.find(p => p.name.toLowerCase().trim() === productName.toLowerCase().trim())
-        const hasPrice = finalInput.match(/\b\d+\s*(?:à|a|@)\s*\d+\b/i)
+        const hasPrice = checkIfInputHasPrice(finalInput)
 
         if (existing) {
           if (!hasPrice) {

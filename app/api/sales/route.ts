@@ -129,6 +129,82 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ─── RÉCUPÉRATION DU PRIX DANS LE CATALOGUE SI MANQUANT ───
+    if (isSupabaseConfigured() && parsedData) {
+      try {
+        const { data: dbProducts } = await supabase
+          .from('products')
+          .select('*')
+          .eq('shop_id', shopId)
+
+        if (dbProducts && dbProducts.length > 0) {
+          let hasPriceUpdated = false
+
+          // Cas 1 : Des articles ont été parsés mais leur prix est 0 ou manquant
+          for (const article of parsedData.articles) {
+            if (!article.prix_unitaire || article.prix_unitaire === 0) {
+              const matchedProd = dbProducts.find(p => p.name.toLowerCase().trim() === article.nom.toLowerCase().trim())
+              if (matchedProd) {
+                const isPurchase = ['purchase_cash', 'purchase_credit'].includes(type)
+                const defaultPrice = isPurchase ? (matchedProd.unit_cost || matchedProd.unit_price) : matchedProd.unit_price
+                if (defaultPrice) {
+                  article.prix_unitaire = defaultPrice
+                  hasPriceUpdated = true
+                }
+              }
+            }
+          }
+
+          // Cas 2 : Aucun article n'a pu être parsé ou total à 0 car pas de prix dans le texte (ex: "farine de blé")
+          if (parsedData.articles.length === 0 || parsedData.total_facture === 0) {
+            const sortedProds = [...dbProducts].sort((a, b) => b.name.length - a.name.length)
+            for (const prod of sortedProds) {
+              const prodNameLower = prod.name.toLowerCase().trim()
+              if (lowercaseText.includes(prodNameLower)) {
+                // Trouver la quantité précédant le nom, ex: "5 farine de blé"
+                const qtyMatch = lowercaseText.match(new RegExp(`(\\d+)\\s*${prodNameLower}`))
+                const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1
+
+                const isPurchase = ['purchase_cash', 'purchase_credit'].includes(type)
+                const price = isPurchase ? (prod.unit_cost || prod.unit_price) : prod.unit_price
+
+                if (price) {
+                  parsedData.articles = [{
+                    nom: prod.name,
+                    quantite: qty,
+                    prix_unitaire: price,
+                    unite_vente: prod.unit
+                  }]
+                  hasPriceUpdated = true
+                  break
+                }
+              }
+            }
+          }
+
+          // Si un prix par défaut a été appliqué, recalculer le total
+          if (hasPriceUpdated) {
+            let total = 0
+            for (const a of parsedData.articles) {
+              total += (a.quantite || 1) * (a.prix_unitaire || 0)
+            }
+            parsedData.total_facture = total
+
+            const isCredit = ['purchase_credit', 'sale_credit'].includes(type)
+            if (isCredit) {
+              parsedData.montant_paye = 0
+              parsedData.montant_dette = total
+            } else {
+              parsedData.montant_paye = total
+              parsedData.montant_dette = 0
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erreur lors de la récupération des prix par défaut du catalogue:', err)
+      }
+    }
+
     // 3. Vérification des règles de solvabilité (Anti-solde négatif)
     const currentCash = await getCurrentCash(shopId)
     const isExpense = type === 'cash_out' || type === 'purchase_cash'
