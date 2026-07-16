@@ -111,7 +111,6 @@ export async function GET(request: NextRequest) {
             .select('*')
             .eq('shop_id', shopId)
             .in('type', ['sale_credit', 'payment_client'])
-            .neq('status', 'crossed_out')
 
           // Regrouper par client
           const clientNames = Array.from(new Set((debts || []).map(d => d.client_name)))
@@ -121,7 +120,7 @@ export async function GET(request: NextRequest) {
             const totalPaid = clientDebts.reduce((sum, d) => sum + d.paid_amount, 0)
             
             const history = (sales || [])
-              .filter(s => s.client_name === name)
+              .filter(s => s.client_name === name && s.status !== 'crossed_out')
               .map(s => ({
                 id: s.id,
                 date: s.date,

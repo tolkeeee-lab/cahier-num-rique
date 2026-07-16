@@ -34,7 +34,6 @@ export async function GET(request: Request) {
         sold_articles ( product_name, quantity, unit_price )
       `)
       .eq('shop_id', shopId)
-      .neq('status', 'crossed_out')
 
     if (salesError) throw salesError
 
@@ -46,6 +45,7 @@ export async function GET(request: Request) {
     }> = {}
 
     for (const sale of salesData || []) {
+      if (sale.status === 'crossed_out') continue
       const isIn = ['purchase_cash', 'purchase_credit'].includes(sale.type)
       const isOut = ['cash_in', 'sale_credit'].includes(sale.type)
       if (!isIn && !isOut) continue

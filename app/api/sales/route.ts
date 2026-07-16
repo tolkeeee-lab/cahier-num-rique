@@ -41,7 +41,6 @@ async function getCurrentCash(shopId: string): Promise<number> {
         .from('sales')
         .select('type, paid_amount, total_amount, status')
         .eq('shop_id', shopId)
-        .neq('status', 'crossed_out')
 
       if (error) throw error
       return calculateCash(data || [])
@@ -534,12 +533,110 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Action de Rayer (Cross out) une transaction
+// Action de Rayer (Cross out) ou d'Ajouter des articles à une transaction
 export async function PATCH(request: NextRequest) {
   try {
-    const { id, action } = await request.json()
+    const body = await request.json()
+    const { id, action } = body
     const shopId = request.headers.get('x-shop-id') || 'default-shop'
 
+    // ─── ACTION : add_article ───────────────────────────────────────────────
+    if (action === 'add_article') {
+      const { text, penColor } = body as { text: string; penColor: string }
+
+      // 1. Récupérer la transaction existante
+      let transaction: any = null
+      if (isSupabaseConfigured()) {
+        const { data } = await supabase.from('sales').select('*').eq('id', id).eq('shop_id', shopId).single()
+        transaction = data
+      } else {
+        transaction = getLocalDb().find((s: any) => s.id === id && s.shop_id === shopId)
+      }
+
+      if (!transaction) {
+        return NextResponse.json({ error: 'Transaction introuvable' }, { status: 404 })
+      }
+      if (transaction.status === 'crossed_out') {
+        return NextResponse.json({ error: 'Impossible de modifier une transaction rayée' }, { status: 400 })
+      }
+
+      // 2. Parser les nouveaux articles
+      const parsed = parseTextLocally(text, penColor || transaction.pen_color || 'blue')
+      if (!parsed || !parsed.articles || parsed.articles.length === 0) {
+        return NextResponse.json({ error: 'Aucun article reconnu dans la saisie' }, { status: 400 })
+      }
+
+      const addedAmount = parsed.total_facture
+      const oldTotal = transaction.total_amount ?? 0
+      const oldPaid = transaction.paid_amount ?? 0
+      const newTotal = oldTotal + addedAmount
+      const newPaid = transaction.type === 'cash_in' ? newTotal : oldPaid
+      const newDebt = Math.max(0, newTotal - newPaid)
+
+      // Notes mises à jour
+      const newNotes = transaction.notes
+        ? `${transaction.notes}, ${text}`
+        : text
+
+      // 3. Mettre à jour dans Supabase
+      if (isSupabaseConfigured()) {
+        const { error: updateError } = await supabase
+          .from('sales')
+          .update({
+            total_amount: newTotal,
+            paid_amount: newPaid,
+            debt_amount: newDebt,
+            status: newDebt > 0 ? 'debt' : 'paid',
+            notes: newNotes,
+          })
+          .eq('id', id)
+          .eq('shop_id', shopId)
+
+        if (updateError) throw updateError
+
+        // Insérer les nouveaux articles dans sold_articles
+        const now = new Date()
+        const articlesData = parsed.articles.map((a: any) => ({
+          id: randomUUID(),
+          sale_id: id,
+          product_name: a.nom,
+          quantity: a.quantite,
+          unit_price: a.prix_unitaire,
+          subtotal: a.quantite * a.prix_unitaire,
+          created_at: now.toISOString(),
+        }))
+        await supabase.from('sold_articles').insert(articlesData)
+      }
+
+      // 4. Mettre à jour le cache local
+      const db = getLocalDb()
+      const idx = db.findIndex((s: any) => s.id === id && s.shop_id === shopId)
+      if (idx !== -1) {
+        const existingArticles = db[idx].articles || []
+        const newArticles = parsed.articles.map((a: any) => ({
+          name: a.nom,
+          quantity: a.quantite,
+          unit_price: a.prix_unitaire,
+        }))
+        db[idx].total_amount = newTotal
+        db[idx].paid_amount = newPaid
+        db[idx].debt_amount = newDebt
+        db[idx].status = newDebt > 0 ? 'debt' : 'paid'
+        db[idx].notes = newNotes
+        db[idx].articles = [...existingArticles, ...newArticles]
+        saveLocalDb(db)
+      }
+
+      return NextResponse.json({
+        success: true,
+        newTotal,
+        newPaid,
+        newDebt,
+        addedArticles: parsed.articles,
+      })
+    }
+
+    // ─── ACTION : cross_out ─────────────────────────────────────────────────
     if (action !== 'cross_out') {
       return NextResponse.json({ error: 'Action non reconnue' }, { status: 400 })
     }
@@ -615,6 +712,7 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
+
 
 function calculateSingleTransactionCashImpact(item: any): number {
   const type = item.type
