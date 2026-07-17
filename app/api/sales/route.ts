@@ -68,6 +68,34 @@ function calculateCash(list: any[]): number {
   return cash
 }
 
+// ─── ALIMENTATION DE LA BASE DE CONNAISSANCE COLLECTIVE (anonymisée) ───
+// Appelée après chaque transaction réussie. Ne bloque jamais la réponse utilisateur.
+async function feedMarketKnowledge(
+  articles: Array<{ nom: string; prix_unitaire: number; [key: string]: any }>,
+  transactionType: string,
+  _shopId: string
+) {
+  if (!isSupabaseConfigured()) return
+
+  const isPurchase = ['purchase_cash', 'purchase_credit'].includes(transactionType)
+  const isSale = ['cash_in', 'sale_credit'].includes(transactionType)
+  if (!isPurchase && !isSale) return
+
+  for (const article of articles) {
+    const name = article.nom?.trim()
+    const price = article.prix_unitaire || 0
+    if (!name || price <= 0) continue
+
+    await supabase.rpc('update_market_knowledge', {
+      p_product_name: name.toLowerCase(),
+      p_unit_price: isSale ? price : 0,
+      p_unit_cost: isPurchase ? price : 0,
+      p_country: 'CI', // TODO: dériver du shop_id ou profil boutique
+      p_city: null      // TODO: ajouter la ville dans le profil boutique
+    })
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { text, penColor, overrideData } = await request.json()
@@ -421,6 +449,14 @@ export async function POST(request: NextRequest) {
                 ])
             }
           }
+        }
+
+        // ─── ALIMENTATION DE LA BASE DE CONNAISSANCE COLLECTIVE ───
+        // Chaque transaction valide nourrit silencieusement la connaissance de marché (anonymisée)
+        if (parsedData.articles.length > 0) {
+          feedMarketKnowledge(parsedData.articles, type, shopId).catch(err =>
+            console.warn('[market_knowledge] Erreur non bloquante:', err)
+          )
         }
 
         savedInSupabase = true
