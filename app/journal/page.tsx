@@ -991,8 +991,13 @@ export default function JournalPage() {
     if (!text.trim()) return null
     if (text.match(/^(?:apport|monnaie|retrait|caisse|ajustement|remboursement|dette)/i)) return null
 
-    const hasExplicitPrice = checkIfInputHasPrice(text)
-    const parts = text.split(/\s*(?:\+|,|\bet\b)\s*/i).map(p => p.trim()).filter(Boolean)
+    // Nettoyer les préfixes de stock/achat pour isoler uniquement les produits et quantités
+    const cleanedText = text.replace(/^(?:stock|achat)\s+de\s+/i, '')
+                            .replace(/^(?:stock|achat)\s+/i, '')
+                            .trim()
+
+    const hasExplicitPrice = checkIfInputHasPrice(cleanedText)
+    const parts = cleanedText.split(/\s*(?:\+|,|\bet\b)\s*/i).map(p => p.trim()).filter(Boolean)
     const isSinglePart = parts.length <= 1
 
     // Si un seul produit sans prix explicite -> comportement original (retourne null si non trouvé)
@@ -1013,6 +1018,7 @@ export default function JournalPage() {
       let unitPrice = isPurchase
         ? (packMatch ? product.unit_cost * (product.multiplier || 1) : product.unit_cost)
         : product.unit_price
+      if (!unitPrice || unitPrice <= 0) return null
       const textOut = packMatch ? `${qty} ${packMatch[1]} de ${product.name} à ${unitPrice}` : `${qty} ${product.name} à ${unitPrice}`
       return { resolvedText: textOut, articles: [{ nom: product.name, quantite: qty, prix_unitaire: unitPrice }], unresolvedNames: [] as string[] }
     }
@@ -1036,6 +1042,17 @@ export default function JournalPage() {
       if (priceSepMatch) {
         explicitPrice = parseInt(priceSepMatch[1], 10)
         productName = part.substring(0, priceSepMatch.index).trim()
+      } else {
+        // Détecter aussi le prix implicite (ex: "2 flag 600")
+        const implicitPriceMatch = part.match(/^(\d+)\s+(.+?)\s+(\d+)$/)
+        if (implicitPriceMatch) {
+          const qtyVal = parseInt(implicitPriceMatch[1], 10)
+          const priceVal = parseInt(implicitPriceMatch[3], 10)
+          if (priceVal >= 10 && priceVal > qtyVal) {
+            explicitPrice = priceVal
+            productName = `${qtyVal} ${implicitPriceMatch[2].trim()}`
+          }
+        }
       }
 
       const qtyMatch = productName.match(/^(\d+)\s+(.+)$/)
@@ -1056,9 +1073,14 @@ export default function JournalPage() {
           let unitPrice = isPurchase
             ? (packMatch ? product.unit_cost * (product.multiplier || 1) : product.unit_cost)
             : product.unit_price
-          const textOut = packMatch ? `${qty} ${packMatch[1]} de ${product.name} à ${unitPrice}` : `${qty} ${product.name} à ${unitPrice}`
-          resolvedTextParts.push(textOut)
-          resolvedArticles.push({ nom: product.name, quantite: qty, prix_unitaire: unitPrice })
+          
+          if (unitPrice && unitPrice > 0) {
+            const textOut = packMatch ? `${qty} ${packMatch[1]} de ${product.name} à ${unitPrice}` : `${qty} ${product.name} à ${unitPrice}`
+            resolvedTextParts.push(textOut)
+            resolvedArticles.push({ nom: product.name, quantite: qty, prix_unitaire: unitPrice })
+          } else {
+            unresolvedNames.push(productName)
+          }
         } else {
           unresolvedNames.push(productName)
         }
@@ -1237,17 +1259,17 @@ export default function JournalPage() {
         )
         return
       }
-      // Conserver le préfixe "stock de" ou "achat de" si l'utilisateur l'a tapé à l'origine
-      const prefixMatch = sanitizedInput.match(/^(stock|achat)\s+de\s+/i)
+      // Conserver le préfixe "stock (de)" ou "achat (de)" si l'utilisateur l'a tapé à l'origine
+      const prefixMatch = sanitizedInput.match(/^(?:stock|achat)\s+(?:de\s+)?/i)
       const prefix = prefixMatch ? prefixMatch[0] : ''
       finalInput = prefix + resolvedResult.resolvedText
     } else {
       // Si l'entrée ressemble à un produit avec quantité (ex: "2 flag") sans prix et qu'on ne l'a pas résolu,
       // c'est qu'il n'est pas dans le catalogue. Pour éviter une écriture à 0 F, on affiche une alerte.
-      const qtyProductMatch = sanitizedInput.replace(/^(?:stock|achat)\s+de\s+/i, '').trim().match(/^(\d+)\s+(.+)$/)
+      const qtyProductMatch = sanitizedInput.replace(/^(?:stock|achat)\s+(?:de\s+)?/i, '').trim().match(/^(\d+)\s+(.+)$/)
       const hasPrice = checkIfInputHasPrice(sanitizedInput)
       
-      const isStockOpTemp = sanitizedInput.match(/^(?:stock|achat)\s+de\s+/i) || selectedPen === 'green'
+      const isStockOpTemp = sanitizedInput.match(/^(?:stock|achat)\s+/i) || selectedPen === 'green'
       if (qtyProductMatch && !hasPrice && !isStockOpTemp) {
         const productNameClean = qtyProductMatch[2].split(/\s+(?:à|a|@|vente|prix)\b/i)[0].trim()
         setPostItWarning(`Le produit « ${productNameClean} » n'a pas été trouvé dans le catalogue. Veuillez préciser le prix (ex: ${sanitizedInput} à 600) ou l'ajouter au stock.`)
@@ -1257,7 +1279,7 @@ export default function JournalPage() {
 
     // Interception et aide à la saisie de stock / achat (produits existants vs nouveaux, avec ou sans prix)
     const isMultiple = finalInput.includes(',') || finalInput.includes('+') || (resolvedResult && resolvedResult.articles.length > 1)
-    const isStockOp = (finalInput.match(/^(?:stock|achat)\s+de\s+/i) || selectedPen === 'green') && !isMultiple
+    const isStockOp = (finalInput.match(/^(?:stock|achat)\s+/i) || selectedPen === 'green') && !isMultiple
     if (isStockOp) {
       const { qty, packaging, productName } = parseSimpleStockInput(finalInput)
       
@@ -1266,7 +1288,8 @@ export default function JournalPage() {
         const existing = offlineProducts.find(p => p.name.toLowerCase().trim() === productName.toLowerCase().trim())
         const hasPrice = checkIfInputHasPrice(finalInput)
 
-        if (existing) {
+        // On ne confirme rapidement que si le produit existe ET possède un coût d'achat configuré (> 0)
+        if (existing && existing.unit_cost > 0) {
           if (!hasPrice) {
             // Cas A : Pas de prix écrit -> Confirmer rapidement avec les tarifs mémorisés
             setStockConfirmationData({
