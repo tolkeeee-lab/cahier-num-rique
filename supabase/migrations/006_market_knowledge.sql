@@ -26,13 +26,13 @@ CREATE TABLE IF NOT EXISTS market_knowledge (
 
   -- Horodatage
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-  -- Contrainte d'unicité : un produit par pays+ville
-  UNIQUE (product_name, country, COALESCE(city, ''))
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 2. Index pour les recherches rapides
+-- 2. Index unique fonctionnel (COALESCE sur city nullable) + index de recherche
+CREATE UNIQUE INDEX IF NOT EXISTS market_knowledge_unique_idx
+  ON market_knowledge (product_name, country, COALESCE(city, ''));
+
 CREATE INDEX IF NOT EXISTS market_knowledge_product_name_idx
   ON market_knowledge (product_name, country);
 
@@ -90,7 +90,7 @@ BEGIN
     v_cost, v_cost,
     1
   )
-  ON CONFLICT (product_name, country, COALESCE(city, ''))
+  ON CONFLICT (product_name, country, COALESCE(city, ''))  -- référence l'index unique fonctionnel
   DO UPDATE SET
     -- Moyenne mobile incrémentale : (moyenne_actuelle * n + nouvelle_valeur) / (n + 1)
     avg_unit_price = CASE
