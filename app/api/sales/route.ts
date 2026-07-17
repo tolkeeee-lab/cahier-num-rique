@@ -99,8 +99,13 @@ export async function POST(request: NextRequest) {
       }
     } else {
       const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'mock-key-for-build'
-      // Nettoyer les espaces, points et virgules entre les chiffres (ex: "12 000" -> "12000")
-      const sanitizedText = text.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
+      // Nettoyer les espaces, points et virgules uniquement pour les séparateurs de milliers (ex: "12 000" ou "12.000" -> "12000")
+      let sanitizedText = text.trim()
+      let prevSanitized = ""
+      while (sanitizedText !== prevSanitized) {
+        prevSanitized = sanitizedText
+        sanitizedText = sanitizedText.replace(/(\d)[.,\s]+(\d{3})(?!\d)/g, "$1$2")
+      }
 
       if (hasApiKey) {
         parsedData = await parseTextWithOpenAI(sanitizedText, color)

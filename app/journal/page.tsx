@@ -1241,8 +1241,13 @@ export default function JournalPage() {
     e.preventDefault()
     if (!input.trim()) return
 
-    // 1. Nettoyer les espaces, points et virgules entre les chiffres (ex: "12 000" ou "12.000" -> "12000")
-    const sanitizedInput = input.trim().replace(/(\d)[.,\s]+(?=\d)/g, "$1")
+    // 1. Nettoyer les espaces, points et virgules uniquement pour les séparateurs de milliers (ex: "12 000" ou "12.000" -> "12000")
+    let sanitizedInput = input.trim()
+    let prevSanitized = ""
+    while (sanitizedInput !== prevSanitized) {
+      prevSanitized = sanitizedInput
+      sanitizedInput = sanitizedInput.replace(/(\d)[.,\s]+(\d{3})(?!\d)/g, "$1$2")
+    }
 
     // Tenter de résoudre automatiquement les prix depuis le catalogue si aucun prix n'est écrit
     const sid = mappedUser?.shop_id || 'default-shop'
