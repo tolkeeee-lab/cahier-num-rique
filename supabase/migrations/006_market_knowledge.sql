@@ -43,13 +43,16 @@ CREATE INDEX IF NOT EXISTS market_knowledge_updated_at_idx
 ALTER TABLE market_knowledge ENABLE ROW LEVEL SECURITY;
 
 -- Lecture ouverte à tous les utilisateurs authentifiés
+DROP POLICY IF EXISTS "market_knowledge_select" ON market_knowledge;
 CREATE POLICY "market_knowledge_select" ON market_knowledge
   FOR SELECT USING (true);
 
 -- Insertion/mise à jour uniquement par le backend (service role)
+DROP POLICY IF EXISTS "market_knowledge_insert" ON market_knowledge;
 CREATE POLICY "market_knowledge_insert" ON market_knowledge
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "market_knowledge_update" ON market_knowledge;
 CREATE POLICY "market_knowledge_update" ON market_knowledge
   FOR UPDATE USING (true);
 
