@@ -104,8 +104,25 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     const stockItems: StockItem[] = offlineProducts.map(p => {
       const key = p.name.toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
+      
+      // Filtrer les mouvements pour n'inclure que ceux après ou égal à la date de création du produit (moins 1 minute de marge)
+      const prodTime = p.created_at ? new Date(p.created_at).getTime() - 60000 : 0
+      const filteredMovements = data.movements.filter((m: any) => {
+        const mTime = m.created_at ? new Date(m.created_at).getTime() : new Date(m.date).getTime()
+        return mTime >= prodTime
+      })
+
+      const totalIn = filteredMovements.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0)
+      const totalOut = filteredMovements.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0)
+
       const mult = p.multiplier || 1
-      return { ...p, total_in: data.total_in, total_out: data.total_out, current_stock: ((p.initial_stock || 0) * mult) + data.total_in - data.total_out, movements: data.movements }
+      return { 
+        ...p, 
+        total_in: totalIn, 
+        total_out: totalOut, 
+        current_stock: ((p.initial_stock || 0) * mult) + totalIn - totalOut, 
+        movements: filteredMovements 
+      }
     })
 
     const orphanItems: StockItem[] = Object.entries(stockMap)
@@ -251,6 +268,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
   })
   const alertCount = items.filter(i => getStockStatus(i) !== 'ok').length
   const stockValue = items.reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_cost || 0), 0)
+  const stockValueSale = items.reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_price || 0), 0)
   const totalIn = items.reduce((s, i) => s + i.total_in, 0)
   const totalOut = items.reduce((s, i) => s + i.total_out, 0)
 
@@ -278,7 +296,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
           {alertCount > 0 && (
             <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 bg-red-100 border border-red-200 rounded-full text-[9px] font-bold text-red-700 uppercase">
               <AlertTriangle className="w-2.5 h-2.5" />
-              {alertCount}
+              {alertCount} alertes
             </span>
           )}
           {isOffline && (
@@ -307,7 +325,8 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
         {[
           { label: 'Produits', value: items.length, color: 'border-gray-200 text-gray-800' },
           { label: 'Alertes', value: alertCount, color: 'border-red-200 text-red-700' },
-          { label: 'Valeur stock', value: formatPrice(stockValue), color: 'border-emerald-200 text-emerald-800' },
+          { label: 'Valeur Achat', value: formatPrice(stockValue), color: 'border-emerald-200 text-emerald-800' },
+          { label: 'Valeur Vente', value: formatPrice(stockValueSale), color: 'border-indigo-200 text-indigo-800' },
           { label: 'Total entrées', value: totalIn, color: 'border-blue-200 text-blue-800' },
           { label: 'Total sorties', value: totalOut, color: 'border-rose-200 text-rose-800' },
         ].map(kpi => (
@@ -462,8 +481,15 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                         {item.multiplier && item.multiplier > 1 && (
                           <span>Conditionnement: <strong className="text-gray-700">1 {item.packaging_name || 'lot'} = {item.multiplier} {item.unit}</strong></span>
                         )}
-                        {item.unit_cost > 0 && item.current_stock > 0 && (
-                          <span className="text-emerald-700">Valeur: <strong>{formatPrice(Math.max(0, item.current_stock) * item.unit_cost)}</strong></span>
+                        {item.current_stock > 0 && (
+                          <>
+                            {item.unit_cost > 0 && (
+                              <span className="text-emerald-700">Valeur Achat: <strong>{formatPrice(Math.max(0, item.current_stock) * item.unit_cost)}</strong></span>
+                            )}
+                            {item.unit_price > 0 && (
+                              <span className="text-indigo-700">Valeur Vente: <strong>{formatPrice(Math.max(0, item.current_stock) * item.unit_price)}</strong></span>
+                            )}
+                          </>
                         )}
                       </div>
 

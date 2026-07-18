@@ -246,7 +246,7 @@ export function deleteOfflineProduct(shopId: string, productId: string): void {
  */
 export function computeOfflineStock(
   shopId: string
-): Record<string, { total_in: number; total_out: number; movements: Array<{ date: string; type: 'in' | 'out'; quantity: number; unit_price: number; notes: string }> }> {
+): Record<string, { total_in: number; total_out: number; movements: Array<{ date: string; created_at: string; type: 'in' | 'out'; quantity: number; unit_price: number; notes: string }> }> {
   const sales = getOfflineSales(shopId)
   const stockMap: Record<string, { total_in: number; total_out: number; movements: any[] }> = {}
 
@@ -261,10 +261,24 @@ export function computeOfflineStock(
       if (!stockMap[key]) stockMap[key] = { total_in: 0, total_out: 0, movements: [] }
       if (isIn) {
         stockMap[key].total_in += article.quantity
-        stockMap[key].movements.push({ date: sale.date, type: 'in', quantity: article.quantity, unit_price: article.unit_price, notes: sale.notes })
+        stockMap[key].movements.push({ 
+          date: sale.date, 
+          created_at: sale.created_at,
+          type: 'in', 
+          quantity: article.quantity, 
+          unit_price: article.unit_price, 
+          notes: sale.notes 
+        })
       } else {
         stockMap[key].total_out += article.quantity
-        stockMap[key].movements.push({ date: sale.date, type: 'out', quantity: article.quantity, unit_price: article.unit_price, notes: sale.notes })
+        stockMap[key].movements.push({ 
+          date: sale.date, 
+          created_at: sale.created_at,
+          type: 'out', 
+          quantity: article.quantity, 
+          unit_price: article.unit_price, 
+          notes: sale.notes 
+        })
       }
     }
   }

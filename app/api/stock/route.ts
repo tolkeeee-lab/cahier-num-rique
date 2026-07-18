@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     const { data: salesData, error: salesError } = await supabase
       .from('sales')
       .select(`
-        id, type, date, notes, status,
+        id, type, date, notes, status, created_at,
         sold_articles ( product_name, quantity, unit_price )
       `)
       .eq('shop_id', shopId)
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     const stockMap: Record<string, {
       total_in: number
       total_out: number
-      movements: Array<{ date: string; type: 'in' | 'out'; quantity: number; unit_price: number; notes: string; sale_type: string }>
+      movements: Array<{ date: string; created_at: string; type: 'in' | 'out'; quantity: number; unit_price: number; notes: string; sale_type: string }>
     }> = {}
 
     for (const sale of salesData || []) {
@@ -56,10 +56,26 @@ export async function GET(request: Request) {
 
         if (isIn) {
           stockMap[key].total_in += article.quantity
-          stockMap[key].movements.push({ date: sale.date, type: 'in', quantity: article.quantity, unit_price: article.unit_price, notes: sale.notes || '', sale_type: sale.type })
+          stockMap[key].movements.push({ 
+            date: sale.date, 
+            created_at: sale.created_at, 
+            type: 'in', 
+            quantity: article.quantity, 
+            unit_price: article.unit_price, 
+            notes: sale.notes || '', 
+            sale_type: sale.type 
+          })
         } else {
           stockMap[key].total_out += article.quantity
-          stockMap[key].movements.push({ date: sale.date, type: 'out', quantity: article.quantity, unit_price: article.unit_price, notes: sale.notes || '', sale_type: sale.type })
+          stockMap[key].movements.push({ 
+            date: sale.date, 
+            created_at: sale.created_at, 
+            type: 'out', 
+            quantity: article.quantity, 
+            unit_price: article.unit_price, 
+            notes: sale.notes || '', 
+            sale_type: sale.type 
+          })
         }
       }
     }
@@ -68,15 +84,27 @@ export async function GET(request: Request) {
     const stockItems = (products || []).map((product: any) => {
       const key = (product.name as string).toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
+      
+      // Filtrer les mouvements pour n'inclure que ceux après ou égal à la date de création du produit (moins 1 minute de marge)
+      const prodTime = product.created_at ? new Date(product.created_at).getTime() - 60000 : 0
+      const filteredMovements = data.movements.filter((m: any) => {
+        const mTime = m.created_at ? new Date(m.created_at).getTime() : new Date(m.date).getTime()
+        return mTime >= prodTime
+      })
+
+      // Recalculer les totaux d'entrées et de sorties après filtrage
+      const totalIn = filteredMovements.filter(m => m.type === 'in').reduce((sum, m) => sum + m.quantity, 0)
+      const totalOut = filteredMovements.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0)
+
       const mult = product.multiplier || 1
-      const currentStock = ((product.initial_stock || 0) * mult) + data.total_in - data.total_out
+      const currentStock = ((product.initial_stock || 0) * mult) + totalIn - totalOut
 
       return {
         ...product,
-        total_in: data.total_in,
-        total_out: data.total_out,
+        total_in: totalIn,
+        total_out: totalOut,
         current_stock: currentStock,
-        movements: data.movements
+        movements: filteredMovements
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
           .slice(0, 20),
       }
