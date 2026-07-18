@@ -187,3 +187,34 @@ textarea:focus {
 .notebook-tab:hover {
   transform: translateY(-2px);
 }
+
+/* Styles d'impression pour isoler le reçu thermique 80mm */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  /* Cacher absolument tout le reste de la page */
+  body * {
+    visibility: hidden;
+  }
+  /* Rendre uniquement la zone du reçu visible */
+  #receipt-print-area, #receipt-print-area * {
+    visibility: visible;
+  }
+  #receipt-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+}

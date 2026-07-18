@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Trash2, PlusCircle, Check, X, Loader } from 'lucide-react'
+import { Trash2, PlusCircle, Check, X, Loader, FileText, Printer, Share2 } from 'lucide-react'
+
 
 interface Article {
   name: string
@@ -44,6 +45,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, shopId, is
   const [addingToId, setAddingToId] = useState<string | null>(null)
   const [addInput, setAddInput] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null)
 
   if (sales.length === 0) return null
 
@@ -278,6 +280,17 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, shopId, is
                         {formatPrice(sale.total)}
                       </div>
 
+                      {/* Émettre un reçu */}
+                      {!isCrossed && canAddArticle(sale.type) && (
+                        <button
+                          onClick={() => setActiveReceiptSale(sale)}
+                          title="Émettre un reçu"
+                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-all"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
                       {/* + Ajouter article */}
                       {!isCrossed && !isEmployee && canAddArticle(sale.type) && onAddArticle && (
                         <button
@@ -344,6 +357,117 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, shopId, is
           </div>
         ))}
       </div>
+
+      {activeReceiptSale && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 no-print select-none">
+          <div className="bg-white rounded-[24px] max-w-sm w-full p-6 shadow-2xl flex flex-col max-h-[90vh] border border-gray-200">
+            {/* Titre et fermeture */}
+            <div className="flex items-center justify-between pb-3 border-b border-gray-150 flex-shrink-0">
+              <span className="font-handwritten text-lg font-bold text-gray-800">Aperçu du Reçu</span>
+              <button
+                onClick={() => setActiveReceiptSale(null)}
+                className="p-1 hover:bg-gray-150 rounded-full text-gray-400 hover:text-gray-600 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Zone du ticket de caisse à imprimer */}
+            <div className="flex-1 overflow-y-auto py-6" id="receipt-print-area">
+              <div className="flex flex-col items-center text-center font-mono text-xs text-gray-800 w-full max-w-[80mm] mx-auto p-4 bg-[#fffdf9] border border-gray-100 shadow-sm rounded-lg">
+                <h3 className="text-sm font-bold uppercase tracking-wider mb-1">Cahier de Caisse Intelligent</h3>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest">Compagnon de Cuisine</p>
+                
+                <div className="w-full border-b border-dashed border-gray-300 my-3"></div>
+
+                <div className="w-full text-left space-y-1 text-[10px] text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Date : {activeReceiptSale.date}</span>
+                    <span>Heure : {activeReceiptSale.time}</span>
+                  </div>
+                  <div>Client : <span className="font-bold text-gray-800">{activeReceiptSale.client}</span></div>
+                  <div>ID Vente : <span className="text-[8px]">{activeReceiptSale.id.slice(0, 8)}...</span></div>
+                </div>
+
+                <div className="w-full border-b border-dashed border-gray-300 my-3"></div>
+
+                {/* Liste des articles */}
+                <div className="w-full space-y-2">
+                  {activeReceiptSale.articles && activeReceiptSale.articles.length > 0 ? (
+                    activeReceiptSale.articles.map((art, idx) => (
+                      <div key={idx} className="flex justify-between items-start text-left text-[11px]">
+                        <div className="pr-2">
+                          <div className="font-bold">{art.name}</div>
+                          <div className="text-[9px] text-gray-500">{art.quantity} x {formatPrice(art.unit_price)}</div>
+                        </div>
+                        <span className="font-bold whitespace-nowrap">{formatPrice(art.quantity * art.unit_price)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex justify-between text-left text-[11px]">
+                      <div className="pr-2">
+                        <div className="font-bold">Transaction Générale</div>
+                        <div className="text-[9px] text-gray-500">1 x {formatPrice(activeReceiptSale.total)}</div>
+                      </div>
+                      <span className="font-bold whitespace-nowrap">{formatPrice(activeReceiptSale.total)}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="w-full border-b border-dashed border-gray-300 my-3"></div>
+
+                {/* Récapitulatif financier */}
+                <div className="w-full space-y-1.5 text-[11px]">
+                  <div className="flex justify-between font-bold text-sm">
+                    <span>TOTAL FACTURÉ</span>
+                    <span>{formatPrice(activeReceiptSale.total)}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>MONTANT PAYÉ</span>
+                    <span>{formatPrice(activeReceiptSale.paid)}</span>
+                  </div>
+                  {activeReceiptSale.debt > 0 && (
+                    <div className="flex justify-between text-red-600 font-bold">
+                      <span>RESTE À PAYER (DETTE)</span>
+                      <span>{formatPrice(activeReceiptSale.debt)}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="w-full border-b border-dashed border-gray-300 my-3"></div>
+
+                <p className="text-[10px] text-gray-500 italic mt-1 leading-relaxed">
+                  Merci pour votre confiance et à bientôt !
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-4 border-t border-gray-150 flex-shrink-0">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-gray-900 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Imprimer
+              </button>
+              <button
+                onClick={() => {
+                  const itemsText = activeReceiptSale.articles && activeReceiptSale.articles.length > 0
+                    ? activeReceiptSale.articles.map(a => `- ${a.quantity}x ${a.name} : ${formatPrice(a.quantity * a.unit_price)}`).join('\n')
+                    : `- Transaction Générale : ${formatPrice(activeReceiptSale.total)}`
+                  const whatsappText = `🧾 *REÇU DE CAISSE*\n*Client* : ${activeReceiptSale.client}\n*Date* : ${activeReceiptSale.date} à ${activeReceiptSale.time}\n\n*Détails des articles* :\n${itemsText}\n\n-------------------------\n*TOTAL* : ${formatPrice(activeReceiptSale.total)}\n*Payé* : ${formatPrice(activeReceiptSale.paid)}\n${activeReceiptSale.debt > 0 ? `*Reste à payer* : ${formatPrice(activeReceiptSale.debt)}\n` : ''}-------------------------\n\nMerci pour votre confiance ! 😊`
+                  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`, '_blank')
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
