@@ -73,7 +73,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
             throw new Error('Le Code Boutique est obligatoire pour les employés.')
           }
 
-          const { error: signUpError } = await supabaseClient.auth.signUp({
+           const { error: signUpError } = await supabaseClient.auth.signUp({
             email,
             password,
             options: {
@@ -85,6 +85,21 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
             },
           })
           if (signUpError) throw signUpError
+
+          // Insérer également l'utilisateur dans la table publique employees pour qu'il soit gérable
+          try {
+            await supabaseClient
+              .from('employees')
+              .insert({
+                shop_id: generatedShopId,
+                email: email.trim().toLowerCase(),
+                name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
+                role: role
+              })
+          } catch (insertErr) {
+            console.error('Erreur non bloquante lors de la création de la fiche employe:', insertErr)
+          }
+
           setSuccess(`✓ Compte créé ! ${role === 'owner' ? `Notez votre Code Boutique : ${generatedShopId} (à donner à vos employés).` : ''} Connectez-vous maintenant.`)
           setIsSignUp(false)
         } else {
