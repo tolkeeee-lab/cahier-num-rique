@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings } from 'lucide-react'
+import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart } from 'lucide-react'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
+import { ShoppingListManager } from '@/components/ShoppingListManager'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { AuthScreen } from '@/components/AuthScreen'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -157,7 +158,7 @@ export default function JournalPage() {
   const [nosDettes, setNosDettes] = useState(0)
   const [soldeDuJour, setSoldeDuJour] = useState(0)
   
-  const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives' | 'stock' | 'settings' | 'analytics'>('cahier')
+  const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives' | 'stock' | 'settings' | 'analytics' | 'shopping'>('cahier')
   const [allSales, setAllSales] = useState<Sale[]>([])
   const [journalFilter, setJournalFilter] = useState<FilterId>('all')
   const [archiveFilter, setArchiveFilter] = useState<FilterId>('all')
@@ -1518,6 +1519,13 @@ export default function JournalPage() {
     }
   }
 
+  const handleConvertToStockPurchase = async (text: string) => {
+    await submitTransaction({
+      text,
+      penColor: 'green'
+    })
+  }
+
   const handleError = (err: string) => {
     setPostItWarning(err)
   }
@@ -1782,6 +1790,19 @@ export default function JournalPage() {
                 >
                   <Package className="w-3.5 h-3.5" />
                   Stock
+                </button>
+              )}
+              {mappedUser?.role !== 'employee' && (
+                <button
+                  onClick={() => setActiveTab('shopping')}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${
+                    activeTab === 'shopping'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
+                  }`}
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                  Courses
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
@@ -2306,6 +2327,16 @@ export default function JournalPage() {
               {activeTab === 'stock' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
                   <StockManager shopId={mappedUser?.shop_id} onError={handleError} />
+                </div>
+              )}
+
+              {activeTab === 'shopping' && (
+                <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
+                  <ShoppingListManager 
+                    shopId={mappedUser?.shop_id} 
+                    onConvertToStockPurchase={handleConvertToStockPurchase} 
+                    onError={handleError} 
+                  />
                 </div>
               )}
 
