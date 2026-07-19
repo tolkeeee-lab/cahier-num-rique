@@ -66,6 +66,7 @@ export default function SuperAdminPage() {
   
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('')
+  const [shopSortBy, setShopSortBy] = useState<'sales' | 'transactions' | 'cash'>('sales')
   const [selectedShopForJournal, setSelectedShopForJournal] = useState<string | null>(null)
   const [selectedShopName, setSelectedShopName] = useState('')
   const [journalSales, setJournalSales] = useState<any[]>([])
@@ -201,12 +202,18 @@ export default function SuperAdminPage() {
     document.body.removeChild(link)
   }
 
-  // Filtres de recherche
-  const filteredShops = shops.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.shop_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.owner_email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Filtres de recherche & tri
+  const filteredShops = shops
+    .filter(s => 
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.shop_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.owner_email.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (shopSortBy === 'sales') return b.total_sales - a.total_sales
+      if (shopSortBy === 'cash') return b.cash_balance - a.cash_balance
+      return b.transactions_count - a.transactions_count
+    })
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -400,7 +407,19 @@ export default function SuperAdminPage() {
             </button>
           </div>
 
-          <div className="flex gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
+            {activeTab === 'shops' && (
+              <select
+                value={shopSortBy}
+                onChange={e => setShopSortBy(e.target.value as any)}
+                className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold font-sans text-gray-700 outline-none"
+              >
+                <option value="sales">💰 Trier par CA Ventes</option>
+                <option value="transactions">📑 Trier par Transactions</option>
+                <option value="cash">💵 Trier par Solde Caisse</option>
+              </select>
+            )}
+
             <div className="relative flex-grow md:flex-grow-0">
               <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
               <input

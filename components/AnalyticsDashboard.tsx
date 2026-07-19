@@ -47,6 +47,7 @@ function formatPrice(price: number): string {
 
 export function AnalyticsDashboard({ sales }: AnalyticsDashboardProps) {
   const [period, setPeriod] = useState<'today' | '7days' | 'month' | 'all'>('all')
+  const [sortBy, setSortBy] = useState<'revenue' | 'quantity' | 'frequency'>('revenue')
 
   // Filtrer les ventes selon la période choisie
   const filteredSales = useMemo(() => {
@@ -106,8 +107,12 @@ export function AnalyticsDashboard({ sales }: AnalyticsDashboardProps) {
       }
     })
 
-    return Object.values(map).sort((a, b) => b.totalQuantity - a.totalQuantity)
-  }, [filteredSales])
+    return Object.values(map).sort((a, b) => {
+      if (sortBy === 'revenue') return b.totalRevenue - a.totalRevenue
+      if (sortBy === 'quantity') return b.totalQuantity - a.totalQuantity
+      return b.frequency - a.frequency
+    })
+  }, [filteredSales, sortBy])
 
   // Aggrégation par catégorie de produit
   const categoryStats = useMemo(() => {
@@ -262,13 +267,43 @@ export function AnalyticsDashboard({ sales }: AnalyticsDashboardProps) {
 
         {/* Tableau du Classement des Produits (Top Produit + Fréquence) */}
         <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
-              🏆 Classement des Produits les plus Vendus
-            </h3>
-            <span className="text-[10px] font-bold text-gray-400 font-mono uppercase">
-              {productStats.length} Produits Référencés
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none">
+            <div>
+              <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
+                🏆 Classement des Produits ({productStats.length})
+              </h3>
+              <p className="text-[9px] font-mono uppercase text-gray-400">
+                {sortBy === 'revenue' ? 'Trié par Chiffre d\'Affaires généré' : sortBy === 'quantity' ? 'Trié par volume d\'articles vendus' : 'Trié par fréquence de vente'}
+              </p>
+            </div>
+
+            {/* Boutons de Tri */}
+            <div className="flex items-center gap-1 bg-[#f5f1e8] p-1 rounded-2xl border border-gray-200">
+              <button
+                onClick={() => setSortBy('revenue')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all ${
+                  sortBy === 'revenue' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                💰 Par CA
+              </button>
+              <button
+                onClick={() => setSortBy('quantity')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all ${
+                  sortBy === 'quantity' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                📦 Par Quantité
+              </button>
+              <button
+                onClick={() => setSortBy('frequency')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all ${
+                  sortBy === 'frequency' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                🔄 Par Fréquence
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
