@@ -143,10 +143,10 @@ export async function GET(request: NextRequest) {
 // Fonction de formatage propre des noms de boutiques
 function formatShopName(sid: string, ownerName?: string): string {
   if (ownerName && ownerName !== 'Utilisateur' && ownerName !== 'Propriétaire' && !ownerName.startsWith('Commerçant')) {
-    return `Boutique de ${ownerName}`
+    return ownerName
   }
   if (sid === 'default-shop') {
-    return 'Boutique Principale (Chantal)'
+    return 'Boutique Chantal'
   }
   if (sid.startsWith('SHOP-')) {
     return `Boutique #${sid.replace('SHOP-', '')}`
