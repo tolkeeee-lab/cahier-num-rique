@@ -14,10 +14,11 @@ interface Employee {
 
 interface SettingsManagerProps {
   shopId?: string
+  userEmail?: string
   onError?: (err: string) => void
 }
 
-export function SettingsManager({ shopId = 'default-shop', onError }: SettingsManagerProps) {
+export function SettingsManager({ shopId = 'default-shop', userEmail, onError }: SettingsManagerProps) {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -150,6 +151,33 @@ export function SettingsManager({ shopId = 'default-shop', onError }: SettingsMa
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full space-y-6">
+        {/* Accès Super Admin pour les comptes d'administration autorisés */}
+        {(userEmail === 'tolkeeee@gmail.com' || userEmail === 'admin@cahier.com') && (
+          <div className="bg-[#fffdf9] border border-rose-250 rounded-[28px] p-5 shadow-sm select-none">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 flex-shrink-0">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div className="flex-grow space-y-1">
+                <h4 className="font-handwritten text-lg font-bold text-gray-800">
+                  Accès Privilégié Super Admin
+                </h4>
+                <p className="text-[10px] text-gray-500 font-sans leading-relaxed">
+                  Votre compte <strong className="text-rose-700 font-mono">{userEmail}</strong> possède des droits d'administration de la plateforme globale.
+                </p>
+                <div className="pt-2">
+                  <a
+                    href="/admin"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all hover:scale-[1.03] active:scale-[0.97]"
+                  >
+                    Aller au Panneau Admin →
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Section 1 : Code Boutique */}
         <div className="bg-white border border-gray-250 rounded-[24px] p-5 shadow-sm">
           <h3 className="font-handwritten text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
