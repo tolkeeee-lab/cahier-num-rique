@@ -21,6 +21,7 @@ export interface OfflineSale {
   type: string
   pen_color: string
   notes: string
+  category?: string
   articles: Array<{
     name: string
     quantity: number
@@ -29,6 +30,80 @@ export interface OfflineSale {
   created_at: string
   is_synced: boolean
   sync_error?: string
+}
+
+/**
+ * Classifie de manière heuristique une dépense en français par mots-clés.
+ */
+export function classifyOfflineExpense(notes: string): string {
+  const text = (notes || '').toLowerCase().trim()
+  if (text.includes('loyer') || text.includes('boutique') || text.includes('emplacement') || text.includes('magasin')) {
+    return 'Loyer'
+  }
+  if (
+    text.includes('cie') || 
+    text.includes('sodeci') || 
+    text.includes('courant') || 
+    text.includes('lumiere') || 
+    text.includes('internet') || 
+    text.includes('wifi') || 
+    text.includes('electricite') || 
+    text.includes('eau') || 
+    text.includes('credit') || 
+    text.includes('abonnement') || 
+    text.includes('recharge')
+  ) {
+    return 'Factures'
+  }
+  if (
+    text.includes('carburant') || 
+    text.includes('essence') || 
+    text.includes('taxi') || 
+    text.includes('transport') || 
+    text.includes('livraison') || 
+    text.includes('voyage') || 
+    text.includes('deplacement') || 
+    text.includes('gbaka')
+  ) {
+    return 'Transport'
+  }
+  if (
+    text.includes('salaire') || 
+    text.includes('ration') || 
+    text.includes('bonus') || 
+    text.includes('paie') || 
+    text.includes('employe') || 
+    text.includes('travailleur') || 
+    text.includes('manoeuvre')
+  ) {
+    return 'Salaires'
+  }
+  if (
+    text.includes('emballage') || 
+    text.includes('sac') || 
+    text.includes('sachet') || 
+    text.includes('plastique') || 
+    text.includes('nettoyage') || 
+    text.includes('balai') || 
+    text.includes('fourniture') || 
+    text.includes('cahier') || 
+    text.includes('stylo')
+  ) {
+    return 'Fournitures'
+  }
+  if (
+    text.includes('manger') || 
+    text.includes('repas') || 
+    text.includes('nourriture') || 
+    text.includes('midi') || 
+    text.includes('dejeuner') || 
+    text.includes('cafe') || 
+    text.includes('the') || 
+    text.includes('pain')
+  ) {
+    return 'Repas'
+  }
+  return 'Divers'
 }
 
 export interface OfflineDebt {
@@ -105,6 +180,9 @@ export function getOfflineSales(shopId: string): OfflineSale[] {
 /** Sauvegarde une nouvelle vente dans le cache local. */
 export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
   const sales = getOfflineSales(shopId)
+  if (sale.type === 'cash_out' && !sale.category) {
+    sale.category = classifyOfflineExpense(sale.notes)
+  }
   sales.push(sale)
   writeJson(salesKey(shopId), sales)
 }

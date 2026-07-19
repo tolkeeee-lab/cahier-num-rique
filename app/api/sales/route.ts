@@ -30,6 +30,7 @@ interface ParsedSale {
   montant_paye: number
   montant_dette: number
   nom_client: string
+  categorie?: string
 }
 
 
@@ -123,7 +124,8 @@ export async function POST(request: NextRequest) {
         total_facture: overrideData.total_amount,
         montant_paye: overrideData.paid_amount,
         montant_dette: overrideData.debt_amount,
-        nom_client: overrideData.client_name || overrideData.nom_client || "Client anonyme"
+        nom_client: overrideData.client_name || overrideData.nom_client || "Client anonyme",
+        categorie: overrideData.category || overrideData.categorie || 'Divers'
       }
     } else {
       const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'mock-key-for-build'
@@ -275,6 +277,7 @@ export async function POST(request: NextRequest) {
       type: type,
       pen_color: color,
       notes: text,
+      category: parsedData.categorie || 'Divers',
       articles: parsedData.articles.map((a) => ({
         name: a.nom,
         quantity: a.quantite,
@@ -304,6 +307,7 @@ export async function POST(request: NextRequest) {
               type: type,
               pen_color: color,
               notes: text,
+              category: parsedData.categorie || 'Divers',
               created_at: now.toISOString(),
             },
           ])
@@ -502,6 +506,7 @@ export async function GET(request: NextRequest) {
             type,
             pen_color,
             notes,
+            category,
             sold_articles:sold_articles(
               product_name,
               quantity,
@@ -535,7 +540,8 @@ export async function GET(request: NextRequest) {
           status: sale.status,
           type: sale.type,
           pen_color: sale.pen_color,
-          notes: sale.notes
+          notes: sale.notes,
+          category: sale.category || 'Divers'
         }))
       } catch (e) {
         console.error('Erreur lecture Supabase GET, repli sur local:', e)
@@ -656,6 +662,34 @@ export async function PATCH(request: NextRequest) {
         newDebt,
         addedArticles: parsed.articles,
       })
+    }
+
+    // ─── ACTION : update_category ───────────────────────────────────────────
+    if (action === 'update_category') {
+      const { category } = body as { category: string }
+      if (!category) {
+        return NextResponse.json({ error: 'La catégorie est obligatoire' }, { status: 400 })
+      }
+
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase
+          .from('sales')
+          .update({ category })
+          .eq('id', id)
+          .eq('shop_id', shopId)
+
+        if (error) throw error
+      }
+
+      // Mettre à jour le cache local/mock
+      const db = getLocalDb()
+      const idx = db.findIndex(s => s.id === id && s.shop_id === shopId)
+      if (idx !== -1) {
+        db[idx].category = category
+        saveLocalDb(db)
+      }
+
+      return NextResponse.json({ success: true })
     }
 
     // ─── ACTION : cross_out ─────────────────────────────────────────────────
@@ -880,12 +914,79 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
     montantDette = 0
   }
 
+  let category = 'Divers'
+  if (penColor === 'red') {
+    const textLower = text.toLowerCase()
+    if (textLower.includes('loyer') || textLower.includes('boutique') || textLower.includes('emplacement') || textLower.includes('magasin')) {
+      category = 'Loyer'
+    } else if (
+      textLower.includes('cie') || 
+      textLower.includes('sodeci') || 
+      textLower.includes('courant') || 
+      textLower.includes('lumiere') || 
+      textLower.includes('internet') || 
+      textLower.includes('wifi') || 
+      textLower.includes('electricite') || 
+      textLower.includes('eau') || 
+      textLower.includes('credit') || 
+      textLower.includes('abonnement') || 
+      textLower.includes('recharge')
+    ) {
+      category = 'Factures'
+    } else if (
+      textLower.includes('carburant') || 
+      textLower.includes('essence') || 
+      textLower.includes('taxi') || 
+      textLower.includes('transport') || 
+      textLower.includes('livraison') || 
+      textLower.includes('voyage') || 
+      textLower.includes('deplacement') || 
+      textLower.includes('gbaka')
+    ) {
+      category = 'Transport'
+    } else if (
+      textLower.includes('salaire') || 
+      textLower.includes('ration') || 
+      textLower.includes('bonus') || 
+      textLower.includes('paie') || 
+      textLower.includes('employe') || 
+      textLower.includes('travailleur') || 
+      textLower.includes('manoeuvre')
+    ) {
+      category = 'Salaires'
+    } else if (
+      textLower.includes('emballage') || 
+      textLower.includes('sac') || 
+      textLower.includes('sachet') || 
+      textLower.includes('plastique') || 
+      textLower.includes('nettoyage') || 
+      textLower.includes('balai') || 
+      textLower.includes('fourniture') || 
+      textLower.includes('cahier') || 
+      textLower.includes('stylo')
+    ) {
+      category = 'Fournitures'
+    } else if (
+      textLower.includes('manger') || 
+      textLower.includes('repas') || 
+      textLower.includes('nourriture') || 
+      textLower.includes('midi') || 
+      textLower.includes('dejeuner') || 
+      textLower.includes('cafe') || 
+      textLower.includes('the') || 
+      textLower.includes('pain')
+    ) {
+      category = 'Repas'
+    }
+  }
+
   return {
     articles,
     total_facture: totalFacture,
     montant_paye: Math.max(0, montantPaye),
     montant_dette: Math.max(0, montantDette),
-    nom_client: nomClient
+    nom_client: nomClient,
+    categorie: category
   }
 }
 
@@ -911,7 +1012,8 @@ Règles STRICTES:
   "total_facture": nombre,
   "montant_paye": nombre,
   "montant_dette": nombre,
-  "nom_client": "nom"
+  "nom_client": "nom",
+  "categorie": "nom_categorie"
 }
 
 2. Extraction simplifiée et conversion pour le stock :
@@ -933,7 +1035,8 @@ Règles STRICTES:
    - jaune: Crédit Client (montant_paye=0, montant_dette=total_facture par défaut sauf si paiement partiel écrit)
 
 4. Extrais le nom de la personne si mentionné (ex: "Koffi", "Chantal"). Si absent, mets "Client anonyme".
-5. Ne RETOURNE que du JSON valide. Pas de texte supplémentaire ni de balises Markdown.`
+5. Si la couleur du Bic est rouge ('red'), tu dois choisir la 'categorie' de la dépense la plus appropriée uniquement parmi celles-ci : "Loyer" (loyer, magasin, boutique, emplacement), "Factures" (électricité, CIE, eau, SODECI, internet, crédit mobile, recharge), "Transport" (carburant, essence, taxi, transport, livraison), "Salaires" (ration, salaires, paie, main d'oeuvre), "Fournitures" (emballages, sacs, nettoyage, stylos, balai), "Repas" (nourriture, déjeuner, manger, café, pain), ou "Divers" (par défaut). Si le Bic n'est pas rouge, mets "Divers".
+6. Ne RETOURNE que du JSON valide. Pas de texte supplémentaire ni de balises Markdown.`
 
   try {
     const response = await openai.chat.completions.create({

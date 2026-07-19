@@ -44,6 +44,7 @@ interface Sale {
   type: string
   pen_color: string
   notes: string
+  category?: string
 }
 
 function formatPrice(price: number): string {
@@ -1472,6 +1473,43 @@ export default function JournalPage() {
     }
   }
 
+  const handleUpdateCategory = async (saleId: string, category: string) => {
+    if (!mappedUser) return
+    const sid = mappedUser.shop_id
+    const online = typeof window !== 'undefined' ? window.navigator.onLine : false
+
+    try {
+      if (isConfigured && online) {
+        const response = await fetch('/api/sales', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': sid
+          },
+          body: JSON.stringify({ id: saleId, action: 'update_category', category })
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur lors de la mise à jour de la catégorie")
+        }
+      } else {
+        // Mode hors-ligne : modifier localement
+        const offlineSales = JSON.parse(localStorage.getItem(`cahier_offline_sales_${sid}`) || '[]')
+        const idx = offlineSales.findIndex((s: any) => s.id === saleId)
+        if (idx > -1) {
+          offlineSales[idx].category = category
+          offlineSales[idx].is_synced = false
+          localStorage.setItem(`cahier_offline_sales_${sid}`, JSON.stringify(offlineSales))
+        }
+      }
+      await loadFinancialData()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur lors de la mise à jour"
+      setPostItWarning(msg)
+      throw err
+    }
+  }
+
   const handleError = (err: string) => {
     setPostItWarning(err)
   }
@@ -2217,6 +2255,8 @@ export default function JournalPage() {
                         sales={filteredAllSales} 
                         onSaleCrossedOut={handleSaleCrossedOut} 
                         onAddArticle={handleAddArticle}
+                        onUpdateCategory={handleUpdateCategory}
+                        showExpenseStats={archiveFilter === 'red'}
                         onError={handleError} 
                         shopId={mappedUser?.shop_id}
                         isEmployee={mappedUser?.role === 'employee'}

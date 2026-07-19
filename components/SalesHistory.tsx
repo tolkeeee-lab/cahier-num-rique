@@ -23,15 +23,28 @@ interface Sale {
   type: string
   pen_color: string
   notes: string
+  category?: string
 }
 
 interface SalesHistoryProps {
   sales: Sale[]
   onSaleCrossedOut?: (id: string) => void
   onAddArticle?: (saleId: string, text: string) => Promise<void>
+  onUpdateCategory?: (saleId: string, category: string) => Promise<void>
   onError?: (err: string) => void
   shopId?: string
   isEmployee?: boolean
+  showExpenseStats?: boolean
+}
+
+export const CATEGORY_INFOS: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
+  'Loyer': { label: 'Loyer & Boutique', emoji: '🏠', color: 'text-orange-700 border-orange-200 bg-orange-50', bg: 'bg-orange-500' },
+  'Factures': { label: 'Factures (Élec, CIE, Net...)', emoji: '⚡', color: 'text-blue-700 border-blue-200 bg-blue-50', bg: 'bg-blue-500' },
+  'Transport': { label: 'Transport & Livraisons', emoji: '🚗', color: 'text-indigo-700 border-indigo-200 bg-indigo-50', bg: 'bg-indigo-500' },
+  'Salaires': { label: 'Salaires & Personnel', emoji: '👥', color: 'text-teal-700 border-teal-200 bg-teal-50', bg: 'bg-teal-500' },
+  'Fournitures': { label: 'Fournitures & Lots', emoji: '📦', color: 'text-purple-700 border-purple-200 bg-purple-50', bg: 'bg-purple-500' },
+  'Repas': { label: 'Repas & Alimentation', emoji: '🍔', color: 'text-amber-700 border-amber-200 bg-amber-50', bg: 'bg-amber-500' },
+  'Divers': { label: 'Divers & Autres', emoji: '🏷️', color: 'text-gray-700 border-gray-200 bg-gray-50', bg: 'bg-gray-500' }
 }
 
 function formatPrice(price: number): string {
@@ -40,12 +53,13 @@ function formatPrice(price: number): string {
   }).format(price) + ' F'
 }
 
-export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, shopId, isEmployee }: SalesHistoryProps) {
+export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCategory, showExpenseStats, shopId, isEmployee }: SalesHistoryProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [addingToId, setAddingToId] = useState<string | null>(null)
   const [addInput, setAddInput] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null)
+  const [editingCategorySaleId, setEditingCategorySaleId] = useState<string | null>(null)
 
   if (sales.length === 0) return null
 
@@ -212,10 +226,59 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, shopId, is
   // Types de ventes où on peut ajouter des articles
   const canAddArticle = (type: string) => ['cash_in', 'sale_credit'].includes(type)
 
+  // Calculs pour les statistiques de dépenses
+  const expenseSales = sales.filter(s => s.type === 'cash_out' && s.status !== 'crossed_out')
+  const totalExpenseAmount = expenseSales.reduce((acc, curr) => acc + curr.total, 0)
+  
+  const expenseCategories: Record<string, number> = {}
+  expenseSales.forEach(s => {
+    const cat = s.category || 'Divers'
+    expenseCategories[cat] = (expenseCategories[cat] || 0) + s.total
+  })
+  
+  const sortedCategories = Object.entries(expenseCategories)
+    .map(([name, amount]) => ({
+      name,
+      amount,
+      percentage: totalExpenseAmount > 0 ? Math.round((amount / totalExpenseAmount) * 100) : 0,
+      info: CATEGORY_INFOS[name] || CATEGORY_INFOS['Divers']
+    }))
+    .sort((a, b) => b.amount - a.amount)
+
   return (
     <div className="relative pl-12 md:pl-24 pr-4 py-4 min-h-[300px] w-full">
       {/* Red vertical margin line */}
       <div className="absolute left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
+
+      {showExpenseStats && totalExpenseAmount > 0 && (
+        <div className="mb-6 mr-4 bg-[#fffdf9] border border-gray-200 rounded-[28px] p-6 shadow-sm z-10 relative select-none">
+          <h4 className="font-handwritten text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            📊 Répartition des Dépenses ({formatPrice(totalExpenseAmount)})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {sortedCategories.map((c, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="flex justify-between items-center text-[10px] md:text-xs">
+                  <span className="font-semibold text-gray-700 flex items-center gap-1.5">
+                    <span>{c.info.emoji}</span>
+                    <span>{c.info.label}</span>
+                  </span>
+                  <span className="font-mono font-bold text-gray-600">
+                    {formatPrice(c.amount)} ({c.percentage}%)
+                  </span>
+                </div>
+                {/* Horizontal progress bar */}
+                <div className="h-2.5 w-full bg-gray-150 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${c.info.bg}`}
+                    style={{ width: `${c.percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="lined-text-container space-y-0 text-lg">
         {Object.entries(groupedSales).map(([dateStr, salesList]) => (
@@ -258,6 +321,55 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, shopId, is
                         <span className={`text-[8px] font-bold border px-1.5 py-0.5 rounded-md font-sans tracking-wide ${typeBadge} no-underline`}>
                           {typeText}
                         </span>
+
+                        {/* Catégorie de dépense cliquable */}
+                        {sale.type === 'cash_out' && !isCrossed && (
+                          <div className="relative inline-block select-none z-20">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (isEmployee) return
+                                setEditingCategorySaleId(editingCategorySaleId === sale.id ? null : sale.id)
+                              }}
+                              className={`text-[8px] font-bold border px-1.5 py-0.5 rounded-md font-sans tracking-wide flex items-center gap-1 transition-all ${
+                                CATEGORY_INFOS[sale.category || 'Divers']?.color || CATEGORY_INFOS['Divers'].color
+                              } ${!isEmployee ? 'hover:scale-105 active:scale-95 cursor-pointer' : ''}`}
+                              title={!isEmployee ? "Changer la catégorie" : undefined}
+                            >
+                              <span>{CATEGORY_INFOS[sale.category || 'Divers']?.emoji || '🏷️'}</span>
+                              <span>{sale.category || 'Divers'}</span>
+                            </button>
+                            
+                            {editingCategorySaleId === sale.id && onUpdateCategory && (
+                              <div className="absolute left-0 mt-1 bg-[#fdfaf2] border border-gray-300 rounded-2xl shadow-xl p-1.5 z-30 min-w-[150px] space-y-0.5">
+                                {Object.keys(CATEGORY_INFOS).map((catName) => {
+                                  const info = CATEGORY_INFOS[catName]
+                                  const isSelected = sale.category === catName
+                                  return (
+                                    <button
+                                      key={catName}
+                                      type="button"
+                                      onClick={async (e) => {
+                                        e.stopPropagation()
+                                        setEditingCategorySaleId(null)
+                                        if (onUpdateCategory) {
+                                          await onUpdateCategory(sale.id, catName)
+                                        }
+                                      }}
+                                      className={`w-full text-left text-[9px] px-2.5 py-1.5 rounded-xl font-sans font-semibold flex items-center gap-1.5 transition-colors ${
+                                        isSelected ? 'bg-gray-200 text-gray-900 border border-gray-300' : 'hover:bg-gray-100 text-gray-600 border border-transparent'
+                                      }`}
+                                    >
+                                      <span>{info.emoji}</span>
+                                      <span>{info.label}</span>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Articles */}
