@@ -15,6 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { SalesHistory } from '@/components/SalesHistory'
+import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 
 interface AdminKPIs {
   totalBoutiques: number
@@ -55,18 +56,20 @@ export default function SuperAdminPage() {
   const [adminPassword, setAdminPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState<'shops' | 'users'>('shops')
+  const [activeTab, setActiveTab] = useState<'shops' | 'users' | 'analytics'>('shops')
   
   // Data States
   const [kpis, setKpis] = useState<AdminKPIs | null>(null)
   const [shops, setShops] = useState<AdminShop[]>([])
   const [users, setUsers] = useState<AdminUser[]>([])
+  const [allNetworkSales, setAllNetworkSales] = useState<any[]>([])
   
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedShopForJournal, setSelectedShopForJournal] = useState<string | null>(null)
   const [selectedShopName, setSelectedShopName] = useState('')
   const [journalSales, setJournalSales] = useState<any[]>([])
+  const [shopModalTab, setShopModalTab] = useState<'journal' | 'analytics'>('journal')
   const [loadingJournal, setLoadingJournal] = useState(false)
 
   // Dev mode bypass checker
@@ -97,6 +100,7 @@ export default function SuperAdminPage() {
       setKpis(data.kpis)
       setShops(data.shops)
       setUsers(data.users)
+      setAllNetworkSales(data.allSales || [])
       setIsAdmin(true)
       if (emailToUse) {
         localStorage.setItem('cahier_admin_email', emailToUse)
@@ -168,7 +172,7 @@ export default function SuperAdminPage() {
   }
 
   // Export CSV
-  const exportToCSV = (type: 'shops' | 'users') => {
+  const exportToCSV = (type: 'shops' | 'users' | 'analytics') => {
     let csvContent = "data:text/csv;charset=utf-8,"
     
     if (type === 'shops') {
@@ -176,10 +180,15 @@ export default function SuperAdminPage() {
       shops.forEach(s => {
         csvContent += `"${s.shop_id}","${s.name}","${s.owner_email}",${s.transactions_count},${s.total_sales},${s.cash_balance},${s.employees_count},"${s.created_at.slice(0, 10)}"\n`
       })
-    } else {
+    } else if (type === 'users') {
       csvContent += "ID Utilisateur,ID Boutique,Nom,Email,Role,Date Inscription\n"
       users.forEach(u => {
         csvContent += `"${u.id}","${u.shop_id}","${u.name}","${u.email}","${u.role}","${u.created_at.slice(0, 10)}"\n`
+      })
+    } else {
+      csvContent += "ID Transaction,Date,Heure,Client,Total,Statut,Type,Notes,Categorie\n"
+      allNetworkSales.forEach(s => {
+        csvContent += `"${s.id}","${s.date}","${s.time}","${s.client}",${s.total},"${s.status}","${s.type}","${(s.notes || '').replace(/"/g, '""')}","${s.category}"\n`
       })
     }
     
@@ -364,10 +373,10 @@ export default function SuperAdminPage() {
 
         {/* Tab & Search Bar */}
         <div className="px-6 py-4 border-b border-gray-200 bg-[#f5f1e8] flex flex-col md:flex-row gap-4 items-center justify-between select-none">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => { setActiveTab('shops'); setSearchQuery('') }}
-              className={`px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
                 activeTab === 'shops' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-250 text-gray-500 hover:text-gray-850'
               }`}
             >
@@ -375,11 +384,19 @@ export default function SuperAdminPage() {
             </button>
             <button
               onClick={() => { setActiveTab('users'); setSearchQuery('') }}
-              className={`px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
                 activeTab === 'users' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-250 text-gray-500 hover:text-gray-850'
               }`}
             >
               👥 Utilisateurs ({users.length})
+            </button>
+            <button
+              onClick={() => { setActiveTab('analytics'); setSearchQuery('') }}
+              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+                activeTab === 'analytics' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-250 text-gray-500 hover:text-gray-850'
+              }`}
+            >
+              📊 Analyses Réseau
             </button>
           </div>
 
@@ -451,7 +468,7 @@ export default function SuperAdminPage() {
                 </tbody>
               </table>
             </div>
-          ) : (
+          ) : activeTab === 'users' ? (
             <div className="min-w-full overflow-hidden border border-gray-200 rounded-2xl bg-white shadow-sm">
               <table className="min-w-full divide-y divide-gray-200 font-sans text-xs">
                 <thead className="bg-gray-50 uppercase text-[9px] font-bold text-gray-400 tracking-wider">
@@ -489,47 +506,77 @@ export default function SuperAdminPage() {
                 </tbody>
               </table>
             </div>
+          ) : (
+            <div className="min-w-full">
+              <AnalyticsDashboard sales={allNetworkSales} />
+            </div>
           )}
         </div>
       </div>
 
-      {/* ── Tiroir / Modal de Journal de Boutique (Lecture Seule) ── */}
+      {/* ── Tiroir / Modal de Journal & Analyses de Boutique (Lecture Seule) ── */}
       {selectedShopForJournal && (
         <div className="fixed inset-0 z-50 flex items-center justify-end bg-black bg-opacity-40 p-4 animate-fade-in">
-          <div className="w-full max-w-xl h-full bg-[#fdfaf2] border border-gray-300 shadow-2xl rounded-l-[32px] overflow-hidden flex flex-col transform transition-transform duration-350 translate-x-0">
+          <div className="w-full max-w-2xl h-full bg-[#fdfaf2] border border-gray-300 shadow-2xl rounded-l-[32px] overflow-hidden flex flex-col transform transition-transform duration-350 translate-x-0">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-[#f5f1e8]">
               <div>
                 <h3 className="font-handwritten text-xl font-bold text-gray-900">
-                  📖 Journal de : {selectedShopName}
+                  🏪 {selectedShopName}
                 </h3>
                 <p className="text-[8px] text-gray-400 font-mono uppercase tracking-wider">
-                  Boutique : {selectedShopForJournal}
+                  Code : {selectedShopForJournal}
                 </p>
               </div>
-              <button 
-                onClick={() => setSelectedShopForJournal(null)} 
-                className="text-gray-400 hover:text-gray-700 transition-colors p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              
+              <div className="flex items-center gap-3">
+                <div className="flex bg-white border border-gray-250 rounded-xl p-0.5">
+                  <button
+                    onClick={() => setShopModalTab('journal')}
+                    className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all ${
+                      shopModalTab === 'journal' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    📖 Journal
+                  </button>
+                  <button
+                    onClick={() => setShopModalTab('analytics')}
+                    className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all ${
+                      shopModalTab === 'analytics' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    📊 Analyses
+                  </button>
+                </div>
+
+                <button 
+                  onClick={() => setSelectedShopForJournal(null)} 
+                  className="text-gray-400 hover:text-gray-700 transition-colors p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto lined-paper pb-20">
+            <div className="flex-1 overflow-y-auto pb-20">
               {loadingJournal ? (
                 <div className="flex items-center justify-center p-24">
                   <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
                 </div>
-              ) : journalSales.length > 0 ? (
-                <SalesHistory 
-                  sales={journalSales} 
-                  shopId={selectedShopForJournal}
-                  isEmployee={true} // Lecture seule en se faisant passer pour un employé
-                />
+              ) : shopModalTab === 'journal' ? (
+                journalSales.length > 0 ? (
+                  <SalesHistory 
+                    sales={journalSales} 
+                    shopId={selectedShopForJournal}
+                    isEmployee={true} // Lecture seule en se faisant passer pour un employé
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-24 text-center">
+                    <span className="text-3xl mb-2">📖</span>
+                    <p className="font-handwritten text-lg text-gray-500 font-bold">Aucune transaction.</p>
+                  </div>
+                )
               ) : (
-                <div className="flex flex-col items-center justify-center p-24 text-center">
-                  <span className="text-3xl mb-2">📖</span>
-                  <p className="font-handwritten text-lg text-gray-500 font-bold">Aucune transaction.</p>
-                </div>
+                <AnalyticsDashboard sales={journalSales} />
               )}
             </div>
           </div>

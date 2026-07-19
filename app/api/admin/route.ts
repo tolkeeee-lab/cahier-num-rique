@@ -36,7 +36,28 @@ export async function GET(request: NextRequest) {
       // 2. Récupérer toutes les transactions pour agrégations
       const { data: sales, error: salesError } = await supabase
         .from('sales')
-        .select('id, shop_id, type, total_amount, paid_amount, status, created_at')
+        .select(`
+          id,
+          shop_id,
+          date,
+          time,
+          client_name,
+          total_amount,
+          paid_amount,
+          debt_amount,
+          status,
+          type,
+          pen_color,
+          notes,
+          category,
+          created_at,
+          sold_articles(
+            product_name,
+            quantity,
+            unit_price,
+            category
+          )
+        `)
 
       if (salesError) throw salesError
 
@@ -149,6 +170,27 @@ function buildAdminStats(users: any[], sales: any[]) {
   const globalTransactions = sales.filter(s => s.status !== 'crossed_out').length
   const globalVolumeSales = shopsList.reduce((acc, s) => acc + s.total_sales, 0)
 
+  const formattedSales = sales.map(s => ({
+    id: s.id,
+    date: s.date || (s.created_at ? s.created_at.slice(0, 10) : ''),
+    time: s.time || '',
+    client: s.client_name || s.client || 'Client anonyme',
+    total: s.total_amount ?? s.total ?? 0,
+    paid: s.paid_amount ?? s.paid ?? 0,
+    debt: s.debt_amount ?? s.debt ?? 0,
+    status: s.status,
+    type: s.type,
+    pen_color: s.pen_color || 'blue',
+    notes: s.notes || '',
+    category: s.category || 'Divers',
+    articles: (s.sold_articles || s.articles || []).map((art: any) => ({
+      name: art.product_name || art.name,
+      quantity: art.quantity,
+      unit_price: art.unit_price,
+      category: art.category || 'Divers'
+    }))
+  }))
+
   return {
     kpis: {
       totalBoutiques,
@@ -164,6 +206,7 @@ function buildAdminStats(users: any[], sales: any[]) {
       email: u.email,
       role: u.role,
       created_at: u.created_at
-    }))
+    })),
+    allSales: formattedSales
   }
 }
