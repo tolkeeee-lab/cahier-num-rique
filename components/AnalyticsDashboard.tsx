@@ -48,7 +48,6 @@ function formatPrice(price: number): string {
 export function AnalyticsDashboard({ sales }: AnalyticsDashboardProps) {
   const [period, setPeriod] = useState<'today' | '7days' | 'month' | 'all'>('all')
   const [sortBy, setSortBy] = useState<'revenue' | 'quantity' | 'frequency'>('revenue')
-  const [displayLimit, setDisplayLimit] = useState<number>(10)
 
   // Filtrer les ventes selon la période choisie
   const filteredSales = useMemo(() => {
@@ -307,20 +306,20 @@ export function AnalyticsDashboard({ sales }: AnalyticsDashboardProps) {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-[#f5f1e8] text-[9px] uppercase font-bold text-gray-400 font-mono tracking-wider border-b border-gray-200">
+          <div className="overflow-x-auto max-h-[420px] overflow-y-auto border border-gray-200 rounded-2xl">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="bg-[#f5f1e8] text-[9px] uppercase font-bold text-gray-400 font-mono tracking-wider border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                 <tr>
-                  <th className="py-3 px-4 rounded-l-xl">Rang</th>
-                  <th className="py-3 px-4">Produit</th>
-                  <th className="py-3 px-4">Catégorie</th>
-                  <th className="py-3 px-4 text-center">Quantité Vendue</th>
-                  <th className="py-3 px-4 text-center">Fréquence Ventes</th>
-                  <th className="py-3 px-4 text-right rounded-r-xl">CA Généré</th>
+                  <th className="py-3.5 px-4 bg-[#f5f1e8]">Rang</th>
+                  <th className="py-3.5 px-4 bg-[#f5f1e8]">Produit</th>
+                  <th className="py-3.5 px-4 bg-[#f5f1e8]">Catégorie</th>
+                  <th className="py-3.5 px-4 text-center bg-[#f5f1e8]">Quantité Vendue</th>
+                  <th className="py-3.5 px-4 text-center bg-[#f5f1e8]">Fréquence Ventes</th>
+                  <th className="py-3.5 px-4 text-right bg-[#f5f1e8]">CA Généré</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 font-sans">
-                {productStats.slice(0, displayLimit).map((prod, idx) => {
+              <tbody className="divide-y divide-gray-100 font-sans bg-white">
+                {productStats.map((prod, idx) => {
                   const catInfo = PRODUCT_CATEGORY_INFOS[prod.category] || PRODUCT_CATEGORY_INFOS['Divers']
                   return (
                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
@@ -359,30 +358,6 @@ export function AnalyticsDashboard({ sales }: AnalyticsDashboardProps) {
               </tbody>
             </table>
           </div>
-
-          {/* Bouton Voir Plus / Voir Moins */}
-          {productStats.length > 10 && (
-            <div className="pt-3 border-t border-gray-150 flex items-center justify-between select-none">
-              <span className="text-[10px] text-gray-400 font-mono">
-                Affichage de {Math.min(displayLimit, productStats.length)} sur {productStats.length} produits
-              </span>
-              {displayLimit < productStats.length ? (
-                <button
-                  onClick={() => setDisplayLimit(prev => prev + 10)}
-                  className="px-4 py-1.5 bg-[#f5f1e8] hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition-all"
-                >
-                  Voir les {productStats.length - displayLimit} autres produits...
-                </button>
-              ) : (
-                <button
-                  onClick={() => setDisplayLimit(10)}
-                  className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-xl transition-all"
-                >
-                  ▲ Réduire aux Top 10
-                </button>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
