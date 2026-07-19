@@ -26,6 +26,7 @@ export interface OfflineSale {
     name: string
     quantity: number
     unit_price: number
+    category?: string
   }>
   created_at: string
   is_synced: boolean
@@ -106,6 +107,85 @@ export function classifyOfflineExpense(notes: string): string {
   return 'Divers'
 }
 
+/**
+ * Classifie de manière heuristique une catégorie de produit en français par mots-clés.
+ */
+export function classifyOfflineProductCategory(productName: string): string {
+  const text = (productName || '').toLowerCase().trim()
+  if (
+    text.includes('riz') || 
+    text.includes('spaghetti') || 
+    text.includes('sucre') || 
+    text.includes('farine') || 
+    text.includes('pain') || 
+    text.includes('biscuit') || 
+    text.includes('huile') || 
+    text.includes('tomate') || 
+    text.includes('sel') || 
+    text.includes('oignon') || 
+    text.includes('nourriture') ||
+    text.includes('bonbon')
+  ) {
+    return 'Alimentation'
+  }
+  if (
+    text.includes('biere') || 
+    text.includes('beer') || 
+    text.includes('eau') || 
+    text.includes('jus') || 
+    text.includes('coca') || 
+    text.includes('fanta') || 
+    text.includes('castel') || 
+    text.includes('soda') || 
+    text.includes('boisson') || 
+    text.includes('bouteille') ||
+    text.includes('sprite') ||
+    text.includes('flag') ||
+    text.includes('heineken')
+  ) {
+    return 'Boissons'
+  }
+  if (
+    text.includes('savon') || 
+    text.includes('omo') || 
+    text.includes('shampoing') || 
+    text.includes('parfum') || 
+    text.includes('dentifrice') || 
+    text.includes('pommade') || 
+    text.includes('lotion') || 
+    text.includes('lingette') || 
+    text.includes('couche')
+  ) {
+    return 'Hygiène & Cosmétique'
+  }
+  if (
+    text.includes('tel') || 
+    text.includes('telephone') || 
+    text.includes('chargeur') || 
+    text.includes('pile') || 
+    text.includes('ampoule') || 
+    text.includes('cable') || 
+    text.includes('carte') || 
+    text.includes('credit') || 
+    text.includes('mobile') || 
+    text.includes('recharge')
+  ) {
+    return 'Électronique'
+  }
+  if (
+    text.includes('vetement') || 
+    text.includes('pagne') || 
+    text.includes('pantalon') || 
+    text.includes('chemise') || 
+    text.includes('chaussure') || 
+    text.includes('habit') || 
+    text.includes('t-shirt')
+  ) {
+    return 'Habillement'
+  }
+  return 'Divers'
+}
+
 export interface OfflineDebt {
   client_name: string
   amount: number
@@ -182,6 +262,13 @@ export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
   const sales = getOfflineSales(shopId)
   if (sale.type === 'cash_out' && !sale.category) {
     sale.category = classifyOfflineExpense(sale.notes)
+  }
+  if (sale.articles && sale.articles.length > 0) {
+    sale.articles.forEach(art => {
+      if (!art.category) {
+        art.category = classifyOfflineProductCategory(art.name)
+      }
+    })
   }
   sales.push(sale)
   writeJson(salesKey(shopId), sales)

@@ -25,6 +25,7 @@ interface ParsedSale {
     quantite_par_boite?: number
     prix_vente_unitaire?: number
     seuil_alerte?: number
+    categorie?: string
   }>
   total_facture: number
   montant_paye: number
@@ -282,6 +283,7 @@ export async function POST(request: NextRequest) {
         name: a.nom,
         quantity: a.quantite,
         unit_price: a.prix_unitaire,
+        category: a.categorie || 'Divers',
       })),
       created_at: now.toISOString(),
     }
@@ -323,6 +325,7 @@ export async function POST(request: NextRequest) {
             quantity: article.quantite,
             unit_price: article.prix_unitaire,
             subtotal: article.quantite * article.prix_unitaire,
+            category: article.categorie || 'Divers',
             created_at: now.toISOString(),
           }))
 
@@ -510,7 +513,8 @@ export async function GET(request: NextRequest) {
             sold_articles:sold_articles(
               product_name,
               quantity,
-              unit_price
+              unit_price,
+              category
             )
           `)
           .eq('shop_id', shopId)
@@ -533,6 +537,7 @@ export async function GET(request: NextRequest) {
             name: art.product_name,
             quantity: art.quantity,
             unit_price: art.unit_price,
+            category: art.category || 'Divers'
           })),
           total: sale.total_amount,
           paid: sale.paid_amount,
@@ -1006,14 +1011,15 @@ Règles STRICTES:
       "unite_vente": "nom_unite_optionnel", 
       "quantite_par_boite": nombre_optionnel, 
       "prix_vente_unitaire": nombre_optionnel, 
-      "seuil_alerte": nombre_optionnel
+      "seuil_alerte": nombre_optionnel,
+      "categorie": "nom_categorie_produit"
     }
   ],
   "total_facture": nombre,
   "montant_paye": nombre,
   "montant_dette": nombre,
   "nom_client": "nom",
-  "categorie": "nom_categorie"
+  "categorie": "nom_categorie_depense_globale"
 }
 
 2. Extraction simplifiée et conversion pour le stock :
@@ -1035,8 +1041,9 @@ Règles STRICTES:
    - jaune: Crédit Client (montant_paye=0, montant_dette=total_facture par défaut sauf si paiement partiel écrit)
 
 4. Extrais le nom de la personne si mentionné (ex: "Koffi", "Chantal"). Si absent, mets "Client anonyme".
-5. Si la couleur du Bic est rouge ('red'), tu dois choisir la 'categorie' de la dépense la plus appropriée uniquement parmi celles-ci : "Loyer" (loyer, magasin, boutique, emplacement), "Factures" (électricité, CIE, eau, SODECI, internet, crédit mobile, recharge), "Transport" (carburant, essence, taxi, transport, livraison), "Salaires" (ration, salaires, paie, main d'oeuvre), "Fournitures" (emballages, sacs, nettoyage, stylos, balai), "Repas" (nourriture, déjeuner, manger, café, pain), ou "Divers" (par défaut). Si le Bic n'est pas rouge, mets "Divers".
-6. Ne RETOURNE que du JSON valide. Pas de texte supplémentaire ni de balises Markdown.`
+5. Si le Bic est rouge ('red'), choisis la 'categorie' de la dépense globale (Loyer, Factures, Transport, Salaires, Fournitures, Repas, ou Divers). Sinon, mets "Divers".
+6. Pour CHAQUE article dans le tableau "articles", tu dois lui associer une "categorie" de produit uniquement parmi : "Alimentation" (riz, spaghetti, sucre, farine, biscuits, huile...), "Boissons" (bière, soda, eau, jus, coca, fanta, castel...), "Hygiène & Cosmétique" (savon, omo, shampoing, parfum, dentifrice...), "Électronique" (téléphone, crédit mobile, chargeur, piles...), "Habillement" (vêtement, pagne, chaussures...), ou "Divers" (autre chose).
+7. Ne RETOURNE que du JSON valide. Pas de texte supplémentaire ni de balises Markdown.`
 
   try {
     const response = await openai.chat.completions.create({
