@@ -67,6 +67,8 @@ export default function SuperAdminPage() {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('')
   const [shopSortBy, setShopSortBy] = useState<'sales' | 'transactions' | 'cash'>('sales')
+  const [shopDisplayLimit, setShopDisplayLimit] = useState<number>(10)
+  const [userDisplayLimit, setUserDisplayLimit] = useState<number>(10)
   const [selectedShopForJournal, setSelectedShopForJournal] = useState<string | null>(null)
   const [selectedShopName, setSelectedShopName] = useState('')
   const [journalSales, setJournalSales] = useState<any[]>([])
@@ -458,7 +460,7 @@ export default function SuperAdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-gray-700">
-                  {filteredShops.map((shop, idx) => (
+                  {filteredShops.slice(0, shopDisplayLimit).map((shop, idx) => (
                     <tr key={idx} className="hover:bg-gray-50 hover:bg-opacity-40 transition-colors">
                       <td className="px-5 py-3 font-mono font-bold text-[10px] text-gray-400">{shop.shop_id}</td>
                       <td className="px-5 py-3 font-bold text-gray-800">{shop.name}</td>
@@ -486,6 +488,30 @@ export default function SuperAdminPage() {
                   )}
                 </tbody>
               </table>
+
+              {/* Control de limite d'affichage des boutiques */}
+              {filteredShops.length > 10 && (
+                <div className="p-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between select-none">
+                  <span className="text-[10px] text-gray-500 font-mono">
+                    Affichage de {Math.min(shopDisplayLimit, filteredShops.length)} sur {filteredShops.length} boutiques
+                  </span>
+                  {shopDisplayLimit < filteredShops.length ? (
+                    <button
+                      onClick={() => setShopDisplayLimit(prev => prev + 10)}
+                      className="px-3.5 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 text-xs font-bold rounded-xl transition-all"
+                    >
+                      Afficher les {filteredShops.length - shopDisplayLimit} autres boutiques...
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShopDisplayLimit(10)}
+                      className="px-3.5 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-600 text-xs font-bold rounded-xl transition-all"
+                    >
+                      ▲ Réduire aux 10 premières
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : activeTab === 'users' ? (
             <div className="min-w-full overflow-hidden border border-gray-200 rounded-2xl bg-white shadow-sm">
@@ -500,7 +526,7 @@ export default function SuperAdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-gray-700">
-                  {filteredUsers.map((user, idx) => (
+                  {filteredUsers.slice(0, userDisplayLimit).map((user, idx) => (
                     <tr key={idx} className="hover:bg-gray-50 hover:bg-opacity-40 transition-colors">
                       <td className="px-5 py-3 font-bold text-gray-800">{user.name}</td>
                       <td className="px-5 py-3">{user.email}</td>
@@ -524,6 +550,30 @@ export default function SuperAdminPage() {
                   )}
                 </tbody>
               </table>
+
+              {/* Control de limite d'affichage des utilisateurs */}
+              {filteredUsers.length > 10 && (
+                <div className="p-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between select-none">
+                  <span className="text-[10px] text-gray-500 font-mono">
+                    Affichage de {Math.min(userDisplayLimit, filteredUsers.length)} sur {filteredUsers.length} utilisateurs
+                  </span>
+                  {userDisplayLimit < filteredUsers.length ? (
+                    <button
+                      onClick={() => setUserDisplayLimit(prev => prev + 10)}
+                      className="px-3.5 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 text-xs font-bold rounded-xl transition-all"
+                    >
+                      Afficher les {filteredUsers.length - userDisplayLimit} autres utilisateurs...
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setUserDisplayLimit(10)}
+                      className="px-3.5 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-600 text-xs font-bold rounded-xl transition-all"
+                    >
+                      ▲ Réduire aux 10 premiers
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="min-w-full">
