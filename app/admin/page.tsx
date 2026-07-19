@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { 
   Store, 
   Users, 
@@ -12,7 +13,8 @@ import {
   Eye, 
   X, 
   Lock,
-  RefreshCw
+  RefreshCw,
+  BookOpen
 } from 'lucide-react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
@@ -317,6 +319,14 @@ export default function SuperAdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/journal"
+              className="px-4 py-2 bg-[#064e3b] hover:bg-[#043c2d] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Mon Cahier Proprio</span>
+            </Link>
+
             <button
               onClick={() => loadAdminData()}
               title="Rafraîchir les statistiques"
