@@ -410,7 +410,6 @@ export async function POST(request: NextRequest) {
 
             const isPurchase = ['purchase_cash', 'purchase_credit'].includes(type)
             const isSale = ['cash_in', 'sale_credit'].includes(type)
-            const unit = article.unite_vente || 'unité'
             
             const unitCost = isPurchase ? article.prix_unitaire : undefined
             const unitPrice = article.prix_vente_unitaire || (isSale ? article.prix_unitaire : undefined)
@@ -429,24 +428,6 @@ export async function POST(request: NextRequest) {
                 .update(updates)
                 .eq('id', existingProd.id)
                 .eq('shop_id', shopId)
-            } else {
-              await supabase
-                .from('products')
-                .insert([
-                  {
-                    id: randomUUID(),
-                    shop_id: shopId,
-                    name: prodName,
-                    category: 'Général',
-                    unit: unit,
-                    alert_threshold: article.seuil_alerte ?? 5,
-                    initial_stock: 0,
-                    unit_cost: unitCost ?? 0,
-                    unit_price: unitPrice ?? 0,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  }
-                ])
             }
           }
         }

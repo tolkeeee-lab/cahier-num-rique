@@ -93,6 +93,8 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
   const [showOrphans, setShowOrphans] = useState(false)
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [deductPastSales, setDeductPastSales] = useState(false)
+  const [orphanPastSales, setOrphanPastSales] = useState(0)
 
   // ── Chargement ──────────────────────────────────────────────────────────────
 
@@ -181,6 +183,16 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
   // ── Actions ─────────────────────────────────────────────────────────────────
 
   const openAddModal = (prefill?: Partial<typeof EMPTY_FORM>) => {
+    const name = prefill?.name || ''
+    const matchedOrphan = orphans.find(o => o.name.toLowerCase().trim() === name.toLowerCase().trim())
+    if (matchedOrphan && matchedOrphan.total_out > 0) {
+      setOrphanPastSales(matchedOrphan.total_out)
+      setDeductPastSales(false) // Par défaut, on repart à zéro
+    } else {
+      setOrphanPastSales(0)
+      setDeductPastSales(false)
+    }
+
     setFormData({ ...EMPTY_FORM, ...(prefill || {}) })
     setEditingItem(null)
     setShowAddModal(true)
@@ -206,7 +218,11 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     try {
       if (online) {
         const method = editingItem ? 'PATCH' : 'POST'
-        const body = editingItem ? { id: editingItem.id, ...formData } : formData
+        const now = deductPastSales ? '2000-01-01T00:00:00.000Z' : new Date().toISOString()
+        const body = editingItem 
+          ? { id: editingItem.id, ...formData } 
+          : { ...formData, created_at: now }
+
         const response = await fetch('/api/stock', {
           method,
           headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
@@ -218,7 +234,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
         }
       } else {
         // Mode hors-ligne — CRUD local
-        const now = new Date().toISOString()
+        const now = deductPastSales ? '2000-01-01T00:00:00.000Z' : new Date().toISOString()
         if (editingItem && !editingItem.is_orphan) {
           saveOfflineProduct(shopId, { ...editingItem, ...formData })
         } else {
@@ -600,6 +616,42 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                   autoFocus
                 />
               </div>
+
+              {/* Ventes antérieures détectées (Orphelin) */}
+              {orphanPastSales > 0 && !editingItem && (
+                <div className="bg-[#fffdf2] border border-amber-250 rounded-2xl p-3.5 text-xs space-y-2 select-none shadow-sm">
+                  <div className="flex gap-2 items-start text-amber-800">
+                    <span className="text-base flex-shrink-0">⚠️</span>
+                    <div className="leading-snug">
+                      <p className="font-bold text-[11px]">Ventes passées détectées :</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Ce produit a été vendu <strong className="text-amber-900 font-mono">{orphanPastSales} fois</strong> avant d'être officiellement ajouté au catalogue.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 pt-2 border-t border-amber-100 font-sans text-gray-700">
+                    <label className="flex items-center gap-2 cursor-pointer text-[10px] font-medium">
+                      <input
+                        type="radio"
+                        name="deductPastSales"
+                        checked={!deductPastSales}
+                        onChange={() => setDeductPastSales(false)}
+                        className="text-gray-800 focus:ring-gray-800"
+                      />
+                      <span>Repartir à zéro (Ignorer les ventes passées)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-[10px] font-medium">
+                      <input
+                        type="radio"
+                        name="deductPastSales"
+                        checked={deductPastSales}
+                        onChange={() => setDeductPastSales(true)}
+                        className="text-gray-800 focus:ring-gray-800"
+                      />
+                      <span>Déduire du stock initial ({orphanPastSales} ventes)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {/* Catégorie + Unité */}
               <div className="grid grid-cols-2 gap-3">

@@ -267,7 +267,7 @@ export function computeOfflineStock(
           type: 'in', 
           quantity: article.quantity, 
           unit_price: article.unit_price, 
-          notes: sale.notes 
+          notes: `${article.quantity} ${article.name} à ${article.unit_price} F` 
         })
       } else {
         stockMap[key].total_out += article.quantity
@@ -277,7 +277,7 @@ export function computeOfflineStock(
           type: 'out', 
           quantity: article.quantity, 
           unit_price: article.unit_price, 
-          notes: sale.notes 
+          notes: `${article.quantity} ${article.name} à ${article.unit_price} F` 
         })
       }
     }

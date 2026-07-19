@@ -62,7 +62,7 @@ export async function GET(request: Request) {
             type: 'in', 
             quantity: article.quantity, 
             unit_price: article.unit_price, 
-            notes: sale.notes || '', 
+            notes: `${article.quantity} ${article.product_name} à ${article.unit_price} F`, 
             sale_type: sale.type 
           })
         } else {
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
             type: 'out', 
             quantity: article.quantity, 
             unit_price: article.unit_price, 
-            notes: sale.notes || '', 
+            notes: `${article.quantity} ${article.product_name} à ${article.unit_price} F`, 
             sale_type: sale.type 
           })
         }
@@ -145,26 +145,32 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json()
-    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name } = body
+    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, created_at } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Le nom du produit est obligatoire' }, { status: 400 })
     }
 
+    const insertData: Record<string, any> = {
+      shop_id: shopId,
+      name: name.trim(),
+      category: category || 'Général',
+      unit: unit || 'unité',
+      alert_threshold: alert_threshold ?? 5,
+      initial_stock: initial_stock ?? 0,
+      unit_cost: unit_cost ?? 0,
+      unit_price: unit_price ?? 0,
+      multiplier: multiplier ?? 1,
+      packaging_name: packaging_name || '',
+    }
+
+    if (created_at) {
+      insertData.created_at = created_at
+    }
+
     const { data, error } = await supabase
       .from('products')
-      .insert({
-        shop_id: shopId,
-        name: name.trim(),
-        category: category || 'Général',
-        unit: unit || 'unité',
-        alert_threshold: alert_threshold ?? 5,
-        initial_stock: initial_stock ?? 0,
-        unit_cost: unit_cost ?? 0,
-        unit_price: unit_price ?? 0,
-        multiplier: multiplier ?? 1,
-        packaging_name: packaging_name || '',
-      })
+      .insert(insertData)
       .select()
       .single()
 
