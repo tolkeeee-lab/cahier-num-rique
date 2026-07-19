@@ -152,7 +152,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, onError }:
 
       <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full space-y-6">
         {/* Accès Super Admin pour les comptes d'administration autorisés */}
-        {(userEmail === 'tolkeeee@gmail.com' || userEmail === 'admin@cahier.com') && (
+        {(userEmail === 'tolkeeee@gmail.com' || userEmail === 'tolkeeeee@gmail.com' || userEmail === 'admin@cahier.com') && (
           <div className="bg-[#fffdf9] border border-rose-250 rounded-[28px] p-5 shadow-sm select-none">
             <div className="flex items-start gap-3">
               <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 flex-shrink-0">

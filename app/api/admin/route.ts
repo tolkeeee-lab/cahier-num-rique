@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const adminEmail = request.headers.get('x-admin-email') || ''
     
     // En production, on restreint aux emails de confiance
-    const isAuthorized = adminEmail.endsWith('@cahier.admin') || adminEmail === 'admin@cahier.com' || adminEmail === 'tolkeeee@gmail.com'
+    const isAuthorized = adminEmail.endsWith('@cahier.admin') || adminEmail === 'admin@cahier.com' || adminEmail === 'tolkeeee@gmail.com' || adminEmail === 'tolkeeeee@gmail.com'
     
     // Bypass en mode développement local
     const isDev = process.env.NODE_ENV === 'development'
