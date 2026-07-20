@@ -123,7 +123,7 @@ export function ShoppingListManager({
       return
     }
 
-    const recommendedQty = Math.max(5, (prod.alert_threshold * 2) - prod.initial_stock)
+    const recommendedQty = Math.max(1, (prod.alert_threshold * 2) - prod.initial_stock)
 
     const newItem: ShoppingItem = {
       id: `auto_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -144,7 +144,7 @@ export function ShoppingListManager({
 
     lowStockProducts.forEach(prod => {
       if (!existingNames.has(prod.name.toLowerCase())) {
-        const recommendedQty = Math.max(5, (prod.alert_threshold * 2) - prod.initial_stock)
+        const recommendedQty = Math.max(1, (prod.alert_threshold * 2) - prod.initial_stock)
         newItemsToAdd.push({
           id: `auto_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           name: prod.name,
@@ -159,6 +159,29 @@ export function ShoppingListManager({
     if (newItemsToAdd.length > 0) {
       saveItems([...items, ...newItemsToAdd])
     }
+  }
+
+  // Modifier la quantité d'un item
+  const updateQuantity = (id: string, delta: number) => {
+    saveItems(items.map(i => {
+      if (i.id === id) {
+        const newQty = Math.max(1, i.quantity + delta)
+        return { ...i, quantity: newQty }
+      }
+      return i
+    }))
+  }
+
+  // Définir directement la quantité
+  const setDirectQuantity = (id: string, newQty: number) => {
+    const qty = Math.max(1, newQty || 1)
+    saveItems(items.map(i => i.id === id ? { ...i, quantity: qty } : i))
+  }
+
+  // Définir le prix unitaire grossiste
+  const setDirectUnitCost = (id: string, newCost: number) => {
+    const cost = Math.max(0, newCost || 0)
+    saveItems(items.map(i => i.id === id ? { ...i, unitCost: cost } : i))
   }
 
   // Cocher / Décocher
@@ -409,16 +432,16 @@ export function ShoppingListManager({
                 return (
                   <div
                     key={item.id}
-                    onClick={() => toggleCheck(item.id)}
-                    className={`py-3.5 px-3 flex items-center justify-between cursor-pointer rounded-xl transition-colors select-none ${
-                      item.isChecked ? 'bg-emerald-50 bg-opacity-40' : 'hover:bg-gray-50'
+                    className={`py-3 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl transition-colors ${
+                      item.isChecked ? 'bg-emerald-50 bg-opacity-50 border border-emerald-200' : 'bg-white hover:bg-gray-50 border border-transparent'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    {/* Checkbox et Nom */}
+                    <div className="flex items-center gap-3 select-none flex-grow">
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); toggleCheck(item.id) }}
-                        className="text-gray-400 hover:text-emerald-600 transition-colors"
+                        onClick={() => toggleCheck(item.id)}
+                        className="text-gray-400 hover:text-emerald-600 transition-colors flex-shrink-0"
                       >
                         {item.isChecked ? (
                           <CheckSquare className="w-5 h-5 text-emerald-600" />
@@ -437,20 +460,58 @@ export function ShoppingListManager({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <div className="text-right font-mono text-xs">
-                        <span className="font-bold text-gray-900">{item.quantity} u</span>
-                        {item.unitCost > 0 && (
-                          <span className="text-gray-500 block text-[10px]">
-                            à {formatPrice(item.unitCost)} = <strong className="text-gray-800">{formatPrice(itemTotal)}</strong>
-                          </span>
-                        )}
+                    {/* Contrôles de Quantité et Prix Achat Grossiste */}
+                    <div className="flex items-center gap-3 justify-between sm:justify-end flex-wrap">
+                      {/* Contrôle Quantité */}
+                      <div className="flex items-center gap-1 bg-[#f5f1e8] border border-gray-200 rounded-xl p-1">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.id, -1)}
+                          className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-white rounded-lg transition-colors"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => setDirectQuantity(item.id, parseInt(e.target.value) || 1)}
+                          className="w-10 text-center text-xs font-bold font-mono bg-transparent outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.id, 1)}
+                          className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-white rounded-lg transition-colors"
+                        >
+                          +
+                        </button>
                       </div>
 
+                      {/* Contrôle Prix Grossiste à l'unité */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] font-bold uppercase text-gray-400 font-mono">Prix Achat:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="Prix Unit"
+                          value={item.unitCost === 0 ? '' : item.unitCost}
+                          onChange={(e) => setDirectUnitCost(item.id, parseInt(e.target.value) || 0)}
+                          className="w-24 px-2 py-1 bg-[#faf7f0] border border-gray-250 rounded-xl text-xs font-bold font-mono text-gray-800 outline-none focus:border-gray-400"
+                        />
+                        <span className="text-[10px] font-bold text-gray-500 font-mono">F</span>
+                      </div>
+
+                      {/* Sous-total */}
+                      <div className="text-right font-mono text-xs min-w-[80px]">
+                        <span className="font-bold text-emerald-800">{formatPrice(itemTotal)}</span>
+                      </div>
+
+                      {/* Bouton Supprimer */}
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); handleDelete(item.id) }}
+                        onClick={() => handleDelete(item.id)}
                         className="p-1 text-gray-300 hover:text-red-500 rounded transition-colors"
+                        title="Retirer de la liste"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
