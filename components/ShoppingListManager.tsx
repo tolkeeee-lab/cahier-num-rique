@@ -8,6 +8,10 @@ interface ShoppingItem {
   name: string
   quantity: number
   unitCost: number
+  isWholesale?: boolean
+  wholesaleQty?: number
+  wholesalePrice?: number
+  itemsPerWholesale?: number
   isAutoSuggested?: boolean
   isChecked: boolean
 }
@@ -41,10 +45,20 @@ export function ShoppingListManager({
 }: ShoppingListManagerProps) {
   const [items, setItems] = useState<ShoppingItem[]>([])
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([])
+  
   // Formulaire ajout manuel
   const [name, setName] = useState('')
+  const [isWholesaleMode, setIsWholesaleMode] = useState(false)
+  
+  // Mode unitaire
   const [quantity, setQuantity] = useState('1')
   const [unitCost, setUnitCost] = useState('')
+
+  // Mode gros / carton
+  const [wholesaleQty, setWholesaleQty] = useState('1') // Ex: 2 cartons
+  const [wholesalePrice, setWholesalePrice] = useState('') // Ex: 18000 F par carton
+  const [itemsPerWholesale, setItemsPerWholesale] = useState('12') // Ex: 12 unités par carton
+
   const [converting, setConverting] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
@@ -94,26 +108,54 @@ export function ShoppingListManager({
     }
   }
 
-  // Ajouter un item manuellement
+  // Ajouter un item manuellement avec calcul automatique de gros
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
 
-    const qtyNum = Math.max(1, parseInt(quantity) || 1)
-    const costNum = Math.max(0, parseInt(unitCost) || 0)
+    let newItem: ShoppingItem
 
-    const newItem: ShoppingItem = {
-      id: `shop_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      name: name.trim(),
-      quantity: qtyNum,
-      unitCost: costNum,
-      isChecked: false
+    if (isWholesaleMode) {
+      const wQty = Math.max(1, parseInt(wholesaleQty) || 1)
+      const wPrice = Math.max(0, parseInt(wholesalePrice) || 0)
+      const itemsPerW = Math.max(1, parseInt(itemsPerWholesale) || 1)
+
+      // Machine fait le reste des calculs :
+      const calculatedTotalQuantity = wQty * itemsPerW
+      const calculatedUnitCost = itemsPerW > 0 ? Math.round(wPrice / itemsPerW) : 0
+
+      newItem = {
+        id: `shop_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: name.trim(),
+        quantity: calculatedTotalQuantity,
+        unitCost: calculatedUnitCost,
+        isWholesale: true,
+        wholesaleQty: wQty,
+        wholesalePrice: wPrice,
+        itemsPerWholesale: itemsPerW,
+        isChecked: false
+      }
+    } else {
+      const qtyNum = Math.max(1, parseInt(quantity) || 1)
+      const costNum = Math.max(0, parseInt(unitCost) || 0)
+
+      newItem = {
+        id: `shop_item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: name.trim(),
+        quantity: qtyNum,
+        unitCost: costNum,
+        isWholesale: false,
+        isChecked: false
+      }
     }
 
     saveItems([...items, newItem])
     setName('')
     setQuantity('1')
     setUnitCost('')
+    setWholesaleQty('1')
+    setWholesalePrice('')
+    setItemsPerWholesale('12')
   }
 
   // Ajouter une suggestion d'alerte de stock à la liste de courses
@@ -353,61 +395,185 @@ export function ShoppingListManager({
           </div>
         )}
 
-        {/* Section 2 : Formulaire d'ajout rapide d'un article */}
-        <div className="bg-white border border-gray-200 rounded-[28px] p-5 shadow-sm">
-          <h3 className="font-handwritten text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-            ✏️ Ajouter un article à la liste
-          </h3>
-          <form onSubmit={handleAddItem} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-            <div className="sm:col-span-5">
-              <label className="block text-[9px] uppercase font-bold text-gray-400 font-sans tracking-wider mb-1">
-                Article / Produit
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Ex: Sacs emballage 10kg, Huile Dinor..."
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-200 rounded-xl text-xs outline-none focus:border-gray-400"
-              />
-            </div>
+        {/* Section 2 : Formulaire d'ajout d'un article (Unité ou Gros Carton/Sac) */}
+        <div className="bg-white border border-gray-200 rounded-[28px] p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-150 pb-3">
+            <h3 className="font-handwritten text-lg font-bold text-gray-800 flex items-center gap-2">
+              ✏️ Ajouter un article à la liste
+            </h3>
 
-            <div className="sm:col-span-3">
-              <label className="block text-[9px] uppercase font-bold text-gray-400 font-sans tracking-wider mb-1">
-                Quantité
-              </label>
-              <input
-                type="number"
-                min="1"
-                required
-                value={quantity}
-                onChange={e => setQuantity(e.target.value)}
-                className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-200 rounded-xl text-xs font-mono font-bold outline-none focus:border-gray-400"
-              />
-            </div>
-
-            <div className="sm:col-span-4 flex gap-2">
-              <div className="flex-grow">
-                <label className="block text-[9px] uppercase font-bold text-gray-400 font-sans tracking-wider mb-1">
-                  Prix unit. (Estimé)
-                </label>
-                <input
-                  type="number"
-                  placeholder="0 F"
-                  value={unitCost}
-                  onChange={e => setUnitCost(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-gray-400"
-                />
-              </div>
-
+            {/* Commutateur Mode Unitaire vs Mode Gros */}
+            <div className="flex bg-[#f5f1e8] p-1 rounded-xl border border-gray-250 select-none self-start sm:self-auto">
               <button
-                type="submit"
-                className="px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center transition-all flex-shrink-0"
+                type="button"
+                onClick={() => setIsWholesaleMode(false)}
+                className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all ${
+                  !isWholesaleMode ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                <Plus className="w-4 h-4" />
+                🛍️ À l'Unité
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsWholesaleMode(true)}
+                className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all ${
+                  isWholesaleMode ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                📦 En Gros / Carton (Calcul Automatique)
               </button>
             </div>
+          </div>
+
+          <form onSubmit={handleAddItem} className="space-y-4 font-sans">
+            {isWholesaleMode ? (
+              /* --- MODE GROS / CARTON / SAC --- */
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                  <div className="sm:col-span-4">
+                    <label className="block text-[9px] uppercase font-bold text-gray-500 font-sans tracking-wider mb-1">
+                      Nom du Produit / Carton
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Cartons Huile Dinor, Sacs Riz..."
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-250 rounded-xl text-xs font-semibold outline-none focus:border-gray-400"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[9px] uppercase font-bold text-amber-800 font-sans tracking-wider mb-1">
+                      Nb Cartons/Sacs
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={wholesaleQty}
+                      onChange={e => setWholesaleQty(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#fffbeb] border border-amber-300 rounded-xl text-xs font-mono font-bold outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <label className="block text-[9px] uppercase font-bold text-amber-800 font-sans tracking-wider mb-1">
+                      Prix 1 Carton/Sac (FCFA)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      placeholder="Ex: 18000"
+                      value={wholesalePrice}
+                      onChange={e => setWholesalePrice(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#fffbeb] border border-amber-300 rounded-xl text-xs font-mono font-bold outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-3">
+                    <label className="block text-[9px] uppercase font-bold text-gray-500 font-sans tracking-wider mb-1">
+                      Unités par Carton/Sac
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      placeholder="Ex: 12"
+                      value={itemsPerWholesale}
+                      onChange={e => setItemsPerWholesale(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#faf7f0] border border-gray-250 rounded-xl text-xs font-mono font-bold outline-none focus:border-gray-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Bandeau Live des Calculs Automatiques réalisés par la machine */}
+                {wholesalePrice && itemsPerWholesale && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex flex-wrap items-center justify-between text-xs font-mono text-amber-950 font-bold gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span>⚙️ Calcul Machine :</span>
+                      <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg">
+                        {(parseInt(wholesaleQty) || 1) * (parseInt(itemsPerWholesale) || 1)} unités au stock
+                      </span>
+                      <span>•</span>
+                      <span className="text-blue-700 bg-blue-100 px-2 py-0.5 rounded-lg">
+                        {formatPrice(Math.round((parseInt(wholesalePrice) || 0) / (parseInt(itemsPerWholesale) || 1)))} / unité
+                      </span>
+                    </div>
+
+                    <div className="text-right font-sans">
+                      <span className="text-[10px] text-gray-500 uppercase block">Total Achat Caisse</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {formatPrice((parseInt(wholesaleQty) || 1) * (parseInt(wholesalePrice) || 0))}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Ajouter cet achat en gros (Calcul Automatique)</span>
+                </button>
+              </div>
+            ) : (
+              /* --- MODE UNITAIRE STANDARD --- */
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                <div className="sm:col-span-5">
+                  <label className="block text-[9px] uppercase font-bold text-gray-400 font-sans tracking-wider mb-1">
+                    Article / Produit
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Sacs emballage 10kg, Bouteille Gaz..."
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-200 rounded-xl text-xs outline-none focus:border-gray-400"
+                  />
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label className="block text-[9px] uppercase font-bold text-gray-400 font-sans tracking-wider mb-1">
+                    Quantité d'unités
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={quantity}
+                    onChange={e => setQuantity(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-200 rounded-xl text-xs font-mono font-bold outline-none focus:border-gray-400"
+                  />
+                </div>
+
+                <div className="sm:col-span-4 flex gap-2">
+                  <div className="flex-grow">
+                    <label className="block text-[9px] uppercase font-bold text-gray-400 font-sans tracking-wider mb-1">
+                      Prix Achat Unit. (Estimé)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="0 F"
+                      value={unitCost}
+                      onChange={e => setUnitCost(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-gray-400"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center transition-all flex-shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
         </div>
 
@@ -451,11 +617,23 @@ export function ShoppingListManager({
                       </button>
 
                       <div className={item.isChecked ? 'line-through text-gray-400' : 'text-gray-800'}>
-                        <span className="font-bold text-xs">{item.name}</span>
-                        {item.isAutoSuggested && (
-                          <span className="ml-2 text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md font-sans font-bold no-underline inline-block">
-                            Alerte Stock
-                          </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-xs">{item.name}</span>
+                          {item.isAutoSuggested && (
+                            <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md font-sans font-bold no-underline">
+                              Alerte Stock
+                            </span>
+                          )}
+                          {item.isWholesale && (
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md font-sans font-bold no-underline">
+                              📦 Achat Gros
+                            </span>
+                          )}
+                        </div>
+                        {item.isWholesale && item.wholesaleQty && item.wholesalePrice && item.itemsPerWholesale && (
+                          <div className="text-[10px] text-amber-900 font-mono font-bold mt-0.5 no-underline">
+                            📦 {item.wholesaleQty} carton{item.wholesaleQty > 1 ? 's' : ''} de {item.itemsPerWholesale} à {formatPrice(item.wholesalePrice)}/carton ➔ Total {item.quantity} un. ({formatPrice(item.unitCost)}/un.)
+                          </div>
                         )}
                       </div>
                     </div>
