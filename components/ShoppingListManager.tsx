@@ -226,6 +226,67 @@ export function ShoppingListManager({
     saveItems(items.map(i => i.id === id ? { ...i, unitCost: cost } : i))
   }
 
+  // Basculer le mode gros pour un article existant
+  const toggleWholesaleForItem = (id: string) => {
+    saveItems(items.map(item => {
+      if (item.id === id) {
+        const nextState = !item.isWholesale
+        const wQty = item.wholesaleQty || 1
+        const wPrice = item.wholesalePrice || (item.unitCost * 12) || 12000
+        const itemsPerW = item.itemsPerWholesale || 12
+
+        if (nextState) {
+          const calculatedQty = wQty * itemsPerW
+          const calculatedUnitCost = itemsPerW > 0 ? Math.round(wPrice / itemsPerW) : item.unitCost
+
+          return {
+            ...item,
+            isWholesale: true,
+            wholesaleQty: wQty,
+            wholesalePrice: wPrice,
+            itemsPerWholesale: itemsPerW,
+            quantity: calculatedQty,
+            unitCost: calculatedUnitCost
+          }
+        } else {
+          return {
+            ...item,
+            isWholesale: false
+          }
+        }
+      }
+      return item
+    }))
+  }
+
+  // Mettre à jour les paramètres de gros pour un article existant
+  const updateWholesaleParamsForItem = (
+    id: string,
+    params: { wholesaleQty?: number; wholesalePrice?: number; itemsPerWholesale?: number }
+  ) => {
+    saveItems(items.map(item => {
+      if (item.id === id) {
+        const wQty = params.wholesaleQty !== undefined ? Math.max(1, params.wholesaleQty) : (item.wholesaleQty || 1)
+        const wPrice = params.wholesalePrice !== undefined ? Math.max(0, params.wholesalePrice) : (item.wholesalePrice || 0)
+        const itemsPerW = params.itemsPerWholesale !== undefined ? Math.max(1, params.itemsPerWholesale) : (item.itemsPerWholesale || 12)
+
+        const calculatedQty = wQty * itemsPerW
+        const calculatedUnitCost = itemsPerW > 0 ? Math.round(wPrice / itemsPerW) : item.unitCost
+
+        return {
+          ...item,
+          isWholesale: true,
+          wholesaleQty: wQty,
+          wholesalePrice: wPrice,
+          itemsPerWholesale: itemsPerW,
+          quantity: calculatedQty,
+          unitCost: calculatedUnitCost
+        }
+      }
+      return item
+    }))
+  }
+
   // Cocher / Décocher
   const toggleCheck = (id: string) => {
     saveItems(items.map(i => i.id === id ? { ...i, isChecked: !i.isChecked } : i))
@@ -598,102 +659,160 @@ export function ShoppingListManager({
                 return (
                   <div
                     key={item.id}
-                    className={`py-3 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl transition-colors ${
-                      item.isChecked ? 'bg-emerald-50 bg-opacity-50 border border-emerald-200' : 'bg-white hover:bg-gray-50 border border-transparent'
+                    className={`py-3 px-3 flex flex-col gap-2 rounded-2xl transition-colors ${
+                      item.isChecked ? 'bg-emerald-50 bg-opacity-50 border border-emerald-200' : 'bg-white hover:bg-gray-50 border border-gray-150'
                     }`}
                   >
-                    {/* Checkbox et Nom */}
-                    <div className="flex items-center gap-3 select-none flex-grow">
-                      <button
-                        type="button"
-                        onClick={() => toggleCheck(item.id)}
-                        className="text-gray-400 hover:text-emerald-600 transition-colors flex-shrink-0"
-                      >
-                        {item.isChecked ? (
-                          <CheckSquare className="w-5 h-5 text-emerald-600" />
-                        ) : (
-                          <Square className="w-5 h-5 text-gray-300" />
-                        )}
-                      </button>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      {/* Checkbox et Nom */}
+                      <div className="flex items-center gap-3 select-none flex-grow">
+                        <button
+                          type="button"
+                          onClick={() => toggleCheck(item.id)}
+                          className="text-gray-400 hover:text-emerald-600 transition-colors flex-shrink-0"
+                        >
+                          {item.isChecked ? (
+                            <CheckSquare className="w-5 h-5 text-emerald-600" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-300" />
+                          )}
+                        </button>
 
-                      <div className={item.isChecked ? 'line-through text-gray-400' : 'text-gray-800'}>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-xs">{item.name}</span>
-                          {item.isAutoSuggested && (
-                            <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md font-sans font-bold no-underline">
-                              Alerte Stock
-                            </span>
-                          )}
-                          {item.isWholesale && (
-                            <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md font-sans font-bold no-underline">
-                              📦 Achat Gros
-                            </span>
-                          )}
-                        </div>
-                        {item.isWholesale && item.wholesaleQty && item.wholesalePrice && item.itemsPerWholesale && (
-                          <div className="text-[10px] text-amber-900 font-mono font-bold mt-0.5 no-underline">
-                            📦 {item.wholesaleQty} carton{item.wholesaleQty > 1 ? 's' : ''} de {item.itemsPerWholesale} à {formatPrice(item.wholesalePrice)}/carton ➔ Total {item.quantity} un. ({formatPrice(item.unitCost)}/un.)
+                        <div className={item.isChecked ? 'line-through text-gray-400' : 'text-gray-800'}>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-xs">{item.name}</span>
+                            {item.isAutoSuggested && (
+                              <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md font-sans font-bold no-underline">
+                                Alerte Stock
+                              </span>
+                            )}
+                            {item.isWholesale && (
+                              <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md font-sans font-bold no-underline">
+                                📦 Achat Gros
+                              </span>
+                            )}
                           </div>
-                        )}
+                        </div>
+                      </div>
+
+                      {/* Contrôles de Quantité, Prix Grossiste et Bouton Gros */}
+                      <div className="flex items-center gap-2.5 justify-between sm:justify-end flex-wrap">
+                        {/* Bouton pour Basculer en Mode Gros sur cet article */}
+                        <button
+                          type="button"
+                          onClick={() => toggleWholesaleForItem(item.id)}
+                          className={`px-2 py-1 text-[10px] font-bold rounded-xl border transition-all flex items-center gap-1 ${
+                            item.isWholesale 
+                              ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                              : 'bg-[#f5f1e8] text-gray-700 border-gray-250 hover:bg-gray-200'
+                          }`}
+                          title="Calculer le prix par carton / gros"
+                        >
+                          <span>📦 {item.isWholesale ? 'Mode Gros Actif' : 'Calculer en Gros'}</span>
+                        </button>
+
+                        {/* Contrôle Quantité Unitaire */}
+                        <div className="flex items-center gap-1 bg-[#f5f1e8] border border-gray-200 rounded-xl p-1">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.id, -1)}
+                            className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-white rounded-lg transition-colors"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => setDirectQuantity(item.id, parseInt(e.target.value) || 1)}
+                            className="w-10 text-center text-xs font-bold font-mono bg-transparent outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.id, 1)}
+                            className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-white rounded-lg transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* Contrôle Prix Grossiste à l'unité */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-bold uppercase text-gray-400 font-mono">Prix Unit:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="Prix Unit"
+                            value={item.unitCost === 0 ? '' : item.unitCost}
+                            onChange={(e) => setDirectUnitCost(item.id, parseInt(e.target.value) || 0)}
+                            className="w-20 px-2 py-1 bg-[#faf7f0] border border-gray-250 rounded-xl text-xs font-bold font-mono text-gray-800 outline-none focus:border-gray-400"
+                          />
+                          <span className="text-[10px] font-bold text-gray-500 font-mono">F</span>
+                        </div>
+
+                        {/* Sous-total */}
+                        <div className="text-right font-mono text-xs min-w-[70px]">
+                          <span className="font-bold text-emerald-800">{formatPrice(itemTotal)}</span>
+                        </div>
+
+                        {/* Bouton Supprimer */}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item.id)}
+                          className="p-1 text-gray-300 hover:text-red-500 rounded transition-colors"
+                          title="Retirer de la liste"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
 
-                    {/* Contrôles de Quantité et Prix Achat Grossiste */}
-                    <div className="flex items-center gap-3 justify-between sm:justify-end flex-wrap">
-                      {/* Contrôle Quantité */}
-                      <div className="flex items-center gap-1 bg-[#f5f1e8] border border-gray-200 rounded-xl p-1">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, -1)}
-                          className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-white rounded-lg transition-colors"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => setDirectQuantity(item.id, parseInt(e.target.value) || 1)}
-                          className="w-10 text-center text-xs font-bold font-mono bg-transparent outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, 1)}
-                          className="w-6 h-6 flex items-center justify-center text-xs font-bold text-gray-600 hover:bg-white rounded-lg transition-colors"
-                        >
-                          +
-                        </button>
-                      </div>
+                    {/* Mini-calculateur Gros interactif déplié sous l'article */}
+                    {item.isWholesale && (
+                      <div className="mt-1 pt-2 border-t border-amber-200 border-dashed bg-amber-50 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-sans">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-[#78350f] text-[10px] uppercase">⚙️ Calcul par Carton/Sac :</span>
+                          
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold text-gray-500 font-mono">Cartons:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.wholesaleQty || 1}
+                              onChange={(e) => updateWholesaleParamsForItem(item.id, { wholesaleQty: parseInt(e.target.value) || 1 })}
+                              className="w-12 px-1.5 py-0.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                            />
+                          </div>
 
-                      {/* Contrôle Prix Grossiste à l'unité */}
-                      <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-bold uppercase text-gray-400 font-mono">Prix Achat:</span>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="Prix Unit"
-                          value={item.unitCost === 0 ? '' : item.unitCost}
-                          onChange={(e) => setDirectUnitCost(item.id, parseInt(e.target.value) || 0)}
-                          className="w-24 px-2 py-1 bg-[#faf7f0] border border-gray-250 rounded-xl text-xs font-bold font-mono text-gray-800 outline-none focus:border-gray-400"
-                        />
-                        <span className="text-[10px] font-bold text-gray-500 font-mono">F</span>
-                      </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold text-gray-500 font-mono">Prix/Carton:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={item.wholesalePrice || 0}
+                              onChange={(e) => updateWholesaleParamsForItem(item.id, { wholesalePrice: parseInt(e.target.value) || 0 })}
+                              className="w-20 px-1.5 py-0.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                            />
+                            <span className="text-[10px] font-mono text-gray-500">F</span>
+                          </div>
 
-                      {/* Sous-total */}
-                      <div className="text-right font-mono text-xs min-w-[80px]">
-                        <span className="font-bold text-emerald-800">{formatPrice(itemTotal)}</span>
-                      </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold text-gray-500 font-mono">Unités/Carton:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.itemsPerWholesale || 12}
+                              onChange={(e) => updateWholesaleParamsForItem(item.id, { itemsPerWholesale: parseInt(e.target.value) || 1 })}
+                              className="w-12 px-1.5 py-0.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                            />
+                          </div>
+                        </div>
 
-                      {/* Bouton Supprimer */}
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item.id)}
-                        className="p-1 text-gray-300 hover:text-red-500 rounded transition-colors"
-                        title="Retirer de la liste"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                        <div className="text-right font-mono text-[10px] text-amber-950 font-bold bg-white px-2 py-1 rounded-lg border border-amber-250">
+                          Machine : {item.quantity} unités en stock à {formatPrice(item.unitCost)} / unité
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
