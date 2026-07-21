@@ -122,6 +122,12 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
   const [menuFilter, setMenuFilter] = useState<'all' | 'cuisine' | 'cafeteria' | 'boisson'>('all')
   const [menuItems, setMenuItems] = useState<MenuItem[]>(DEFAULT_MENU_ITEMS)
 
+  // Formulaire d'ajout rapide d'un plat au menu carte
+  const [showAddMenuForm, setShowAddMenuForm] = useState(false)
+  const [newPlatName, setNewPlatName] = useState('')
+  const [newPlatPrice, setNewPlatPrice] = useState('')
+  const [newPlatCat, setNewPlatCat] = useState<'cuisine' | 'cafeteria' | 'boisson'>('cuisine')
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -155,6 +161,50 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
       console.warn('Fallback au menu modèle démo:', e)
     }
   }, [shopId])
+
+  // Fonction d'ajout rapide d'un nouveau plat/boisson au menu carte
+  const handleCreateQuickMenuItem = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newPlatName.trim()) return
+
+    const priceNum = Math.max(0, parseInt(newPlatPrice) || 0)
+    const emojiSymbol = newPlatCat === 'boisson' ? '🥤' : newPlatCat === 'cuisine' ? '🍲' : '☕'
+
+    const newItem: MenuItem = {
+      id: `menu_custom_${Date.now()}`,
+      name: newPlatName.trim(),
+      price: priceNum,
+      category: newPlatCat,
+      emoji: emojiSymbol
+    }
+
+    setMenuItems(prev => [newItem, ...prev])
+
+    // Essayer de persister dans la table des produits / stock
+    try {
+      await fetch('/api/stock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-shop-id': shopId
+        },
+        body: JSON.stringify({
+          name: newPlatName.trim(),
+          unit_price: priceNum,
+          unit_cost: Math.round(priceNum * 0.6),
+          initial_stock: 100,
+          alert_threshold: 5,
+          category: newPlatCat === 'boisson' ? 'Boissons' : newPlatCat === 'cuisine' ? 'Cuisine' : 'Cafétéria'
+        })
+      })
+    } catch (err) {
+      console.warn('Sauvegarde stock non bloquante:', err)
+    }
+
+    setNewPlatName('')
+    setNewPlatPrice('')
+    setShowAddMenuForm(false)
+  }
 
   useEffect(() => {
     fetchStockMenu()
@@ -333,7 +383,7 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
       {showMenuGrid && (
         <div className="bg-[#fffdf9] border border-amber-250 rounded-[28px] p-5 shadow-sm space-y-3 animate-fade-in select-none">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 border-dashed pb-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Sparkles className="w-4 h-4 text-amber-600" />
               <h4 className="font-handwritten text-lg font-bold text-gray-800">
                 🍽️ Menu Carte & Touches Rapides (1-Tap)
@@ -341,6 +391,15 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
               <span className="text-[9px] bg-amber-100 text-amber-900 font-mono font-bold px-2 py-0.5 rounded-full">
                 {filteredMenuItems.length} plats / boissons
               </span>
+
+              <button
+                type="button"
+                onClick={() => setShowAddMenuForm(!showAddMenuForm)}
+                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold uppercase rounded-xl flex items-center gap-1 transition-all shadow-sm"
+              >
+                <Plus className="w-3 h-3" />
+                <span>{showAddMenuForm ? 'Fermer' : 'Ajouter un Plat au Menu'}</span>
+              </button>
             </div>
 
             {/* Filtres par Catégorie */}
@@ -383,6 +442,63 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
               </button>
             </div>
           </div>
+
+          {/* Formulaire d'ajout rapide d'un plat au menu carte */}
+          {showAddMenuForm && (
+            <form onSubmit={handleCreateQuickMenuItem} className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex flex-wrap items-end gap-3 animate-fade-in">
+              <div className="flex-1 min-w-[140px]">
+                <label className="block text-[9px] uppercase font-bold text-amber-900 mb-1 font-mono">
+                  Nom du Plat / Boisson
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Amonso, Bière Castel..."
+                  value={newPlatName}
+                  onChange={e => setNewPlatName(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-semibold outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="w-28">
+                <label className="block text-[9px] uppercase font-bold text-amber-900 mb-1 font-mono">
+                  Prix Vente (F)
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  placeholder="Ex: 1500"
+                  value={newPlatPrice}
+                  onChange={e => setNewPlatPrice(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="w-36">
+                <label className="block text-[9px] uppercase font-bold text-amber-900 mb-1 font-mono">
+                  Catégorie
+                </label>
+                <select
+                  value={newPlatCat}
+                  onChange={(e: any) => setNewPlatCat(e.target.value)}
+                  className="w-full px-2 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-bold text-gray-800 outline-none"
+                >
+                  <option value="cuisine">🍲 Cuisiné / Repas</option>
+                  <option value="cafeteria">☕ Cafétéria / Ptis dej</option>
+                  <option value="boisson">🥤 Boisson / Rafraîchissement</option>
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="px-4 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Enregistrer</span>
+              </button>
+            </form>
+          )}
 
           {/* Grille des Touches Tactiles (Buttons) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 pt-1">
