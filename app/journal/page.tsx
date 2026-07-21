@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart } from 'lucide-react'
+import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus } from 'lucide-react'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -201,6 +201,131 @@ export default function JournalPage() {
   const [wizardAlertThreshold, setWizardAlertThreshold] = useState('5')
   const [wizardPurchasePrice, setWizardPurchasePrice] = useState('')
   const [wizardSalePrice, setWizardSalePrice] = useState('')
+
+  // 🍽️ États & Touches Tactiles du Menu Resto & Cafétéria (1-Tap)
+  const [showJournalMenuGrid, setShowJournalMenuGrid] = useState(false)
+  const [journalMenuFilter, setJournalMenuFilter] = useState<'all' | 'cuisine' | 'cafeteria' | 'boisson'>('all')
+  const [journalMenuItems, setJournalMenuItems] = useState<Array<{
+    id: string
+    name: string
+    price: number
+    category: 'cuisine' | 'cafeteria' | 'boisson' | 'autre'
+    emoji: string
+  }>>([
+    { id: 'm1', name: 'Atassi Viande / Poulet', price: 1500, category: 'cuisine', emoji: '🍲' },
+    { id: 'm2', name: 'Riz au Gras Poisson', price: 1500, category: 'cuisine', emoji: '🍛' },
+    { id: 'm3', name: 'Spaghetti Omelette', price: 1000, category: 'cuisine', emoji: '🍝' },
+    { id: 'm4', name: 'Igname Pilée Sauce', price: 2500, category: 'cuisine', emoji: '🍠' },
+    { id: 'm5', name: 'Poulet Braisé / Frit', price: 2000, category: 'cuisine', emoji: '🍗' },
+    { id: 'm6', name: 'Café au Lait', price: 500, category: 'cafeteria', emoji: '☕' },
+    { id: 'm7', name: 'Pain Omelette Avocat', price: 800, category: 'cafeteria', emoji: '🥖' },
+    { id: 'm8', name: 'Bouillie de Millet', price: 300, category: 'cafeteria', emoji: '🥣' },
+    { id: 'm9', name: 'Jus de Bissap Maison', price: 300, category: 'boisson', emoji: '🥤' },
+    { id: 'm10', name: 'Bière Beaufort / Sobebra', price: 800, category: 'boisson', emoji: '🍺' },
+    { id: 'm11', name: 'Eau Possotomè 1.5L', price: 400, category: 'boisson', emoji: '💧' },
+    { id: 'm12', name: 'Coca-Cola / Sucrerie', price: 500, category: 'boisson', emoji: '🥤' }
+  ])
+
+  // Formulaire d'ajout rapide d'un plat au menu dans le journal
+  const [showQuickAddMenuForm, setShowQuickAddMenuForm] = useState(false)
+  const [quickPlatName, setQuickPlatName] = useState('')
+  const [quickPlatPrice, setQuickPlatPrice] = useState('')
+  const [quickPlatCat, setQuickPlatCat] = useState<'cuisine' | 'cafeteria' | 'boisson'>('cuisine')
+
+  // Charger le stock réel de la boutique pour fusionner avec le menu
+  useEffect(() => {
+    if (!shopId) return
+    const fetchStockMenu = async () => {
+      try {
+        const res = await fetch('/api/stock', {
+          headers: { 'x-shop-id': shopId }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.products && data.products.length > 0) {
+            const loadedMenu = data.products.map((p: any, idx: number) => ({
+              id: p.id || `stk_${idx}`,
+              name: p.name,
+              price: p.unit_price || 1000,
+              category: p.category === 'Boisson' || p.category === 'Boissons' ? 'boisson' : p.category === 'Cuisine' || p.category === 'Plats' ? 'cuisine' : 'cafeteria',
+              emoji: p.category === 'Boissons' ? '🥤' : p.category === 'Cuisine' ? '🍲' : '🍽️'
+            }))
+            setJournalMenuItems(loadedMenu)
+          }
+        }
+      } catch (e) {
+        console.warn('Fallback au menu modèle démo:', e)
+      }
+    }
+    fetchStockMenu()
+  }, [shopId])
+
+  // Tap 1-Click sur un plat du menu
+  const handleTapMenuItemInJournal = (item: { name: string; price: number }) => {
+    if (selectedPen !== 'blue') {
+      setSelectedPen('blue')
+      setJournalFilter('blue')
+    }
+
+    const itemName = item.name
+    const itemPrice = item.price
+
+    if (!input.trim()) {
+      setInput(`1 ${itemName} à ${itemPrice}`)
+    } else {
+      const regex = new RegExp(`(\\d+)\\s+${itemName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+à\\s+${itemPrice}`, 'i')
+      const match = input.match(regex)
+      if (match) {
+        const currentQty = parseInt(match[1]) || 1
+        setInput(input.replace(regex, `${currentQty + 1} ${itemName} à ${itemPrice}`))
+      } else {
+        setInput(`${input.trim()}, 1 ${itemName} à ${itemPrice}`)
+      }
+    }
+  }
+
+  // Ajout rapide d'un plat au menu
+  const handleAddQuickMenuItemInJournal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!quickPlatName.trim()) return
+
+    const priceNum = Math.max(0, parseInt(quickPlatPrice) || 0)
+    const emojiSymbol = quickPlatCat === 'boisson' ? '🥤' : quickPlatCat === 'cuisine' ? '🍲' : '☕'
+
+    const newItem = {
+      id: `menu_custom_${Date.now()}`,
+      name: quickPlatName.trim(),
+      price: priceNum,
+      category: quickPlatCat,
+      emoji: emojiSymbol
+    }
+
+    setJournalMenuItems(prev => [newItem, ...prev])
+
+    try {
+      await fetch('/api/stock', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-shop-id': shopId || 'default-shop'
+        },
+        body: JSON.stringify({
+          name: quickPlatName.trim(),
+          unit_price: priceNum,
+          unit_cost: Math.round(priceNum * 0.6),
+          initial_stock: 100,
+          alert_threshold: 5,
+          category: quickPlatCat === 'boisson' ? 'Boissons' : quickPlatCat === 'cuisine' ? 'Cuisine' : 'Cafétéria'
+        })
+      })
+    } catch (err) {
+      console.warn('Erreur non bloquante sauvegarde stock:', err)
+    }
+
+    setQuickPlatName('')
+    setQuickPlatPrice('')
+    setShowQuickAddMenuForm(false)
+  }
 
   // Context-aware stock confirmation & price mismatch alert states
   const [showStockConfirmation, setShowStockConfirmation] = useState(false)
@@ -1951,6 +2076,162 @@ export default function JournalPage() {
                     )}
                   </div>
  
+                  {/* ── 🍽️ Barre / Grille Tactile du Menu Carte & Touches Rapides (Resto, Cafétéria, Buvette) ── */}
+                  <div className="bg-[#f5f1e8] border-t border-gray-200 p-2 px-4 flex items-center justify-between gap-2 select-none flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowJournalMenuGrid(!showJournalMenuGrid)}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                    >
+                      <Utensils className="w-3.5 h-3.5" />
+                      <span>{showJournalMenuGrid ? 'Masquer le Menu Carte' : '🍽️ Menu Carte & Touches Rapides (1-Tap)'}</span>
+                      {showJournalMenuGrid ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {showJournalMenuGrid && (
+                      <div className="flex bg-white p-0.5 rounded-xl border border-gray-250 text-xs select-none">
+                        <button
+                          type="button"
+                          onClick={() => setJournalMenuFilter('all')}
+                          className={`px-2.5 py-0.5 text-[9px] font-bold rounded-lg transition-all ${
+                            journalMenuFilter === 'all' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          🌟 Tout
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setJournalMenuFilter('cuisine')}
+                          className={`px-2.5 py-0.5 text-[9px] font-bold rounded-lg transition-all ${
+                            journalMenuFilter === 'cuisine' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          🍲 Cuisiné
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setJournalMenuFilter('cafeteria')}
+                          className={`px-2.5 py-0.5 text-[9px] font-bold rounded-lg transition-all ${
+                            journalMenuFilter === 'cafeteria' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          ☕ Cafétéria
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setJournalMenuFilter('boisson')}
+                          className={`px-2.5 py-0.5 text-[9px] font-bold rounded-lg transition-all ${
+                            journalMenuFilter === 'boisson' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          🥤 Boissons
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Panneau Dépliable de la Grille Tactile du Menu */}
+                  {showJournalMenuGrid && (
+                    <div className="bg-[#fffdf9] border-t border-b border-amber-250 p-4 shadow-inner space-y-3 max-h-56 overflow-y-auto select-none flex-shrink-0 animate-fade-in">
+                      <div className="flex items-center justify-between gap-2 border-b border-amber-200 border-dashed pb-2">
+                        <span className="text-xs font-bold text-amber-900 font-handwritten flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Cliquez sur un plat pour l'ajouter instantanément au cahier :</span>
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowQuickAddMenuForm(!showQuickAddMenuForm)}
+                          className="px-2 py-0.5 bg-amber-700 hover:bg-amber-800 text-white text-[9px] font-bold uppercase rounded-lg flex items-center gap-1 transition-all"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>{showQuickAddMenuForm ? 'Fermer' : '➕ Ajouter un Plat au Menu'}</span>
+                        </button>
+                      </div>
+
+                      {/* Mini-formulaire rapide d'ajout au menu */}
+                      {showQuickAddMenuForm && (
+                        <form onSubmit={handleAddQuickMenuItemInJournal} className="p-2.5 bg-amber-100 bg-opacity-70 border border-amber-300 rounded-xl flex flex-wrap items-end gap-2 text-xs font-sans">
+                          <div className="flex-1 min-w-[120px]">
+                            <label className="block text-[8px] uppercase font-bold text-amber-950 mb-0.5 font-mono">
+                              Nom Plat / Boisson
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Ex: Amonso, Bière..."
+                              value={quickPlatName}
+                              onChange={e => setQuickPlatName(e.target.value)}
+                              className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded-lg text-xs font-semibold outline-none"
+                            />
+                          </div>
+
+                          <div className="w-24">
+                            <label className="block text-[8px] uppercase font-bold text-amber-950 mb-0.5 font-mono">
+                              Prix Vente (F)
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              min="0"
+                              placeholder="1500"
+                              value={quickPlatPrice}
+                              onChange={e => setQuickPlatPrice(e.target.value)}
+                              className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-amber-950 outline-none"
+                            />
+                          </div>
+
+                          <div className="w-32">
+                            <label className="block text-[8px] uppercase font-bold text-amber-950 mb-0.5 font-mono">
+                              Catégorie
+                            </label>
+                            <select
+                              value={quickPlatCat}
+                              onChange={(e: any) => setQuickPlatCat(e.target.value)}
+                              className="w-full px-1.5 py-1 bg-white border border-amber-300 rounded-lg text-xs font-bold text-gray-800 outline-none"
+                            >
+                              <option value="cuisine">🍲 Cuisiné</option>
+                              <option value="cafeteria">☕ Cafétéria</option>
+                              <option value="boisson">🥤 Boisson</option>
+                            </select>
+                          </div>
+
+                          <button
+                            type="submit"
+                            className="px-3 py-1 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Enregistrer</span>
+                          </button>
+                        </form>
+                      )}
+
+                      {/* Touches Tactiles de Plats/Boissons */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                        {journalMenuItems
+                          .filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter)
+                          .map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => handleTapMenuItemInJournal(item)}
+                              className="p-2 bg-white hover:bg-amber-100 border border-amber-200 hover:border-amber-400 rounded-xl shadow-sm hover:shadow transition-all text-left flex items-center justify-between group active:scale-95 border-b-2 hover:border-b-amber-500"
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
+                                <span className="font-sans text-xs font-bold text-gray-800 truncate">
+                                  {item.name}
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded-md flex-shrink-0 ml-1">
+                                {formatPrice(item.price)}
+                              </span>
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Sticky writing input bar pinned to the bottom of the page */}
                   <form 
                     onSubmit={handleSubmit}
