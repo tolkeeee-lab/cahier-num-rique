@@ -243,13 +243,32 @@ export default function JournalPage() {
         if (res.ok) {
           const data = await res.json()
           if (data.products && data.products.length > 0) {
-            const loadedMenu = data.products.map((p: any, idx: number) => ({
-              id: p.id || `stk_${idx}`,
-              name: p.name,
-              price: p.unit_price || 1000,
-              category: p.category === 'Boisson' || p.category === 'Boissons' ? 'boisson' : p.category === 'Cuisine' || p.category === 'Plats' ? 'cuisine' : 'cafeteria',
-              emoji: p.category === 'Boissons' ? '🥤' : p.category === 'Cuisine' ? '🍲' : '🍽️'
-            }))
+            const loadedMenu = data.products.map((p: any, idx: number) => {
+              const lowerName = (p.name || '').toLowerCase()
+              const lowerCat = (p.category || '').toLowerCase()
+              
+              let catType: 'cuisine' | 'cafeteria' | 'boisson' | 'autre' = 'autre'
+              let emoji = '📦'
+
+              if (lowerCat.includes('boisson') || lowerCat.includes('bar') || /bierre|biere|beaufort|flag|pils|sucrerie|coca|fanta|sprite|bissap|eau|jus|fifa|vin|whisky|soda/i.test(lowerName)) {
+                catType = 'boisson'
+                emoji = lowerName.includes('eau') ? '💧' : lowerName.includes('jus') || lowerName.includes('bissap') ? '🥤' : '🍺'
+              } else if (lowerCat.includes('cuisin') || lowerCat.includes('plat') || /atassi|riz|poulet|omelette|spaghetti|igname|sauce|poisson|viande|plat|repas|amonso|frite/i.test(lowerName)) {
+                catType = 'cuisine'
+                emoji = lowerName.includes('riz') || lowerName.includes('atassi') ? '🍲' : lowerName.includes('poulet') ? '🍗' : '🍛'
+              } else if (lowerCat.includes('cafet') || lowerCat.includes('ptis') || /café|cafe|pain|bouillie|millet|lait|sandwich|sucre|chocolat|thé|the|avocat/i.test(lowerName)) {
+                catType = 'cafeteria'
+                emoji = lowerName.includes('pain') || lowerName.includes('sandwich') ? '🥖' : lowerName.includes('bouillie') ? '🥣' : '☕'
+              }
+
+              return {
+                id: p.id || `stk_${idx}`,
+                name: p.name,
+                price: p.unit_price || 1000,
+                category: catType,
+                emoji
+              }
+            })
             setJournalMenuItems(loadedMenu)
           }
         }

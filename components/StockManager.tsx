@@ -37,7 +37,7 @@ interface StockManagerProps {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['Général', 'Alimentation', 'Boissons', 'Hygiène', 'Électronique', 'Textile', 'Autre']
+const CATEGORIES = ['Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', 'Alimentation', 'Hygiène', 'Électronique', 'Textile', 'Autre']
 const UNITS = ['unité', 'pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'colis', 'boîte', 'bouteille']
 
 const EMPTY_FORM = {
