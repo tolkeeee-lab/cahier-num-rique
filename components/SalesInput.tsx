@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
-import { Send, Loader, AlertTriangle } from 'lucide-react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Sale {
   id: string
@@ -25,6 +25,15 @@ interface Sale {
 interface SalesInputProps {
   onSaleRecorded: (sale: Sale) => void
   onError: (error: string) => void
+  shopId?: string
+}
+
+interface MenuItem {
+  id: string
+  name: string
+  price: number
+  category: 'cuisine' | 'cafeteria' | 'boisson' | 'autre'
+  emoji: string
 }
 
 const PENS = [
@@ -35,7 +44,7 @@ const PENS = [
     bg: 'bg-blue-700', 
     border: 'border-blue-700', 
     textClass: 'ink-blue', 
-    placeholder: 'Stylo Bleu : Écrivez une vente cash... (ex: 10 mèches à 2000 pour Maman Tantie)' 
+    placeholder: 'Stylo Bleu : Cliquez sur les plats du menu ou tapez une vente cash (ex: 2 Atassi Poulet à 1500)' 
   },
   { 
     id: 'red', 
@@ -44,7 +53,7 @@ const PENS = [
     bg: 'bg-rose-600', 
     border: 'border-rose-600', 
     textClass: 'ink-red', 
-    placeholder: 'Stylo Rouge : Écrivez une dépense... (ex: Achat ampoules boutique 4500 ou Facture électricité 12000)' 
+    placeholder: 'Stylo Rouge : Écrivez une dépense... (ex: Achat ingrédients marché 15000 ou Électricité 8000)' 
   },
   { 
     id: 'green', 
@@ -53,7 +62,7 @@ const PENS = [
     bg: 'bg-emerald-700', 
     border: 'border-emerald-700', 
     textClass: 'ink-green', 
-    placeholder: 'Stylo Vert : Écrivez un achat de stock payé cash... (ex: 5 cartons lait à 15000 pour boutique)' 
+    placeholder: 'Stylo Vert : Écrivez un achat de stock payé cash... (ex: 2 cartons bière à 18000)' 
   },
   { 
     id: 'purple', 
@@ -62,7 +71,7 @@ const PENS = [
     bg: 'bg-fuchsia-800', 
     border: 'border-fuchsia-800', 
     textClass: 'ink-purple', 
-    placeholder: 'Stylo Violet : Écrivez un achat à crédit chez un grossiste... (ex: Grossiste Chantal 3 cartons Peak crédit 35000)' 
+    placeholder: 'Stylo Violet : Écrivez un achat à crédit chez un fournisseur... (ex: Brasserie 5 casiers crédit 45000)' 
   },
   { 
     id: 'yellow', 
@@ -71,15 +80,48 @@ const PENS = [
     bg: 'bg-amber-600', 
     border: 'border-amber-600', 
     textClass: 'ink-yellow', 
-    placeholder: 'Stylo Jaune : Écrivez un crédit accordé à un client... (ex: Koffi prend 2 sacs de riz crédit 12000)' 
+    placeholder: 'Stylo Jaune : Écrivez un crédit accordé à un client... (ex: Koffi prend 2 repas crédit 3000)' 
   },
 ]
 
-export function SalesInput({ onSaleRecorded, onError }: SalesInputProps) {
+// Menu modèle par défaut pour Resto & Cafétéria au Bénin
+const DEFAULT_MENU_ITEMS: MenuItem[] = [
+  // Plats Cuisinés
+  { id: 'm1', name: 'Atassi Viande / Poulet', price: 1500, category: 'cuisine', emoji: '🍲' },
+  { id: 'm2', name: 'Riz au Gras Poisson', price: 1500, category: 'cuisine', emoji: '🍛' },
+  { id: 'm3', name: 'Spaghetti Omelette', price: 1000, category: 'cuisine', emoji: '🍝' },
+  { id: 'm4', name: 'Igname Pilée Sauce', price: 2500, category: 'cuisine', emoji: '🍠' },
+  { id: 'm5', name: 'Poulet Braisé / Frit', price: 2000, category: 'cuisine', emoji: '🍗' },
+
+  // Cafétéria & Petit-Déjeuner
+  { id: 'm6', name: 'Café au Lait', price: 500, category: 'cafeteria', emoji: '☕' },
+  { id: 'm7', name: 'Pain Omelette Avocat', price: 800, category: 'cafeteria', emoji: '🥖' },
+  { id: 'm8', name: 'Bouillie de Millet', price: 300, category: 'cafeteria', emoji: '🥣' },
+  { id: 'm9', name: 'Sandwich Viande Hachée', price: 1200, category: 'cafeteria', emoji: '🥪' },
+
+  // Boissons & Rafraîchissements
+  { id: 'm10', name: 'Jus de Bissap Maison', price: 300, category: 'boisson', emoji: '🥤' },
+  { id: 'm11', name: 'Bière Beaufort / Sobebra', price: 800, category: 'boisson', emoji: '🍺' },
+  { id: 'm12', name: 'Eau Possotomè 1.5L', price: 400, category: 'boisson', emoji: '💧' },
+  { id: 'm13', name: 'Coca-Cola / Sucrerie', price: 500, category: 'boisson', emoji: '🥤' },
+  { id: 'm14', name: 'Jus de Gingembre (Gnamakoudji)', price: 400, category: 'boisson', emoji: '🍹' },
+]
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(price) + ' F'
+}
+
+export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }: SalesInputProps) {
   const [input, setInput] = useState('')
   const [selectedPen, setSelectedPen] = useState('blue')
   const [loading, setLoading] = useState(false)
   const [postItWarning, setPostItWarning] = useState<string | null>(null)
+  
+  // États Menu Tactile
+  const [showMenuGrid, setShowMenuGrid] = useState(true)
+  const [menuFilter, setMenuFilter] = useState<'all' | 'cuisine' | 'cafeteria' | 'boisson'>('all')
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(DEFAULT_MENU_ITEMS)
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -90,7 +132,68 @@ export function SalesInput({ onSaleRecorded, onError }: SalesInputProps) {
     }
   }, [input])
 
+  // Charger le stock réel de la boutique pour fusionner avec le menu s'il existe
+  const fetchStockMenu = useCallback(async () => {
+    try {
+      const res = await fetch('/api/stock', {
+        headers: { 'x-shop-id': shopId }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.products && data.products.length > 0) {
+          const loadedMenu: MenuItem[] = data.products.map((p: any, idx: number) => ({
+            id: p.id || `stk_${idx}`,
+            name: p.name,
+            price: p.unit_price || 1000,
+            category: p.category === 'Boisson' || p.category === 'Boissons' ? 'boisson' : p.category === 'Cuisine' || p.category === 'Plats' ? 'cuisine' : 'cafeteria',
+            emoji: p.category === 'Boissons' ? '🥤' : p.category === 'Cuisine' ? '🍲' : '🍽️'
+          }))
+          setMenuItems(loadedMenu)
+        }
+      }
+    } catch (e) {
+      console.warn('Fallback au menu modèle démo:', e)
+    }
+  }, [shopId])
+
+  useEffect(() => {
+    fetchStockMenu()
+  }, [fetchStockMenu])
+
   const currentPen = PENS.find(p => p.id === selectedPen) || PENS[0]
+
+  // Fonction Tactile "1-Tap" : Ajouter ou incrémenter un plat du menu dans la commande
+  const handleTapMenuItem = (item: MenuItem) => {
+    // Si un autre stylo était sélectionné, rebasculer sur le Stylo Bleu (Vente Cash)
+    if (selectedPen !== 'blue') {
+      setSelectedPen('blue')
+    }
+
+    const itemName = item.name
+    const itemPrice = item.price
+
+    if (!input.trim()) {
+      // Premier article de la commande
+      setInput(`1 ${itemName} à ${itemPrice}`)
+    } else {
+      // Vérifier si cet article figure déjà dans le texte actuel
+      const regex = new RegExp(`(\\d+)\\s+${itemName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+à\\s+${itemPrice}`, 'i')
+      const match = input.match(regex)
+
+      if (match) {
+        // Incrémenter la quantité existante
+        const currentQty = parseInt(match[1]) || 1
+        const newQty = currentQty + 1
+        const updatedInput = input.replace(regex, `${newQty} ${itemName} à ${itemPrice}`)
+        setInput(updatedInput)
+      } else {
+        // Ajouter à la suite avec une virgule
+        setInput(`${input.trim()}, 1 ${itemName} à ${itemPrice}`)
+      }
+    }
+
+    textareaRef.current?.focus()
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,7 +220,6 @@ export function SalesInput({ onSaleRecorded, onError }: SalesInputProps) {
 
       if (!response.ok) {
         if (data.isSafeguardTriggered) {
-          // Affichage du Post-It
           setPostItWarning(data.error)
         } else {
           throw new Error(data.error || 'Erreur lors de l\'enregistrement')
@@ -136,9 +238,14 @@ export function SalesInput({ onSaleRecorded, onError }: SalesInputProps) {
     }
   }
 
+  const filteredMenuItems = menuItems.filter(item => {
+    if (menuFilter === 'all') return true
+    return item.category === menuFilter
+  })
+
   return (
-    <div className="relative space-y-4">
-      {/* Visual representation of Bic 4-couleurs pen */}
+    <div className="relative space-y-4 font-sans select-none">
+      {/* ── 1. Sélection du Stylo Bic 4-Couleurs ── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-3 bg-white rounded-2xl border border-gray-200 shadow-sm">
         <span className="text-sm font-semibold text-gray-600 flex items-center gap-1.5">
           🖊️ Choisir le stylo de caisse :
@@ -166,7 +273,7 @@ export function SalesInput({ onSaleRecorded, onError }: SalesInputProps) {
         </div>
       </div>
 
-      {/* Text Area & Form */}
+      {/* ── 2. Zone d'Écriture Manuscrite du Cahier ── */}
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative rounded-2xl overflow-hidden shadow-sm border border-gray-200 bg-white p-1">
           <textarea
@@ -178,32 +285,136 @@ export function SalesInput({ onSaleRecorded, onError }: SalesInputProps) {
             className={`w-full px-4 py-4 min-h-24 bg-transparent text-lg placeholder-gray-400 border-0 focus:ring-0 leading-relaxed font-handwritten transition-colors ${currentPen.textClass}`}
           />
 
-          <div className="flex items-center justify-end px-3 py-2 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
+          <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-t border-gray-100 rounded-b-2xl flex-wrap gap-2">
             <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 hover:bg-black text-white font-semibold rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+              type="button"
+              onClick={() => setShowMenuGrid(!showMenuGrid)}
+              className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold rounded-xl border border-amber-300 transition-all flex items-center gap-1.5"
             >
-              {loading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Traitement...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Enregistrer
-                </>
-              )}
+              <Utensils className="w-3.5 h-3.5 text-amber-700" />
+              <span>{showMenuGrid ? 'Masquer le Menu Carte' : '🍽️ Afficher Menu Carte & Touches Rapides'}</span>
+              {showMenuGrid ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
+
+            <div className="flex items-center gap-2">
+              {input.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setInput('')}
+                  className="px-3 py-1.5 text-xs font-bold text-gray-500 hover:text-red-600 transition-colors"
+                >
+                  Effacer
+                </button>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 hover:bg-black text-white font-semibold rounded-xl text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Traitement...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Enregistrer Vente
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </form>
 
-      {/* Post-it warning card for Safeguards */}
+      {/* ── 3. Grille Tactile du Menu (Préréglages Resto, Cafétéria & Buvette) ── */}
+      {showMenuGrid && (
+        <div className="bg-[#fffdf9] border border-amber-250 rounded-[28px] p-5 shadow-sm space-y-3 animate-fade-in select-none">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 border-dashed pb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-600" />
+              <h4 className="font-handwritten text-lg font-bold text-gray-800">
+                🍽️ Menu Carte & Touches Rapides (1-Tap)
+              </h4>
+              <span className="text-[9px] bg-amber-100 text-amber-900 font-mono font-bold px-2 py-0.5 rounded-full">
+                {filteredMenuItems.length} plats / boissons
+              </span>
+            </div>
+
+            {/* Filtres par Catégorie */}
+            <div className="flex bg-[#f5f1e8] p-1 rounded-xl border border-gray-250 text-xs select-none self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setMenuFilter('all')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                  menuFilter === 'all' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🌟 Tout le Menu
+              </button>
+              <button
+                type="button"
+                onClick={() => setMenuFilter('cuisine')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                  menuFilter === 'cuisine' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🍲 Cuisiné
+              </button>
+              <button
+                type="button"
+                onClick={() => setMenuFilter('cafeteria')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                  menuFilter === 'cafeteria' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                ☕ Cafétéria
+              </button>
+              <button
+                type="button"
+                onClick={() => setMenuFilter('boisson')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                  menuFilter === 'boisson' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🥤 Boissons
+              </button>
+            </div>
+          </div>
+
+          {/* Grille des Touches Tactiles (Buttons) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 pt-1">
+            {filteredMenuItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleTapMenuItem(item)}
+                className="p-3 bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-400 rounded-2xl shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group active:scale-95 border-b-2 hover:border-b-amber-500"
+              >
+                <div className="flex items-start justify-between gap-1 mb-1">
+                  <span className="text-base group-hover:scale-125 transition-transform">{item.emoji}</span>
+                  <span className="text-[10px] font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-lg border border-amber-250">
+                    {formatPrice(item.price)}
+                  </span>
+                </div>
+                <div className="font-sans text-xs font-bold text-gray-800 line-clamp-1 group-hover:text-amber-950">
+                  {item.name}
+                </div>
+                <div className="text-[8px] font-mono text-gray-400 mt-1 flex items-center gap-1">
+                  <Plus className="w-2.5 h-2.5 text-amber-600" />
+                  <span>Ajouter au cahier</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── 4. Post-it Alerte de Sécurité ── */}
       {postItWarning && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 w-80 bg-amber-200 border-2 border-amber-300 shadow-2xl p-6 rotate-2 transition-all flex flex-col items-center text-center">
-          {/* Post-it pin/tape effect */}
           <div className="absolute -top-3 w-16 h-6 bg-gray-300 bg-opacity-70 -rotate-3"></div>
           
           <AlertTriangle className="w-8 h-8 text-amber-700 mb-2" />
