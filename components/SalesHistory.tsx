@@ -566,9 +566,9 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
               <button
                 onClick={() => {
                   const itemsText = activeReceiptSale.articles && activeReceiptSale.articles.length > 0
-                    ? activeReceiptSale.articles.map(a => `- ${a.quantity}x ${a.name} : ${formatPrice(a.quantity * a.unit_price)}`).join('\n')
-                    : `- Transaction Générale : ${formatPrice(activeReceiptSale.total)}`
-                  const whatsappText = `🧾 *REÇU DE CAISSE*\n*Client* : ${activeReceiptSale.client}\n*Date* : ${activeReceiptSale.date} à ${activeReceiptSale.time}\n\n*Détails des articles* :\n${itemsText}\n\n-------------------------\n*TOTAL* : ${formatPrice(activeReceiptSale.total)}\n*Payé* : ${formatPrice(activeReceiptSale.paid)}\n${activeReceiptSale.debt > 0 ? `*Reste à payer* : ${formatPrice(activeReceiptSale.debt)}\n` : ''}-------------------------\n\nMerci pour votre confiance ! 😊`
+                    ? activeReceiptSale.articles.map(a => `• ${a.quantity}x ${a.name} ➔ ${formatPrice(a.quantity * a.unit_price)}`).join('\n')
+                    : `• Transaction Générale ➔ ${formatPrice(activeReceiptSale.total)}`
+                  const whatsappText = `🧾 *TICKET DE CAISSE ÉLECTRONIQUE*\n═════════════════════════\n👤 *Client* : ${activeReceiptSale.client}\n📅 *Date*   : ${activeReceiptSale.date} à ${activeReceiptSale.time}\n🆔 *Réf*    : #${activeReceiptSale.id.slice(0, 8)}\n═════════════════════════\n🛍️ *DÉTAILS DES ARTICLES* :\n${itemsText}\n\n═════════════════════════\n💰 *TOTAL FACTURÉ* : ${formatPrice(activeReceiptSale.total)}\n✅ *MONTANT PAYÉ*  : ${formatPrice(activeReceiptSale.paid)}\n${activeReceiptSale.debt > 0 ? `⚠️ *RESTE À PAYER*  : ${formatPrice(activeReceiptSale.debt)}\n` : ''}═════════════════════════\n\n✨ *Merci pour votre confiance !*\n_Cahier de Caisse Intelligent_`
                   window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`, '_blank')
                 }}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
