@@ -485,19 +485,36 @@ export default function JournalPage() {
   // Supprimer un produit directement depuis le menu tactile du bas
   const handleDeleteMenuItem = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!window.confirm('Voulez-vous supprimer ce produit du menu ?')) return
+    const targetItem = journalMenuItems.find(item => item.id === id)
+    if (!targetItem) return
 
+    if (!window.confirm(`Voulez-vous masquer "${targetItem.name}" définitivement du menu ?`)) return
+
+    // 1. Ajouter à la liste d'exclusion locale
+    try {
+      const storedExclusions = localStorage.getItem(`cahier_deleted_menu_items_${shopId}`)
+      const excludedNames: string[] = storedExclusions ? JSON.parse(storedExclusions) : []
+      if (!excludedNames.some(name => name.toLowerCase().trim() === targetItem.name.toLowerCase().trim())) {
+        excludedNames.push(targetItem.name)
+        localStorage.setItem(`cahier_deleted_menu_items_${shopId}`, JSON.stringify(excludedNames))
+      }
+    } catch (err) {
+      console.warn('Erreur stockage exclusion:', err)
+    }
+
+    // 2. Retirer de l'état local
     setJournalMenuItems(prev => prev.filter(item => item.id !== id))
 
+    // 3. Supprimer de la DB si c'est un produit du catalogue réel (non virtuel ni orphelin)
     try {
-      if (id && !id.startsWith('m')) {
+      if (id && !id.startsWith('stk_') && !id.startsWith('orphan_')) {
         await fetch(`/api/stock?id=${id}`, {
           method: 'DELETE',
           headers: { 'x-shop-id': shopId }
         })
       }
     } catch (err) {
-      console.warn('Erreur suppression menu:', err)
+      console.warn('Erreur suppression menu DB:', err)
     }
   }
 
@@ -507,20 +524,47 @@ export default function JournalPage() {
     e.preventDefault()
     if (!quickPlatName.trim()) return
 
+    const currentShop = userShops.find(s => s.id === shopId)
+    const shopActivity = currentShop?.activity || 'boutique'
+    const theme = THEMES[shopActivity] || THEMES.boutique
+
+    const categoryToSave = quickPlatCat || theme.filters.filter(f => f.id !== 'all')[0]?.id || 'autre'
+    const emojiSymbol = getSmartEmojiAndCategory(quickPlatName, shopActivity as any).emoji
+
+    // Retirer des exclusions locales au cas où le produit y était
+    try {
+      const storedExclusions = localStorage.getItem(`cahier_deleted_menu_items_${shopId}`)
+      if (storedExclusions) {
+        let excludedNames: string[] = JSON.parse(storedExclusions)
+        if (excludedNames.some(name => name.toLowerCase().trim() === quickPlatName.trim().toLowerCase())) {
+          excludedNames = excludedNames.filter(name => name.toLowerCase().trim() !== quickPlatName.trim().toLowerCase())
+          localStorage.setItem(`cahier_deleted_menu_items_${shopId}`, JSON.stringify(excludedNames))
+        }
+      }
+    } catch {}
+
     const priceNum = Math.max(0, parseInt(quickPlatPrice) || 0)
-    const emojiSymbol = quickPlatCat === 'boisson' ? '🥤' : quickPlatCat === 'cuisine' ? '🍲' : '☕'
 
     const newItem = {
       id: `menu_custom_${Date.now()}`,
       name: quickPlatName.trim(),
       price: priceNum,
-      category: quickPlatCat,
+      category: categoryToSave,
       emoji: emojiSymbol
     }
 
     setJournalMenuItems(prev => [newItem, ...prev])
 
     try {
+      let dbCategory = 'Divers'
+      if (shopActivity === 'resto') {
+        dbCategory = categoryToSave === 'boisson' ? 'Boissons' : categoryToSave === 'cuisine' ? 'Cuisine' : 'Cafétéria'
+      } else if (shopActivity === 'boutique') {
+        dbCategory = categoryToSave === 'fourniture' ? 'Fournitures' : categoryToSave === 'alimentaire' ? 'Alimentation' : categoryToSave === 'boisson' ? 'Boissons' : 'Divers'
+      } else if (shopActivity === 'prestations') {
+        dbCategory = categoryToSave === 'service' ? 'Services' : categoryToSave === 'produit' ? 'Produits' : 'Divers'
+      }
+
       await fetch('/api/stock', {
         method: 'POST',
         headers: {
@@ -533,7 +577,7 @@ export default function JournalPage() {
           unit_cost: Math.round(priceNum * 0.6),
           initial_stock: 100,
           alert_threshold: 5,
-          category: quickPlatCat === 'boisson' ? 'Boissons' : quickPlatCat === 'cuisine' ? 'Cuisine' : 'Cafétéria'
+          category: dbCategory
         })
       })
     } catch (err) {
@@ -542,8 +586,10 @@ export default function JournalPage() {
 
     setQuickPlatName('')
     setQuickPlatPrice('')
+    setQuickPlatCat('')
     setShowQuickAddMenuForm(false)
   }
+
 
   // Context-aware stock confirmation & price mismatch alert states
   const [showStockConfirmation, setShowStockConfirmation] = useState(false)
