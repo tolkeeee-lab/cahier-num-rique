@@ -1,7 +1,15 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Trash2, PlusCircle, Check, X, Loader, FileText, Printer, Share2 } from 'lucide-react'
+import React, { useState, useRef, useCallback } from 'react'
+import { Trash2, PlusCircle, Check, X, Loader, FileText, Printer, Share2, Sparkles } from 'lucide-react'
+
+interface MenuItem {
+  id: string
+  name: string
+  price: number
+  emoji: string
+  category?: string
+}
 
 
 interface Article {
@@ -60,6 +68,40 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
   const [savingId, setSavingId] = useState<string | null>(null)
   const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null)
   const [editingCategorySaleId, setEditingCategorySaleId] = useState<string | null>(null)
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const addInputRef = useRef<HTMLInputElement>(null)
+
+  // Charger les produits du stock (localStorage + Supabase)
+  const loadMenuItems = useCallback(async () => {
+    const sId = shopId || 'default-shop'
+    // 1. D'abord depuis le cache local
+    try {
+      const cached = localStorage.getItem(`cahier_menu_items_${sId}`)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (Array.isArray(parsed) && parsed.length > 0) setMenuItems(parsed)
+      }
+    } catch {}
+
+    // 2. Puis depuis l'API (si en ligne)
+    try {
+      const res = await fetch('/api/stock', { headers: { 'x-shop-id': sId } })
+      if (res.ok) {
+        const data = await res.json()
+        const products: MenuItem[] = (data.products || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          price: p.unit_price || 0,
+          emoji: p.emoji || '📦',
+          category: p.category,
+        }))
+        if (products.length > 0) {
+          setMenuItems(products)
+          localStorage.setItem(`cahier_menu_items_${sId}`, JSON.stringify(products))
+        }
+      }
+    } catch {}
+  }, [shopId])
 
   if (sales.length === 0) return null
 
@@ -121,6 +163,8 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
   const handleStartAdd = (id: string) => {
     setAddingToId(id)
     setAddInput('')
+    loadMenuItems()
+    setTimeout(() => addInputRef.current?.focus(), 50)
   }
 
   const handleCancelAdd = () => {
@@ -416,39 +460,78 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
                     </div>
                   </div>
 
-                  {/* Champ d'ajout inline */}
-                  {isAddingHere && (
-                    <div className="mt-2 ml-2 flex items-center gap-2">
-                      <span className="text-emerald-500 text-xs font-bold select-none">+</span>
-                      <input
-                        autoFocus
-                        type="text"
-                        value={addInput}
-                        onChange={e => setAddInput(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleConfirmAdd(sale.id)
-                          if (e.key === 'Escape') handleCancelAdd()
-                        }}
-                        placeholder="ex: 1 lb  ou  2 beaufort à 350"
-                        className="flex-1 text-xs border border-emerald-300 rounded-lg px-2.5 py-1.5 font-handwritten focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white placeholder:text-gray-300"
-                      />
-                      <button
-                        onClick={() => handleConfirmAdd(sale.id)}
-                        disabled={isSavingHere || !addInput.trim()}
-                        title="Confirmer l'ajout"
-                        className="p-1.5 text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg disabled:opacity-50 transition-colors"
-                      >
-                        {isSavingHere ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={handleCancelAdd}
-                        title="Annuler"
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
+                  {/* Champ d'ajout inline avec suggestions stock */}
+                  {isAddingHere && (() => {
+                    const query = addInput.trim().toLowerCase()
+                    const suggestions = query.length >= 2
+                      ? menuItems.filter(m => m.name.toLowerCase().includes(query)).slice(0, 6)
+                      : menuItems.slice(0, 8)
+
+                    return (
+                      <div className="mt-2 ml-2 space-y-2">
+                        {/* Suggestions du stock */}
+                        {suggestions.length > 0 && (
+                          <div className="bg-[#fffdf2] border border-emerald-200 rounded-2xl p-2 shadow-sm">
+                            <div className="flex items-center gap-1 text-[9px] font-bold text-emerald-700 mb-1.5 px-1">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span>{query.length >= 2 ? `Résultats pour « ${addInput} »` : 'Choisir un produit du stock :'}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {suggestions.map(item => (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setAddInput(`1 ${item.name} à ${item.price}`)
+                                    addInputRef.current?.focus()
+                                  }}
+                                  className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-400 rounded-xl text-xs font-semibold text-gray-800 transition-all active:scale-95 shadow-sm"
+                                >
+                                  <span>{item.emoji}</span>
+                                  <span>{item.name}</span>
+                                  <span className="font-mono text-emerald-700 text-[9px] bg-emerald-50 px-1 rounded">
+                                    {new Intl.NumberFormat('fr-FR').format(item.price)} F
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Input manuel + boutons */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-emerald-500 text-xs font-bold select-none">+</span>
+                          <input
+                            ref={addInputRef}
+                            type="text"
+                            value={addInput}
+                            onChange={e => setAddInput(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') handleConfirmAdd(sale.id)
+                              if (e.key === 'Escape') handleCancelAdd()
+                            }}
+                            placeholder="ou taper : 2 beaufort à 350..."
+                            className="flex-1 text-xs border border-emerald-300 rounded-lg px-2.5 py-1.5 font-handwritten focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white placeholder:text-gray-300"
+                          />
+                          <button
+                            onClick={() => handleConfirmAdd(sale.id)}
+                            disabled={isSavingHere || !addInput.trim()}
+                            title="Confirmer l'ajout"
+                            className="p-1.5 text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg disabled:opacity-50 transition-colors"
+                          >
+                            {isSavingHere ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={handleCancelAdd}
+                            title="Annuler"
+                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                 </div>
               )
