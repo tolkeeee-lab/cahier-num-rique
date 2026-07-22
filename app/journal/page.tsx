@@ -383,7 +383,27 @@ export default function JournalPage() {
     }
   }
 
+  // Supprimer un produit directement depuis le menu tactile du bas
+  const handleDeleteMenuItem = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!window.confirm('Voulez-vous supprimer ce produit du menu ?')) return
+
+    setJournalMenuItems(prev => prev.filter(item => item.id !== id))
+
+    try {
+      if (id && !id.startsWith('m')) {
+        await fetch(`/api/stock?id=${id}`, {
+          method: 'DELETE',
+          headers: { 'x-shop-id': shopId }
+        })
+      }
+    } catch (err) {
+      console.warn('Erreur suppression menu:', err)
+    }
+  }
+
   // Ajout rapide d'un plat au menu
+
   const handleAddQuickMenuItemInJournal = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!quickPlatName.trim()) return
@@ -2370,26 +2390,40 @@ export default function JournalPage() {
                         {journalMenuItems
                           .filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter)
                           .map((item) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => handleTapMenuItemInJournal(item)}
-                              className={`px-3 py-2 border rounded-2xl shadow-sm hover:shadow transition-all text-left flex items-center gap-2 flex-shrink-0 active:scale-95 border-b-2 max-w-[200px] ${
-                                addingToSaleId
-                                  ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 hover:border-emerald-500 hover:border-b-emerald-600'
-                                  : 'bg-white hover:bg-amber-100 border-amber-250 hover:border-amber-400 hover:border-b-amber-500'
-                              }`}
-                            >
-                              <span className="text-base flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-sans text-xs font-bold text-gray-800 truncate">
-                                  {item.name}
-                                </span>
-                                <span className="text-[9px] font-mono font-bold text-amber-900">
-                                  {formatPrice(item.price)}
-                                </span>
-                              </div>
-                            </button>
+                            <div key={item.id} className="relative group flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleTapMenuItemInJournal(item)}
+                                className={`px-3 py-2 border rounded-2xl shadow-sm hover:shadow transition-all text-left flex items-center gap-2 active:scale-95 border-b-2 max-w-[200px] ${
+                                  !item.id.startsWith('m') ? 'pr-6' : ''
+                                } ${
+                                  addingToSaleId
+                                    ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 hover:border-emerald-500 hover:border-b-emerald-600'
+                                    : 'bg-white hover:bg-amber-100 border-amber-250 hover:border-amber-400 hover:border-b-amber-500'
+                                }`}
+                              >
+                                <span className="text-base flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-sans text-xs font-bold text-gray-800 truncate">
+                                    {item.name}
+                                  </span>
+                                  <span className="text-[9px] font-mono font-bold text-amber-900">
+                                    {formatPrice(item.price)}
+                                  </span>
+                                </div>
+                              </button>
+
+                              {!item.id.startsWith('m') && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteMenuItem(item.id, e)}
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center shadow transition-all scale-100 sm:scale-0 sm:group-hover:scale-100"
+                                  title="Supprimer ce produit indésirable"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
                           ))}
                       </div>
                     </div>
