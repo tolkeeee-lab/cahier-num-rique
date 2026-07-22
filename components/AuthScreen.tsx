@@ -103,15 +103,58 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
           setSuccess(`✓ Compte créé ! ${role === 'owner' ? `Notez votre Code Boutique : ${generatedShopId} (à donner à vos employés).` : ''} Connectez-vous maintenant.`)
           setIsSignUp(false)
         } else {
-          const { data, error: loginError } = await supabaseClient.auth.signInWithPassword({
-            email,
-            password,
-          })
-          if (loginError) throw loginError
-          if (onLoginSuccess && data.user) {
-            onLoginSuccess(data.user)
+          try {
+            const { data, error: loginError } = await supabaseClient.auth.signInWithPassword({
+              email,
+              password,
+            })
+            if (loginError) throw loginError
+
+            if (data.user) {
+              const localUser = {
+                id: data.user.id,
+                email: data.user.email,
+                name: data.user.user_metadata?.full_name || 'Utilisateur',
+                role: data.user.user_metadata?.role || 'owner',
+                shop_id: data.user.user_metadata?.shop_id || data.user.id,
+                password_fallback: password
+              }
+              localStorage.setItem(`cahier_offline_credentials_${email.toLowerCase().trim()}`, JSON.stringify(localUser))
+              if (onLoginSuccess) {
+                onLoginSuccess(data.user)
+              }
+            }
+            setSuccess('✓ Connexion réussie !')
+          } catch (supabaseErr: any) {
+            const isNetworkError = !window.navigator.onLine || 
+                                   /fetch|network|dns|timeout|enotfound/i.test(supabaseErr.message || '')
+
+            if (isNetworkError) {
+              console.warn('[Auth Fallback] Supabase injoignable, tentative de connexion locale de secours...')
+              const storedCreds = localStorage.getItem(`cahier_offline_credentials_${email.toLowerCase().trim()}`)
+              if (storedCreds) {
+                const creds = JSON.parse(storedCreds)
+                if (creds.password_fallback === password) {
+                  const syntheticUser = {
+                    id: creds.id,
+                    email: creds.email,
+                    user_metadata: {
+                      full_name: creds.name,
+                      role: creds.role,
+                      shop_id: creds.shop_id
+                    }
+                  }
+                  localStorage.setItem('cahier_last_active_user', JSON.stringify(syntheticUser))
+                  if (onLoginSuccess) {
+                    onLoginSuccess(syntheticUser)
+                  }
+                  setSuccess('✓ Connexion hors-ligne réussie (mode de secours) !')
+                  return
+                }
+              }
+            }
+            throw supabaseErr
           }
-          setSuccess('✓ Connexion réussie !')
         }
       } else {
         // --- AUTH LOCAL STORAGE FALLBACK ---

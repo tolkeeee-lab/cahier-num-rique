@@ -239,7 +239,7 @@ export default function JournalPage() {
     }
   }
 
-  const mappedUser = getMappedUser(user)
+  const mappedUser = React.useMemo(() => getMappedUser(user), [user])
   const [authLoading, setAuthLoading] = useState(true)
   const [demoRole, setDemoRole] = useState<'owner' | 'employee' | null>(null)
   // localDemo kept for backward compat - true when using demo bypass
@@ -261,7 +261,9 @@ export default function JournalPage() {
         try {
           const parsed = JSON.parse(stored)
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setUserShops(parsed)
+            if (JSON.stringify(userShops) !== JSON.stringify(parsed)) {
+              setUserShops(parsed)
+            }
             if (!selectedShopId) {
               setSelectedShopId(parsed[0].id)
             }
@@ -274,13 +276,15 @@ export default function JournalPage() {
       const defaultShops = [
         { id: uShopId, name: 'Mon Point de Vente', activity: 'boutique' }
       ]
-      setUserShops(defaultShops)
+      if (JSON.stringify(userShops) !== JSON.stringify(defaultShops)) {
+        setUserShops(defaultShops)
+      }
       localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify(defaultShops))
       if (!selectedShopId) {
         setSelectedShopId(uShopId)
       }
     }
-  }, [mappedUser, selectedShopId])
+  }, [mappedUser?.id, mappedUser?.shop_id, selectedShopId, userShops])
 
   const shopId = selectedShopId || mappedUser?.shop_id || 'default-shop'
   const currentShop = userShops.find(s => s.id === shopId)
@@ -444,8 +448,58 @@ export default function JournalPage() {
           }
         }
       } catch (e) {
-        console.warn('Erreur chargement stock menu:', e)
-        setJournalMenuItems([])
+        console.warn('Erreur chargement stock menu, repli sur local:', e)
+        try {
+          const localProducts = getOfflineProducts(shopId)
+          if (localProducts && localProducts.length > 0) {
+            const uniqueMap = new Map<string, any>()
+            let excludedNames: string[] = []
+            try {
+              const stored = localStorage.getItem(`cahier_deleted_menu_items_${shopId}`)
+              if (stored) excludedNames = JSON.parse(stored)
+            } catch { }
+
+            localProducts.forEach((p: any, idx: number) => {
+              const rawName = p.name || ''
+              if (!rawName.trim()) return
+              let cleanName = rawName.trim()
+              const lowerName = cleanName.toLowerCase()
+              if (excludedNames.some(name => name.toLowerCase().trim() === lowerName.trim())) return
+
+              if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
+              else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
+              else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
+              else if (/^coca(-cola)?$/i.test(lowerName)) cleanName = 'Coca-Cola'
+              else if (/^possotome|possotomè$/i.test(lowerName)) cleanName = 'Eau Possotomè'
+              else if (/^colgate|brosse colgate$/i.test(lowerName)) cleanName = 'Colgate'
+              else if (/^boites?\s+de\s+sardines?$/i.test(lowerName)) cleanName = 'Boîte de Sardines'
+              else if (/^boites?\s+de\s+tomates?$/i.test(lowerName)) cleanName = 'Boîte de Tomate'
+              else {
+                cleanName = cleanName.split(/\s+/)
+                  .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                  .join(' ')
+              }
+
+              const priceVal = p.unit_price || p.price || 1000
+              const dedupeKey = `${cleanName.toLowerCase().trim()}_${priceVal}`
+              if (uniqueMap.has(dedupeKey)) return
+
+              const { emoji, category } = getSmartEmojiAndCategory(cleanName, shopActivity as any)
+              uniqueMap.set(dedupeKey, {
+                id: p.id || `stk_${idx}`,
+                name: cleanName,
+                price: priceVal,
+                category,
+                emoji
+              })
+            })
+            setJournalMenuItems(Array.from(uniqueMap.values()))
+          } else {
+            setJournalMenuItems([])
+          }
+        } catch (localErr) {
+          setJournalMenuItems([])
+        }
       }
     }
     fetchStockMenu()
@@ -1129,29 +1183,38 @@ export default function JournalPage() {
     const online = typeof window !== 'undefined' ? window.navigator.onLine : false
     const shopId = mappedUser.shop_id
 
+    let useOfflineFallback = false
+
     try {
       if (isConfigured && online) {
-        // Mode en ligne -> Envoyer à l'API
-        const response = await fetch('/api/sales', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId
-          },
-          body: JSON.stringify(bodyData),
-        })
+        try {
+          // Mode en ligne -> Envoyer à l'API
+          const response = await fetch('/api/sales', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-shop-id': shopId
+            },
+            body: JSON.stringify(bodyData),
+          })
 
-        const data = await response.json()
+          const data = await response.json()
 
-        if (!response.ok) {
-          if (data.isSafeguardTriggered) {
-            setPostItWarning(data.error)
-          } else {
-            throw new Error(data.error || 'Erreur lors de l\'enregistrement')
+          if (!response.ok) {
+            if (data.isSafeguardTriggered) {
+              setPostItWarning(data.error)
+              return
+            } else {
+              throw new Error(data.error || 'Erreur lors de l\'enregistrement')
+            }
           }
-          return
+        } catch (fetchErr: any) {
+          console.warn('[Sales API Fallback] Impossible d\'enregistrer en ligne, bascule automatique en local:', fetchErr)
+          useOfflineFallback = true
         }
-      } else {
+      }
+
+      if (!isConfigured || !online || useOfflineFallback) {
         // Mode hors-ligne -> Enregistrer localement via offlineDb
         let parsed: any = null
         const color = bodyData.penColor
