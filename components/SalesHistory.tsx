@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useCallback } from 'react'
-import { Trash2, PlusCircle, Check, X, Loader, FileText, Printer, Share2, Sparkles } from 'lucide-react'
+import { Trash2, PlusCircle, Check, X, Loader, FileText, Printer, Share2 } from 'lucide-react'
 
 interface MenuItem {
   id: string
@@ -460,45 +460,16 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
                     </div>
                   </div>
 
-                  {/* Champ d'ajout inline avec suggestions stock */}
+                  {/* Champ d'ajout inline — saisie libre + suggestions en dessous si on tape */}
                   {isAddingHere && (() => {
                     const query = addInput.trim().toLowerCase()
-                    const suggestions = query.length >= 2
+                    const suggestions = query.length >= 1
                       ? menuItems.filter(m => m.name.toLowerCase().includes(query)).slice(0, 6)
-                      : menuItems.slice(0, 8)
+                      : []
 
                     return (
-                      <div className="mt-2 ml-2 space-y-2">
-                        {/* Suggestions du stock */}
-                        {suggestions.length > 0 && (
-                          <div className="bg-[#fffdf2] border border-emerald-200 rounded-2xl p-2 shadow-sm">
-                            <div className="flex items-center gap-1 text-[9px] font-bold text-emerald-700 mb-1.5 px-1">
-                              <Sparkles className="w-2.5 h-2.5" />
-                              <span>{query.length >= 2 ? `Résultats pour « ${addInput} »` : 'Choisir un produit du stock :'}</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {suggestions.map(item => (
-                                <button
-                                  key={item.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setAddInput(`1 ${item.name} à ${item.price}`)
-                                    addInputRef.current?.focus()
-                                  }}
-                                  className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-400 rounded-xl text-xs font-semibold text-gray-800 transition-all active:scale-95 shadow-sm"
-                                >
-                                  <span>{item.emoji}</span>
-                                  <span>{item.name}</span>
-                                  <span className="font-mono text-emerald-700 text-[9px] bg-emerald-50 px-1 rounded">
-                                    {new Intl.NumberFormat('fr-FR').format(item.price)} F
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Input manuel + boutons */}
+                      <div className="mt-2 ml-2 space-y-1">
+                        {/* Input principal */}
                         <div className="flex items-center gap-2">
                           <span className="text-emerald-500 text-xs font-bold select-none">+</span>
                           <input
@@ -510,7 +481,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
                               if (e.key === 'Enter') handleConfirmAdd(sale.id)
                               if (e.key === 'Escape') handleCancelAdd()
                             }}
-                            placeholder="ou taper : 2 beaufort à 350..."
+                            placeholder="Taper un produit ou une quantité..."
                             className="flex-1 text-xs border border-emerald-300 rounded-lg px-2.5 py-1.5 font-handwritten focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white placeholder:text-gray-300"
                           />
                           <button
@@ -529,6 +500,30 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
                             <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
+
+                        {/* Suggestions — apparaissent seulement si on tape */}
+                        {suggestions.length > 0 && (
+                          <div className="ml-4 flex flex-wrap gap-1.5 py-1">
+                            {suggestions.map(item => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onMouseDown={e => e.preventDefault()} // éviter blur sur l'input
+                                onClick={() => {
+                                  setAddInput(`1 ${item.name} à ${item.price}`)
+                                  addInputRef.current?.focus()
+                                }}
+                                className="flex items-center gap-1 px-2 py-0.5 bg-white hover:bg-emerald-50 border border-emerald-200 hover:border-emerald-400 rounded-xl text-[11px] font-semibold text-gray-800 transition-all active:scale-95 shadow-sm"
+                              >
+                                <span>{item.emoji}</span>
+                                <span>{item.name}</span>
+                                <span className="font-mono text-emerald-700 text-[9px]">
+                                  {new Intl.NumberFormat('fr-FR').format(item.price)} F
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )
                   })()}
