@@ -31,7 +31,6 @@ import {
 
 const THEMES: Record<string, {
   filters: Array<{ id: string; label: string; emoji: string }>;
-  defaultItems: Array<{ id: string; name: string; price: number; category: string; emoji: string }>;
 }> = {
   resto: {
     filters: [
@@ -39,20 +38,6 @@ const THEMES: Record<string, {
       { id: 'cuisine', label: 'Cuisiné', emoji: '🍲' },
       { id: 'cafeteria', label: 'Cafétéria', emoji: '☕' },
       { id: 'boisson', label: 'Boissons', emoji: '🥤' }
-    ],
-    defaultItems: [
-      { id: 'm1', name: 'Atassi Viande / Poulet', price: 1500, category: 'cuisine', emoji: '🍲' },
-      { id: 'm2', name: 'Riz au Gras Poisson', price: 1500, category: 'cuisine', emoji: '🍛' },
-      { id: 'm3', name: 'Spaghetti Omelette', price: 1000, category: 'cuisine', emoji: '🍝' },
-      { id: 'm4', name: 'Igname Pilée Sauce', price: 2500, category: 'cuisine', emoji: '🍠' },
-      { id: 'm5', name: 'Poulet Braisé / Frit', price: 2000, category: 'cuisine', emoji: '🍗' },
-      { id: 'm6', name: 'Café au Lait', price: 500, category: 'cafeteria', emoji: '☕' },
-      { id: 'm7', name: 'Pain Omelette Avocat', price: 800, category: 'cafeteria', emoji: '🥖' },
-      { id: 'm8', name: 'Bouillie de Millet', price: 300, category: 'cafeteria', emoji: '🥣' },
-      { id: 'm9', name: 'Jus de Bissap Maison', price: 300, category: 'boisson', emoji: '🥤' },
-      { id: 'm10', name: 'Bière Beaufort / Sobebra', price: 800, category: 'boisson', emoji: '🍺' },
-      { id: 'm11', name: 'Eau Possotomè 1.5L', price: 400, category: 'boisson', emoji: '💧' },
-      { id: 'm12', name: 'Coca-Cola / Sucrerie', price: 500, category: 'boisson', emoji: '🥤' }
     ]
   },
   boutique: {
@@ -62,19 +47,6 @@ const THEMES: Record<string, {
       { id: 'alimentaire', label: 'Alimentaire', emoji: '🌾' },
       { id: 'boisson', label: 'Boissons', emoji: '🥤' },
       { id: 'autre', label: 'Divers', emoji: '🏷️' }
-    ],
-    defaultItems: [
-      { id: 'm1', name: 'Cahier 100 Pages', price: 250, category: 'fourniture', emoji: '📖' },
-      { id: 'm2', name: 'Cahier 200 Pages', price: 450, category: 'fourniture', emoji: '📖' },
-      { id: 'm3', name: 'Stylo Bic Bleu', price: 100, category: 'fourniture', emoji: '🖋️' },
-      { id: 'm4', name: 'Pain Baguette', price: 150, category: 'alimentaire', emoji: '🥖' },
-      { id: 'm5', name: 'Lait Bonnet Rouge', price: 600, category: 'alimentaire', emoji: '🥛' },
-      { id: 'm6', name: 'Boîte de Sardines', price: 400, category: 'alimentaire', emoji: '🐟' },
-      { id: 'm7', name: 'Boîte de Tomate', price: 150, category: 'alimentaire', emoji: '🍅' },
-      { id: 'm8', name: 'Eau Possotomè 1.5L', price: 400, category: 'boisson', emoji: '💧' },
-      { id: 'm9', name: 'Coca-Cola', price: 500, category: 'boisson', emoji: '🥤' },
-      { id: 'm10', name: 'Savon de Marseille', price: 350, category: 'autre', emoji: '🧼' },
-      { id: 'm11', name: 'Colgate', price: 350, category: 'autre', emoji: '🪥' }
     ]
   },
   prestations: {
@@ -83,16 +55,6 @@ const THEMES: Record<string, {
       { id: 'service', label: 'Services', emoji: '✂️' },
       { id: 'produit', label: 'Produits', emoji: '🧴' },
       { id: 'autre', label: 'Divers', emoji: '🏷️' }
-    ],
-    defaultItems: [
-      { id: 'm1', name: 'Coiffure Homme Simple', price: 1000, category: 'service', emoji: '✂️' },
-      { id: 'm2', name: 'Rasage Barbe', price: 500, category: 'service', emoji: '🪒' },
-      { id: 'm3', name: 'Coiffure Enfant', price: 800, category: 'service', emoji: '👶' },
-      { id: 'm4', name: 'Lavage Cheveux', price: 1500, category: 'service', emoji: '🧼' },
-      { id: 'm5', name: 'Tresses Simples', price: 2000, category: 'service', emoji: '💇\u200D♀️' },
-      { id: 'm6', name: 'Gel Cheveux', price: 1200, category: 'produit', emoji: '🧴' },
-      { id: 'm7', name: 'Huile pour Barbe', price: 2500, category: 'produit', emoji: '🧪' },
-      { id: 'm8', name: 'Shampoing Soin', price: 3000, category: 'produit', emoji: '🧼' }
     ]
   }
 }
@@ -414,10 +376,6 @@ export default function JournalPage() {
     if (!shopId) return
     const fetchStockMenu = async () => {
       try {
-        const currentShop = userShops.find(s => s.id === shopId)
-        const shopActivity = currentShop?.activity || 'boutique'
-        const theme = THEMES[shopActivity] || THEMES.boutique
-
         const res = await fetch('/api/stock', {
           headers: { 'x-shop-id': shopId }
         })
@@ -471,20 +429,16 @@ export default function JournalPage() {
 
             setJournalMenuItems(Array.from(uniqueMap.values()))
           } else {
-            // Aucun produit dans le stock -> charger la liste par défaut du thème
-            setJournalMenuItems(theme.defaultItems)
+            setJournalMenuItems([])
           }
         }
       } catch (e) {
-        console.warn('Fallback au menu modèle:', e)
-        const currentShop = userShops.find(s => s.id === shopId)
-        const shopActivity = currentShop?.activity || 'boutique'
-        const theme = THEMES[shopActivity] || THEMES.boutique
-        setJournalMenuItems(theme.defaultItems)
+        console.warn('Erreur chargement stock menu:', e)
+        setJournalMenuItems([])
       }
     }
     fetchStockMenu()
-  }, [shopId, userShops])
+  }, [shopId, shopActivity])
 
   // Tap 1-Click sur un plat du menu
   const handleTapMenuItemInJournal = (item: { name: string; price: number }) => {
@@ -2491,43 +2445,48 @@ export default function JournalPage() {
                       )}
 
                       {/* Touches Tactiles de Plats/Boissons sur une SEULE LIGNE CONTINUE DÉFILANTE */}
-                      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-0.5 select-none">
-                        {journalMenuItems
-                          .filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter)
-                          .map((item) => (
-                            <div key={item.id} className="relative group flex-shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => handleTapMenuItemInJournal(item)}
-                                className={`px-3 py-2 border rounded-2xl shadow-sm hover:shadow transition-all text-left flex items-center gap-2 active:scale-95 border-b-2 max-w-[200px] ${!item.id.startsWith('m') ? 'pr-6' : ''
-                                  } ${addingToSaleId
-                                    ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 hover:border-emerald-500 hover:border-b-emerald-600'
-                                    : 'bg-white hover:bg-amber-100 border-amber-250 hover:border-amber-400 hover:border-b-amber-500'
-                                  }`}
-                              >
-                                <span className="text-base flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
-                                <div className="flex flex-col min-w-0">
-                                  <span className="font-sans text-xs font-bold text-gray-800 truncate">
-                                    {item.name}
-                                  </span>
-                                  <span className="text-[9px] font-mono font-bold text-amber-900">
-                                    {formatPrice(item.price)}
-                                  </span>
-                                </div>
-                              </button>
+                      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-0.5 select-none w-full">
+                        {journalMenuItems.filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter).length === 0 ? (
+                          <div className="text-center py-2 text-gray-500 font-handwritten text-sm w-full">
+                            Aucun produit dans cet onglet. Utilisez le bouton <span className="font-bold text-amber-800">"+"</span> ci-dessus pour en ajouter, ou écrivez simplement vos ventes !
+                          </div>
+                        ) : (
+                          journalMenuItems
+                            .filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter)
+                            .map((item) => (
+                              <div key={item.id} className="relative group flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleTapMenuItemInJournal(item)}
+                                  className={`px-3 py-2 border rounded-2xl shadow-sm hover:shadow transition-all text-left flex items-center gap-2 active:scale-95 border-b-2 max-w-[200px] ${!item.id.startsWith('m') ? 'pr-6' : ''
+                                    } ${addingToSaleId
+                                      ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 hover:border-emerald-500 hover:border-b-emerald-600'
+                                      : 'bg-white hover:bg-amber-100 border-amber-250 hover:border-amber-400 hover:border-b-amber-500'
+                                    }`}
+                                  title={item.name}
+                                >
+                                  <span className="text-base flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-sans text-xs font-bold text-gray-800 truncate">
+                                      {item.name}
+                                    </span>
+                                    <span className="text-[9px] font-mono font-bold text-amber-900">
+                                      {formatPrice(item.price)}
+                                    </span>
+                                  </div>
+                                </button>
 
-                              {!item.id.startsWith('m') && (
                                 <button
                                   type="button"
                                   onClick={(e) => handleDeleteMenuItem(item.id, e)}
                                   className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center shadow transition-all scale-100 sm:scale-0 sm:group-hover:scale-100"
-                                  title="Supprimer ce produit indésirable"
+                                  title="Supprimer ce produit"
                                 >
                                   ✕
                                 </button>
-                              )}
-                            </div>
-                          ))}
+                              </div>
+                            ))
+                        )}
                       </div>
                     </div>
                   )}
