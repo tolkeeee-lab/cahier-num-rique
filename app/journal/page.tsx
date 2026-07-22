@@ -232,7 +232,7 @@ export default function JournalPage() {
   const [quickPlatPrice, setQuickPlatPrice] = useState('')
   const [quickPlatCat, setQuickPlatCat] = useState<'cuisine' | 'cafeteria' | 'boisson'>('cuisine')
 
-  // Charger le stock réel de la boutique pour fusionner avec le menu
+  // Charger le stock réel et les produits pour fusionner avec le menu (avec normalisation et dédoublonnement canonique)
   useEffect(() => {
     if (!shopId) return
     const fetchStockMenu = async () => {
@@ -242,11 +242,43 @@ export default function JournalPage() {
         })
         if (res.ok) {
           const data = await res.json()
-          if (data.products && data.products.length > 0) {
-            const loadedMenu = data.products.map((p: any, idx: number) => {
-              const lowerName = (p.name || '').toLowerCase()
-              const lowerCat = (p.category || '').toLowerCase()
+          const rawItems = [...(data.products || []), ...(data.orphans || [])]
+
+          if (rawItems.length > 0) {
+            const uniqueMap = new Map<string, {
+              id: string
+              name: string
+              price: number
+              category: 'cuisine' | 'cafeteria' | 'boisson' | 'autre'
+              emoji: string
+            }>()
+
+            rawItems.forEach((p: any, idx: number) => {
+              const rawName = p.name || ''
+              if (!rawName.trim()) return
+
+              // Normalisation Canonique (ex: lb / LB -> LB, flag / FLAG -> Flag, beufort / beaufort -> Beaufort)
+              let cleanName = rawName.trim()
+              const lowerName = cleanName.toLowerCase()
               
+              if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
+              else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
+              else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
+              else if (/^coca(-cola)?$/i.test(lowerName)) cleanName = 'Coca-Cola'
+              else if (/^possotome|possotomè$/i.test(lowerName)) cleanName = 'Eau Possotomè'
+              else if (/^colgate|brosse colgate$/i.test(lowerName)) cleanName = 'Colgate'
+              else if (/^boites?\s+de\s+sardines?$/i.test(lowerName)) cleanName = 'Boîte de Sardines'
+              else if (/^boites?\s+de\s+tomates?$/i.test(lowerName)) cleanName = 'Boîte de Tomate'
+              else {
+                cleanName = cleanName.split(/\s+/)
+                  .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                  .join(' ')
+              }
+
+              const dedupeKey = cleanName.toLowerCase()
+              if (uniqueMap.has(dedupeKey)) return // Déjà répertorié sous sa forme canonique unique !
+
+              const lowerCat = (p.category || '').toLowerCase()
               let catType: 'cuisine' | 'cafeteria' | 'boisson' | 'autre' = 'autre'
               let emoji = '📦'
 
@@ -261,15 +293,16 @@ export default function JournalPage() {
                 emoji = lowerName.includes('pain') || lowerName.includes('sandwich') ? '🥖' : lowerName.includes('bouillie') ? '🥣' : '☕'
               }
 
-              return {
+              uniqueMap.set(dedupeKey, {
                 id: p.id || `stk_${idx}`,
-                name: p.name,
+                name: cleanName,
                 price: p.unit_price || 1000,
                 category: catType,
                 emoji
-              }
+              })
             })
-            setJournalMenuItems(loadedMenu)
+
+            setJournalMenuItems(Array.from(uniqueMap.values()))
           }
         }
       } catch (e) {

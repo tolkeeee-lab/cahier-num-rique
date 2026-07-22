@@ -128,13 +128,27 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     })
 
     const orphanItems: StockItem[] = Object.entries(stockMap)
-      .filter(([name]) => !catalogNames.has(name))
-      .map(([name, data]) => ({
-        id: `orphan_${name}`, shop_id: shopId, name, category: '', unit: 'unité',
-        alert_threshold: 0, initial_stock: 0, unit_cost: 0, unit_price: 0,
-        created_at: '', total_in: data.total_in, total_out: data.total_out,
-        current_stock: data.total_in - data.total_out, movements: data.movements, is_orphan: true,
-      }))
+      .filter(([name]) => !catalogNames.has(name.toLowerCase().trim()))
+      .map(([name, data]) => {
+        let cleanName = name.trim()
+        const lowerName = cleanName.toLowerCase()
+        if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
+        else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
+        else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
+        else if (/^coca(-cola)?$/i.test(lowerName)) cleanName = 'Coca-Cola'
+        else {
+          cleanName = cleanName.split(/\s+/)
+            .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(' ')
+        }
+
+        return {
+          id: `orphan_${name}`, shop_id: shopId, name: cleanName, category: '', unit: 'unité',
+          alert_threshold: 0, initial_stock: 0, unit_cost: 0, unit_price: 0,
+          created_at: '', total_in: data.total_in, total_out: data.total_out,
+          current_stock: data.total_in - data.total_out, movements: data.movements, is_orphan: true,
+        }
+      })
 
     setItems(stockItems)
     setOrphans(orphanItems)
