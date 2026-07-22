@@ -37,7 +37,7 @@ interface StockManagerProps {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', 'Alimentation', 'Hygiène', 'Électronique', 'Textile', 'Autre']
+const CATEGORIES = ['Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', 'Alimentation', 'Hygiène', 'Autre']
 const UNITS = ['unité', 'pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'colis', 'boîte', 'bouteille']
 
 const EMPTY_FORM = {
@@ -290,7 +290,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
 
   // ── Données dérivées ─────────────────────────────────────────────────────────
 
-  const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar']
+  const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients']
   const existingCategories = Array.from(new Set(items.map(i => i.category).filter(Boolean)))
   const allCategories = Array.from(new Set([...defaultCategories, ...existingCategories]))
 
@@ -718,6 +718,12 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                 </div>
               ) : (
                 <>
+                  {formData.category.includes('Matières') && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-center gap-2 text-emerald-900 text-[10px] mb-3">
+                      <span className="text-sm">🥬</span>
+                      <p><strong>Matière Première / Cuisine :</strong> Ingrédients achetés au marché (sacs de riz, huile, viandes, condiments) pour préparer les plats et calculer le bénéfice brut global de la cuisine.</p>
+                    </div>
+                  )}
                   {formData.category.includes('Boissons') && (
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 flex items-center gap-2 text-blue-900 text-[10px] mb-3">
                       <span className="text-sm">🥤</span>
