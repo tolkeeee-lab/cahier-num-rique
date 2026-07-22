@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus } from 'lucide-react'
+import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X } from 'lucide-react'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -148,9 +148,28 @@ export default function JournalPage() {
   // localDemo kept for backward compat - true when using demo bypass
   const localDemo = demoRole !== null
 
-  // ── Réseau & Sync ──────────────────────────────────────────────────────────
-  const shopId = mappedUser?.shop_id
+  // ── Multi-Boutiques / Réseau Fondateur ──────────────────────────────────────
+  const [selectedShopId, setSelectedShopId] = useState<string>('')
+  const [userShops, setUserShops] = useState<Array<{ id: string; name: string; activity: string }>>([])
+  
+  // Synchroniser la boutique initiale dès que l'utilisateur est chargé
+  useEffect(() => {
+    if (mappedUser?.shop_id && !selectedShopId) {
+      setSelectedShopId(mappedUser.shop_id)
+      setUserShops([
+        { id: mappedUser.shop_id, name: 'Point de Vente N°1', activity: 'boutique' },
+        { id: `${mappedUser.shop_id}-resto`, name: 'Maquis & Restaurant N°2', activity: 'resto' }
+      ])
+    }
+  }, [mappedUser, selectedShopId])
+
+  const shopId = selectedShopId || mappedUser?.shop_id || 'default-shop'
   const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopId)
+
+  // Modal de création d'une nouvelle boutique / point de vente
+  const [showNewShopModal, setShowNewShopModal] = useState(false)
+  const [newShopName, setNewShopName] = useState('')
+  const [newShopActivity, setNewShopActivity] = useState<'boutique' | 'resto' | 'prestations'>('boutique')
 
   const [sales, setSales] = useState<Sale[]>([])
   const [tiroirCaisse, setTiroirCaisse] = useState(0)
@@ -1794,6 +1813,31 @@ export default function JournalPage() {
                   <h1 className="text-base md:text-2xl font-bold text-gray-900 font-handwritten truncate">
                     Cahier de Caisse Intelligent
                   </h1>
+                  {/* Sélecteur Multi-Boutique / Point de Vente Proprio */}
+                  <div className="flex items-center gap-1 bg-amber-100 bg-opacity-80 border border-amber-300 rounded-2xl px-2 py-0.5 select-none flex-shrink-0 shadow-sm">
+                    <span className="text-xs">🏬</span>
+                    <select
+                      value={shopId}
+                      onChange={(e) => {
+                        if (e.target.value === 'ADD_NEW_SHOP') {
+                          setShowNewShopModal(true)
+                        } else {
+                          setSelectedShopId(e.target.value)
+                        }
+                      }}
+                      className="bg-transparent text-xs font-bold text-amber-950 outline-none cursor-pointer py-0.5"
+                    >
+                      {userShops.map(s => (
+                        <option key={s.id} value={s.id} className="bg-white text-gray-900 font-sans">
+                          {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : '🏬 Boutique'})
+                        </option>
+                      ))}
+                      <option value="ADD_NEW_SHOP" className="bg-amber-50 font-bold text-amber-900">
+                        ➕ Ajouter un Point de Vente...
+                      </option>
+                    </select>
+                  </div>
+
                   {/* Role + boutique badge */}
                   <span className={`hidden sm:inline text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border flex-shrink-0 ${
                     mappedUser?.role === 'employee' 
@@ -3368,6 +3412,85 @@ export default function JournalPage() {
                 className="flex-grow py-2.5 px-3 bg-amber-900 hover:bg-amber-950 text-white text-xs font-bold uppercase rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 Oui, mettre à jour 👍
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Création Nouveau Point de Vente (Multi-Boutiques Proprio) ── */}
+      {showNewShopModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#fdfaf2] border border-amber-300 rounded-[28px] p-6 max-w-md w-full shadow-2xl space-y-4 font-sans animate-scale-in">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🏬</span>
+                <h3 className="font-handwritten text-xl font-bold text-gray-900">
+                  Nouveau Point de Vente
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowNewShopModal(false)}
+                className="p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-600 tracking-wider block mb-1">
+                  Nom de la boutique / Maquis / Point de vente *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Boutique Ganhi, Maquis Fidjrossè..."
+                  value={newShopName}
+                  onChange={(e) => setNewShopName(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-handwritten outline-none focus:border-amber-500"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-600 tracking-wider block mb-1">
+                  Type d'activité principal *
+                </label>
+                <select
+                  value={newShopActivity}
+                  onChange={(e: any) => setNewShopActivity(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-800 outline-none"
+                >
+                  <option value="boutique">🏬 Boutique / Alimentation Générale / Magasin</option>
+                  <option value="resto">🍲 Restaurant / Cafétéria / Maquis / Bar</option>
+                  <option value="prestations">✂️ Prestations de Services / Coiffure / Artisanat</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-3">
+              <button
+                type="button"
+                onClick={() => setShowNewShopModal(false)}
+                className="flex-1 py-2.5 px-4 border border-gray-300 text-gray-700 text-xs font-bold uppercase rounded-xl hover:bg-gray-100 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={!newShopName.trim()}
+                onClick={() => {
+                  if (!newShopName.trim()) return
+                  const newId = `shop_${Date.now()}`
+                  const newShopObj = { id: newId, name: newShopName.trim(), activity: newShopActivity }
+                  setUserShops(prev => [...prev, newShopObj])
+                  setSelectedShopId(newId)
+                  setNewShopName('')
+                  setShowNewShopModal(false)
+                }}
+                className="flex-1 py-2.5 px-4 bg-amber-900 hover:bg-amber-950 text-white text-xs font-bold uppercase rounded-xl transition-all disabled:opacity-40"
+              >
+                Créer le Point de Vente
               </button>
             </div>
           </div>
