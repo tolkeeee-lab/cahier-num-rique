@@ -169,12 +169,34 @@ export default function JournalPage() {
   
   // Synchroniser la boutique initiale dès que l'utilisateur est chargé
   useEffect(() => {
-    if (mappedUser?.shop_id && !selectedShopId) {
-      setSelectedShopId(mappedUser.shop_id)
-      setUserShops([
-        { id: mappedUser.shop_id, name: 'Point de Vente N°1', activity: 'boutique' },
-        { id: `${mappedUser.shop_id}-resto`, name: 'Maquis & Restaurant N°2', activity: 'resto' }
-      ])
+    if (mappedUser?.id) {
+      const uId = mappedUser.id
+      const uShopId = mappedUser.shop_id || `${uId}-main`
+
+      // Récupérer les boutiques stockées localement pour ce propriétaire
+      const stored = localStorage.getItem(`cahier_user_shops_${uId}`)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setUserShops(parsed)
+            if (!selectedShopId) {
+              setSelectedShopId(parsed[0].id)
+            }
+            return
+          }
+        } catch {}
+      }
+
+      // Si aucune boutique n'est enregistrée localement, initialiser uniquement avec sa boutique principale
+      const defaultShops = [
+        { id: uShopId, name: 'Mon Point de Vente', activity: 'boutique' }
+      ]
+      setUserShops(defaultShops)
+      localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify(defaultShops))
+      if (!selectedShopId) {
+        setSelectedShopId(uShopId)
+      }
     }
   }, [mappedUser, selectedShopId])
 
@@ -3587,7 +3609,13 @@ export default function JournalPage() {
                   if (!newShopName.trim()) return
                   const newId = `shop_${Date.now()}`
                   const newShopObj = { id: newId, name: newShopName.trim(), activity: newShopActivity }
-                  setUserShops(prev => [...prev, newShopObj])
+                  setUserShops(prev => {
+                    const updated = [...prev, newShopObj]
+                    if (mappedUser?.id) {
+                      localStorage.setItem(`cahier_user_shops_${mappedUser.id}`, JSON.stringify(updated))
+                    }
+                    return updated
+                  })
                   setSelectedShopId(newId)
                   setNewShopName('')
                   setShowNewShopModal(false)
