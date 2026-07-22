@@ -15,10 +15,11 @@ interface Employee {
 interface SettingsManagerProps {
   shopId?: string
   userEmail?: string
+  userShops?: Array<{ id: string; name: string; activity: string }>
   onError?: (err: string) => void
 }
 
-export function SettingsManager({ shopId = 'default-shop', userEmail, onError }: SettingsManagerProps) {
+export function SettingsManager({ shopId = 'default-shop', userEmail, userShops = [], onError }: SettingsManagerProps) {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -27,6 +28,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, onError }:
   // Formulaire d'ajout
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [assignedShopId, setAssignedShopId] = useState(shopId)
   const [saving, setSaving] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
@@ -245,6 +247,25 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, onError }:
                 className="w-full px-4 py-2 border border-gray-250 rounded-xl text-xs font-mono outline-none focus:border-gray-400 bg-[#faf7f0] transition-all"
               />
             </div>
+
+            {userShops.length > 0 && (
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                  Boutique / Point de Vente Assigné
+                </label>
+                <select
+                  value={assignedShopId}
+                  onChange={e => setAssignedShopId(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-250 rounded-xl text-xs font-semibold text-gray-800 outline-none bg-[#faf7f0]"
+                >
+                  {userShops.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : '🏬 Boutique'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {formError && (
               <p className="text-[10px] font-bold text-red-600 uppercase tracking-wide">

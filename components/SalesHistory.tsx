@@ -402,13 +402,13 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
                         </button>
                       )}
 
-                      {/* Rayer */}
-                      {!isCrossed && !isEmployee && (
+                      {/* Rayer (Accessible à tous, y compris les employés) */}
+                      {!isCrossed && (
                         <button
                           onClick={() => handleCrossOut(sale.id)}
                           disabled={deletingId === sale.id}
-                          title="Rayer cette écriture"
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all disabled:opacity-50"
+                          title="Rayer cette écriture (Annulation)"
+                          className="opacity-100 p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all disabled:opacity-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

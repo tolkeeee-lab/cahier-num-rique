@@ -2732,7 +2732,7 @@ export default function JournalPage() {
 
               {activeTab === 'settings' && mappedUser?.role !== 'employee' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
-                  <SettingsManager shopId={mappedUser?.shop_id} userEmail={mappedUser?.email} onError={handleError} />
+                  <SettingsManager shopId={mappedUser?.shop_id} userEmail={mappedUser?.email} userShops={userShops} onError={handleError} />
                 </div>
               )}
 
