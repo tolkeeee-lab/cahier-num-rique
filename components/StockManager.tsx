@@ -718,6 +718,13 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                 </div>
               ) : (
                 <>
+                  {formData.category.includes('Boissons') && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 flex items-center gap-2 text-blue-900 text-[10px] mb-3">
+                      <span className="text-sm">🥤</span>
+                      <p><strong>Boisson / Bar en Stock :</strong> Produit acheté tout fait et revendu (avec suivi du nombre de bouteilles/casiers, prix d'achat grossiste et alerte de rupture).</p>
+                    </div>
+                  )}
+
                   {/* Catégorie + Unité */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
