@@ -43,6 +43,13 @@ interface SalesHistoryProps {
   shopId?: string
   isEmployee?: boolean
   showExpenseStats?: boolean
+  // Contrôle externe (depuis page.tsx) pour connecter le menu du bas
+  externalAddingToId?: string | null
+  externalAddInput?: string
+  onExternalAddInputChange?: (val: string) => void
+  onExternalStartAdd?: (saleId: string) => void
+  onExternalCancelAdd?: () => void
+  onExternalConfirmAdd?: (saleId: string) => Promise<void>
 }
 
 export const CATEGORY_INFOS: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
@@ -61,15 +68,22 @@ function formatPrice(price: number): string {
   }).format(price) + ' F'
 }
 
-export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCategory, showExpenseStats, shopId, isEmployee }: SalesHistoryProps) {
+export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCategory, showExpenseStats, shopId, isEmployee,
+  externalAddingToId, externalAddInput, onExternalAddInputChange, onExternalStartAdd, onExternalCancelAdd, onExternalConfirmAdd
+}: SalesHistoryProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [addingToId, setAddingToId] = useState<string | null>(null)
-  const [addInput, setAddInput] = useState('')
+  const [internalAddingToId, setInternalAddingToId] = useState<string | null>(null)
+  const [internalAddInput, setInternalAddInput] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null)
   const [editingCategorySaleId, setEditingCategorySaleId] = useState<string | null>(null)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const addInputRef = useRef<HTMLInputElement>(null)
+
+  // Valeurs effectives : externes si fournies, sinon internes
+  const addingToId = externalAddingToId !== undefined ? externalAddingToId : internalAddingToId
+  const addInput = externalAddInput !== undefined ? externalAddInput : internalAddInput
+  const setAddInput = onExternalAddInputChange ?? setInternalAddInput
 
   // Charger les produits du stock (localStorage + Supabase)
   const loadMenuItems = useCallback(async () => {
@@ -161,15 +175,17 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
   }
 
   const handleStartAdd = (id: string) => {
-    setAddingToId(id)
+    setInternalAddingToId(id)
     setAddInput('')
+    if (onExternalStartAdd) onExternalStartAdd(id)
     loadMenuItems()
     setTimeout(() => addInputRef.current?.focus(), 50)
   }
 
   const handleCancelAdd = () => {
-    setAddingToId(null)
+    setInternalAddingToId(null)
     setAddInput('')
+    if (onExternalCancelAdd) onExternalCancelAdd()
   }
 
   const handleConfirmAdd = async (id: string) => {
@@ -177,9 +193,14 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
     if (!text || !onAddArticle) return
     setSavingId(id)
     try {
-      await onAddArticle(id, text)
-      setAddingToId(null)
+      if (onExternalConfirmAdd) {
+        await onExternalConfirmAdd(id)
+      } else {
+        await onAddArticle(id, text)
+      }
+      setInternalAddingToId(null)
       setAddInput('')
+      if (onExternalCancelAdd) onExternalCancelAdd()
     } catch (err) {
       console.error('Erreur ajout article:', err)
     } finally {

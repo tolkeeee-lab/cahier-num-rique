@@ -227,6 +227,10 @@ export default function JournalPage() {
   const [wizardPurchasePrice, setWizardPurchasePrice] = useState('')
   const [wizardSalePrice, setWizardSalePrice] = useState('')
 
+  // ── Ajout article à vente existante — état partagé avec SalesHistory + menu du bas ──
+  const [addingToSaleId, setAddingToSaleId] = useState<string | null>(null)
+  const [addArticleInput, setAddArticleInput] = useState('')
+
   // 🍽️ États & Touches Tactiles du Menu Resto & Cafétéria (1-Tap)
   const [showJournalMenuGrid, setShowJournalMenuGrid] = useState(false)
   const [journalMenuFilter, setJournalMenuFilter] = useState<'all' | 'cuisine' | 'cafeteria' | 'boisson'>('all')
@@ -339,6 +343,13 @@ export default function JournalPage() {
 
   // Tap 1-Click sur un plat du menu
   const handleTapMenuItemInJournal = (item: { name: string; price: number }) => {
+    // ── MODE AJOUT ARTICLE : remplir le champ d'ajout de la vente en cours ──
+    if (addingToSaleId) {
+      setAddArticleInput(`1 ${item.name} à ${item.price}`)
+      return
+    }
+
+    // ── MODE NORMAL : écriture dans le cahier ──
     if (selectedPen !== 'blue') {
       setSelectedPen('blue')
       setJournalFilter('blue')
@@ -2159,6 +2170,12 @@ export default function JournalPage() {
                         onError={handleError} 
                         shopId={mappedUser?.shop_id}
                         isEmployee={mappedUser?.role === 'employee'}
+                        externalAddingToId={addingToSaleId}
+                        externalAddInput={addArticleInput}
+                        onExternalAddInputChange={setAddArticleInput}
+                        onExternalStartAdd={id => { setAddingToSaleId(id); setAddArticleInput('') }}
+                        onExternalCancelAdd={() => { setAddingToSaleId(null); setAddArticleInput('') }}
+                        onExternalConfirmAdd={async (id) => { await handleAddArticle(id, addArticleInput); setAddingToSaleId(null); setAddArticleInput('') }}
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center p-24 text-center min-h-[350px] no-underline">
@@ -2321,6 +2338,21 @@ export default function JournalPage() {
                         </form>
                       )}
 
+                      {/* Bandeau mode "Ajout article" — s'affiche quand une vente est en cours d'édition */}
+                      {addingToSaleId && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-300 rounded-xl text-[10px] font-bold text-emerald-800 mb-1">
+                          <span>✏️</span>
+                          <span>Mode ajout : cliquer sur un article ci-dessous pour l'ajouter à la vente</span>
+                          <button
+                            type="button"
+                            onClick={() => { setAddingToSaleId(null); setAddArticleInput('') }}
+                            className="ml-auto text-emerald-600 hover:text-red-500 transition-colors"
+                          >
+                            ✕ Annuler
+                          </button>
+                        </div>
+                      )}
+
                       {/* Touches Tactiles de Plats/Boissons sur une SEULE LIGNE CONTINUE DÉFILANTE */}
                       <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-0.5 select-none">
                         {journalMenuItems
@@ -2330,7 +2362,11 @@ export default function JournalPage() {
                               key={item.id}
                               type="button"
                               onClick={() => handleTapMenuItemInJournal(item)}
-                              className="px-3 py-2 bg-white hover:bg-amber-100 border border-amber-250 hover:border-amber-400 rounded-2xl shadow-sm hover:shadow transition-all text-left flex items-center gap-2 flex-shrink-0 active:scale-95 border-b-2 hover:border-b-amber-500 max-w-[200px]"
+                              className={`px-3 py-2 border rounded-2xl shadow-sm hover:shadow transition-all text-left flex items-center gap-2 flex-shrink-0 active:scale-95 border-b-2 max-w-[200px] ${
+                                addingToSaleId
+                                  ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 hover:border-emerald-500 hover:border-b-emerald-600'
+                                  : 'bg-white hover:bg-amber-100 border-amber-250 hover:border-amber-400 hover:border-b-amber-500'
+                              }`}
                             >
                               <span className="text-base flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
                               <div className="flex flex-col min-w-0">
@@ -2698,6 +2734,12 @@ export default function JournalPage() {
                         onError={handleError} 
                         shopId={mappedUser?.shop_id}
                         isEmployee={mappedUser?.role === 'employee'}
+                        externalAddingToId={addingToSaleId}
+                        externalAddInput={addArticleInput}
+                        onExternalAddInputChange={setAddArticleInput}
+                        onExternalStartAdd={id => { setAddingToSaleId(id); setAddArticleInput('') }}
+                        onExternalCancelAdd={() => { setAddingToSaleId(null); setAddArticleInput('') }}
+                        onExternalConfirmAdd={async (id) => { await handleAddArticle(id, addArticleInput); setAddingToSaleId(null); setAddArticleInput('') }}
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center p-24 text-center min-h-[350px]">
