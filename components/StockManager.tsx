@@ -37,7 +37,7 @@ interface StockManagerProps {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', 'Alimentation', 'Hygiène', 'Autre']
+const CATEGORIES = ['Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', '✂️ Prestations & Services', 'Alimentation', 'Hygiène', 'Autre']
 const UNITS = ['unité', 'pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'colis', 'boîte', 'bouteille']
 
 const EMPTY_FORM = {
@@ -290,7 +290,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
 
   // ── Données dérivées ─────────────────────────────────────────────────────────
 
-  const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients']
+  const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', '✂️ Prestations & Services']
   const existingCategories = Array.from(new Set(items.map(i => i.category).filter(Boolean)))
   const allCategories = Array.from(new Set([...defaultCategories, ...existingCategories]))
 
@@ -325,7 +325,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
       <div className="px-4 py-2.5 border-b border-gray-200 bg-[#f5f1e8] flex items-center justify-between gap-3 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Package className="w-4 h-4 text-gray-700 flex-shrink-0" />
-          <h2 className="font-handwritten text-xl font-bold text-gray-800 truncate">Gestionnaire de Stock</h2>
+          <h2 className="font-handwritten text-xl font-bold text-gray-800 truncate">Gestionnaire de Stock & Cartes</h2>
           {alertCount > 0 && (
             <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 bg-red-100 border border-red-200 rounded-full text-[9px] font-bold text-red-700 uppercase">
               <AlertTriangle className="w-2.5 h-2.5" />
@@ -349,17 +349,28 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
               setEditingItem(null)
               setShowAddModal(true)
             }}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-full text-[10px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            className="flex items-center gap-1 px-2 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
             <Plus className="w-3 h-3" />
-            <span>Plat / Menu</span>
+            <span>🍽️ Carte Menu</span>
+          </button>
+          <button
+            onClick={() => {
+              setFormData({ ...EMPTY_FORM, category: '✂️ Prestations & Services' })
+              setEditingItem(null)
+              setShowAddModal(true)
+            }}
+            className="flex items-center gap-1 px-2 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+          >
+            <Plus className="w-3 h-3" />
+            <span>✂️ Prestation</span>
           </button>
           <button
             onClick={() => openAddModal()}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-900 hover:bg-black text-white rounded-full text-[10px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            className="flex items-center gap-1 px-2 py-1.5 bg-gray-900 hover:bg-black text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
             <Plus className="w-3 h-3" />
-            <span>Produit</span>
+            <span>📦 Carte Stock</span>
           </button>
         </div>
       </div>
@@ -718,6 +729,12 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                 </div>
               ) : (
                 <>
+                  {formData.category.includes('Prestations') && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-2.5 flex items-center gap-2 text-purple-900 text-[10px] mb-3">
+                      <span className="text-sm">✂️</span>
+                      <p><strong>Carte Prestation / Service :</strong> Main d'œuvre ou service rendu (Coiffure, Couture, Réparation, Nettoyage). Aucun stock physique requis.</p>
+                    </div>
+                  )}
                   {formData.category.includes('Matières') && (
                     <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-center gap-2 text-emerald-900 text-[10px] mb-3">
                       <span className="text-sm">🥬</span>
