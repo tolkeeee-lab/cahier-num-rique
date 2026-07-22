@@ -293,6 +293,25 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
     return item.category === menuFilter
   })
 
+  // Auto-suggestions dynamiques des déclinaisons lors de la frappe
+  const lastTypedSegment = input.split(/[,;\n]/).pop()?.trim() || ''
+  const searchWords = lastTypedSegment.toLowerCase().split(/\s+/).filter(w => w.length >= 2)
+
+  const matchingSuggestions = lastTypedSegment.length >= 2 && searchWords.length > 0
+    ? menuItems.filter(item => {
+        const itemLower = item.name.toLowerCase()
+        return searchWords.some(w => itemLower.includes(w))
+      }).slice(0, 6)
+    : []
+
+  const handleSelectSuggestion = (item: MenuItem) => {
+    const segments = input.split(/[,;\n]/)
+    segments.pop() // Enlever le segment incomplet
+    const prefix = segments.length > 0 ? segments.join(', ') + ', ' : ''
+    setInput(`${prefix}1 ${item.name} à ${item.price}`)
+    textareaRef.current?.focus()
+  }
+
   return (
     <div className="relative space-y-4 font-sans select-none">
       {/* ── 1. Sélection du Stylo Bic 4-Couleurs ── */}
@@ -323,8 +342,31 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
         </div>
       </div>
 
-      {/* ── 2. Zone d'Écriture Manuscrite du Cahier ── */}
+      {/* ── 2. Zone d'Écriture Manuscrite du Cahier avec Suggestions Intelligentes ── */}
       <form onSubmit={handleSubmit} className="relative">
+        {matchingSuggestions.length > 0 && (
+          <div className="mb-2 p-2 bg-[#fffdf2] border border-amber-300 rounded-2xl shadow-md animate-fade-in">
+            <div className="flex items-center gap-1.5 text-amber-900 text-[10px] font-bold mb-1.5 px-1">
+              <Sparkles className="w-3 h-3 text-amber-600 animate-pulse" />
+              <span>Préciser le format / la déclinaison ({matchingSuggestions.length} trouvés) :</span>
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-0.5">
+              {matchingSuggestions.map(sugg => (
+                <button
+                  key={sugg.id}
+                  type="button"
+                  onClick={() => handleSelectSuggestion(sugg)}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-amber-100 border border-amber-300 hover:border-amber-500 rounded-xl text-xs font-bold text-gray-800 flex-shrink-0 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  <span>{sugg.emoji}</span>
+                  <span>{sugg.name}</span>
+                  <span className="font-mono text-amber-800 text-[10px] bg-amber-50 px-1 rounded">{formatPrice(sugg.price)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="relative rounded-2xl overflow-hidden shadow-sm border border-gray-200 bg-white p-1">
           <textarea
             ref={textareaRef}
