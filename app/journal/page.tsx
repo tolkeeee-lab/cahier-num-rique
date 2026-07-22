@@ -128,7 +128,22 @@ const FILTERS: { id: FilterId; label: string }[] = [
 
 export default function JournalPage() {
   const isConfigured = isSupabaseClientConfigured()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      const loggedOut = localStorage.getItem('cahier_logged_out_flag') === 'true'
+      if (!loggedOut) {
+        const cached = localStorage.getItem('cahier_last_active_user') || localStorage.getItem('cahier_mock_session')
+        if (cached) {
+          try {
+            return JSON.parse(cached)
+          } catch {
+            return null
+          }
+        }
+      }
+    }
+    return null
+  })
   
   const getMappedUser = (rawUser: any) => {
     if (!rawUser) return null
@@ -483,26 +498,14 @@ export default function JournalPage() {
           return
         }
 
-        // Pas de session Supabase → essayer le cache local (mock session ou dernière session)
-        const localSession = localStorage.getItem('cahier_mock_session')
-        if (localSession) {
-          try { setUser(JSON.parse(localSession)) } catch {}
+        // Si pas de session Cloud active, conserver la session locale de secours si disponible
+        const cached = localStorage.getItem('cahier_last_active_user') || localStorage.getItem('cahier_mock_session')
+        if (cached) {
+          try {
+            setUser(JSON.parse(cached))
+          } catch {}
           setAuthLoading(false)
           return
-        }
-
-        // ⚠️ Clé du fix offline : relire l'utilisateur du dernier accès
-        // Si on est offline et qu'on refresh, getSession() retourne null MAIS on a
-        // le dernier utilisateur actif en cache → on l'utilise au lieu de déconnecter
-        const isCurrentlyOffline = typeof window !== 'undefined' && !window.navigator.onLine
-        const lastActiveUser = localStorage.getItem('cahier_last_active_user')
-        if (isCurrentlyOffline && lastActiveUser) {
-          console.info('[Auth] Offline refresh — restauration depuis cahier_last_active_user')
-          try {
-            setUser(JSON.parse(lastActiveUser))
-            setAuthLoading(false)
-            return
-          } catch {}
         }
 
         // Vraiment pas de session → montrer l'écran de login
@@ -510,10 +513,12 @@ export default function JournalPage() {
         setAuthLoading(false)
       } catch (err) {
         console.error('[Auth] Erreur d\'initialisation:', err)
-        // En cas d'erreur inattendue, essayer le cache
-        const lastActiveUser = localStorage.getItem('cahier_last_active_user')
-        if (lastActiveUser) {
-          try { setUser(JSON.parse(lastActiveUser)) } catch {}
+        // En cas d'erreur de chargement (ex: réseau coupé en plein init), s'assurer de garder le cache local s'il existe
+        const cached = localStorage.getItem('cahier_last_active_user') || localStorage.getItem('cahier_mock_session')
+        if (cached) {
+          try { setUser(JSON.parse(cached)) } catch {}
+        } else {
+          setUser(null)
         }
         setAuthLoading(false)
       }
@@ -526,19 +531,19 @@ export default function JournalPage() {
       if (session?.user) {
         setUser(session.user)
       } else {
-        // ⚠️ Ne pas déconnecter si on est offline (faux SIGNED_OUT dû au timeout réseau)
-        const isCurrentlyOffline = typeof window !== 'undefined' && !window.navigator.onLine
-        if (isCurrentlyOffline) {
-          console.info('[Auth] Offline SIGNED_OUT ignoré — on garde la session locale')
-          setAuthLoading(false)
-          return
-        }
-
-        const localSession = localStorage.getItem('cahier_mock_session')
-        if (localSession) {
-          try { setUser(JSON.parse(localSession)) } catch {}
-        } else {
+        // ⚠️ Ignorer la déconnexion automatique si on a un cache local de secours
+        // sauf si un flag 'cahier_logged_out_flag' confirme que c'est un logout volontaire.
+        const hasLoggedOut = localStorage.getItem('cahier_logged_out_flag') === 'true'
+        if (hasLoggedOut) {
           setUser(null)
+        } else {
+          const cached = localStorage.getItem('cahier_last_active_user') || localStorage.getItem('cahier_mock_session')
+          if (cached) {
+            console.info('[Auth] Session conservée en cache local de secours')
+            try { setUser(JSON.parse(cached)) } catch {}
+          } else {
+            setUser(null)
+          }
         }
       }
       setAuthLoading(false)
@@ -550,6 +555,7 @@ export default function JournalPage() {
   useEffect(() => {
     if (user) {
       localStorage.setItem('cahier_last_active_user', JSON.stringify(user))
+      localStorage.removeItem('cahier_logged_out_flag') // Effacer le flag de déconnexion dès qu'on a un utilisateur valide
     }
   }, [user])
 
@@ -570,11 +576,15 @@ export default function JournalPage() {
 
   const handleLogout = async () => {
     localStorage.removeItem('cahier_mock_session')
+    localStorage.removeItem('cahier_last_active_user')
+    localStorage.setItem('cahier_logged_out_flag', 'true') // Signaler une déconnexion volontaire
     if (localDemo) {
       setDemoRole(null)
       setUser(null)
     } else {
-      await supabaseClient.auth.signOut()
+      try {
+        await supabaseClient.auth.signOut()
+      } catch {}
       setUser(null)
     }
   }

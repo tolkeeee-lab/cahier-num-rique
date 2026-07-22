@@ -246,7 +246,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
 
           <form onSubmit={handleAuth} className="space-y-4 font-sans">
             
-            {!isOnline && lastActiveUser && (
+            {lastActiveUser && (
               <div className="pb-3 border-b border-[#e2dcd0] border-dashed mb-3">
                 <button
                   type="button"
@@ -255,7 +255,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                       onLoginSuccess(lastActiveUser)
                     }
                   }}
-                  className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-1.5 border border-amber-500"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-1.5 border border-emerald-500"
                 >
                   <span>⚡ Continuer hors-ligne ({lastActiveUser.name || lastActiveUser.full_name || 'Ma Boutique'})</span>
                 </button>
