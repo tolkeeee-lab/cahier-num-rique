@@ -293,13 +293,24 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
     return item.category === menuFilter
   })
 
+  // Normalisation des abréviations populaires (ex: 100p -> 100 pages, cartonnet -> cartonné, gf -> grand format)
+  const normalizeTerm = (term: string): string => {
+    let t = term.toLowerCase()
+    t = t.replace(/\b(\d+)\s*p\b/g, '$1 pages')
+    t = t.replace(/\bcartonne\b/g, 'cartonné')
+    t = t.replace(/\bgf\b/g, 'grand format')
+    t = t.replace(/\bpf\b/g, 'petit format')
+    return t
+  }
+
   // Auto-suggestions dynamiques des déclinaisons lors de la frappe
   const lastTypedSegment = input.split(/[,;\n]/).pop()?.trim() || ''
-  const searchWords = lastTypedSegment.toLowerCase().split(/\s+/).filter(w => w.length >= 2)
+  const normalizedSegment = normalizeTerm(lastTypedSegment)
+  const searchWords = normalizedSegment.split(/\s+/).filter(w => w.length >= 2)
 
   const matchingSuggestions = lastTypedSegment.length >= 2 && searchWords.length > 0
     ? menuItems.filter(item => {
-        const itemLower = item.name.toLowerCase()
+        const itemLower = normalizeTerm(item.name)
         return searchWords.some(w => itemLower.includes(w))
       }).slice(0, 6)
     : []

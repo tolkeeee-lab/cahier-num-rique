@@ -654,6 +654,27 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                   className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-handwritten outline-none focus:border-gray-400 transition-colors"
                   autoFocus
                 />
+
+                {/* Pilules d'attributs rapides génériques (Papeterie & Commerce) */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
+                  <span className="text-[9px] font-bold text-gray-400 font-mono uppercase">Attributs :</span>
+                  {[
+                    '100 Pages', '200 Pages', '300 Pages', 'Grand Format', 'Petit Format', 'Cartonné', 'Souple', 'TP', 'Boîte', 'Sachet'
+                  ].map(attr => (
+                    <button
+                      key={attr}
+                      type="button"
+                      onClick={() => {
+                        const currentName = formData.name.trim()
+                        if (currentName.includes(attr)) return
+                        setFormData(p => ({ ...p, name: currentName ? `${currentName} ${attr}` : attr }))
+                      }}
+                      className="px-2 py-0.5 bg-gray-100 hover:bg-amber-100 border border-gray-200 hover:border-amber-300 rounded-lg text-[9.5px] font-bold text-gray-700 transition-all hover:scale-105 active:scale-95"
+                    >
+                      +{attr}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Ventes antérieures détectées (Orphelin) */}
