@@ -681,124 +681,163 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                 </div>
               )}
 
-              {/* Catégorie + Unité */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Catégorie</label>
-                  <select
-                    value={formData.category}
-                    onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-gray-400"
-                  >
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Unité</label>
-                  <select
-                    value={formData.unit}
-                    onChange={e => setFormData(p => ({ ...p, unit: e.target.value }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-gray-400"
-                  >
-                    {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Stock initial + Seuil alerte */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Stock initial</label>
-                  <input
-                    type="number" min="0"
-                    value={formData.initial_stock}
-                    onChange={e => setFormData(p => ({ ...p, initial_stock: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
-                  />
-                  <p className="text-[8px] text-gray-400 mt-0.5">Ce que tu as déjà</p>
-                </div>
-                <div>
-                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Seuil d'alerte</label>
-                  <input
-                    type="number" min="0"
-                    value={formData.alert_threshold}
-                    onChange={e => setFormData(p => ({ ...p, alert_threshold: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
-                  />
-                  <p className="text-[8px] text-gray-400 mt-0.5">Alerte en dessous de</p>
-                </div>
-              </div>
-
-              {/* Prix */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Prix achat (F)</label>
-                  <input
-                    type="number" min="0"
-                    value={formData.unit_cost || ''}
-                    onChange={e => setFormData(p => ({ ...p, unit_cost: parseInt(e.target.value) || 0 }))}
-                    placeholder="Optionnel"
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
-                  />
-                </div>
-                <div>
-                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Prix vente (F)</label>
-                  <input
-                    type="number" min="0"
-                    value={formData.unit_price || ''}
-                    onChange={e => setFormData(p => ({ ...p, unit_price: parseInt(e.target.value) || 0 }))}
-                    placeholder="Optionnel"
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
-                  />
-                </div>
-              </div>
-
-              {/* Conditionnement / Multiplicateur */}
-              <div className="border-t border-dashed border-gray-200 pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">📦 Conditionnement / Lots</span>
-                  <input
-                    type="checkbox"
-                    checked={formData.multiplier > 1}
-                    onChange={e => {
-                      setFormData(p => ({
-                        ...p,
-                        multiplier: e.target.checked ? 50 : 1,
-                        packaging_name: e.target.checked ? 'sac' : '',
-                      }))
-                    }}
-                    className="rounded text-gray-800 focus:ring-gray-800"
-                  />
-                </div>
-
-                {formData.multiplier > 1 && (
-                  <div className="grid grid-cols-2 gap-3 bg-white p-3 border border-gray-200 rounded-xl shadow-inner">
+              {/* Adaptateur dynamique Menu Carte vs Stock Physique */}
+              {formData.category.includes('Cuisiné') || formData.category.includes('Cafétéria') ? (
+                <div className="bg-amber-50 border border-amber-250 rounded-2xl p-3.5 space-y-3">
+                  <div className="flex items-center gap-2 text-amber-900">
+                    <span className="text-base">🍽️</span>
                     <div>
-                      <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Nom du lot</label>
-                      <input
-                        type="text"
-                        placeholder="ex: sac, carton, pack"
-                        value={formData.packaging_name}
-                        onChange={e => setFormData(p => ({ ...p, packaging_name: e.target.value }))}
-                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Contenance (Multiplicateur)</label>
-                      <input
-                        type="number"
-                        min="2"
-                        value={formData.multiplier}
-                        onChange={e => setFormData(p => ({ ...p, multiplier: Math.max(1, parseInt(e.target.value) || 1) }))}
-                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
-                      />
-                    </div>
-                    <div className="col-span-2 text-[8px] text-gray-400 leading-tight">
-                      Chaque entrée/sortie de ce produit comptée dans le journal fera automatiquement <strong>+{formData.multiplier} / -{formData.multiplier} {formData.unit}</strong>.
+                      <h4 className="font-bold text-xs">Mode Plat / Menu Carte</h4>
+                      <p className="text-[10px] text-amber-700">Plat cuisiné ou servi à la demande. Aucun stock physique d'alerte ni prix d'achat grossiste requis.</p>
                     </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-amber-950 tracking-wider font-sans block mb-1">Catégorie Carte</label>
+                      <select
+                        value={formData.category}
+                        onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-gray-800 outline-none"
+                      >
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-amber-950 tracking-wider font-sans block mb-1">Prix Vente (FCFA) *</label>
+                      <input
+                        type="number" min="0" required
+                        value={formData.unit_price || ''}
+                        onChange={e => setFormData(p => ({ ...p, unit_price: parseInt(e.target.value) || 0 }))}
+                        placeholder="Ex: 1500"
+                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-sm font-mono font-bold text-amber-950 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Catégorie + Unité */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Catégorie</label>
+                      <select
+                        value={formData.category}
+                        onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-gray-400"
+                      >
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Unité</label>
+                      <select
+                        value={formData.unit}
+                        onChange={e => setFormData(p => ({ ...p, unit: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-gray-400"
+                      >
+                        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Stock initial + Seuil alerte */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Stock initial</label>
+                      <input
+                        type="number" min="0"
+                        value={formData.initial_stock}
+                        onChange={e => setFormData(p => ({ ...p, initial_stock: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                      />
+                      <p className="text-[8px] text-gray-400 mt-0.5">Ce que tu as déjà</p>
+                    </div>
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Seuil d'alerte</label>
+                      <input
+                        type="number" min="0"
+                        value={formData.alert_threshold}
+                        onChange={e => setFormData(p => ({ ...p, alert_threshold: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                      />
+                      <p className="text-[8px] text-gray-400 mt-0.5">Alerte en dessous de</p>
+                    </div>
+                  </div>
+
+                  {/* Prix */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Prix achat (F)</label>
+                      <input
+                        type="number" min="0"
+                        value={formData.unit_cost || ''}
+                        onChange={e => setFormData(p => ({ ...p, unit_cost: parseInt(e.target.value) || 0 }))}
+                        placeholder="Optionnel"
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Prix vente (F)</label>
+                      <input
+                        type="number" min="0"
+                        value={formData.unit_price || ''}
+                        onChange={e => setFormData(p => ({ ...p, unit_price: parseInt(e.target.value) || 0 }))}
+                        placeholder="Optionnel"
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Conditionnement / Multiplicateur */}
+                  <div className="border-t border-dashed border-gray-200 pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">📦 Conditionnement / Lots</span>
+                      <input
+                        type="checkbox"
+                        checked={formData.multiplier > 1}
+                        onChange={e => {
+                          setFormData(p => ({
+                            ...p,
+                            multiplier: e.target.checked ? 50 : 1,
+                            packaging_name: e.target.checked ? 'sac' : '',
+                          }))
+                        }}
+                        className="rounded text-gray-800 focus:ring-gray-800"
+                      />
+                    </div>
+
+                    {formData.multiplier > 1 && (
+                      <div className="grid grid-cols-2 gap-3 bg-white p-3 border border-gray-200 rounded-xl shadow-inner mt-2">
+                        <div>
+                          <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Nom du lot</label>
+                          <input
+                            type="text"
+                            placeholder="ex: sac, carton, pack"
+                            value={formData.packaging_name}
+                            onChange={e => setFormData(p => ({ ...p, packaging_name: e.target.value }))}
+                            className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Contenance (Multiplicateur)</label>
+                          <input
+                            type="number"
+                            min="2"
+                            value={formData.multiplier}
+                            onChange={e => setFormData(p => ({ ...p, multiplier: Math.max(1, parseInt(e.target.value) || 1) }))}
+                            className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
+                          />
+                        </div>
+                        <div className="col-span-2 text-[8px] text-gray-400 leading-tight">
+                          Chaque entrée/sortie de ce produit comptée dans le journal fera automatiquement <strong>+{formData.multiplier} / -{formData.multiplier} {formData.unit}</strong>.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex gap-3 px-5 py-4 border-t border-gray-200 bg-[#f5f1e8]">
