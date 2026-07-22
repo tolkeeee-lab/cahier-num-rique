@@ -1837,12 +1837,12 @@ export default function JournalPage() {
               {/* Top row: title + logout */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xl md:text-3xl">📖</span>
-                  <h1 className="text-base md:text-2xl font-bold text-gray-900 font-handwritten truncate">
+                  <span className="hidden md:inline text-xl md:text-3xl">📖</span>
+                  <h1 className="hidden md:block text-base md:text-2xl font-bold text-gray-900 font-handwritten truncate">
                     Cahier de Caisse Intelligent
                   </h1>
                   {/* Sélecteur Multi-Boutique / Point de Vente Proprio */}
-                  <div className="flex items-center gap-1 bg-amber-100 bg-opacity-80 border border-amber-300 rounded-2xl px-2 py-0.5 select-none flex-shrink-0 shadow-sm">
+                  <div className="flex items-center gap-1 bg-amber-100 bg-opacity-80 border border-amber-300 rounded-2xl px-2 py-0.5 select-none flex-shrink-0 shadow-sm relative z-10">
                     <span className="text-xs">🏬</span>
                     <select
                       value={shopId}
@@ -1853,7 +1853,7 @@ export default function JournalPage() {
                           setSelectedShopId(e.target.value)
                         }
                       }}
-                      className="bg-transparent text-xs font-bold text-amber-950 outline-none cursor-pointer py-0.5"
+                      className="bg-transparent text-xs font-bold text-amber-950 outline-none cursor-pointer py-0.5 max-w-[120px] md:max-w-none"
                     >
                       {userShops.map(s => (
                         <option key={s.id} value={s.id} className="bg-white text-gray-900 font-sans">
@@ -1927,9 +1927,10 @@ export default function JournalPage() {
                   <button
                     onClick={handleLogout}
                     title="Déconnexion"
-                    className="text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-wider border border-red-200 rounded-full px-2 py-1 transition-colors"
+                    className="flex items-center gap-1 text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-wider border border-red-200 rounded-full px-2 py-1 transition-colors flex-shrink-0"
                   >
-                    Quitter
+                    <span>🚪</span>
+                    <span className="hidden sm:inline">Quitter</span>
                   </button>
                 </div>
               </div>
