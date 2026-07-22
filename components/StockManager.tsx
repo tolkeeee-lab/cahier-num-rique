@@ -276,7 +276,10 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
 
   // ── Données dérivées ─────────────────────────────────────────────────────────
 
-  const allCategories = ['TOUT', ...Array.from(new Set(items.map(i => i.category).filter(Boolean)))]
+  const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar']
+  const existingCategories = Array.from(new Set(items.map(i => i.category).filter(Boolean)))
+  const allCategories = Array.from(new Set([...defaultCategories, ...existingCategories]))
+
   const filteredItems = items.filter(i => {
     const matchSearch = !searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchCat = categoryFilter === 'TOUT' || i.category === categoryFilter
@@ -322,16 +325,27 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <button onClick={loadStock} title="Rafraîchir" className="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={() => openAddModal()}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 hover:bg-black text-white rounded-full text-[10px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95"
+            onClick={() => {
+              setFormData({ ...EMPTY_FORM, category: '🍲 Cuisiné / Plats' })
+              setEditingItem(null)
+              setShowAddModal(true)
+            }}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-full text-[10px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
             <Plus className="w-3 h-3" />
-            Produit
+            <span>Plat / Menu</span>
+          </button>
+          <button
+            onClick={() => openAddModal()}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-900 hover:bg-black text-white rounded-full text-[10px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+          >
+            <Plus className="w-3 h-3" />
+            <span>Produit</span>
           </button>
         </div>
       </div>

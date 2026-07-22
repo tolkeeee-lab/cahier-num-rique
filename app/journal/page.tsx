@@ -2096,24 +2096,37 @@ export default function JournalPage() {
                   </div>
  
                   {/* ── 🍽️ Barre / Grille Tactile du Menu Carte & Touches Rapides (Resto, Cafétéria, Buvette) ── */}
-                  <div className="bg-[#f5f1e8] border-t border-gray-200 p-2 px-4 flex items-center justify-between gap-2 select-none flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setShowJournalMenuGrid(!showJournalMenuGrid)}
-                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5"
-                    >
-                      <Utensils className="w-3.5 h-3.5" />
-                      <span>{showJournalMenuGrid ? 'Masquer le Menu Carte' : '🍽️ Menu Carte & Touches Rapides (1-Tap)'}</span>
-                      {showJournalMenuGrid ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    </button>
+                  <div className="bg-[#f5f1e8] border-t border-gray-200 p-2 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 select-none flex-shrink-0">
+                    <div className="flex items-center justify-between gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => setShowJournalMenuGrid(!showJournalMenuGrid)}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap flex-shrink-0"
+                      >
+                        <Utensils className="w-3.5 h-3.5" />
+                        <span>{showJournalMenuGrid ? 'Masquer le Menu' : '🍽️ Menu Carte (1-Tap)'}</span>
+                        {showJournalMenuGrid ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+
+                      {showJournalMenuGrid && (
+                        <button
+                          type="button"
+                          onClick={() => setShowQuickAddMenuForm(!showQuickAddMenuForm)}
+                          className="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold uppercase rounded-lg flex items-center gap-1 transition-all whitespace-nowrap sm:hidden"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>{showQuickAddMenuForm ? 'Fermer' : '➕ Plat'}</span>
+                        </button>
+                      )}
+                    </div>
 
                     {showJournalMenuGrid && (
-                      <div className="flex bg-white p-0.5 rounded-xl border border-gray-250 text-xs select-none">
+                      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide whitespace-nowrap w-full sm:w-auto pb-0.5 sm:pb-0">
                         <button
                           type="button"
                           onClick={() => setJournalMenuFilter('all')}
-                          className={`px-2.5 py-0.5 text-[9px] font-bold rounded-lg transition-all ${
-                            journalMenuFilter === 'all' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                          className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all flex-shrink-0 ${
+                            journalMenuFilter === 'all' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200'
                           }`}
                         >
                           🌟 Tout
@@ -2121,8 +2134,8 @@ export default function JournalPage() {
                         <button
                           type="button"
                           onClick={() => setJournalMenuFilter('cuisine')}
-                          className={`px-2.5 py-0.5 text-[9px] font-bold rounded-lg transition-all ${
-                            journalMenuFilter === 'cuisine' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                          className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all flex-shrink-0 ${
+                            journalMenuFilter === 'cuisine' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200'
                           }`}
                         >
                           🍲 Cuisiné
@@ -2130,8 +2143,8 @@ export default function JournalPage() {
                         <button
                           type="button"
                           onClick={() => setJournalMenuFilter('cafeteria')}
-                          className={`px-2.5 py-0.5 text-[9px] font-bold rounded-lg transition-all ${
-                            journalMenuFilter === 'cafeteria' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                          className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all flex-shrink-0 ${
+                            journalMenuFilter === 'cafeteria' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200'
                           }`}
                         >
                           ☕ Cafétéria
@@ -2139,8 +2152,8 @@ export default function JournalPage() {
                         <button
                           type="button"
                           onClick={() => setJournalMenuFilter('boisson')}
-                          className={`px-2.5 py-0.5 text-[9px] font-bold rounded-lg transition-all ${
-                            journalMenuFilter === 'boisson' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                          className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all flex-shrink-0 ${
+                            journalMenuFilter === 'boisson' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200'
                           }`}
                         >
                           🥤 Boissons
@@ -2149,19 +2162,19 @@ export default function JournalPage() {
                     )}
                   </div>
 
-                  {/* Panneau Dépliable de la Grille Tactile du Menu */}
+                  {/* Panneau Dépliable de la Ligne Tactile Continue du Menu */}
                   {showJournalMenuGrid && (
-                    <div className="bg-[#fffdf9] border-t border-b border-amber-250 p-4 shadow-inner space-y-3 max-h-56 overflow-y-auto select-none flex-shrink-0 animate-fade-in">
-                      <div className="flex items-center justify-between gap-2 border-b border-amber-200 border-dashed pb-2">
+                    <div className="bg-[#fffdf9] border-t border-b border-amber-250 p-3 shadow-inner space-y-2 select-none flex-shrink-0 animate-fade-in relative z-20">
+                      <div className="hidden sm:flex items-center justify-between gap-2 border-b border-amber-200 border-dashed pb-1.5">
                         <span className="text-xs font-bold text-amber-900 font-handwritten flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Cliquez sur un plat pour l'ajouter instantanément au cahier :</span>
+                          <span>Faites glisser et cliquez pour ajouter instantanément au cahier :</span>
                         </span>
 
                         <button
                           type="button"
                           onClick={() => setShowQuickAddMenuForm(!showQuickAddMenuForm)}
-                          className="px-2 py-0.5 bg-amber-700 hover:bg-amber-800 text-white text-[9px] font-bold uppercase rounded-lg flex items-center gap-1 transition-all"
+                          className="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold uppercase rounded-lg flex items-center gap-1 transition-all"
                         >
                           <Plus className="w-3 h-3" />
                           <span>{showQuickAddMenuForm ? 'Fermer' : '➕ Ajouter un Plat au Menu'}</span>
@@ -2225,8 +2238,8 @@ export default function JournalPage() {
                         </form>
                       )}
 
-                      {/* Touches Tactiles de Plats/Boissons */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {/* Touches Tactiles de Plats/Boissons sur une SEULE LIGNE CONTINUE DÉFILANTE */}
+                      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-0.5 select-none">
                         {journalMenuItems
                           .filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter)
                           .map((item) => (
@@ -2234,17 +2247,17 @@ export default function JournalPage() {
                               key={item.id}
                               type="button"
                               onClick={() => handleTapMenuItemInJournal(item)}
-                              className="p-2 bg-white hover:bg-amber-100 border border-amber-200 hover:border-amber-400 rounded-xl shadow-sm hover:shadow transition-all text-left flex items-center justify-between group active:scale-95 border-b-2 hover:border-b-amber-500"
+                              className="px-3 py-2 bg-white hover:bg-amber-100 border border-amber-250 hover:border-amber-400 rounded-2xl shadow-sm hover:shadow transition-all text-left flex items-center gap-2 flex-shrink-0 active:scale-95 border-b-2 hover:border-b-amber-500 max-w-[200px]"
                             >
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-sm flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
+                              <span className="text-base flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
+                              <div className="flex flex-col min-w-0">
                                 <span className="font-sans text-xs font-bold text-gray-800 truncate">
                                   {item.name}
                                 </span>
+                                <span className="text-[9px] font-mono font-bold text-amber-900">
+                                  {formatPrice(item.price)}
+                                </span>
                               </div>
-                              <span className="text-[10px] font-mono font-bold text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded-md flex-shrink-0 ml-1">
-                                {formatPrice(item.price)}
-                              </span>
                             </button>
                           ))}
                       </div>
@@ -2286,10 +2299,10 @@ export default function JournalPage() {
                     </button>
 
                     {/* Post-it calculette de monnaie — INSIDE the form, s'ouvre vers le haut */}
-                    <div className={`absolute right-4 bottom-full mb-2 z-30 transition-all duration-300 ${
+                    <div className={`absolute right-2 md:right-4 ${showJournalMenuGrid ? 'bottom-full mb-1 z-10 scale-90 sm:scale-100 origin-bottom-right' : 'bottom-full mb-2 z-30'} transition-all duration-300 ${
                       showChangeCalc
                         ? 'w-64 bg-amber-100 border border-amber-300 shadow-xl p-4 rotate-1 rounded-sm'
-                        : 'w-36 bg-amber-200 hover:bg-[#fef08a] border border-amber-300 shadow-md p-2 cursor-pointer rotate-2 text-center rounded-sm'
+                        : 'w-28 md:w-36 bg-amber-200 hover:bg-[#fef08a] border border-amber-300 shadow-md p-1.5 md:p-2 cursor-pointer rotate-2 text-center rounded-sm'
                     } select-none`}>
                       {/* Ruban adhésif */}
                       <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-4 bg-gray-300 bg-opacity-60 -rotate-2"></div>
