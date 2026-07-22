@@ -208,6 +208,12 @@ export default function JournalPage() {
   const [physicalCash, setPhysicalCash] = useState('')
   const [adjustmentNote, setAdjustmentNote] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  // Auto-apprentissage & mémorisation au vol des nouveaux produits
+  const [autoLearnData, setAutoLearnData] = useState<{
+    name: string
+    price: number
+  } | null>(null)
+  const [showAutoLearnModal, setShowAutoLearnModal] = useState(false)
 
   // Stock guided wizard states
   const [showStockWizard, setShowStockWizard] = useState(false)
@@ -3491,6 +3497,90 @@ export default function JournalPage() {
                 className="flex-1 py-2.5 px-4 bg-amber-900 hover:bg-amber-950 text-white text-xs font-bold uppercase rounded-xl transition-all disabled:opacity-40"
               >
                 Créer le Point de Vente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Auto-Apprentissage & Mémorisation au Vol de Produit ── */}
+      {showAutoLearnModal && autoLearnData && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#fffdf2] border border-amber-300 rounded-[28px] p-6 max-w-md w-full shadow-2xl space-y-4 font-sans animate-scale-in">
+            <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
+              <span className="text-2xl">💡</span>
+              <div>
+                <h3 className="font-handwritten text-xl font-bold text-gray-900">
+                  Enregistrer ce produit au catalogue ?
+                </h3>
+                <p className="text-[10px] text-amber-800 font-mono">
+                  MÉMORISATION AUTOMATIQUE DE VOS SITES ET VENTES HABITUELLES
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white border border-amber-200 rounded-2xl p-4 space-y-2">
+              <div className="flex justify-between items-center text-sm font-bold">
+                <span className="text-gray-800">{autoLearnData.name}</span>
+                <span className="text-emerald-700 font-mono">{formatPrice(autoLearnData.price)}</span>
+              </div>
+              <p className="text-[10px] text-gray-500 leading-relaxed font-sans">
+                Voulez-vous mémoriser définitivement « <strong>{autoLearnData.name}</strong> » pour que son nom et son tarif soient suggérés automatiquement lors des prochaines écritures au cahier ?
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAutoLearnModal(false)
+                  setAutoLearnData(null)
+                }}
+                className="flex-1 py-2.5 px-4 border border-amber-300 text-amber-950 text-xs font-bold uppercase rounded-xl hover:bg-amber-50 transition-all"
+              >
+                Non, juste pour cette fois ✕
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!mappedUser || !autoLearnData) return
+                  const sid = mappedUser.shop_id
+                  saveOfflineProduct(sid, {
+                    id: generateOfflineId(),
+                    shop_id: sid,
+                    name: autoLearnData.name,
+                    category: 'Général',
+                    unit: 'pièce',
+                    alert_threshold: 5,
+                    initial_stock: 100,
+                    unit_cost: Math.round(autoLearnData.price * 0.7),
+                    unit_price: autoLearnData.price,
+                    created_at: new Date().toISOString()
+                  })
+                  
+                  try {
+                    await fetch('/api/stock', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'x-shop-id': sid },
+                      body: JSON.stringify({
+                        name: autoLearnData.name,
+                        unit_price: autoLearnData.price,
+                        unit_cost: Math.round(autoLearnData.price * 0.7),
+                        initial_stock: 100,
+                        alert_threshold: 5,
+                        category: 'Alimentation'
+                      })
+                    })
+                  } catch (e) {
+                    console.warn(e)
+                  }
+
+                  setShowAutoLearnModal(false)
+                  setAutoLearnData(null)
+                }}
+                className="flex-1 py-2.5 px-4 bg-amber-900 hover:bg-amber-950 text-white text-xs font-bold uppercase rounded-xl transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]"
+              >
+                👍 Oui, Mémoriser !
               </button>
             </div>
           </div>
