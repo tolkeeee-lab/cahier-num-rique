@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
+import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp, X } from 'lucide-react'
 
 interface Sale {
   id: string
@@ -323,6 +323,22 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
     textareaRef.current?.focus()
   }
 
+  const handleDeleteSuggestion = async (item: MenuItem, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setMenuItems(prev => prev.filter(m => m.id !== item.id))
+
+    try {
+      if (item.id && !item.id.startsWith('m')) {
+        await fetch(`/api/stock?id=${item.id}`, {
+          method: 'DELETE',
+          headers: { 'x-shop-id': shopId }
+        })
+      }
+    } catch (err) {
+      console.warn('Suppression backend non bloquante:', err)
+    }
+  }
+
   return (
     <div className="relative space-y-4 font-sans select-none">
       {/* ── 1. Sélection du Stylo Bic 4-Couleurs ── */}
@@ -357,22 +373,37 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
       <form onSubmit={handleSubmit} className="relative">
         {matchingSuggestions.length > 0 && (
           <div className="mb-2 p-2 bg-[#fffdf2] border border-amber-300 rounded-2xl shadow-md animate-fade-in">
-            <div className="flex items-center gap-1.5 text-amber-900 text-[10px] font-bold mb-1.5 px-1">
-              <Sparkles className="w-3 h-3 text-amber-600 animate-pulse" />
-              <span>Préciser le format / la déclinaison ({matchingSuggestions.length} trouvés) :</span>
+            <div className="flex items-center justify-between gap-1.5 text-amber-900 text-[10px] font-bold mb-1.5 px-1">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-amber-600 animate-pulse" />
+                <span>Préciser le format / la déclinaison ({matchingSuggestions.length} trouvés) :</span>
+              </div>
+              <span className="text-[8px] text-amber-700 font-mono">Cliquez ✕ pour supprimer une mauvaise suggestion</span>
             </div>
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-0.5">
               {matchingSuggestions.map(sugg => (
-                <button
+                <div
                   key={sugg.id}
-                  type="button"
-                  onClick={() => handleSelectSuggestion(sugg)}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-amber-100 border border-amber-300 hover:border-amber-500 rounded-xl text-xs font-bold text-gray-800 flex-shrink-0 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                  className="flex items-center bg-white border border-amber-300 hover:border-amber-500 rounded-xl flex-shrink-0 transition-all shadow-sm overflow-hidden group"
                 >
-                  <span>{sugg.emoji}</span>
-                  <span>{sugg.name}</span>
-                  <span className="font-mono text-amber-800 text-[10px] bg-amber-50 px-1 rounded">{formatPrice(sugg.price)}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectSuggestion(sugg)}
+                    className="flex items-center gap-1 px-2.5 py-1 hover:bg-amber-100 text-xs font-bold text-gray-800 transition-colors"
+                  >
+                    <span>{sugg.emoji}</span>
+                    <span>{sugg.name}</span>
+                    <span className="font-mono text-amber-800 text-[10px] bg-amber-50 px-1 rounded">{formatPrice(sugg.price)}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteSuggestion(sugg, e)}
+                    title="Supprimer cette suggestion erronée"
+                    className="px-1.5 py-1 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors border-l border-amber-200"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
