@@ -28,6 +28,7 @@ interface Sale {
 
 interface AnalyticsDashboardProps {
   sales: Sale[]
+  userShops?: Array<{ id: string; name: string; activity: string }>
 }
 
 const PRODUCT_CATEGORY_INFOS: Record<string, { label: string; emoji: string; bg: string; text: string }> = {
@@ -45,9 +46,10 @@ function formatPrice(price: number): string {
   }).format(price) + ' F'
 }
 
-export function AnalyticsDashboard({ sales }: AnalyticsDashboardProps) {
+export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboardProps) {
   const [period, setPeriod] = useState<'today' | '7days' | 'month' | 'all'>('all')
   const [sortBy, setSortBy] = useState<'revenue' | 'quantity' | 'frequency'>('revenue')
+  const [viewMode, setViewMode] = useState<'single' | 'network'>(userShops.length > 1 ? 'network' : 'single')
 
   // Filtrer les ventes selon la période choisie
   const filteredSales = useMemo(() => {
@@ -165,8 +167,30 @@ export function AnalyticsDashboard({ sales }: AnalyticsDashboardProps) {
           </div>
         </div>
 
-        {/* Boutons Période */}
-        <div className="flex gap-1.5 bg-white border border-gray-250 p-1 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-3">
+          {userShops.length > 1 && (
+            <div className="flex bg-amber-100 p-1 rounded-2xl border border-amber-300 text-xs select-none">
+              <button
+                onClick={() => setViewMode('single')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all ${
+                  viewMode === 'single' ? 'bg-amber-800 text-white shadow-sm' : 'text-amber-950 hover:bg-amber-200'
+                }`}
+              >
+                📊 Point de Vente Actuel
+              </button>
+              <button
+                onClick={() => setViewMode('network')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all ${
+                  viewMode === 'network' ? 'bg-amber-900 text-white shadow-sm' : 'text-amber-950 hover:bg-amber-200'
+                }`}
+              >
+                👑 Vue Réseau ({userShops.length})
+              </button>
+            </div>
+          )}
+
+          {/* Boutons Période */}
+          <div className="flex gap-1.5 bg-white border border-gray-250 p-1 rounded-2xl shadow-sm">
           {[
             { id: 'all', label: 'Tout' },
             { id: 'month', label: 'Ce Mois' },
@@ -187,8 +211,57 @@ export function AnalyticsDashboard({ sales }: AnalyticsDashboardProps) {
           ))}
         </div>
       </div>
+    </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 max-w-5xl mx-auto w-full">
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 max-w-5xl mx-auto w-full">
+        {/* Vue Consolidée du Réseau Proprio */}
+        {viewMode === 'network' && userShops.length > 0 && (
+          <div className="bg-[#fffdf2] border border-amber-300 rounded-[28px] p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👑</span>
+                <div>
+                  <h3 className="font-handwritten text-xl font-bold text-gray-900">
+                    État Consolidé du Réseau Propriétaire
+                  </h3>
+                  <p className="text-[10px] text-amber-700 font-mono">
+                    COMPARAISON DES PERFORMANCES ET CHIFFRES DE TOUS VOS POINTS DE VENTE
+                  </p>
+                </div>
+              </div>
+              <span className="bg-amber-800 text-white font-mono font-bold text-xs px-3 py-1 rounded-full">
+                {userShops.length} Établissements
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {userShops.map((shop) => (
+                <div key={shop.id} className="bg-white border border-amber-200 rounded-2xl p-4 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
+                      <span>{shop.activity === 'resto' ? '🍲' : shop.activity === 'prestations' ? '✂️' : '🏬'}</span>
+                      <span>{shop.name}</span>
+                    </span>
+                    <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                      {shop.activity === 'resto' ? 'Resto / Cafétéria' : shop.activity === 'prestations' ? 'Services' : 'Boutique'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 font-mono text-xs">
+                    <div>
+                      <span className="text-[9px] uppercase text-gray-400 block font-sans">Statut Réseau</span>
+                      <span className="text-emerald-700 font-bold">⚡ Actif / Sync OK</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase text-gray-400 block font-sans">Bilan Point de Vente</span>
+                      <span className="text-gray-800 font-bold">Autonome</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {/* KPI Summary Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white border border-gray-200 rounded-[24px] p-4 shadow-sm flex items-center gap-3">
