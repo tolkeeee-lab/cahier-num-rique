@@ -383,6 +383,17 @@ export default function JournalPage() {
           const data = await res.json()
           const rawItems = [...(data.products || []), ...(data.orphans || [])]
 
+          // 1. Charger les exclusions locales pour cette boutique
+          let excludedNames: string[] = []
+          try {
+            const stored = localStorage.getItem(`cahier_deleted_menu_items_${shopId}`)
+            if (stored) {
+              excludedNames = JSON.parse(stored)
+            }
+          } catch (e) {
+            console.warn('Erreur lecture exclusions:', e)
+          }
+
           if (rawItems.length > 0) {
             const uniqueMap = new Map<string, {
               id: string
@@ -398,6 +409,11 @@ export default function JournalPage() {
 
               let cleanName = rawName.trim()
               const lowerName = cleanName.toLowerCase()
+
+              // Si ce nom de produit est dans la liste d'exclusion, on ne l'affiche pas dans le menu tactile
+              if (excludedNames.some(name => name.toLowerCase().trim() === lowerName.trim())) {
+                return
+              }
 
               if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
               else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
