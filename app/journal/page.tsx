@@ -343,9 +343,24 @@ export default function JournalPage() {
 
   // Tap 1-Click sur un plat du menu
   const handleTapMenuItemInJournal = (item: { name: string; price: number }) => {
-    // ── MODE AJOUT ARTICLE : remplir le champ d'ajout de la vente en cours ──
+    const itemName = item.name
+    const itemPrice = item.price
+    const escName = itemName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`(\\d+)\\s+${escName}\\s+à\\s+${itemPrice}`, 'i')
+
+    // ── MODE AJOUT ARTICLE : même logique que la saisie normale (append / incrément) ──
     if (addingToSaleId) {
-      setAddArticleInput(`1 ${item.name} à ${item.price}`)
+      if (!addArticleInput.trim()) {
+        setAddArticleInput(`1 ${itemName} à ${itemPrice}`)
+      } else {
+        const match = addArticleInput.match(regex)
+        if (match) {
+          const currentQty = parseInt(match[1]) || 1
+          setAddArticleInput(addArticleInput.replace(regex, `${currentQty + 1} ${itemName} à ${itemPrice}`))
+        } else {
+          setAddArticleInput(`${addArticleInput.trim()}, 1 ${itemName} à ${itemPrice}`)
+        }
+      }
       return
     }
 
@@ -355,13 +370,9 @@ export default function JournalPage() {
       setJournalFilter('blue')
     }
 
-    const itemName = item.name
-    const itemPrice = item.price
-
     if (!input.trim()) {
       setInput(`1 ${itemName} à ${itemPrice}`)
     } else {
-      const regex = new RegExp(`(\\d+)\\s+${itemName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+à\\s+${itemPrice}`, 'i')
       const match = input.match(regex)
       if (match) {
         const currentQty = parseInt(match[1]) || 1
