@@ -303,22 +303,22 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
               return (
                 <div
                   key={sale.id}
-                  className="lined-item group relative flex flex-col border-b border-transparent hover:bg-gray-50 hover:bg-opacity-40 px-2 rounded-lg transition-all"
-                  style={{ minHeight: '80px', paddingBottom: '8px', paddingTop: '8px' }}
+                  className="lined-item group relative flex flex-col border-b border-transparent hover:bg-gray-50 hover:bg-opacity-40 px-1 md:px-2 rounded-lg transition-all"
+                  style={{ minHeight: '44px', paddingBottom: '4px', paddingTop: '4px' }}
                 >
-                  <div className="flex items-start justify-between w-full">
+                  <div className="flex items-center justify-between w-full gap-2">
                     {/* Timestamp */}
-                    <div className="absolute left-[-38px] md:left-[-68px] w-8 md:w-14 text-right font-mono text-[10px] text-gray-400 font-bold select-none pr-1.5 md:pr-1 pt-1.5 no-underline">
+                    <div className="absolute left-[-38px] md:left-[-68px] w-8 md:w-14 text-right font-mono text-[9px] md:text-[10px] text-gray-400 font-bold select-none pr-1 md:pr-1 pt-0.5 no-underline">
                       {sale.time}
                     </div>
 
                     {/* Main text */}
-                    <div className="flex-grow pl-2 pr-4">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`font-semibold leading-relaxed ${penClass}`}>
+                    <div className="flex-grow pl-1 md:pl-2 pr-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`font-semibold leading-tight text-base md:text-lg ${penClass}`}>
                           {sale.notes}
                         </span>
-                        <span className={`text-[8px] font-bold border px-1.5 py-0.5 rounded-md font-sans tracking-wide ${typeBadge} no-underline`}>
+                        <span className={`text-[7.5px] md:text-[8px] font-bold border px-1 py-0.2 rounded-md font-sans tracking-wide ${typeBadge} no-underline flex-shrink-0`}>
                           {typeText}
                         </span>
 
@@ -371,18 +371,6 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
                           </div>
                         )}
                       </div>
-
-                      {/* Articles */}
-                      {sale.articles && sale.articles.length > 0 && (
-                        <div className="text-xs text-gray-500 font-handwritten mt-1 space-y-0.5 ml-2 no-underline">
-                          {sale.articles.map((a, idx) => (
-                            <div key={idx} className="flex items-center gap-1 opacity-80">
-                              <span>📦</span>
-                              <span>{a.quantity}x {a.name} à {a.unit_price} F</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
                     {/* Amount + action buttons */}
