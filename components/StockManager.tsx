@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import {
   Package, Plus, AlertTriangle, TrendingUp, TrendingDown,
   X, Search, RefreshCw, Edit3, Trash2, ChevronDown, ChevronUp, WifiOff,
+  Download,
 } from 'lucide-react'
 import {
   getOfflineProducts, replaceOfflineProducts, saveOfflineProduct,
@@ -288,6 +289,59 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     }
   }
 
+  const handleExportStock = () => {
+    if (items.length === 0) {
+      alert("Aucun produit à exporter dans le stock.")
+      return
+    }
+
+    const headers = [
+      "Nom du Produit",
+      "Catégorie",
+      "Unité",
+      "Prix d'Achat (F)",
+      "Prix de Vente (F)",
+      "Stock Initial",
+      "Entrées de stock",
+      "Sorties de stock",
+      "Stock Actuel",
+      "Valeur Stock Achat (F)",
+      "Valeur Stock Vente (F)",
+      "Statut Stock"
+    ]
+
+    const rows = items.map(item => {
+      const status = getStockStatus(item) === 'out' ? 'Rupture' : getStockStatus(item) === 'low' ? 'Stock Bas' : 'OK'
+      const valAchat = Math.max(0, item.current_stock) * (item.unit_cost || 0)
+      const valVente = Math.max(0, item.current_stock) * (item.unit_price || 0)
+
+      return [
+        `"${item.name.replace(/"/g, '""')}"`,
+        `"${(item.category || 'Général').replace(/"/g, '""')}"`,
+        `"${(item.unit || 'unité').replace(/"/g, '""')}"`,
+        item.unit_cost || 0,
+        item.unit_price || 0,
+        item.initial_stock || 0,
+        item.total_in || 0,
+        item.total_out || 0,
+        item.current_stock,
+        valAchat,
+        valVente,
+        `"${status}"`
+      ]
+    })
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n")
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", `Cahier_Stock_${shopId}_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // ── Données dérivées ─────────────────────────────────────────────────────────
 
   const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', '✂️ Prestations & Services']
@@ -340,6 +394,14 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
           )}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            onClick={handleExportStock}
+            title="Exporter le stock en Excel/CSV"
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+          >
+            <Download className="w-3 h-3" />
+            <span>Exporter</span>
+          </button>
           <button onClick={loadStock} title="Rafraîchir" className="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>

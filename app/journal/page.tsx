@@ -423,7 +423,8 @@ export default function JournalPage() {
                   .join(' ')
               }
 
-              const dedupeKey = cleanName.toLowerCase()
+              const priceVal = p.unit_price || p.price || 1000
+              const dedupeKey = `${cleanName.toLowerCase().trim()}_${priceVal}`
               if (uniqueMap.has(dedupeKey)) return
 
               const { emoji, category } = getSmartEmojiAndCategory(cleanName, shopActivity as any)
@@ -431,7 +432,7 @@ export default function JournalPage() {
               uniqueMap.set(dedupeKey, {
                 id: p.id || `stk_${idx}`,
                 name: cleanName,
-                price: p.unit_price || 1000,
+                price: priceVal,
                 category,
                 emoji
               })
