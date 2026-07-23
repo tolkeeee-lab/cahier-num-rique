@@ -97,13 +97,17 @@ export async function GET(request: Request) {
       const totalOut = filteredMovements.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0)
 
       const mult = product.multiplier || 1
-      const currentStock = ((product.initial_stock || 0) * mult) + totalIn - totalOut
+      const isUnlimited = product.is_service || product.category === 'Cuisine'
+      const currentStock = isUnlimited 
+        ? 999999 
+        : (((product.initial_stock || 0) * mult) + totalIn - totalOut)
 
       return {
         ...product,
         total_in: totalIn,
         total_out: totalOut,
         current_stock: currentStock,
+        is_unlimited: isUnlimited,
         movements: filteredMovements
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
           .slice(0, 20),
@@ -145,7 +149,7 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json()
-    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, created_at } = body
+    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, created_at } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Le nom du produit est obligatoire' }, { status: 400 })
@@ -162,6 +166,7 @@ export async function POST(request: Request) {
       unit_price: unit_price ?? 0,
       multiplier: multiplier ?? 1,
       packaging_name: packaging_name || '',
+      is_service: is_service ?? false,
     }
 
     if (created_at) {
@@ -193,7 +198,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json()
-    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name } = body
+    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service } = body
 
     if (!id) {
       return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
@@ -209,6 +214,7 @@ export async function PATCH(request: Request) {
     if (unit_price !== undefined) updates.unit_price = unit_price
     if (multiplier !== undefined) updates.multiplier = multiplier
     if (packaging_name !== undefined) updates.packaging_name = packaging_name
+    if (is_service !== undefined) updates.is_service = is_service
 
     const { data, error } = await supabase
       .from('products')

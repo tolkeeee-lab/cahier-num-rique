@@ -34,6 +34,28 @@ interface ParsedSale {
   categorie?: string
 }
 
+function cleanProductName(name: string): string {
+  let clean = name.trim()
+  if (!clean) return ""
+
+  const lower = clean.toLowerCase()
+  if (/^lb(\s*600)?$/i.test(lower)) return "LB"
+  if (/^flag(\s*6002?\s*lb)?$/i.test(lower)) return "Flag"
+  if (/^beufort$/i.test(lower) || /^beaufort$/i.test(lower)) return "Beaufort"
+  if (/^coca(-cola)?$/i.test(lower)) return "Coca-Cola"
+  if (/^possotome|possotomè$/i.test(lower)) return "Eau Possotomè"
+  if (/^colgate|brosse colgate$/i.test(lower)) return "Colgate"
+  if (/^boites?\s+de\s+sardines?$/i.test(lower)) return "Boîte de Sardines"
+  if (/^boites?\s+de\s+tomates?$/i.test(lower)) return "Boîte de Tomate"
+
+  if (clean.length > 3 && (lower.endsWith('s') || lower.endsWith('x')) && !lower.endsWith('ess') && !lower.endsWith('aux')) {
+    clean = clean.substring(0, clean.length - 1)
+  }
+
+  return clean.split(/\s+/)
+    .map(w => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
+}
 
 // Calcule le solde actuel du tiroir-caisse (Cash)
 async function getCurrentCash(shopId: string): Promise<number> {
@@ -102,6 +124,7 @@ export async function POST(request: NextRequest) {
   try {
     const { text, penColor, overrideData } = await request.json()
     const shopId = request.headers.get('x-shop-id') || 'default-shop'
+    const shopActivity = request.headers.get('x-shop-activity') || 'boutique'
 
     if ((!text || typeof text !== 'string' || text.trim().length === 0) && !overrideData) {
       return NextResponse.json(
@@ -316,24 +339,97 @@ export async function POST(request: NextRequest) {
 
         if (saleError) throw saleError
 
-        // Insérer les articles si existants
+        // Insérer les articles si existants avec résolution de catalogue intelligente
         if (parsedData.articles.length > 0) {
-          const articlesData = parsedData.articles.map((article) => ({
-            id: randomUUID(),
-            sale_id: saleId,
-            product_name: article.nom,
-            quantity: article.quantite,
-            unit_price: article.prix_unitaire,
-            subtotal: article.quantite * article.prix_unitaire,
-            category: article.categorie || 'Divers',
-            created_at: now.toISOString(),
-          }))
+          // Charger le catalogue produits existant
+          const { data: dbProducts } = await supabase
+            .from('products')
+            .select('*')
+            .eq('shop_id', shopId)
 
-          const { error: articlesError } = await supabase
-            .from('sold_articles')
-            .insert(articlesData)
+          const productsList = dbProducts || []
+          const articlesData = []
 
-          if (articlesError) console.error('Erreur Supabase sold_articles:', articlesError)
+          for (const article of parsedData.articles) {
+            const cleanName = cleanProductName(article.nom)
+            if (!cleanName) continue
+
+            let productId: string | null = null
+            let canonicalName = cleanName
+
+            // 1. Recherche de correspondance exacte (insensible à la casse)
+            let matchedProd = productsList.find(
+              p => p.name.toLowerCase().trim() === cleanName.toLowerCase().trim()
+            )
+
+            // 2. Recherche par fuzzy matching ou synonymes
+            if (!matchedProd) {
+              matchedProd = productsList.find(p => {
+                const prodNameLower = p.name.toLowerCase().trim()
+                const cleanLower = cleanName.toLowerCase().trim()
+                return prodNameLower.includes(cleanLower) || cleanLower.includes(prodNameLower)
+              })
+            }
+
+            if (matchedProd) {
+              productId = matchedProd.id
+              canonicalName = matchedProd.name
+            } else {
+              // 3. Si c'est une boutique, on l'ajoute automatiquement au catalogue products pour l'enrichir proprement
+              if (shopActivity === 'boutique') {
+                const newProdId = randomUUID()
+                const dbCategory = article.categorie || 'Divers'
+                const { error: insertProdErr } = await supabase
+                  .from('products')
+                  .insert([
+                    {
+                      id: newProdId,
+                      shop_id: shopId,
+                      name: cleanName,
+                      unit_price: article.prix_unitaire || 0,
+                      unit_cost: Math.round((article.prix_unitaire || 0) * 0.6),
+                      initial_stock: 100,
+                      alert_threshold: 5,
+                      category: dbCategory,
+                      created_at: now.toISOString(),
+                    }
+                  ])
+                if (!insertProdErr) {
+                  productId = newProdId
+                  // L'ajouter localement à la liste pour les prochains articles de la même boucle
+                  productsList.push({
+                    id: newProdId,
+                    shop_id: shopId,
+                    name: cleanName,
+                    unit_price: article.prix_unitaire || 0,
+                    category: dbCategory
+                  } as any)
+                }
+              }
+            }
+
+            articlesData.push({
+              id: randomUUID(),
+              sale_id: saleId,
+              product_id: productId,
+              product_name: canonicalName,
+              product_name_raw: article.nom,
+              product_name_canonical: canonicalName,
+              quantity: article.quantite,
+              unit_price: article.prix_unitaire,
+              subtotal: article.quantite * article.prix_unitaire,
+              category: article.categorie || 'Divers',
+              created_at: now.toISOString(),
+            })
+          }
+
+          if (articlesData.length > 0) {
+            const { error: articlesError } = await supabase
+              .from('sold_articles')
+              .insert(articlesData)
+
+            if (articlesError) console.error('Erreur Supabase sold_articles:', articlesError)
+          }
         }
 
         // Si crédit client, insérer dans debts

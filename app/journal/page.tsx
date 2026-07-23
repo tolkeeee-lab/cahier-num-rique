@@ -374,8 +374,13 @@ export default function JournalPage() {
     if (!shopId) return
     const fetchStockMenu = async () => {
       try {
+        const currentShop = userShops.find(s => s.id === shopId)
+        const activity = currentShop?.activity || 'boutique'
         const res = await fetch('/api/stock', {
-          headers: { 'x-shop-id': shopId }
+          headers: { 
+            'x-shop-id': shopId,
+            'x-shop-activity': activity
+          }
         })
         if (res.ok) {
           const data = await res.json()
@@ -575,9 +580,14 @@ export default function JournalPage() {
     // 3. Supprimer de la DB si c'est un produit du catalogue réel (non virtuel ni orphelin)
     try {
       if (id && !id.startsWith('stk_') && !id.startsWith('orphan_')) {
+        const currentShop = userShops.find(s => s.id === shopId)
+        const activity = currentShop?.activity || 'boutique'
         await fetch(`/api/stock?id=${id}`, {
           method: 'DELETE',
-          headers: { 'x-shop-id': shopId }
+          headers: { 
+            'x-shop-id': shopId,
+            'x-shop-activity': activity
+          }
         })
       }
     } catch (err) {
@@ -636,7 +646,8 @@ export default function JournalPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-shop-id': shopId || 'default-shop'
+          'x-shop-id': shopId || 'default-shop',
+          'x-shop-activity': shopActivity
         },
         body: JSON.stringify({
           name: quickPlatName.trim(),
@@ -837,11 +848,14 @@ export default function JournalPage() {
           },
         }
 
+        const currentShop = userShops.find(s => s.id === sid)
+        const activity = currentShop?.activity || 'boutique'
         const response = await fetch('/api/sales', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-shop-id': sid,
+            'x-shop-activity': activity
           },
           body: JSON.stringify(bodyData),
         })
@@ -887,7 +901,9 @@ export default function JournalPage() {
       if (isConfigured && isOnline) {
         try {
           // En ligne -> charger via le réseau
-          const headers = { 'x-shop-id': sid }
+          const currentShop = userShops.find(s => s.id === sid)
+          const activity = currentShop?.activity || 'boutique'
+          const headers = { 'x-shop-id': sid, 'x-shop-activity': activity }
           const response = await fetch('/api/sales', { headers })
           if (!response.ok) throw new Error('Erreur lors du chargement des écritures')
           const data = await response.json()
@@ -1191,11 +1207,14 @@ export default function JournalPage() {
       if (isConfigured && online) {
         try {
           // Mode en ligne -> Envoyer à l'API
+          const currentShop = userShops.find(s => s.id === shopId)
+          const activity = currentShop?.activity || 'boutique'
           const response = await fetch('/api/sales', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-shop-id': shopId
+              'x-shop-id': shopId,
+              'x-shop-activity': activity
             },
             body: JSON.stringify(bodyData),
           })
@@ -1649,9 +1668,15 @@ export default function JournalPage() {
       const oldUnitPrice = product.unit_price
 
       if (isConfigured && isOnline) {
+        const currentShop = userShops.find(s => s.id === sid)
+        const activity = currentShop?.activity || 'boutique'
         await fetch('/api/stock', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-shop-id': sid },
+          headers: { 
+            'Content-Type': 'application/json', 
+            'x-shop-id': sid,
+            'x-shop-activity': activity
+          },
           body: JSON.stringify({
             id: product.id,
             unit_cost: oldUnitCost,
@@ -1837,11 +1862,14 @@ export default function JournalPage() {
 
     try {
       if (isConfigured && online) {
+        const currentShop = userShops.find(s => s.id === sid)
+        const activity = currentShop?.activity || 'boutique'
         const response = await fetch('/api/sales', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'x-shop-id': sid
+            'x-shop-id': sid,
+            'x-shop-activity': activity
           },
           body: JSON.stringify({ id: saleId, action: 'add_article', text, penColor: selectedPen })
         })
@@ -1916,11 +1944,14 @@ export default function JournalPage() {
 
     try {
       if (isConfigured && online) {
+        const currentShop = userShops.find(s => s.id === sid)
+        const activity = currentShop?.activity || 'boutique'
         const response = await fetch('/api/sales', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'x-shop-id': sid
+            'x-shop-id': sid,
+            'x-shop-activity': activity
           },
           body: JSON.stringify({ id: saleId, action: 'update_category', category })
         })
@@ -3699,9 +3730,15 @@ export default function JournalPage() {
                   })
 
                   try {
+                    const currentShop = userShops.find(s => s.id === sid)
+                    const activity = currentShop?.activity || 'boutique'
                     await fetch('/api/stock', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'x-shop-id': sid },
+                      headers: { 
+                        'Content-Type': 'application/json', 
+                        'x-shop-id': sid,
+                        'x-shop-activity': activity
+                      },
                       body: JSON.stringify({
                         name: autoLearnData.name,
                         unit_price: autoLearnData.price,
