@@ -98,9 +98,19 @@ export async function GET(request: Request) {
 
       const mult = product.multiplier || 1
       const isUnlimited = product.is_service || product.category === 'Cuisine'
+      
+      // Un produit est "suivi" seulement si le propriétaire a défini un stock initial > 0
+      // OU s'il y a eu au moins un achat/entrée de stock.
+      // Les produits auto-créés depuis les ventes (initial_stock=0, aucun achat) ne sont PAS suivis.
+      const hasInitialStock = (product.initial_stock || 0) > 0
+      const hasPurchases = totalIn > 0
+      const stockTracked = hasInitialStock || hasPurchases
+      
       const currentStock = isUnlimited 
         ? 999999 
-        : (((product.initial_stock || 0) * mult) + totalIn - totalOut)
+        : stockTracked
+          ? (((product.initial_stock || 0) * mult) + totalIn - totalOut)
+          : 0 // Stock non suivi = 0 neutre (pas de RUPTURE fictive)
 
       return {
         ...product,
@@ -108,6 +118,7 @@ export async function GET(request: Request) {
         total_out: totalOut,
         current_stock: currentStock,
         is_unlimited: isUnlimited,
+        stock_tracked: stockTracked,
         movements: filteredMovements
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
           .slice(0, 20),

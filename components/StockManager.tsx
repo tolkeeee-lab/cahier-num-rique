@@ -29,6 +29,8 @@ interface StockItem extends OfflineProduct {
   current_stock: number
   movements: Movement[]
   is_orphan?: boolean
+  stock_tracked?: boolean
+  is_unlimited?: boolean
 }
 
 interface StockManagerProps {
@@ -59,17 +61,22 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR').format(price) + ' F'
 }
 
-function getStockStatus(item: StockItem): 'ok' | 'low' | 'out' {
+function getStockStatus(item: StockItem): 'ok' | 'low' | 'out' | 'untracked' {
+  // Les produits non suivis (auto-créés depuis les ventes, sans stock initial ni achat)
+  // ne déclenchent pas d'alerte de rupture
+  if (item.is_unlimited) return 'ok'
+  if (item.stock_tracked === false) return 'untracked'
   if (item.current_stock <= 0) return 'out'
   if (item.current_stock <= item.alert_threshold) return 'low'
   return 'ok'
 }
 
-function getStatusColors(status: 'ok' | 'low' | 'out') {
+function getStatusColors(status: 'ok' | 'low' | 'out' | 'untracked') {
   switch (status) {
-    case 'ok':  return { dot: 'bg-emerald-500', bar: 'bg-emerald-400', text: 'text-emerald-700', border: 'border-emerald-200', bg: 'bg-emerald-50' }
-    case 'low': return { dot: 'bg-amber-500',   bar: 'bg-amber-400',   text: 'text-amber-700',   border: 'border-amber-200',   bg: 'bg-amber-50'   }
-    case 'out': return { dot: 'bg-red-500',      bar: 'bg-red-400',     text: 'text-red-700',     border: 'border-red-200',     bg: 'bg-red-50'     }
+    case 'ok':        return { dot: 'bg-emerald-500', bar: 'bg-emerald-400', text: 'text-emerald-700', border: 'border-emerald-200', bg: 'bg-emerald-50' }
+    case 'low':       return { dot: 'bg-amber-500',   bar: 'bg-amber-400',   text: 'text-amber-700',   border: 'border-amber-200',   bg: 'bg-amber-50'   }
+    case 'out':       return { dot: 'bg-red-500',      bar: 'bg-red-400',     text: 'text-red-700',     border: 'border-red-200',     bg: 'bg-red-50'     }
+    case 'untracked': return { dot: 'bg-slate-400',    bar: 'bg-slate-300',   text: 'text-slate-500',   border: 'border-slate-200',   bg: 'bg-slate-50'   }
   }
 }
 
@@ -311,7 +318,8 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     ]
 
     const rows = items.map(item => {
-      const status = getStockStatus(item) === 'out' ? 'Rupture' : getStockStatus(item) === 'low' ? 'Stock Bas' : 'OK'
+      const st = getStockStatus(item)
+      const status = st === 'untracked' ? 'Non suivi' : st === 'out' ? 'Rupture' : st === 'low' ? 'Stock Bas' : 'OK'
       const valAchat = Math.max(0, item.current_stock) * (item.unit_cost || 0)
       const valVente = Math.max(0, item.current_stock) * (item.unit_price || 0)
 
@@ -353,7 +361,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     const matchCat = categoryFilter === 'TOUT' || i.category === categoryFilter
     return matchSearch && matchCat
   })
-  const alertCount = items.filter(i => getStockStatus(i) !== 'ok').length
+  const alertCount = items.filter(i => { const s = getStockStatus(i); return s === 'out' || s === 'low' }).length
   const stockValue = items.reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_cost || 0), 0)
   const stockValueSale = items.reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_price || 0), 0)
   const totalIn = items.reduce((s, i) => s + i.total_in, 0)
@@ -549,7 +557,9 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                           />
                         </div>
                         <span className={`font-mono text-xs font-bold flex-shrink-0 ${colors.text}`}>
-                          {item.current_stock <= 0
+                          {status === 'untracked'
+                            ? '📋 Non suivi'
+                            : item.current_stock <= 0
                             ? '⚠️ RUPTURE'
                             : `${item.current_stock} ${item.unit} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'lots'})` : ''}`}
                         </span>
