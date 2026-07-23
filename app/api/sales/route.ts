@@ -448,8 +448,12 @@ export async function POST(request: NextRequest) {
         }
 
         savedInSupabase = true
-      } catch (e) {
-        console.error('Erreur insertion Supabase, repli sur local:', e)
+      } catch (e: any) {
+        console.error('Erreur insertion Supabase:', e)
+        const isNetworkError = e.message?.includes('fetch failed') || e.message?.includes('ENOTFOUND') || e.details?.includes('ENOTFOUND')
+        if (!isNetworkError) {
+          throw new Error(e.message || e.details || (typeof e === 'string' ? e : JSON.stringify(e)))
+        }
       }
     }
 
@@ -476,10 +480,11 @@ export async function POST(request: NextRequest) {
       savedInSupabase 
     }, { status: 201 })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur API POST:', error)
+    const msg = error instanceof Error ? error.message : (error && typeof error === 'object' && ('message' in error || 'details' in error) ? (error.message || error.details) : String(error))
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur serveur inconnue' },
+      { error: msg },
       { status: 500 }
     )
   }

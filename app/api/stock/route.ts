@@ -129,8 +129,8 @@ export async function GET(request: Request) {
       orphans,
       total: stockItems.length,
     })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Erreur inconnue'
+  } catch (err: any) {
+    const msg = err instanceof Error ? err.message : (err && typeof err === 'object' && ('message' in err || 'details' in err) ? (err.message || err.details) : String(err))
     console.error('[API/stock GET]', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
