@@ -378,6 +378,25 @@ export default function JournalPage() {
     const cleanTerm = lastPart.replace(/^\s*\d+\s*/, '').trim().toLowerCase()
     if (cleanTerm.length < 1) return []
 
+    // 1. Charger la liste d'exclusions locales (produits supprimés du menu par l'utilisateur)
+    let excludedNames: string[] = []
+    try {
+      const stored = localStorage.getItem(`cahier_deleted_menu_items_${shopId}`)
+      if (stored) {
+        excludedNames = JSON.parse(stored)
+      }
+    } catch (e) {
+      console.warn('Erreur lecture exclusions stock:', e)
+    }
+
+    // 2. Extraire les noms de produits déjà présents dans la saisie en cours
+    const existingNamesInInput = parts.map(p =>
+      p.toLowerCase()
+       .replace(/^(?:\d+\s+)?/, '')
+       .replace(/\s*(?:à|a|@)\s*\d+.*$/, '')
+       .trim()
+    ).filter(Boolean)
+
     const offlineProds = getOfflineProducts(shopId) || []
     const candidatesMap = new Map<string, {
       name: string
@@ -387,8 +406,10 @@ export default function JournalPage() {
       stock?: number
     }>()
 
+    // Ajouter uniquement les produits du menu tactile actif
     journalMenuItems.forEach(item => {
       const key = item.name.toLowerCase().trim()
+      if (excludedNames.some(ex => ex.toLowerCase().trim() === key)) return
       candidatesMap.set(key, {
         name: item.name,
         price: item.price,
@@ -397,9 +418,12 @@ export default function JournalPage() {
       })
     })
 
+    // Ajouter les produits offline s'ils ne sont PAS supprimés
     offlineProds.forEach(prod => {
       if (!prod.name || !prod.name.trim()) return
       const key = prod.name.toLowerCase().trim()
+      if (excludedNames.some(ex => ex.toLowerCase().trim() === key)) return
+
       const { emoji, category } = getSmartEmojiAndCategory(prod.name, shopActivity as any)
       const existing = candidatesMap.get(key)
       candidatesMap.set(key, {
@@ -421,7 +445,8 @@ export default function JournalPage() {
 
     for (const candidate of candidatesMap.values()) {
       const nameLower = candidate.name.toLowerCase()
-      if (nameLower.includes(cleanTerm) && nameLower !== cleanTerm) {
+      // Filtrer par le terme tapé ET ignorer ceux déjà saisis dans cette vente
+      if (nameLower.includes(cleanTerm) && nameLower !== cleanTerm && !existingNamesInInput.includes(nameLower)) {
         results.push(candidate)
         if (results.length >= 8) break
       }
@@ -437,13 +462,10 @@ export default function JournalPage() {
     const qty = qtyMatch ? qtyMatch[1] : '1'
     const formattedItem = item.price > 0 ? `${qty} ${item.name} à ${item.price}` : `${qty} ${item.name}`
 
-    if (parts.length <= 1) {
-      setInput(formattedItem)
-    } else {
-      parts[parts.length - 1] = ' ' + formattedItem
-      const newInput = parts.join(', ').replace(/^\s*,\s*/, '').trim()
-      setInput(newInput)
-    }
+    parts[parts.length - 1] = ' ' + formattedItem
+    const newInput = parts.join(', ').replace(/^\s*,\s*/, '').trim()
+    // Conserver une virgule + espace pour permettre d'enchaîner plusieurs produits successivement !
+    setInput(newInput + ', ')
   }, [input])
 
   // Charger le stock réel et les produits pour fusionner avec le menu (avec normalisation et dédoublonnement canonique)
