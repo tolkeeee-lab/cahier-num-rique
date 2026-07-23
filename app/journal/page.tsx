@@ -2056,6 +2056,67 @@ export default function JournalPage() {
     }
   }
 
+  const handleUpdateSale = async (
+    saleId: string,
+    updatedArticles: Array<{ name: string; quantity: number; unit_price: number }>,
+    clientName?: string
+  ) => {
+    if (!mappedUser) return
+    const sid = mappedUser.shop_id || 'default-shop'
+    const isOnline = typeof window !== 'undefined' ? window.navigator.onLine : false
+
+    try {
+      if (isConfigured && isOnline) {
+        const response = await fetch('/api/sales', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': sid
+          },
+          body: JSON.stringify({
+            id: saleId,
+            action: 'update_sale',
+            articles: updatedArticles,
+            clientName
+          })
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Erreur lors de la modification de la vente')
+        }
+      } else {
+        // Mode hors-ligne : modifier localement dans le cache local
+        const newTotal = updatedArticles.reduce((acc, a) => acc + (a.quantity * a.unit_price), 0)
+        const newNotes = updatedArticles.map(a => a.unit_price > 0 ? `${a.quantity} ${a.name} à ${a.unit_price}` : `${a.quantity} ${a.name}`).join(', ')
+
+        const sales = getOfflineSales(sid)
+        const idx = sales.findIndex(s => s.id === saleId)
+        if (idx !== -1) {
+          const isCashIn = sales[idx].type === 'cash_in'
+          const newPaid = isCashIn ? newTotal : (sales[idx].paid || 0)
+          const newDebt = sales[idx].type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
+          sales[idx].total = newTotal
+          sales[idx].paid = newPaid
+          sales[idx].debt = newDebt
+          sales[idx].status = (newDebt > 0 && sales[idx].type === 'sale_credit') ? 'debt' : 'paid'
+          sales[idx].notes = newNotes
+          sales[idx].client = clientName || sales[idx].client
+          sales[idx].articles = updatedArticles
+          sales[idx].is_synced = false
+          replaceOfflineSales(sid, sales)
+        }
+      }
+
+      await loadFinancialData()
+    } catch (err: any) {
+      console.error('Erreur handleUpdateSale:', err)
+      const msg = err instanceof Error ? err.message : "Erreur lors de la modification de la vente"
+      setPostItWarning(msg)
+      throw err
+    }
+  }
+
   const handleUpdateCategory = async (saleId: string, category: string) => {
     if (!mappedUser) return
     const sid = mappedUser.shop_id
@@ -2518,6 +2579,7 @@ export default function JournalPage() {
                         sales={filteredSales}
                         onSaleCrossedOut={handleSaleCrossedOut}
                         onAddArticle={handleAddArticle}
+                        onUpdateSale={handleUpdateSale}
                         onError={handleError}
                         shopId={mappedUser?.shop_id}
                         isEmployee={mappedUser?.role === 'employee'}

@@ -770,6 +770,117 @@ export async function PATCH(request: NextRequest) {
       })
     }
 
+    // ─── ACTION : update_sale (remplacement complet d'articles/quantités) ─────
+    if (action === 'update_sale') {
+      const { articles: newArticlesInput, clientName: newClientName } = body as {
+        articles: Array<{ name: string; quantity: number; unit_price: number }>
+        clientName?: string
+      }
+
+      if (!newArticlesInput || !Array.isArray(newArticlesInput) || newArticlesInput.length === 0) {
+        return NextResponse.json({ error: 'La vente doit contenir au moins un article' }, { status: 400 })
+      }
+
+      // 1. Récupérer la transaction existante
+      let transaction: any = null
+      if (isSupabaseConfigured()) {
+        const { data } = await supabase.from('sales').select('*').eq('id', id).eq('shop_id', shopId).single()
+        transaction = data
+      } else {
+        transaction = getLocalDb().find((s: any) => s.id === id && s.shop_id === shopId)
+      }
+
+      if (!transaction) {
+        return NextResponse.json({ error: 'Transaction introuvable' }, { status: 404 })
+      }
+      if (transaction.status === 'crossed_out') {
+        return NextResponse.json({ error: 'Impossible de modifier une transaction rayée' }, { status: 400 })
+      }
+
+      // 2. Calculer le nouveau total
+      let newTotal = 0
+      const formattedArticles = newArticlesInput.map(a => {
+        const q = Math.max(1, Number(a.quantity) || 1)
+        const p = Math.max(0, Number(a.unit_price) || 0)
+        newTotal += q * p
+        return {
+          name: a.name.trim(),
+          quantity: q,
+          unit_price: p
+        }
+      })
+
+      const isCashIn = transaction.type === 'cash_in'
+      const isSaleCredit = transaction.type === 'sale_credit'
+      let newPaid = isCashIn ? newTotal : (transaction.paid_amount ?? 0)
+      if (newPaid > newTotal) newPaid = newTotal
+      const newDebt = isSaleCredit ? Math.max(0, newTotal - newPaid) : 0
+      const newStatus = (newDebt > 0 && isSaleCredit) ? 'debt' : 'paid'
+
+      const newNotes = formattedArticles.map(a => a.unit_price > 0 ? `${a.quantity} ${a.name} à ${a.unit_price}` : `${a.quantity} ${a.name}`).join(', ')
+      const newClient = newClientName ? newClientName.trim() : (transaction.client_name || 'Client anonyme')
+
+      // 3. Mettre à jour dans Supabase
+      if (isSupabaseConfigured()) {
+        const { error: updateError } = await supabase
+          .from('sales')
+          .update({
+            total_amount: newTotal,
+            paid_amount: newPaid,
+            debt_amount: newDebt,
+            status: newStatus,
+            notes: newNotes,
+            client_name: newClient
+          })
+          .eq('id', id)
+          .eq('shop_id', shopId)
+
+        if (updateError) throw updateError
+
+        // Remplacer les articles dans sold_articles
+        await supabase.from('sold_articles').delete().eq('sale_id', id)
+        const now = new Date()
+        const articlesData = formattedArticles.map((a: any) => ({
+          id: randomUUID(),
+          sale_id: id,
+          product_name: a.name,
+          quantity: a.quantity,
+          unit_price: a.unit_price,
+          subtotal: a.quantity * a.unit_price,
+          created_at: now.toISOString(),
+        }))
+        await supabase.from('sold_articles').insert(articlesData)
+      }
+
+      // 4. Mettre à jour le cache local
+      const db = getLocalDb()
+      const idx = db.findIndex((s: any) => s.id === id && s.shop_id === shopId)
+      if (idx !== -1) {
+        db[idx].total_amount = newTotal
+        db[idx].paid_amount = newPaid
+        db[idx].debt_amount = newDebt
+        db[idx].status = newStatus
+        db[idx].notes = newNotes
+        db[idx].client_name = newClient
+        db[idx].articles = formattedArticles
+        saveLocalDb(db)
+      }
+
+      return NextResponse.json({
+        success: true,
+        sale: {
+          id,
+          total: newTotal,
+          paid: newPaid,
+          debt: newDebt,
+          status: newStatus,
+          notes: newNotes,
+          client: newClient,
+          articles: formattedArticles
+        }
+      })
+    }
+
     // ─── ACTION : update_category ───────────────────────────────────────────
     if (action === 'update_category') {
       const { category } = body as { category: string }

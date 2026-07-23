@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useCallback } from 'react'
-import { Trash2, PlusCircle, Check, X, Loader, FileText, Printer, Share2 } from 'lucide-react'
+import { Trash2, PlusCircle, Check, X, Loader, FileText, Printer, Share2, Edit3, RefreshCw, Minus, Plus } from 'lucide-react'
 
 interface MenuItem {
   id: string
@@ -38,6 +38,7 @@ interface SalesHistoryProps {
   sales: Sale[]
   onSaleCrossedOut?: (id: string) => void
   onAddArticle?: (saleId: string, text: string) => Promise<void>
+  onUpdateSale?: (saleId: string, updatedArticles: Article[], clientName?: string) => Promise<void>
   onUpdateCategory?: (saleId: string, category: string) => Promise<void>
   onError?: (err: string) => void
   shopId?: string
@@ -68,7 +69,7 @@ function formatPrice(price: number): string {
   }).format(price) + ' F'
 }
 
-export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCategory, showExpenseStats, shopId, isEmployee,
+export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSale, onUpdateCategory, showExpenseStats, shopId, isEmployee,
   externalAddingToId, externalAddInput, onExternalAddInputChange, onExternalStartAdd, onExternalCancelAdd, onExternalConfirmAdd
 }: SalesHistoryProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -76,6 +77,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
   const [internalAddInput, setInternalAddInput] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null)
+  const [editingSale, setEditingSale] = useState<Sale | null>(null)
   const [editingCategorySaleId, setEditingCategorySaleId] = useState<string | null>(null)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const addInputRef = useRef<HTMLInputElement>(null)
@@ -460,10 +462,24 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
                       {!isCrossed && !isEmployee && canAddArticle(sale.type) && onAddArticle && (
                         <button
                           onClick={() => handleStartAdd(sale.id)}
-                          title="Ajouter un article à cette vente"
+                          title="Ajouter rapidement un article"
                           className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all"
                         >
                           <PlusCircle className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {/* ✏️ Modifier l'ensemble des articles (remplacer, quantités...) */}
+                      {!isCrossed && !isEmployee && canAddArticle(sale.type) && onUpdateSale && (
+                        <button
+                          onClick={() => {
+                            loadMenuItems()
+                            setEditingSale(sale)
+                          }}
+                          title="Modifier les articles (remplacer, quantités...)"
+                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-all"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
                         </button>
                       )}
 
@@ -667,6 +683,298 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateCa
           </div>
         </div>
       )}
+
+      {/* Modal d'édition de la vente */}
+      {editingSale && onUpdateSale && (
+        <EditSaleModal
+          sale={editingSale}
+          menuItems={menuItems}
+          onClose={() => setEditingSale(null)}
+          onSave={onUpdateSale}
+        />
+      )}
+    </div>
+  )
+}
+
+interface EditSaleModalProps {
+  sale: Sale
+  menuItems: MenuItem[]
+  onClose: () => void
+  onSave: (saleId: string, articles: Article[], clientName?: string) => Promise<void>
+}
+
+function EditSaleModal({ sale, menuItems, onClose, onSave }: EditSaleModalProps) {
+  const [articles, setArticles] = useState<Article[]>(
+    sale.articles && sale.articles.length > 0
+      ? sale.articles.map(a => ({ name: a.name, quantity: a.quantity || 1, unit_price: a.unit_price || 0 }))
+      : [{ name: sale.notes || 'Article', quantity: 1, unit_price: sale.total }]
+  )
+  const [clientName, setClientName] = useState<string>(sale.client || '')
+  const [saving, setSaving] = useState<boolean>(false)
+  const [activeSearchIdx, setActiveSearchIdx] = useState<number | null>(null)
+  const [searchTerm, setSearchTerm] = useState<string>('')
+
+  const handleUpdateArticle = (idx: number, field: keyof Article, val: any) => {
+    setArticles(prev => {
+      const next = [...prev]
+      next[idx] = { ...next[idx], [field]: val }
+      return next
+    })
+  }
+
+  const handleRemoveArticle = (idx: number) => {
+    if (articles.length <= 1) {
+      alert("La vente doit contenir au moins un article.")
+      return
+    }
+    setArticles(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleAddBlankArticle = () => {
+    setArticles(prev => [...prev, { name: '', quantity: 1, unit_price: 0 }])
+  }
+
+  const handleSelectProductSuggestion = (idx: number, item: MenuItem) => {
+    setArticles(prev => {
+      const next = [...prev]
+      next[idx] = {
+        name: item.name,
+        quantity: next[idx].quantity || 1,
+        unit_price: item.price || next[idx].unit_price || 0
+      }
+      return next
+    })
+    setActiveSearchIdx(null)
+    setSearchTerm('')
+  }
+
+  const totalCalculated = articles.reduce((acc, curr) => acc + (curr.quantity * curr.unit_price), 0)
+
+  const handleConfirmSave = async () => {
+    const validArticles = articles.filter(a => a.name.trim().length > 0)
+    if (validArticles.length === 0) {
+      alert("Veuillez renseigner au moins un nom d'article.")
+      return
+    }
+    setSaving(true)
+    try {
+      await onSave(sale.id, validArticles, clientName)
+      onClose()
+    } catch (e: any) {
+      alert(e.message || "Erreur lors de la sauvegarde.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-4 select-none">
+      <div className="bg-[#fefdfa] border-2 border-amber-400 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+        
+        {/* Header */}
+        <div className="bg-amber-500/10 border-b border-amber-200 px-5 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-amber-950 font-extrabold text-sm md:text-base font-sans">
+            <Edit3 className="w-4 h-4 text-amber-600" />
+            <span>Éditer la Vente du {sale.time}</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-bold transition-all"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <div className="p-4 md:p-5 overflow-y-auto space-y-4 flex-1">
+          {sale.type === 'sale_credit' && (
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Nom du client :</label>
+              <input
+                type="text"
+                value={clientName}
+                onChange={e => setClientName(e.target.value)}
+                placeholder="Ex: Koffi, Chantal..."
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:border-amber-500 focus:outline-none bg-white font-medium"
+              />
+            </div>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-amber-950 uppercase tracking-wider font-sans">
+                Articles de la vente ({articles.length})
+              </span>
+              <span className="text-[10px] text-gray-500">Remplacer un produit, ajuster les quantités</span>
+            </div>
+
+            <div className="space-y-3">
+              {articles.map((art, idx) => (
+                <div key={idx} className="bg-amber-50/60 border border-amber-200 rounded-2xl p-3 space-y-2 relative">
+                  
+                  {/* Ligne 1 : Nom du produit + Autocomplétion / Remplacer */}
+                  <div className="relative">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={art.name}
+                        onChange={e => {
+                          handleUpdateArticle(idx, 'name', e.target.value)
+                          setActiveSearchIdx(idx)
+                          setSearchTerm(e.target.value)
+                        }}
+                        onFocus={() => {
+                          setActiveSearchIdx(idx)
+                          setSearchTerm(art.name)
+                        }}
+                        placeholder="Nom de l'article (ex: Flag, Beaufort...)"
+                        className="flex-1 px-3 py-1.5 text-sm font-handwritten font-bold text-blue-900 border border-amber-300 rounded-xl bg-white focus:border-amber-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleUpdateArticle(idx, 'name', '')
+                          setActiveSearchIdx(idx)
+                          setSearchTerm('')
+                        }}
+                        title="Remplacer ce produit"
+                        className="px-2 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-950 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all flex-shrink-0"
+                      >
+                        <RefreshCw className="w-3 h-3 text-amber-800" />
+                        <span>Changer</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveArticle(idx)}
+                        title="Supprimer cet article"
+                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded-xl transition-all flex-shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Bulle d'autocomplétion prédictive pour remplacer */}
+                    {activeSearchIdx === idx && (
+                      <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-[#fefdfa] border-2 border-amber-400 rounded-2xl shadow-xl p-2 max-h-40 overflow-y-auto space-y-1">
+                        <div className="text-[9px] font-bold text-amber-900 px-1 pb-1 border-b border-amber-200">
+                          Sélectionnez un produit du stock à remplacer :
+                        </div>
+                        {menuItems
+                          .filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase().trim()))
+                          .slice(0, 8)
+                          .map((m, mIdx) => (
+                            <button
+                              key={mIdx}
+                              type="button"
+                              onClick={() => handleSelectProductSuggestion(idx, m)}
+                              className="w-full text-left px-2.5 py-1.5 hover:bg-amber-100 rounded-xl text-xs font-bold flex items-center justify-between text-amber-950 transition-colors"
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <span>{m.emoji || '📦'}</span>
+                                <span className="font-handwritten text-blue-900">{m.name}</span>
+                              </span>
+                              <span className="font-mono text-[10px] bg-amber-200 px-1.5 py-0.5 rounded font-extrabold">
+                                {formatPrice(m.price)}
+                              </span>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ligne 2 : Quantité (- / +) & Prix Unitaire & Sous-total */}
+                  <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                    {/* Selecteur de Quantite */}
+                    <div className="flex items-center gap-1 bg-white border border-amber-300 rounded-xl p-1">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateArticle(idx, 'quantity', Math.max(1, art.quantity - 1))}
+                        className="w-6 h-6 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold flex items-center justify-center text-xs"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        value={art.quantity}
+                        onChange={e => handleUpdateArticle(idx, 'quantity', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        className="w-10 text-center text-xs font-mono font-extrabold focus:outline-none bg-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateArticle(idx, 'quantity', art.quantity + 1)}
+                        className="w-6 h-6 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold flex items-center justify-center text-xs"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    {/* Prix unitaire */}
+                    <div className="flex items-center gap-1 text-xs font-mono">
+                      <span className="text-gray-500 text-[10px]">à</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={art.unit_price}
+                        onChange={e => handleUpdateArticle(idx, 'unit_price', Math.max(0, parseInt(e.target.value, 10) || 0))}
+                        className="w-16 px-2 py-1 border border-amber-300 rounded-lg text-xs font-mono font-bold bg-white text-right focus:outline-none focus:border-amber-500"
+                      />
+                      <span className="text-gray-600 font-bold">F</span>
+                    </div>
+
+                    {/* Sous-total de la ligne */}
+                    <div className="font-mono text-xs font-extrabold text-amber-900 bg-amber-200/80 px-2 py-1 rounded-lg">
+                      {formatPrice(art.quantity * art.unit_price)}
+                    </div>
+                  </div>
+
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAddBlankArticle}
+              className="mt-3 w-full py-2 bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+            >
+              <PlusCircle className="w-4 h-4 text-amber-700" />
+              <span>+ Ajouter un autre produit à la vente</span>
+            </button>
+          </div>
+
+        </div>
+
+        {/* Footer avec Récapitulatif Total & Bouton Valider */}
+        <div className="bg-amber-100/50 border-t border-amber-200 p-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Nouveau Total</div>
+            <div className="text-lg md:text-xl font-mono font-black text-emerald-800">
+              {formatPrice(totalCalculated)}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3.5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-xs font-bold transition-all"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmSave}
+              disabled={saving}
+              className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              <span>Enregistrer</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
     </div>
   )
 }
