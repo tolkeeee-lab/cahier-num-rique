@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useCallback } from 'react'
-import { Trash2, PlusCircle, Check, X, Loader, FileText, Printer, Share2, Edit3, RefreshCw, Minus, Plus } from 'lucide-react'
+import { Trash2, PlusCircle, Check, X, Loader, FileText, Printer, Share2, Edit3, RefreshCw, Minus, Plus, MoreVertical } from 'lucide-react'
 
 interface MenuItem {
   id: string
@@ -79,6 +79,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
   const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null)
   const [editingSale, setEditingSale] = useState<Sale | null>(null)
   const [editingCategorySaleId, setEditingCategorySaleId] = useState<string | null>(null)
+  const [activeMobileActionsSaleId, setActiveMobileActionsSaleId] = useState<string | null>(null)
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const addInputRef = useRef<HTMLInputElement>(null)
 
@@ -313,9 +314,9 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
     .sort((a, b) => b.amount - a.amount)
 
   return (
-    <div className="relative pl-12 md:pl-24 pr-4 py-4 min-h-[300px] w-full">
+    <div className="relative pl-6 sm:pl-12 md:pl-24 pr-4 py-4 min-h-[300px] w-full">
       {/* Red vertical margin line */}
-      <div className="absolute left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
+      <div className="absolute left-[24px] sm:left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
 
       {showExpenseStats && totalExpenseAmount > 0 && (
         <div className="mb-6 mr-4 bg-[#fffdf9] border border-gray-200 rounded-[28px] p-6 shadow-sm z-10 relative select-none">
@@ -375,16 +376,34 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                 >
                   <div className="flex items-center justify-between w-full gap-2">
                     {/* Timestamp */}
-                    <div className="absolute left-[-38px] md:left-[-68px] w-8 md:w-14 text-right font-mono text-[9px] md:text-[10px] text-gray-400 font-bold select-none pr-1 md:pr-1 pt-0.5 no-underline">
+                    <div className="absolute left-[-22px] sm:left-[-38px] md:left-[-68px] w-5 sm:w-8 md:w-14 text-right font-mono text-[9px] md:text-[10px] text-gray-400 font-bold select-none pr-0.5 md:pr-1 pt-0.5 no-underline">
                       {sale.time}
                     </div>
 
                     {/* Main text */}
                     <div className="flex-grow pl-1 md:pl-2 pr-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`font-semibold leading-tight text-base md:text-lg ${penClass}`}>
-                          {sale.notes}
-                        </span>
+                      <div className="flex items-start md:items-center gap-1.5 flex-col md:flex-row md:flex-wrap w-full">
+                        {sale.articles && sale.articles.length > 0 ? (
+                          <>
+                            {/* Mobile vertical list */}
+                            <div className="flex flex-col gap-0.5 md:hidden">
+                              {sale.articles.map((art, idx) => (
+                                <span key={idx} className={`font-semibold leading-tight text-[11px] sm:text-xs block ${penClass}`}>
+                                  • {art.quantity} × {art.name} {art.unit_price > 0 ? `à ${formatPrice(art.unit_price)}` : ''}
+                                </span>
+                              ))}
+                            </div>
+                            {/* Desktop inline notes */}
+                            <span className={`hidden md:inline font-semibold leading-tight text-base md:text-lg ${penClass}`}>
+                              {sale.notes}
+                            </span>
+                          </>
+                        ) : (
+                          <span className={`font-semibold leading-tight text-xs sm:text-sm md:text-lg ${penClass}`}>
+                            {sale.notes}
+                          </span>
+                        )}
+
                         <span className={`text-[7.5px] md:text-[8px] font-bold border px-1 py-0.2 rounded-md font-sans tracking-wide ${typeBadge} no-underline flex-shrink-0`}>
                           {typeText}
                         </span>
@@ -441,58 +460,146 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                     </div>
 
                     {/* Amount + action buttons */}
-                    <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
+                    <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5 relative z-20">
                       <div className={`font-mono text-xs font-bold border rounded-lg px-2.5 py-1 ${amountBadge}`}>
                         {sale.type === 'cash_out' || sale.type === 'purchase_cash' || sale.type === 'payment_supplier' ? '-' : '+'}
                         {formatPrice(sale.total)}
                       </div>
 
-                      {/* Émettre un reçu */}
-                      {!isCrossed && canAddArticle(sale.type) && (
-                        <button
-                          onClick={() => setActiveReceiptSale(sale)}
-                          title="Émettre un reçu"
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-all"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      {/* Desktop actions list (always visible or on hover) */}
+                      <div className="hidden md:flex items-center gap-1">
+                        {/* Émettre un reçu */}
+                        {!isCrossed && canAddArticle(sale.type) && (
+                          <button
+                            onClick={() => setActiveReceiptSale(sale)}
+                            title="Émettre un reçu"
+                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-all"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                          </button>
+                        )}
 
-                      {/* + Ajouter article */}
-                      {!isCrossed && !isEmployee && canAddArticle(sale.type) && onAddArticle && (
-                        <button
-                          onClick={() => handleStartAdd(sale.id)}
-                          title="Ajouter rapidement un article"
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all"
-                        >
-                          <PlusCircle className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                        {/* + Ajouter article */}
+                        {!isCrossed && !isEmployee && canAddArticle(sale.type) && onAddArticle && (
+                          <button
+                            onClick={() => handleStartAdd(sale.id)}
+                            title="Ajouter rapidement un article"
+                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-all"
+                          >
+                            <PlusCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
 
-                      {/* ✏️ Modifier l'ensemble des articles (remplacer, quantités...) */}
-                      {!isCrossed && !isEmployee && canAddArticle(sale.type) && onUpdateSale && (
-                        <button
-                          onClick={() => {
-                            loadMenuItems()
-                            setEditingSale(sale)
-                          }}
-                          title="Modifier les articles (remplacer, quantités...)"
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-all"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                        {/* ✏️ Modifier l'ensemble des articles (remplacer, quantités...) */}
+                        {!isCrossed && !isEmployee && canAddArticle(sale.type) && onUpdateSale && (
+                          <button
+                            onClick={() => {
+                              loadMenuItems()
+                              setEditingSale(sale)
+                            }}
+                            title="Modifier les articles (remplacer, quantités...)"
+                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-all"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
 
-                      {/* Rayer (Accessible à tous, y compris les employés) */}
+                        {/* Rayer (Accessible à tous, y compris les employés) */}
+                        {!isCrossed && (
+                          <button
+                            onClick={() => handleCrossOut(sale.id)}
+                            disabled={deletingId === sale.id}
+                            title="Rayer cette écriture (Annulation)"
+                            className="opacity-100 p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Mobile Actions Menu (Trigger Button + Dropdown Popover) */}
                       {!isCrossed && (
-                        <button
-                          onClick={() => handleCrossOut(sale.id)}
-                          disabled={deletingId === sale.id}
-                          title="Rayer cette écriture (Annulation)"
-                          className="opacity-100 p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all disabled:opacity-50"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex md:hidden relative">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setActiveMobileActionsSaleId(activeMobileActionsSaleId === sale.id ? null : sale.id)
+                            }}
+                            className="p-1 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-all"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+
+                          {activeMobileActionsSaleId === sale.id && (
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 shadow-2xl rounded-2xl p-1.5 z-40 min-w-[160px] flex flex-col gap-0.5 animate-scale-in">
+                              {/* Option: Émettre un reçu */}
+                              {canAddArticle(sale.type) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveReceiptSale(sale)
+                                    setActiveMobileActionsSaleId(null)
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl flex items-center gap-2 transition-colors"
+                                >
+                                  <FileText className="w-4 h-4 text-blue-500" />
+                                  <span>Émettre un reçu</span>
+                                </button>
+                              )}
+
+                              {/* Option: + Ajouter article */}
+                              {!isEmployee && canAddArticle(sale.type) && onAddArticle && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleStartAdd(sale.id)
+                                    setActiveMobileActionsSaleId(null)
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl flex items-center gap-2 transition-colors"
+                                >
+                                  <PlusCircle className="w-4 h-4 text-emerald-500" />
+                                  <span>Ajouter un article</span>
+                                </button>
+                              )}
+
+                              {/* Option: Modifier articles */}
+                              {!isEmployee && canAddArticle(sale.type) && onUpdateSale && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    loadMenuItems()
+                                    setEditingSale(sale)
+                                    setActiveMobileActionsSaleId(null)
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-amber-50 hover:text-amber-700 rounded-xl flex items-center gap-2 transition-colors"
+                                >
+                                  <Edit3 className="w-4 h-4 text-amber-500" />
+                                  <span>Modifier la vente</span>
+                                </button>
+                              )}
+
+                              {/* Option: Rayer */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleCrossOut(sale.id)
+                                  setActiveMobileActionsSaleId(null)
+                                }}
+                                disabled={deletingId === sale.id}
+                                className="w-full text-left px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 hover:text-red-800 rounded-xl flex items-center gap-2 transition-colors disabled:opacity-50"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                                <span>Rayer l'écriture</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Rayer pour mobile si déjà raturé */}
+                      {isCrossed && (
+                        <div className="md:hidden w-7"></div>
                       )}
                     </div>
                   </div>

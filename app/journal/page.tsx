@@ -2214,7 +2214,7 @@ export default function JournalPage() {
         <div className="bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-gray-300 shadow-none md:shadow-2xl flex relative z-0 h-dvh md:h-[720px] overflow-hidden w-full max-w-full">
 
           {/* Left leather cover binder spine */}
-          <div className="flex w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-12 z-10 flex-shrink-0 select-none">
+          <div className="flex w-6 sm:w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-12 z-10 flex-shrink-0 select-none">
             {/* Top brass screw */}
             <div className="brass-screw"></div>
 
@@ -2234,7 +2234,7 @@ export default function JournalPage() {
           </div>
 
           {/* Spiral loops */}
-          <div className="flex absolute left-[32px] md:left-[54px] top-0 bottom-0 w-4 md:w-5 flex-col items-center justify-around py-4 md:py-6 z-20 pointer-events-none">
+          <div className="flex absolute left-[18px] sm:left-[32px] md:left-[54px] top-0 bottom-0 w-4 md:w-5 flex-col items-center justify-around py-4 md:py-6 z-20 pointer-events-none">
             {spiralRings.map((_, i) => (
               <div
                 key={i}
@@ -2795,13 +2795,13 @@ export default function JournalPage() {
                   {/* Sticky writing input bar pinned to the bottom of the page */}
                   <form
                     onSubmit={handleSubmit}
-                    className="relative bg-[#fefdfa] border-t border-gray-200 py-3 pl-12 md:pl-24 pr-3 md:pr-6 flex items-center gap-2 md:gap-4 z-10 shadow-lg"
+                    className="relative bg-[#fefdfa] border-t border-gray-200 py-3 pl-8 sm:pl-12 md:pl-24 pr-3 md:pr-6 flex items-center gap-2 md:gap-4 z-10 shadow-lg"
                   >
                         {/* Red margin line — responsive */}
-                        <div className="absolute left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
+                        <div className="absolute left-[24px] sm:left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
 
                         {/* Clock — positioned in left margin */}
-                        <div className="absolute left-1 md:left-4 font-mono text-[9px] md:text-xs text-gray-400 font-bold select-none w-8 md:w-14 text-right pr-1 md:pr-2">
+                        <div className="absolute left-0.5 sm:left-1 md:left-4 font-mono text-[9px] md:text-xs text-gray-400 font-bold select-none w-5 sm:w-8 md:w-14 text-right pr-0.5 md:pr-2">
                           ⏰ {currentTime}
                         </div>
 
@@ -2873,10 +2873,10 @@ export default function JournalPage() {
                     {/* Post-it calculette de monnaie — INSIDE the form, s'ouvre vers le haut */}
                     <div className={`absolute right-2 md:right-4 ${showJournalMenuGrid ? 'bottom-full mb-1 z-10 scale-90 sm:scale-100 origin-bottom-right' : 'bottom-full mb-2 z-30'} transition-all duration-300 ${showChangeCalc
                         ? 'w-64 bg-amber-100 border border-amber-300 shadow-xl p-4 rotate-1 rounded-sm'
-                        : 'w-28 md:w-36 bg-amber-200 hover:bg-[#fef08a] border border-amber-300 shadow-md p-1.5 md:p-2 cursor-pointer rotate-2 text-center rounded-sm'
+                        : 'w-10 h-10 md:w-36 md:h-auto rounded-full md:rounded-sm bg-amber-200 hover:bg-[#fef08a] border border-amber-300 shadow-md p-0 md:p-2 cursor-pointer rotate-2 flex items-center justify-center md:block'
                       } select-none`}>
                       {/* Ruban adhésif */}
-                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-4 bg-gray-300 bg-opacity-60 -rotate-2"></div>
+                      <div className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-12 h-4 bg-gray-300 bg-opacity-60 -rotate-2 ${!showChangeCalc ? 'hidden md:block' : ''}`}></div>
 
                       {!showChangeCalc ? (
                         <div onClick={() => {
@@ -2884,9 +2884,9 @@ export default function JournalPage() {
                             setChangeTotal(sales[0].total.toString())
                           }
                           setShowChangeCalc(true)
-                        }} className="pt-2">
+                        }} className="flex items-center justify-center md:block md:pt-2">
                           <span className="text-xl">💵</span>
-                          <p className="font-handwritten font-bold text-amber-900 text-xs mt-1">Calculer la monnaie</p>
+                          <p className="hidden md:block font-handwritten font-bold text-amber-900 text-xs mt-1">Calculer la monnaie</p>
                         </div>
                       ) : (
                         <div className="flex flex-col text-left">

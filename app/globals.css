@@ -41,6 +41,14 @@ body {
   }
 }
 
+@media (max-width: 480px) {
+  :root {
+    --margin-left: 24px;
+    --line-height: 24px;
+    --font-size-ink: 0.85rem;
+  }
+}
+
 /* Seyes Ivory paper styling */
 .lined-paper {
   background-color: #fdfaf2;
