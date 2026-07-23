@@ -379,7 +379,7 @@ export default function JournalPage() {
         })
         if (res.ok) {
           const data = await res.json()
-          const rawItems = [...(data.products || []), ...(data.orphans || [])]
+          const rawItems = data.products || []
 
           // 1. Charger les exclusions locales pour cette boutique
           let excludedNames: string[] = []
@@ -408,11 +408,6 @@ export default function JournalPage() {
               let cleanName = rawName.trim()
               const lowerName = cleanName.toLowerCase()
 
-              // Si ce nom de produit est dans la liste d'exclusion, on ne l'affiche pas dans le menu tactile
-              if (excludedNames.some(name => name.toLowerCase().trim() === lowerName.trim())) {
-                return
-              }
-
               if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
               else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
               else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
@@ -425,6 +420,12 @@ export default function JournalPage() {
                 cleanName = cleanName.split(/\s+/)
                   .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
                   .join(' ')
+              }
+
+              // Si ce nom de produit normalisé est dans la liste d'exclusion, on ne l'affiche pas dans le menu tactile
+              const cleanLower = cleanName.toLowerCase().trim()
+              if (excludedNames.some(name => name.toLowerCase().trim() === cleanLower)) {
+                return
               }
 
               const priceVal = p.unit_price || p.price || 1000
@@ -464,7 +465,6 @@ export default function JournalPage() {
               if (!rawName.trim()) return
               let cleanName = rawName.trim()
               const lowerName = cleanName.toLowerCase()
-              if (excludedNames.some(name => name.toLowerCase().trim() === lowerName.trim())) return
 
               if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
               else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
@@ -479,6 +479,8 @@ export default function JournalPage() {
                   .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
                   .join(' ')
               }
+
+              if (excludedNames.some(name => name.toLowerCase().trim() === cleanName.toLowerCase().trim())) return
 
               const priceVal = p.unit_price || p.price || 1000
               const dedupeKey = `${cleanName.toLowerCase().trim()}_${priceVal}`
