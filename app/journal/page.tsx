@@ -2745,8 +2745,8 @@ export default function JournalPage() {
 
                         {/* Bulle d'Autocomplétion Prédictive pour milliers d'articles du Stock */}
                         {stockSuggestions.length > 0 && (
-                          <div className="absolute bottom-full left-12 md:left-24 mb-2 z-40 bg-[#fefdfa] border-2 border-amber-400 shadow-2xl rounded-2xl p-2.5 max-w-xl w-[90vw] md:w-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
-                            <div className="flex items-center justify-between gap-2 px-2 pb-1.5 border-b border-amber-200/80 mb-2 select-none">
+                          <div className="absolute bottom-full left-12 md:left-24 mb-2 z-40 bg-[#fefdfa] border-2 border-amber-400 shadow-2xl rounded-2xl p-2.5 max-w-xl w-[90vw] md:w-auto animate-in fade-in slide-in-from-bottom-2 duration-200 select-none">
+                            <div className="flex items-center justify-between gap-2 px-2 pb-1.5 border-b border-amber-200/80 mb-2">
                               <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-amber-900 uppercase tracking-wider font-sans">
                                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                                 <span>Stock Prédictif ({stockSuggestions.length})</span>
@@ -2755,27 +2755,34 @@ export default function JournalPage() {
                             </div>
 
                             <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto scrollbar-hide">
-                              {stockSuggestions.map((item, idx) => (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => handleAppendStockSuggestion(item)}
-                                  className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 hover:border-amber-400 text-amber-950 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-[0.98]"
-                                >
-                                  <span>{item.emoji}</span>
-                                  <span className="font-handwritten text-sm text-[#1d4ed8]">{item.name}</span>
-                                  {item.price > 0 && (
-                                    <span className="font-mono text-[10px] bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-900 font-extrabold">
-                                      {formatPrice(item.price)}
-                                    </span>
-                                  )}
-                                  {item.stock !== undefined && (
-                                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${item.stock <= 5 ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-gray-100 text-gray-600'}`}>
-                                      Stock: {item.stock}
-                                    </span>
-                                  )}
-                                </button>
-                              ))}
+                              {(() => {
+                                const parts = input.split(/(?:,|\+|\bet\b)/i)
+                                const lastPart = parts[parts.length - 1] || ''
+                                const qtyMatch = lastPart.match(/^\s*(\d+)\s*/)
+                                const activeQty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1
+
+                                return stockSuggestions.map((item, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => handleAppendStockSuggestion(item)}
+                                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 hover:border-amber-400 text-amber-950 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+                                  >
+                                    <span>{item.emoji}</span>
+                                    <span className="font-handwritten text-sm text-[#1d4ed8]">{item.name}</span>
+                                    {item.price > 0 && (
+                                      <span className="font-mono text-[10px] bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-900 font-extrabold">
+                                        {activeQty > 1 ? `${activeQty} × ${item.price} = ${formatPrice(activeQty * item.price)}` : formatPrice(item.price)}
+                                      </span>
+                                    )}
+                                    {item.stock !== undefined && (
+                                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${item.stock <= 5 ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-gray-100 text-gray-600'}`}>
+                                        Stock: {item.stock}
+                                      </span>
+                                    )}
+                                  </button>
+                                ))
+                              })()}
                             </div>
                           </div>
                         )}
