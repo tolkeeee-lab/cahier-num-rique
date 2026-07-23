@@ -436,9 +436,14 @@ export default function JournalPage() {
     const qtyMatch = lastPart.match(/^\s*(\d+)\s*/)
     const qty = qtyMatch ? qtyMatch[1] : '1'
     const formattedItem = item.price > 0 ? `${qty} ${item.name} à ${item.price}` : `${qty} ${item.name}`
-    parts[parts.length - 1] = ' ' + formattedItem
-    const newInput = parts.join(', ').replace(/^\s*,\s*/, '').trim()
-    setInput(newInput + ', ')
+
+    if (parts.length <= 1) {
+      setInput(formattedItem)
+    } else {
+      parts[parts.length - 1] = ' ' + formattedItem
+      const newInput = parts.join(', ').replace(/^\s*,\s*/, '').trim()
+      setInput(newInput)
+    }
   }, [input])
 
   // Charger le stock réel et les produits pour fusionner avec le menu (avec normalisation et dédoublonnement canonique)
@@ -1565,8 +1570,17 @@ export default function JournalPage() {
       let searchName = productName
       const packMatch = productName.match(/^(caissier|carton|sac|boite|boîte|paquet|unité|unite)\s+(?:de\s+)?(.+)$/i)
       if (packMatch) searchName = packMatch[2].trim()
-      const offlineProducts = getOfflineProducts(sid)
-      const product = offlineProducts.find(p => p.name.toLowerCase().trim() === searchName.toLowerCase().trim())
+      const offlineProducts = getOfflineProducts(sid) || []
+      const findInCatalog = (nameToSearch: string) => {
+        const sLower = nameToSearch.toLowerCase().trim()
+        const p1 = offlineProducts.find(p => p.name.toLowerCase().trim() === sLower)
+        if (p1) return { name: p1.name, unit_price: p1.unit_price, unit_cost: p1.unit_cost, multiplier: p1.multiplier }
+        const p2 = journalMenuItems.find(m => m.name.toLowerCase().trim() === sLower)
+        if (p2) return { name: p2.name, unit_price: p2.price, unit_cost: p2.price, multiplier: 1 }
+        return null
+      }
+
+      const product = findInCatalog(searchName)
       if (!product) return null
       const isPurchase = ['green', 'purple'].includes(penColor)
       let unitPrice = isPurchase
@@ -1583,7 +1597,16 @@ export default function JournalPage() {
     const resolvedArticles: any[] = []
     const resolvedTextParts: string[] = []
     const unresolvedNames: string[] = []
-    const offlineProducts = getOfflineProducts(sid)
+    const offlineProducts = getOfflineProducts(sid) || []
+    const findInCatalog = (nameToSearch: string) => {
+      const sLower = nameToSearch.toLowerCase().trim()
+      const p1 = offlineProducts.find(p => p.name.toLowerCase().trim() === sLower)
+      if (p1) return { name: p1.name, unit_price: p1.unit_price, unit_cost: p1.unit_cost, multiplier: p1.multiplier }
+      const p2 = journalMenuItems.find(m => m.name.toLowerCase().trim() === sLower)
+      if (p2) return { name: p2.name, unit_price: p2.price, unit_cost: p2.price, multiplier: 1 }
+      return null
+    }
+
     const isPurchase = ['green', 'purple'].includes(penColor)
 
     for (const part of parts) {
@@ -1622,7 +1645,7 @@ export default function JournalPage() {
         resolvedTextParts.push(textOut)
         resolvedArticles.push({ nom: searchName, quantite: qty, prix_unitaire: explicitPrice })
       } else {
-        const product = offlineProducts.find(p => p.name.toLowerCase().trim() === searchName.toLowerCase().trim())
+        const product = findInCatalog(searchName)
         if (product) {
           let unitPrice = isPurchase
             ? (packMatch ? product.unit_cost * (product.multiplier || 1) : product.unit_cost)
@@ -1808,6 +1831,8 @@ export default function JournalPage() {
       prevSanitized = sanitizedInput
       sanitizedInput = sanitizedInput.replace(/(\d)[.,\s]+(\d{3})(?!\d)/g, "$1$2")
     }
+    // Nettoyer toute virgule ou ponctuation traînante à la fin de la saisie (ex: "1 flag à 600," -> "1 flag à 600")
+    sanitizedInput = sanitizedInput.replace(/[\s,;]+$/, '').trim()
 
     // Tenter de résoudre automatiquement les prix depuis le catalogue si aucun prix n'est écrit
     const sid = mappedUser?.shop_id || 'default-shop'
