@@ -369,6 +369,78 @@ export default function JournalPage() {
   const [quickPlatPrice, setQuickPlatPrice] = useState('')
   const [quickPlatCat, setQuickPlatCat] = useState<string>('')
 
+  // 💡 Suggestions prédictives du stock en temps réel (pour des milliers d'articles)
+  const stockSuggestions = React.useMemo(() => {
+    if (!input || !input.trim()) return []
+
+    const parts = input.split(/(?:,|\+|\bet\b)/i)
+    const lastPart = parts[parts.length - 1] || ''
+    const cleanTerm = lastPart.replace(/^\s*\d+\s*/, '').trim().toLowerCase()
+    if (cleanTerm.length < 1) return []
+
+    const offlineProds = getOfflineProducts(shopId) || []
+    const candidatesMap = new Map<string, {
+      name: string
+      price: number
+      emoji: string
+      category: string
+      stock?: number
+    }>()
+
+    journalMenuItems.forEach(item => {
+      const key = item.name.toLowerCase().trim()
+      candidatesMap.set(key, {
+        name: item.name,
+        price: item.price,
+        emoji: item.emoji || '📦',
+        category: item.category || 'Général'
+      })
+    })
+
+    offlineProds.forEach(prod => {
+      if (!prod.name || !prod.name.trim()) return
+      const key = prod.name.toLowerCase().trim()
+      const { emoji, category } = getSmartEmojiAndCategory(prod.name, shopActivity as any)
+      const existing = candidatesMap.get(key)
+      candidatesMap.set(key, {
+        name: prod.name,
+        price: prod.unit_price || existing?.price || 0,
+        emoji: emoji || existing?.emoji || '📦',
+        category: category || existing?.category || 'Général',
+        stock: prod.initial_stock
+      })
+    })
+
+    const results: Array<{
+      name: string
+      price: number
+      emoji: string
+      category: string
+      stock?: number
+    }> = []
+
+    for (const candidate of candidatesMap.values()) {
+      const nameLower = candidate.name.toLowerCase()
+      if (nameLower.includes(cleanTerm) && nameLower !== cleanTerm) {
+        results.push(candidate)
+        if (results.length >= 8) break
+      }
+    }
+
+    return results
+  }, [input, shopId, shopActivity, journalMenuItems])
+
+  const handleAppendStockSuggestion = React.useCallback((item: { name: string; price: number }) => {
+    const parts = input.split(/(?:,|\+|\bet\b)/i)
+    const lastPart = parts[parts.length - 1] || ''
+    const qtyMatch = lastPart.match(/^\s*(\d+)\s*/)
+    const qty = qtyMatch ? qtyMatch[1] : '1'
+    const formattedItem = item.price > 0 ? `${qty} ${item.name} à ${item.price}` : `${qty} ${item.name}`
+    parts[parts.length - 1] = ' ' + formattedItem
+    const newInput = parts.join(', ').replace(/^\s*,\s*/, '').trim()
+    setInput(newInput + ', ')
+  }, [input])
+
   // Charger le stock réel et les produits pour fusionner avec le menu (avec normalisation et dédoublonnement canonique)
   useEffect(() => {
     if (!shopId) return
@@ -2616,22 +2688,59 @@ export default function JournalPage() {
                     onSubmit={handleSubmit}
                     className="relative bg-[#fefdfa] border-t border-gray-200 py-3 pl-12 md:pl-24 pr-3 md:pr-6 flex items-center gap-2 md:gap-4 z-10 shadow-lg"
                   >
-                    {/* Red margin line — responsive */}
-                    <div className="absolute left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
+                        {/* Red margin line — responsive */}
+                        <div className="absolute left-[40px] md:left-[80px] top-0 bottom-0 w-[2px] bg-red-400 bg-opacity-40"></div>
 
-                    {/* Clock — positioned in left margin */}
-                    <div className="absolute left-1 md:left-4 font-mono text-[9px] md:text-xs text-gray-400 font-bold select-none w-8 md:w-14 text-right pr-1 md:pr-2">
-                      ⏰ {currentTime}
-                    </div>
+                        {/* Clock — positioned in left margin */}
+                        <div className="absolute left-1 md:left-4 font-mono text-[9px] md:text-xs text-gray-400 font-bold select-none w-8 md:w-14 text-right pr-1 md:pr-2">
+                          ⏰ {currentTime}
+                        </div>
 
-                    <input
-                      type="text"
-                      placeholder={currentPen.placeholder}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      disabled={loading}
-                      className={`flex-grow bg-transparent text-lg border-0 outline-none focus:ring-0 font-handwritten px-2 ${currentPen.textClass}`}
-                    />
+                        {/* Bulle d'Autocomplétion Prédictive pour milliers d'articles du Stock */}
+                        {stockSuggestions.length > 0 && (
+                          <div className="absolute bottom-full left-12 md:left-24 mb-2 z-40 bg-[#fefdfa] border-2 border-amber-400 shadow-2xl rounded-2xl p-2.5 max-w-xl w-[90vw] md:w-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex items-center justify-between gap-2 px-2 pb-1.5 border-b border-amber-200/80 mb-2 select-none">
+                              <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-amber-900 uppercase tracking-wider font-sans">
+                                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                <span>Stock Prédictif ({stockSuggestions.length})</span>
+                              </div>
+                              <span className="text-[9px] font-mono text-amber-700">Cliquez pour insérer l'article</span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto scrollbar-hide">
+                              {stockSuggestions.map((item, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => handleAppendStockSuggestion(item)}
+                                  className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 hover:border-amber-400 text-amber-950 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                  <span>{item.emoji}</span>
+                                  <span className="font-handwritten text-sm text-[#1d4ed8]">{item.name}</span>
+                                  {item.price > 0 && (
+                                    <span className="font-mono text-[10px] bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-900 font-extrabold">
+                                      {formatPrice(item.price)}
+                                    </span>
+                                  )}
+                                  {item.stock !== undefined && (
+                                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${item.stock <= 5 ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-gray-100 text-gray-600'}`}>
+                                      Stock: {item.stock}
+                                    </span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <input
+                          type="text"
+                          placeholder={currentPen.placeholder}
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          disabled={loading}
+                          className={`flex-grow bg-transparent text-lg border-0 outline-none focus:ring-0 font-handwritten px-2 ${currentPen.textClass}`}
+                        />
 
                     <button
                       type="submit"
