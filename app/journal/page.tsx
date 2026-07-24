@@ -335,6 +335,7 @@ export default function JournalPage() {
     price: number
   } | null>(null)
   const [showAutoLearnModal, setShowAutoLearnModal] = useState(false)
+  const [refreshMenuTrigger, setRefreshMenuTrigger] = useState(0)
 
   // Stock guided wizard states
   const [showStockWizard, setShowStockWizard] = useState(false)
@@ -609,7 +610,7 @@ export default function JournalPage() {
       }
     }
     fetchStockMenu()
-  }, [shopId, shopActivity])
+  }, [shopId, shopActivity, refreshMenuTrigger])
 
   // Tap 1-Click sur un plat du menu
   const handleTapMenuItemInJournal = (item: { name: string; price: number }) => {
@@ -1299,6 +1300,40 @@ export default function JournalPage() {
 
     const online = typeof window !== 'undefined' ? window.navigator.onLine : false
     const shopId = mappedUser.shop_id
+    const color = bodyData.penColor
+    const text = bodyData.text
+
+    let parsed: any = null
+    if (bodyData.overrideData) {
+      parsed = {
+        nom_client: bodyData.overrideData.client_name || 'Client anonyme',
+        articles: bodyData.overrideData.articles.map((a: any) => ({
+          nom: a.name || a.nom,
+          quantite: a.quantity || a.quantite,
+          prix_unitaire: a.unit_price || a.prix_unitaire,
+        })),
+        total_facture: bodyData.overrideData.total_amount,
+        montant_paye: bodyData.overrideData.paid_amount,
+        montant_dette: bodyData.overrideData.debt_amount,
+      }
+    } else {
+      parsed = parseTextLocallyClientSide(text, color)
+    }
+
+    // Déterminer le type
+    let type = 'cash_in'
+    if (color === 'red') type = 'cash_out'
+    else if (color === 'green') type = 'purchase_cash'
+    else if (color === 'purple') type = 'purchase_credit'
+    else if (color === 'yellow') type = 'sale_credit'
+
+    // Forcer en Achat Stock (purchase_cash / purchase_credit) si le texte commence par "stock" ou "achat"
+    const lowercaseText = text.trim().toLowerCase()
+    if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
+      if (type === 'cash_in' || type === 'sale_credit') {
+        type = 'purchase_cash'
+      }
+    }
 
     let useOfflineFallback = false
 
@@ -1336,41 +1371,7 @@ export default function JournalPage() {
 
       if (!isConfigured || !online || useOfflineFallback) {
         // Mode hors-ligne -> Enregistrer localement via offlineDb
-        let parsed: any = null
-        const color = bodyData.penColor
-        const text = bodyData.text
         const sid = mappedUser.shop_id
-
-        if (bodyData.overrideData) {
-          parsed = {
-            nom_client: bodyData.overrideData.client_name || 'Client anonyme',
-            articles: bodyData.overrideData.articles.map((a: any) => ({
-              nom: a.name || a.nom,
-              quantite: a.quantity || a.quantite,
-              prix_unitaire: a.unit_price || a.prix_unitaire,
-            })),
-            total_facture: bodyData.overrideData.total_amount,
-            montant_paye: bodyData.overrideData.paid_amount,
-            montant_dette: bodyData.overrideData.debt_amount,
-          }
-        } else {
-          parsed = parseTextLocallyClientSide(text, color)
-        }
-
-        // Déterminer le type
-        let type = 'cash_in'
-        if (color === 'red') type = 'cash_out'
-        else if (color === 'green') type = 'purchase_cash'
-        else if (color === 'purple') type = 'purchase_credit'
-        else if (color === 'yellow') type = 'sale_credit'
-
-        // Forcer en Achat Stock (purchase_cash / purchase_credit) si le texte commence par "stock" ou "achat"
-        const lowercaseText = text.trim().toLowerCase()
-        if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
-          if (type === 'cash_in' || type === 'sale_credit') {
-            type = 'purchase_cash'
-          }
-        }
 
         // Safeguard tiroir caisse
         const isExpense = type === 'cash_out' || type === 'purchase_cash'
@@ -1417,9 +1418,9 @@ export default function JournalPage() {
           }
         }
 
-        // ─── CRÉATION/MISE À JOUR DYNAMIQUE HORS-LIGNE DANS LE CATALOGUE STOCK ───
-        const isStockOp = ['purchase_cash', 'purchase_credit', 'cash_in', 'sale_credit'].includes(type)
-        if (isStockOp && parsed.articles.length > 0) {
+        // ─── CRÉATION/MISE À JOUR DYNAMIQUE HORS-LIGNE DANS LE CATALOGUE STOCK (ACHATS UNIQUEMENT) ───
+        const isPurchaseOp = ['purchase_cash', 'purchase_credit'].includes(type)
+        if (isPurchaseOp && parsed.articles.length > 0) {
           for (const article of parsed.articles) {
             const prodName = article.nom.trim()
             if (!prodName) continue
@@ -1463,6 +1464,31 @@ export default function JournalPage() {
 
       setInput('')
       await loadFinancialData()
+
+      // Trigger auto-learning modal if a new product is detected in a sale operation
+      const isSaleOp = ['cash_in', 'sale_credit'].includes(type)
+      if (isSaleOp && parsed && parsed.articles && parsed.articles.length > 0) {
+        for (const art of parsed.articles) {
+          const cleanName = art.nom.trim()
+          if (cleanName.length < 3) continue
+
+          const isGeneric = ['article', 'articles', 'transaction générale', 'divers', 'monnaie', 'remboursement', 'apport caisse', 'retrait caisse', 'ajustement caisse'].includes(cleanName.toLowerCase())
+          if (isGeneric) continue
+
+          const exists = journalMenuItems.some(
+            item => item.name.toLowerCase().trim() === cleanName.toLowerCase()
+          )
+
+          if (!exists) {
+            setAutoLearnData({
+              name: cleanName,
+              price: art.prix_unitaire || 100
+            })
+            setShowAutoLearnModal(true)
+            break
+          }
+        }
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue'
       setPostItWarning(errorMessage)
@@ -3979,6 +4005,7 @@ export default function JournalPage() {
 
                   setShowAutoLearnModal(false)
                   setAutoLearnData(null)
+                  setRefreshMenuTrigger(p => p + 1)
                 }}
                 className="flex-1 py-2.5 px-4 bg-amber-900 hover:bg-amber-950 text-white text-xs font-bold uppercase rounded-xl transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]"
               >

@@ -375,8 +375,9 @@ export async function POST(request: NextRequest) {
               productId = matchedProd.id
               canonicalName = matchedProd.name
             } else {
-              // 3. Si c'est une boutique, on l'ajoute automatiquement au catalogue products pour l'enrichir proprement
-              if (shopActivity === 'boutique') {
+              // 3. Si c'est une boutique et que c'est une opération d'achat/stockage, on l'ajoute au catalogue products
+              const isPurchaseOp = ['purchase_cash', 'purchase_credit'].includes(type)
+              if (shopActivity === 'boutique' && isPurchaseOp) {
                 const newProdId = randomUUID()
                 const dbCategory = article.categorie || 'Divers'
                 const { error: insertProdErr } = await supabase

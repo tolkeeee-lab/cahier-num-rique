@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Copy, Check, UserPlus, Trash2, Shield, Users } from 'lucide-react'
+import { Copy, Check, UserPlus, Trash2, Shield, Users, Database, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
+import { testSupabaseConnection } from '@/lib/supabaseClient'
 
 interface Employee {
   id: string
@@ -25,6 +26,10 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
   const [copied, setCopied] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
 
+  // Diagnostic BDD
+  const [dbStatus, setDbStatus] = useState<{ ok: boolean; message: string; code?: number } | null>(null)
+  const [checkingDb, setCheckingDb] = useState(false)
+
   // Formulaire d'ajout
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -32,6 +37,18 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
   const [saving, setSaving] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+
+  const runDbCheck = async () => {
+    setCheckingDb(true)
+    const res = await testSupabaseConnection()
+    setDbStatus(res)
+    setCheckingDb(false)
+  }
+
+  useEffect(() => {
+    runDbCheck()
+  }, [])
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -153,6 +170,48 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full space-y-6">
+        {/* Diagnostic Connexion Supabase */}
+        <div className="bg-white border border-gray-200 rounded-[24px] p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-indigo-600" />
+              <h3 className="font-bold text-sm text-gray-800">Diagnostic Base de Données Supabase</h3>
+            </div>
+            <button
+              onClick={runDbCheck}
+              disabled={checkingDb}
+              className="p-1.5 text-xs text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-1"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${checkingDb ? 'animate-spin' : ''}`} />
+              <span>Tester</span>
+            </button>
+          </div>
+
+          {dbStatus && (
+            <div className={`p-3.5 rounded-xl border text-xs flex items-start gap-2.5 ${
+              dbStatus.ok 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}>
+              {dbStatus.ok ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              )}
+              <div className="space-y-1">
+                <p className="font-semibold">{dbStatus.message}</p>
+                {dbStatus.code === 401 && (
+                  <p className="text-[11px] text-amber-700 font-mono bg-amber-100/60 p-2 rounded-md">
+                    💡 Pour résoudre cela :<br />
+                    1. Exécutez la migration <strong>011_fix_rls_permissions.sql</strong> dans l'éditeur SQL Supabase.<br />
+                    2. Vérifiez que <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> est configurée dans Vercel.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Accès Super Admin pour les comptes d'administration autorisés */}
         {(userEmail === 'tolkeeee@gmail.com' || userEmail === 'tolkeeeee@gmail.com' || userEmail === 'admin@cahier.com') && (
           <div className="bg-[#fffdf9] border border-rose-250 rounded-[28px] p-5 shadow-sm select-none">
