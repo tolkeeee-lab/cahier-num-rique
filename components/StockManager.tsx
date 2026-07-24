@@ -4,13 +4,14 @@ import React, { useState, useEffect, useCallback } from 'react'
 import {
   Package, Plus, AlertTriangle, TrendingUp, TrendingDown,
   X, Search, RefreshCw, Edit3, Trash2, ChevronDown, ChevronUp, WifiOff,
-  Download,
+  Download, GitMerge, Layers, Sparkles, CheckCircle2,
 } from 'lucide-react'
 import {
   getOfflineProducts, replaceOfflineProducts, saveOfflineProduct,
   deleteOfflineProduct, computeOfflineStock, generateOfflineId,
   type OfflineProduct,
 } from '@/lib/offlineDb'
+import { findDuplicateCandidates, normalizeProductName, type DuplicatePair } from '@/lib/productUtils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -103,6 +104,76 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
   const [saving, setSaving] = useState(false)
   const [deductPastSales, setDeductPastSales] = useState(false)
   const [orphanPastSales, setOrphanPastSales] = useState(0)
+
+  // Déduplication & Fusion
+  const [duplicatePairs, setDuplicatePairs] = useState<DuplicatePair[]>([])
+  const [showMergeModal, setShowMergeModal] = useState(false)
+  const [activePairIndex, setActivePairIndex] = useState(0)
+  const [merging, setMerging] = useState(false)
+
+  // Recalculer les doublons dès que les items changent
+  useEffect(() => {
+    if (items.length > 0) {
+      const candidates = findDuplicateCandidates(items, 0.75)
+      setDuplicatePairs(candidates)
+    } else {
+      setDuplicatePairs([])
+    }
+  }, [items])
+
+  const handleMergeProducts = async (sourceId: string, targetId: string) => {
+    setMerging(true)
+    try {
+      const response = await fetch('/api/stock/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+        body: JSON.stringify({ sourceProductId: sourceId, targetProductId: targetId }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erreur lors de la fusion')
+      }
+
+      // Recharger le catalogue
+      await loadStock()
+
+      if (activePairIndex < duplicatePairs.length - 1) {
+        setActivePairIndex(prev => prev + 1)
+      } else {
+        setShowMergeModal(false)
+      }
+    } catch (err: any) {
+      onError?.(err?.message || 'Impossible de fusionner les produits')
+    } finally {
+      setMerging(false)
+    }
+  }
+
+  const handleEnableTracking = async (item: StockItem) => {
+    try {
+      const online = typeof window !== 'undefined' ? window.navigator.onLine : true
+      if (online) {
+        await fetch('/api/stock', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+          body: JSON.stringify({
+            id: item.id,
+            alert_threshold: item.alert_threshold || 5,
+            initial_stock: Math.max(item.initial_stock || 0, 1),
+          }),
+        })
+      } else {
+        saveOfflineProduct(shopId, {
+          ...item,
+          initial_stock: Math.max(item.initial_stock || 0, 1),
+        })
+      }
+      await loadStock()
+    } catch (err: any) {
+      onError?.(err?.message || 'Erreur d\'activation du suivi')
+    }
+  }
 
   // ── Chargement ──────────────────────────────────────────────────────────────
 
@@ -462,6 +533,28 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
         ))}
       </div>
 
+      {/* ── Bannière d'alerte doublons ── */}
+      {duplicatePairs.length > 0 && (
+        <div className="mx-4 my-2 p-2.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-xs text-amber-900 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <GitMerge className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>
+              <strong>{duplicatePairs.length} doublon(s) potentiel(s)</strong> détecté(s) (ex: « {duplicatePairs[0].item1.name} » & « {duplicatePairs[0].item2.name} »)
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setActivePairIndex(0)
+              setShowMergeModal(true)
+            }}
+            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center gap-1 flex-shrink-0 shadow-sm"
+          >
+            <GitMerge className="w-3 h-3" />
+            <span>Fusionner</span>
+          </button>
+        </div>
+      )}
+
       {/* ── Search + Category filter ── */}
       <div className="px-4 py-2 border-b border-gray-100 flex flex-col gap-2 bg-[#faf7f0] flex-shrink-0">
         <div className="relative">
@@ -556,13 +649,28 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                             style={{ width: `${barWidth}%` }}
                           />
                         </div>
-                        <span className={`font-mono text-xs font-bold flex-shrink-0 ${colors.text}`}>
-                          {status === 'untracked'
-                            ? '📋 Non suivi'
-                            : item.current_stock <= 0
-                            ? '⚠️ RUPTURE'
-                            : `${item.current_stock} ${item.unit} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'lots'})` : ''}`}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-mono text-xs font-bold flex-shrink-0 ${colors.text}`}>
+                            {status === 'untracked'
+                              ? '📋 Non suivi'
+                              : item.current_stock <= 0
+                              ? '⚠️ RUPTURE'
+                              : `${item.current_stock} ${item.unit} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'lots'})` : ''}`}
+                          </span>
+                          {status === 'untracked' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEnableTracking(item)
+                              }}
+                              className="px-2 py-0.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-[9px] font-bold rounded-full transition-colors flex items-center gap-1"
+                              title="Activer le suivi du stock pour ce produit"
+                            >
+                              <Plus className="w-2.5 h-2.5" />
+                              <span>Activer suivi</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -977,6 +1085,88 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
               >
                 {saving ? 'Sauvegarde...' : editingItem ? 'Modifier' : 'Ajouter'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de Fusion de Doublons ── */}
+      {showMergeModal && duplicatePairs.length > 0 && activePairIndex < duplicatePairs.length && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#fbf9f4] border-2 border-amber-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-4 border-b border-amber-200 bg-amber-100 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                <GitMerge className="w-5 h-5 text-amber-700" />
+                <span>Fusionner les doublons ({activePairIndex + 1}/{duplicatePairs.length})</span>
+              </div>
+              <button
+                onClick={() => setShowMergeModal(false)}
+                className="p-1 text-amber-800 hover:text-amber-950 rounded-full hover:bg-amber-200/60"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs text-gray-700">
+              <p className="text-gray-600">
+                Ces deux articles semblent identiques. Choisissez le nom canonique à conserver :
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Choix 1 */}
+                <button
+                  onClick={() => handleMergeProducts(
+                    duplicatePairs[activePairIndex].item2.id,
+                    duplicatePairs[activePairIndex].item1.id
+                  )}
+                  disabled={merging}
+                  className="p-3.5 bg-white border border-amber-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-2xl text-left transition-all group flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="font-bold text-sm text-gray-900 group-hover:text-amber-900">
+                      « {duplicatePairs[activePairIndex].item1.name} »
+                    </div>
+                    <span className="text-[10px] text-gray-400 block mt-1">Conserver ce nom</span>
+                  </div>
+                  <div className="mt-3 px-2 py-1 bg-amber-600 text-white text-[9px] font-bold uppercase rounded-lg text-center">
+                    Garder celui-ci
+                  </div>
+                </button>
+
+                {/* Choix 2 */}
+                <button
+                  onClick={() => handleMergeProducts(
+                    duplicatePairs[activePairIndex].item1.id,
+                    duplicatePairs[activePairIndex].item2.id
+                  )}
+                  disabled={merging}
+                  className="p-3.5 bg-white border border-amber-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-2xl text-left transition-all group flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="font-bold text-sm text-gray-900 group-hover:text-amber-900">
+                      « {duplicatePairs[activePairIndex].item2.name} »
+                    </div>
+                    <span className="text-[10px] text-gray-400 block mt-1">Conserver ce nom</span>
+                  </div>
+                  <div className="mt-3 px-2 py-1 bg-amber-600 text-white text-[9px] font-bold uppercase rounded-lg text-center">
+                    Garder celui-ci
+                  </div>
+                </button>
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-[10px] text-amber-800">
+                ℹ️ <strong>Remarque :</strong> La fusion transférera automatiquement l'historique complet des ventes et mouvements sous le nom sélectionné et supprimera l'autre version.
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-amber-200 bg-amber-100/50 flex justify-between items-center">
+              <button
+                onClick={() => setShowMergeModal(false)}
+                className="px-3 py-1.5 text-xs text-amber-900 hover:text-black font-semibold"
+              >
+                Passer
+              </button>
+              {merging && <span className="text-xs font-mono text-amber-700 animate-pulse">Fusion en cours...</span>}
             </div>
           </div>
         </div>

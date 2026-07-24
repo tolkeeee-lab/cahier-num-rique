@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { normalizeProductName } from '@/lib/productUtils'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -166,9 +167,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Le nom du produit est obligatoire' }, { status: 400 })
     }
 
+    const canonicalName = normalizeProductName(name)
+
     const insertData: Record<string, any> = {
       shop_id: shopId,
-      name: name.trim(),
+      name: canonicalName,
       category: category || 'Général',
       unit: unit || 'unité',
       alert_threshold: alert_threshold ?? 5,
