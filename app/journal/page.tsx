@@ -755,7 +755,8 @@ export default function JournalPage() {
           unit_cost: Math.round(priceNum * 0.6),
           initial_stock: 100,
           alert_threshold: 5,
-          category: dbCategory
+          category: dbCategory,
+          is_service: (shopActivity === 'prestations' && categoryToSave === 'service') || (shopActivity === 'resto' && categoryToSave === 'cuisine')
         })
       })
     } catch (err) {
