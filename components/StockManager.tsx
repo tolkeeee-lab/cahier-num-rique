@@ -111,6 +111,73 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
   const [activePairIndex, setActivePairIndex] = useState(0)
   const [merging, setMerging] = useState(false)
 
+  // Ajustement Express & WhatsApp
+  const [expressItem, setExpressItem] = useState<StockItem | null>(null)
+  const [expressType, setExpressType] = useState<'in' | 'out'>('in')
+  const [expressQty, setExpressQty] = useState(1)
+  const [expressReason, setExpressReason] = useState('purchase')
+  const [expressNotes, setExpressNotes] = useState('')
+  const [adjusting, setAdjusting] = useState(false)
+
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
+  const [supplierPhone, setSupplierPhone] = useState('')
+
+  const handleExpressAdjust = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!expressItem || expressQty <= 0) return
+    setAdjusting(true)
+
+    try {
+      const response = await fetch('/api/stock/adjust', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-shop-id': shopId,
+        },
+        body: JSON.stringify({
+          productId: expressItem.id,
+          quantity: expressQty,
+          type: expressType,
+          reason: expressReason,
+          notes: expressNotes,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erreur lors de l\'ajustement')
+      }
+
+      setExpressItem(null)
+      setExpressQty(1)
+      setExpressNotes('')
+      await loadStock()
+    } catch (err: any) {
+      onError?.(err?.message || 'Erreur lors de l\'ajustement')
+    } finally {
+      setAdjusting(false)
+    }
+  }
+
+  const generateWhatsAppUrl = () => {
+    const alertItems = items.filter(i => getStockStatus(i) === 'low' || getStockStatus(i) === 'out')
+    if (alertItems.length === 0) return '#'
+    
+    let text = `📑 *BON DE COMMANDE - REAPPROVISIONNEMENT*\n📅 Date: ${new Date().toLocaleDateString('fr-FR')}\n\n`
+    text += `Bonjour, veuillez me préparer le réapprovisionnement suivant :\n\n`
+    
+    alertItems.forEach((item, idx) => {
+      const neededQty = Math.max(item.alert_threshold * 2 - Math.max(0, item.current_stock), 10)
+      text += `${idx + 1}. *${item.name}* : ${neededQty} ${item.unit} (Stock restant: ${item.current_stock})\n`
+    })
+
+    text += `\nMerci de me confirmer la disponibilité et le tarif ! 🙏`
+
+    const phoneClean = supplierPhone.replace(/[^0-9]/g, '')
+    const baseUrl = phoneClean ? `https://wa.me/${phoneClean}` : `https://wa.me/`
+    return `${baseUrl}?text=${encodeURIComponent(text)}`
+  }
+
   // Recalculer les doublons dès que les items changent
   useEffect(() => {
     if (items.length > 0) {
@@ -507,6 +574,12 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
             <span>✂️ Prestation</span>
           </button>
           <button
+            onClick={() => setShowWhatsAppModal(true)}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+          >
+            <span>📲 Bon WhatsApp</span>
+          </button>
+          <button
             onClick={() => openAddModal()}
             className="flex items-center gap-1 px-2 py-1.5 bg-gray-900 hover:bg-black text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
@@ -523,6 +596,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
           { label: 'Alertes', value: alertCount, color: 'border-red-200 text-red-700' },
           { label: 'Valeur Achat', value: formatPrice(stockValue), color: 'border-emerald-200 text-emerald-800' },
           { label: 'Valeur Vente', value: formatPrice(stockValueSale), color: 'border-indigo-200 text-indigo-800' },
+          { label: 'Marge Estimée', value: formatPrice(Math.max(0, stockValueSale - stockValue)), color: 'border-amber-300 text-amber-900 bg-amber-50' },
           { label: 'Total entrées', value: totalIn, color: 'border-blue-200 text-blue-800' },
           { label: 'Total sorties', value: totalOut, color: 'border-rose-200 text-rose-800' },
         ].map(kpi => (
@@ -675,6 +749,34 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Boutons Ajustement Express */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setExpressItem(item)
+                            setExpressType('in')
+                            setExpressQty(1)
+                          }}
+                          className="w-7 h-7 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold rounded-lg flex items-center justify-center text-xs transition-colors shadow-xs"
+                          title="Ajouter du stock (+ Entrée)"
+                        >
+                          +
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setExpressItem(item)
+                            setExpressType('out')
+                            setExpressQty(1)
+                          }}
+                          className="w-7 h-7 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-lg flex items-center justify-center text-xs transition-colors shadow-xs"
+                          title="Retirer du stock (- Sortie)"
+                        >
+                          -
+                        </button>
+                      </div>
+
                       <div className="text-right hidden sm:block">
                         <div className="flex items-center gap-1 text-[9px] text-emerald-700 font-mono font-bold">
                           <TrendingUp className="w-2.5 h-2.5" /> +{item.total_in}
@@ -707,6 +809,20 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                           </div>
                         ))}
                       </div>
+
+                      {/* Profitabilité & Marge */}
+                      {item.unit_price > 0 && item.unit_cost > 0 && (
+                        <div className="mb-3 p-2 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between text-xs font-mono">
+                          <span className="text-amber-800">
+                            💰 Marge Unitaire: <strong>{formatPrice(item.unit_price - item.unit_cost)}</strong> ({Math.round(((item.unit_price - item.unit_cost) / item.unit_cost) * 100)}%)
+                          </span>
+                          {item.current_stock > 0 && (
+                            <span className="text-amber-900 font-bold">
+                              Profit Potentiel: {formatPrice((item.unit_price - item.unit_cost) * item.current_stock)}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       {/* Seuil + Prix */}
                       <div className="flex gap-4 text-[10px] font-mono mb-3 text-gray-500 flex-wrap">
@@ -1167,6 +1283,158 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                 Passer
               </button>
               {merging && <span className="text-xs font-mono text-amber-700 animate-pulse">Fusion en cours...</span>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Ajustement Express (+ / -) ── */}
+      {expressItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#fbf9f4] border border-gray-200 rounded-[28px] max-w-sm w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className={`px-5 py-4 border-b flex items-center justify-between ${
+              expressType === 'in' ? 'bg-emerald-100 border-emerald-200 text-emerald-900' : 'bg-rose-100 border-rose-200 text-rose-900'
+            }`}>
+              <div className="font-bold text-sm flex items-center gap-2">
+                <span>{expressType === 'in' ? '⚡ Entrée de Stock (+)' : '⚡ Sortie de Stock (-)'}</span>
+              </div>
+              <button onClick={() => setExpressItem(null)} className="p-1 rounded-full hover:bg-black/10">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleExpressAdjust} className="p-5 space-y-4 text-xs">
+              <div className="bg-white p-3 rounded-xl border border-gray-200">
+                <div className="text-[10px] text-gray-400 font-mono uppercase">Produit sélectionné</div>
+                <div className="font-handwritten text-lg font-bold text-gray-800">{expressItem.name}</div>
+                <div className="text-[11px] text-gray-500 font-mono">Stock actuel : {expressItem.current_stock} {expressItem.unit}</div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Quantité à {expressType === 'in' ? 'ajouter' : 'retirer'}</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={expressQty}
+                  onChange={e => setExpressQty(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-sm font-bold text-gray-800 outline-none focus:border-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Motif de l'ajustement</label>
+                <select
+                  value={expressReason}
+                  onChange={e => setExpressReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-xs text-gray-800 outline-none focus:border-gray-900 bg-white"
+                >
+                  {expressType === 'in' ? (
+                    <>
+                      <option value="purchase">📦 Achat / Reconstitution de stock</option>
+                      <option value="inventory_correction">⚖️ Ajustement d'inventaire (+)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="damage">⚠️ Casse / Perte / Produit périmé</option>
+                      <option value="personal_use">🥤 Consommation personnelle / Équipe</option>
+                      <option value="inventory_correction">⚖️ Ajustement d'inventaire (-)</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Notes optionnelles</label>
+                <input
+                  type="text"
+                  placeholder="ex: Carton cassé lors du déchargement"
+                  value={expressNotes}
+                  onChange={e => setExpressNotes(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-gray-200 rounded-xl font-mono text-xs outline-none focus:border-gray-400"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setExpressItem(null)}
+                  className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={adjusting}
+                  className={`flex-1 py-2 text-white font-bold rounded-full transition-transform hover:scale-105 active:scale-95 ${
+                    expressType === 'in' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                  }`}
+                >
+                  {adjusting ? 'Validation...' : 'Valider'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Bon de Commande WhatsApp ── */}
+      {showWhatsAppModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#fbf9f4] border border-emerald-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-4 border-b border-emerald-200 bg-emerald-100 flex items-center justify-between text-emerald-950">
+              <div className="font-bold text-sm flex items-center gap-2">
+                <span>📲 Bon de Commande WhatsApp</span>
+              </div>
+              <button onClick={() => setShowWhatsAppModal(false)} className="p-1 rounded-full hover:bg-emerald-200/60">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Numéro WhatsApp du Grossiste / Fournisseur (Optionnel)</label>
+                <input
+                  type="tel"
+                  placeholder="ex: +22997000000 ou laisser vide"
+                  value={supplierPhone}
+                  onChange={e => setSupplierPhone(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-xs outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              <div className="bg-white p-3.5 border border-gray-200 rounded-2xl max-h-48 overflow-y-auto space-y-2">
+                <div className="font-bold text-gray-800 text-[11px] uppercase tracking-wider mb-1">Articles en alerte de rupture :</div>
+                {items.filter(i => getStockStatus(i) === 'low' || getStockStatus(i) === 'out').length === 0 ? (
+                  <p className="text-gray-400 italic py-2 text-center">Aucun produit en alerte de rupture pour le moment !</p>
+                ) : (
+                  items.filter(i => getStockStatus(i) === 'low' || getStockStatus(i) === 'out').map(item => (
+                    <div key={item.id} className="flex justify-between items-center text-xs py-1 border-b border-gray-100 last:border-0 font-mono">
+                      <span className="font-bold text-gray-800">{item.name}</span>
+                      <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">
+                        A commander: {Math.max(item.alert_threshold * 2 - Math.max(0, item.current_stock), 10)} {item.unit}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowWhatsAppModal(false)}
+                  className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100"
+                >
+                  Fermer
+                </button>
+                <a
+                  href={generateWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full text-center transition-transform hover:scale-105 active:scale-95 flex items-center justify-center gap-1"
+                >
+                  <span>Envoyer WhatsApp</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
