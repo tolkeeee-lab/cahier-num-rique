@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Copy, Check, UserPlus, Trash2, Shield, Users, Database, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
+import { Copy, Check, UserPlus, Trash2, Shield, Users, Database, AlertCircle, CheckCircle2, RefreshCw, Coins } from 'lucide-react'
 import { testSupabaseConnection } from '@/lib/supabaseClient'
+import { SUPPORTED_CURRENCIES, getShopCurrency, setShopCurrency } from '@/lib/currencyUtils'
 
 interface Employee {
   id: string
@@ -25,6 +26,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(() => getShopCurrency(shopId))
 
   // Diagnostic BDD
   const [dbStatus, setDbStatus] = useState<{ ok: boolean; message: string; code?: number } | null>(null)
@@ -170,6 +172,40 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full space-y-6">
+        {/* Configuration de la Devise Régionale / Internationale */}
+        <div className="bg-white border border-amber-200 rounded-[24px] p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2">
+            <Coins className="w-5 h-5 text-amber-700" />
+            <h3 className="font-bold text-sm text-gray-900">Devise Principale du Point de Vente</h3>
+          </div>
+          <p className="text-xs text-gray-500 font-mono">
+            Sélectionnez la monnaie d'affichage pour vos prix, ventes et reçus de caisse.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+            {Object.values(SUPPORTED_CURRENCIES).map(curr => {
+              const isSelected = selectedCurrency === curr.code
+              return (
+                <button
+                  key={curr.code}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCurrency(curr.code)
+                    setShopCurrency(shopId, curr.code)
+                  }}
+                  className={`p-3 rounded-2xl border text-left transition-all font-mono ${
+                    isSelected
+                      ? 'border-amber-500 bg-amber-50 shadow-sm scale-105'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="text-xs font-bold text-gray-900">{curr.symbol}</div>
+                  <div className="text-[10px] text-gray-500 truncate">{curr.name}</div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Diagnostic Connexion Supabase */}
         <div className="bg-white border border-gray-200 rounded-[24px] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">

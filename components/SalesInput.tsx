@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp, X, Mic, MicOff } from 'lucide-react'
 import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
 
 interface Sale {
@@ -118,6 +118,47 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
   const [loading, setLoading] = useState(false)
   const [postItWarning, setPostItWarning] = useState<string | null>(null)
   const [lastPrintedSale, setLastPrintedSale] = useState<any | null>(null)
+  const [isListening, setIsListening] = useState(false)
+
+  const toggleVoiceDictation = useCallback(() => {
+    if (typeof window === 'undefined') return
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      alert("La dictée vocale n'est pas prise en charge sur ce navigateur.")
+      return
+    }
+
+    if (isListening) {
+      setIsListening(false)
+      return
+    }
+
+    try {
+      const recognition = new SpeechRecognition()
+      recognition.lang = 'fr-FR'
+      recognition.interimResults = false
+      recognition.maxAlternatives = 1
+
+      recognition.onstart = () => setIsListening(true)
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript
+        if (transcript) {
+          setInput(prev => (prev ? `${prev} ${transcript}` : transcript))
+        }
+        setIsListening(false)
+      }
+      recognition.onerror = (err: any) => {
+        console.warn('[Speech Recognition]', err)
+        setIsListening(false)
+      }
+      recognition.onend = () => setIsListening(false)
+
+      recognition.start()
+    } catch (e) {
+      console.warn(e)
+      setIsListening(false)
+    }
+  }, [isListening])
   
   // États Menu Tactile
   const [showMenuGrid, setShowMenuGrid] = useState(true)
@@ -433,6 +474,20 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
             </button>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleVoiceDictation}
+                title={isListening ? "Écoute en cours... Parlez !" : "Dicter la vente à la voix"}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                  isListening
+                    ? 'bg-red-600 text-white animate-pulse'
+                    : 'bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300'
+                }`}
+              >
+                {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-amber-700" />}
+                <span>{isListening ? 'Écoute...' : '🎙️ Dictée'}</span>
+              </button>
+
               {input.trim() && (
                 <button
                   type="button"
