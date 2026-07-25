@@ -7,10 +7,12 @@ import {
 } from 'lucide-react'
 import { StockItem } from './types'
 import { getStockStatus, getStatusColors, getBarWidth, formatPrice } from './stockUtils'
+import { canViewFinancialMargins } from '@/lib/roleUtils'
 
 interface StockItemRowProps {
   item: StockItem
   isExpanded: boolean
+  userRole?: string
   onToggleExpand: () => void
   onEnableTracking: (item: StockItem) => void
   onOpenExpressAdjust: (item: StockItem, type: 'in' | 'out') => void
@@ -21,6 +23,7 @@ interface StockItemRowProps {
 export function StockItemRow({
   item,
   isExpanded,
+  userRole,
   onToggleExpand,
   onEnableTracking,
   onOpenExpressAdjust,
@@ -139,8 +142,8 @@ export function StockItemRow({
             ))}
           </div>
 
-          {/* Profitabilité & Marge */}
-          {item.unit_price > 0 && item.unit_cost > 0 && (
+          {/* Profitabilité & Marge (Masqué pour les employés) */}
+          {canViewFinancialMargins(userRole) && item.unit_price > 0 && item.unit_cost > 0 && (
             <div className="mb-3 p-2 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between text-xs font-mono">
               <span className="text-amber-800">
                 💰 Marge Unitaire: <strong>{formatPrice(item.unit_price - item.unit_cost)}</strong> ({Math.round(((item.unit_price - item.unit_cost) / item.unit_cost) * 100)}%)

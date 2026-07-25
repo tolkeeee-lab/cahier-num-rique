@@ -21,6 +21,7 @@ export interface StockItem extends OfflineProduct {
 
 export interface StockManagerProps {
   shopId?: string
+  userRole?: string
   onError?: (err: string) => void
 }
 

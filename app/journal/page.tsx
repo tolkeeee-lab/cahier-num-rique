@@ -3253,7 +3253,7 @@ export default function JournalPage() {
 
               {activeTab === 'stock' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
-                  <StockManager shopId={mappedUser?.shop_id} onError={handleError} />
+                  <StockManager shopId={mappedUser?.shop_id} userRole={mappedUser?.role} onError={handleError} />
                 </div>
               )}
 

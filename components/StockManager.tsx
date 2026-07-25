@@ -21,7 +21,7 @@ import { ExpressAdjustmentModal } from './stock/ExpressAdjustmentModal'
 import { WhatsAppPOModal } from './stock/WhatsAppPOModal'
 import { ProductMergeModal } from './stock/ProductMergeModal'
 
-export function StockManager({ shopId = 'default-shop', onError }: StockManagerProps) {
+export function StockManager({ shopId = 'default-shop', userRole, onError }: StockManagerProps) {
   const [items, setItems] = useState<StockItem[]>([])
   const [orphans, setOrphans] = useState<StockItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -520,6 +520,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                 key={item.id}
                 item={item}
                 isExpanded={expandedId === item.id}
+                userRole={userRole}
                 onToggleExpand={() => setExpandedId(expandedId === item.id ? null : item.id)}
                 onEnableTracking={handleEnableTracking}
                 onOpenExpressAdjust={(targetItem, type) => {

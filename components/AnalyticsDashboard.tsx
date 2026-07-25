@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { TrendingUp, Package, ShoppingBag, Layers, Award, BarChart3 } from 'lucide-react'
+import { TrendingUp, Package, ShoppingBag, Layers, Award, BarChart3, Download, Share2 } from 'lucide-react'
+import { exportSalesToCSV, generateWhatsAppPerformanceReport } from '@/lib/exportUtils'
 
 interface Article {
   name: string
@@ -191,25 +192,47 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
 
           {/* Boutons Période */}
           <div className="flex gap-1.5 bg-white border border-gray-250 p-1 rounded-2xl shadow-sm">
-          {[
-            { id: 'all', label: 'Tout' },
-            { id: 'month', label: 'Ce Mois' },
-            { id: '7days', label: '7 Jours' },
-            { id: 'today', label: 'Aujourd\'hui' },
-          ].map(p => (
+            {[
+              { id: 'all', label: 'Tout' },
+              { id: 'month', label: 'Ce Mois' },
+              { id: '7days', label: '7 Jours' },
+              { id: 'today', label: 'Aujourd\'hui' },
+            ].map(p => (
+              <button
+                key={p.id}
+                onClick={() => setPeriod(p.id as any)}
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all ${
+                  period === p.id 
+                    ? 'bg-gray-900 text-white shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Boutons d'exportation */}
+          <div className="flex items-center gap-1.5">
             <button
-              key={p.id}
-              onClick={() => setPeriod(p.id as any)}
-              className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all ${
-                period === p.id 
-                  ? 'bg-gray-900 text-white shadow-sm' 
-                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-              }`}
+              onClick={() => exportSalesToCSV(filteredSales, period, userShops[0]?.name || 'Point_de_Vente')}
+              title="Exporter les ventes filtrées au format Excel/CSV"
+              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
             >
-              {p.label}
+              <Download className="w-3 h-3" />
+              <span>Exporter CSV</span>
             </button>
-          ))}
-        </div>
+            <a
+              href={generateWhatsAppPerformanceReport(filteredSales, period === 'all' ? 'Toutes les Ventes' : period === 'month' ? 'Ce Mois' : period === '7days' ? '7 derniers jours' : 'Aujourd\'hui', userShops[0]?.name || 'Cahier Numérique')}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Envoyer la synthèse de performance par WhatsApp"
+              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            >
+              <Share2 className="w-3 h-3" />
+              <span>Rapport WhatsApp</span>
+            </a>
+          </div>
       </div>
     </div>
 
