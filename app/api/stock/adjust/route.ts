@@ -1,17 +1,19 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { stockAdjustSchema, validatePayload } from '@/lib/validations'
 
 export async function POST(request: Request) {
   const shopId = request.headers.get('x-shop-id') || 'default-shop'
   const employeeName = request.headers.get('x-employee-name') || 'Gérant'
 
   try {
-    const body = await request.json()
-    const { productId, quantity, type, reason, notes } = body
-
-    if (!productId || !quantity || quantity <= 0 || !['in', 'out'].includes(type)) {
-      return NextResponse.json({ error: 'Paramètres d\'ajustement invalides' }, { status: 400 })
+    const rawBody = await request.json()
+    const validation = validatePayload(stockAdjustSchema, rawBody)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
+
+    const { productId, quantity, type, reason, notes } = validation.data
 
     // 1. Récupérer le produit
     const { data: product, error: prodErr } = await supabase

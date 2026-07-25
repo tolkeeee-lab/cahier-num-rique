@@ -11,6 +11,8 @@ import { AuthScreen } from '@/components/AuthScreen'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { StockManager } from '@/components/StockManager'
 import { SettingsManager } from '@/components/SettingsManager'
+import { CashClosingModal } from '@/components/CashClosingModal'
+import { SyncManager } from '@/components/SyncManager'
 import {
   generateOfflineId,
   getOfflineSales,
@@ -317,6 +319,7 @@ export default function JournalPage() {
   const [currentTime, setCurrentTime] = useState('')
 
 
+  const [showCashClosing, setShowCashClosing] = useState(false)
   const [showChangeCalc, setShowChangeCalc] = useState(false)
   const [changeTotal, setChangeTotal] = useState('')
   const [changeReceived, setChangeReceived] = useState('')
@@ -2404,6 +2407,15 @@ export default function JournalPage() {
                   </div>
                   <span className="font-mono text-sm font-bold text-emerald-950 mt-0.5 whitespace-nowrap">{formatPrice(tiroirCaisse)}</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCashClosing(true)}
+                  className="bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 rounded-xl px-3 py-1.5 flex items-center gap-1 shadow-sm flex-shrink-0 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  title="Effectuer le bilan et la clôture de caisse du jour"
+                >
+                  <span className="text-xs">📊</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide">Clôture Z</span>
+                </button>
                 <div className="bg-[#fffdf9] border border-rose-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
                   <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wide whitespace-nowrap">🔴 Crédits dehors</span>
                   <span className="font-mono text-sm font-bold text-rose-950 mt-0.5 whitespace-nowrap">{formatPrice(argentDehors)}</span>
@@ -4021,6 +4033,17 @@ export default function JournalPage() {
       <footer className="text-center text-[10px] text-[#8e857b]/60 font-mono py-2 uppercase tracking-widest mt-auto z-10 select-none">
         CAHIER NO. 200 • WEST AFRICA MARKET RD.
       </footer>
+
+      {/* Service Sync en arrière-plan */}
+      <SyncManager shopId={shopId} />
+
+      {/* Modale de Clôture de Caisse Journalière (Z de Caisse) */}
+      <CashClosingModal
+        isOpen={showCashClosing}
+        onClose={() => setShowCashClosing(false)}
+        sales={sales}
+        shopName={currentShop?.name || 'Mon Point de Vente'}
+      />
 
     </main>
   )
