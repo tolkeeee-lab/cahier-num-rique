@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X, Sun, Moon } from 'lucide-react'
+import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X } from 'lucide-react'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -13,7 +13,6 @@ import { StockManager } from '@/components/StockManager'
 import { SettingsManager } from '@/components/SettingsManager'
 import { CashClosingModal } from '@/components/CashClosingModal'
 import { SyncManager } from '@/components/SyncManager'
-import { getSavedTheme, applyTheme, ThemeMode } from '@/lib/themeUtils'
 import {
   generateOfflineId,
   getOfflineSales,
@@ -319,11 +318,6 @@ export default function JournalPage() {
   const [postItWarning, setPostItWarning] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState('')
 
-
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getSavedTheme())
-  useEffect(() => {
-    applyTheme(themeMode)
-  }, [themeMode])
 
   const [showCashClosing, setShowCashClosing] = useState(false)
   const [showChangeCalc, setShowChangeCalc] = useState(false)
@@ -2428,24 +2422,6 @@ export default function JournalPage() {
                   </div>
                   <span className="font-mono text-sm font-bold text-emerald-950 mt-0.5 whitespace-nowrap">{formatPrice(tiroirCaisse)}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowCashClosing(true)}
-                  className="bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 rounded-xl px-3 py-1.5 flex items-center gap-1 shadow-sm flex-shrink-0 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                  title="Effectuer le bilan et la clôture de caisse du jour"
-                >
-                  <span className="text-xs">📊</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wide">Clôture Z</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setThemeMode(prev => prev === 'light' ? 'dark' : 'light')}
-                  className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-xl px-2.5 py-1.5 flex items-center gap-1 shadow-sm flex-shrink-0 transition-all cursor-pointer"
-                  title={themeMode === 'light' ? 'Activer le Mode Nuit Caisse (Dark Mode)' : 'Activer le Mode Clair'}
-                >
-                  {themeMode === 'light' ? <Moon className="w-3.5 h-3.5 text-amber-700" /> : <Sun className="w-3.5 h-3.5 text-amber-400" />}
-                  <span className="text-[10px] font-bold uppercase tracking-wide hidden sm:inline">{themeMode === 'light' ? 'Nuit' : 'Clair'}</span>
-                </button>
                 <div className="bg-[#fffdf9] border border-rose-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
                   <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wide whitespace-nowrap">🔴 Crédits dehors</span>
                   <span className="font-mono text-sm font-bold text-rose-950 mt-0.5 whitespace-nowrap">{formatPrice(argentDehors)}</span>
