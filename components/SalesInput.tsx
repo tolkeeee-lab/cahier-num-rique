@@ -473,7 +473,7 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
               {showMenuGrid ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
               <button
                 type="button"
                 onClick={toggleVoiceDictation}

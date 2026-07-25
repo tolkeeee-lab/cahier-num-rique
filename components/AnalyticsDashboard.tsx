@@ -168,7 +168,7 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {userShops.length > 1 && (
             <div className="flex bg-amber-100 p-1 rounded-2xl border border-amber-300 text-xs select-none">
               <button

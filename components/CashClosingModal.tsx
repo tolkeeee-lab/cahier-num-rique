@@ -87,11 +87,11 @@ export function CashClosingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-xs">
-      <div className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-3 sm:p-4 backdrop-blur-xs">
+      <div className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
-        <div className="px-5 py-4 border-b border-amber-200 bg-amber-100 flex items-center justify-between text-amber-950">
+        <div className="px-5 py-4 border-b border-amber-200 bg-amber-100 flex items-center justify-between text-amber-950 flex-shrink-0">
           <div className="font-bold text-sm flex items-center gap-2">
             <Calculator className="w-5 h-5 text-amber-700" />
             <span>Clôture de Caisse Journalière (Z)</span>
@@ -101,7 +101,7 @@ export function CashClosingModal({
           </button>
         </div>
 
-        <div className="p-5 space-y-4 text-xs font-mono">
+        <div className="p-5 space-y-4 text-xs font-mono overflow-y-auto">
           
           {/* Synthèse des flux du jour */}
           <div className="bg-white p-3.5 border border-amber-200 rounded-2xl space-y-2">

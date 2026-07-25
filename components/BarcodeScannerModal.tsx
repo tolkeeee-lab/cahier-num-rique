@@ -75,11 +75,11 @@ export function BarcodeScannerModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4 backdrop-blur-xs">
-      <div className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-3 sm:p-4 backdrop-blur-xs">
+      <div className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
-        <div className="px-5 py-4 border-b border-amber-200 bg-amber-100 flex items-center justify-between text-amber-950">
+        <div className="px-5 py-4 border-b border-amber-200 bg-amber-100 flex items-center justify-between text-amber-950 flex-shrink-0">
           <div className="font-bold text-sm flex items-center gap-2">
             <QrCode className="w-5 h-5 text-amber-700" />
             <span>Scanner Code-Barres / QR Code</span>
@@ -92,7 +92,7 @@ export function BarcodeScannerModal({
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 overflow-y-auto">
           
           {/* Zone de prévisualisation Vidéo Caméra */}
           <div className="relative bg-black rounded-2xl overflow-hidden aspect-video flex items-center justify-center border-2 border-amber-300 shadow-inner">
