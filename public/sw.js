@@ -1,83 +1,83 @@
-const CACHE_NAME = 'cahier-caisse-v1';
-const OFFLINE_URL = '/journal';
+/* Service Worker PWA — Cahier Numérique */
 
-// Assets to cache immediately on install
-const PRECACHE_ASSETS = [
+const CACHE_NAME = 'cahier-pwa-v1'
+const STATIC_ASSETS = [
+  '/',
   '/journal',
+  '/manifest.webmanifest',
   '/icon.svg',
-];
+]
 
+// Installation : Mise en cache des ressources statiques
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.error('Erreur lors du pré-chargement des ressources:', err);
-      });
+      console.log('[SW] Pre-caching static assets')
+      return cache.addAll(STATIC_ASSETS).catch(err => {
+        console.warn('[SW] Pre-cache partial warning:', err)
+      })
     })
-  );
-  // Force active immediately
-  self.skipWaiting();
-});
+  )
+  self.skipWaiting()
+})
 
+// Activation : Nettoyage des anciens caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('Nettoyage ancien cache SW:', cache);
-            return caches.delete(cache);
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log('[SW] Removing old cache:', key)
+            return caches.delete(key)
           }
         })
-      );
+      )
     })
-  );
-  // Claim clients immediately
-  self.clients.claim();
-});
+  )
+  self.clients.claim()
+})
 
+// Interception des requêtes réseau
 self.addEventListener('fetch', (event) => {
-  // Only handle HTTP/HTTPS local requests
-  if (!event.request.url.startsWith(self.location.origin)) return;
+  const url = new URL(event.request.url)
 
-  // Ignore POST requests, API routes, and Supabase endpoints
-  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) return;
+  // Ignorer les requêtes d'API (gérées côté client avec fallback local)
+  if (url.pathname.startsWith('/api/') || event.request.method !== 'GET') {
+    return
+  }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached, and update cache in background (stale-while-revalidate)
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-            }
-          })
-          .catch(() => {});
-        return cachedResponse;
-      }
-
-      // Fetch from network
-      return fetch(event.request)
-        .then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-            return networkResponse;
-          }
-
-          // Cache dynamically fetched files (CSS, JS, Fonts...)
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
-          return networkResponse;
+  // Stratégie Network First avec Fallback Cache pour la navigation HTML
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseClone = response.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone))
+          return response
         })
         .catch(() => {
-          // If offline and navigating to page, fall back to /journal page
-          if (event.request.mode === 'navigate') {
-            return caches.match(OFFLINE_URL);
-          }
-        });
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse
+            return caches.match('/journal') || caches.match('/')
+          })
+        })
+    )
+    return
+  }
+
+  // Stratégie Stale-While-Revalidate pour les assets statiques (JS, CSS, images, polices)
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone))
+        }
+        return networkResponse
+      }).catch(() => cachedResponse)
+
+      return cachedResponse || fetchPromise
     })
-  );
-});
+  )
+})
