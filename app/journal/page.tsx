@@ -2422,6 +2422,15 @@ export default function JournalPage() {
                   </div>
                   <span className="font-mono text-sm font-bold text-emerald-950 mt-0.5 whitespace-nowrap">{formatPrice(tiroirCaisse)}</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCashClosing(true)}
+                  className="bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-xl px-3 py-2 flex items-center gap-1.5 shadow-md flex-shrink-0 transition-transform hover:scale-105 active:scale-95 cursor-pointer text-xs"
+                  title="Effectuer le bilan et la clôture de caisse journalière (Z)"
+                >
+                  <span>📊</span>
+                  <span className="font-bold uppercase tracking-wider text-[10px]">Clôture Z</span>
+                </button>
                 <div className="bg-[#fffdf9] border border-rose-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
                   <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wide whitespace-nowrap">🔴 Crédits dehors</span>
                   <span className="font-mono text-sm font-bold text-rose-950 mt-0.5 whitespace-nowrap">{formatPrice(argentDehors)}</span>
