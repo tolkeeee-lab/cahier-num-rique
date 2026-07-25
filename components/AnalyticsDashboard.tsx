@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { TrendingUp, Package, ShoppingBag, Layers, Award, BarChart3, Download, Share2 } from 'lucide-react'
-import { exportSalesToCSV, generateWhatsAppPerformanceReport } from '@/lib/exportUtils'
+import { TrendingUp, Package, ShoppingBag, Layers, Award, BarChart3, Download, Share2, FileText } from 'lucide-react'
+import { exportSalesToCSV, exportSalesToPDF, generateWhatsAppPerformanceReport } from '@/lib/exportUtils'
 
 interface Article {
   name: string
@@ -213,7 +213,7 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
           </div>
 
           {/* Boutons d'exportation */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
               onClick={() => exportSalesToCSV(filteredSales, period, userShops[0]?.name || 'Point_de_Vente')}
               title="Exporter les ventes filtrées au format Excel/CSV"
@@ -221,6 +221,14 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
             >
               <Download className="w-3 h-3" />
               <span>Exporter CSV</span>
+            </button>
+            <button
+              onClick={() => exportSalesToPDF(filteredSales, period === 'all' ? 'Toutes les Ventes' : period === 'month' ? 'Ce Mois' : period === '7days' ? '7 derniers jours' : 'Aujourd\'hui', userShops[0]?.name || 'Cahier Numérique')}
+              title="Générer et imprimer le rapport d'activité au format PDF"
+              className="flex items-center gap-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            >
+              <FileText className="w-3 h-3" />
+              <span>Exporter PDF</span>
             </button>
             <a
               href={generateWhatsAppPerformanceReport(filteredSales, period === 'all' ? 'Toutes les Ventes' : period === 'month' ? 'Ce Mois' : period === '7days' ? '7 derniers jours' : 'Aujourd\'hui', userShops[0]?.name || 'Cahier Numérique')}
