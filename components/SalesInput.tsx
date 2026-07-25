@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
 
 interface Sale {
   id: string
@@ -116,6 +117,7 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
   const [selectedPen, setSelectedPen] = useState('blue')
   const [loading, setLoading] = useState(false)
   const [postItWarning, setPostItWarning] = useState<string | null>(null)
+  const [lastPrintedSale, setLastPrintedSale] = useState<any | null>(null)
   
   // États Menu Tactile
   const [showMenuGrid, setShowMenuGrid] = useState(true)
@@ -633,6 +635,13 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
           </button>
         </div>
       )}
+
+      {/* Modale d'Impression de Ticket de Caisse */}
+      <ReceiptPrinterModal
+        isOpen={!!lastPrintedSale}
+        sale={lastPrintedSale}
+        onClose={() => setLastPrintedSale(null)}
+      />
     </div>
   )
 }
