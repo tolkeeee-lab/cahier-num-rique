@@ -15,6 +15,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<'owner' | 'employee'>('owner')
+  const [activity, setActivity] = useState<'boutique' | 'resto' | 'prestations'>('boutique')
   const [shopCode, setShopCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   
@@ -80,7 +81,8 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
               data: {
                 full_name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
                 role: role,
-                shop_id: generatedShopId
+                shop_id: generatedShopId,
+                shop_activity: activity
               },
             },
           })
@@ -352,6 +354,54 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-3 pr-4 py-2.5 text-sm bg-[#fdfbf7] border border-[#dcd6c9] rounded-xl focus:border-gray-600 text-gray-800 transition-all font-medium placeholder-gray-300"
                   />
+                </div>
+              </div>
+            )}
+
+            {isSignUp && role === 'owner' && (
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest pl-1 block">
+                  🎯 Votre Secteur d'Activité *
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActivity('boutique')}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                      activity === 'boutique'
+                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-lg">🛒</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Boutique / Épicerie</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActivity('resto')}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                      activity === 'resto'
+                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-lg">🍲</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Resto / Cafétéria</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActivity('prestations')}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                      activity === 'prestations'
+                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-lg">✂️</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Prestation / Service</span>
+                  </button>
                 </div>
               </div>
             )}

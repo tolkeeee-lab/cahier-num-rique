@@ -277,8 +277,9 @@ export default function JournalPage() {
       }
 
       // Si aucune boutique n'est enregistrée localement, initialiser uniquement avec sa boutique principale
+      const userActivity = (mappedUser as any)?.user_metadata?.shop_activity || 'boutique'
       const defaultShops = [
-        { id: uShopId, name: 'Mon Point de Vente', activity: 'boutique' }
+        { id: uShopId, name: 'Mon Point de Vente', activity: userActivity }
       ]
       if (JSON.stringify(userShops) !== JSON.stringify(defaultShops)) {
         setUserShops(defaultShops)
