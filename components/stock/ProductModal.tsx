@@ -32,13 +32,19 @@ export function ProductModal({
 }: ProductModalProps) {
   if (!isOpen) return null
 
+  const isPrestation = formData.category.includes('Prestations')
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
       <div className="w-full max-w-sm bg-[#fdfaf2] border border-gray-300 shadow-2xl rounded-2xl overflow-hidden">
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-[#f5f1e8]">
-          <h3 className="font-handwritten text-xl font-bold text-gray-800">
-            {editingItem ? 'Modifier le produit' : 'Nouveau produit'}
+        <div className={`flex items-center justify-between px-5 py-4 border-b ${
+          isPrestation ? 'bg-purple-100 border-purple-200 text-purple-950' : 'bg-[#f5f1e8] border-gray-200 text-gray-800'
+        }`}>
+          <h3 className="font-handwritten text-xl font-bold">
+            {editingItem
+              ? (isPrestation ? '✂️ Modifier la prestation' : 'Modifier le produit')
+              : (isPrestation ? '✂️ Nouvelle Prestation / Service' : 'Nouveau produit')}
           </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors p-1">
             <X className="w-5 h-5" />
@@ -49,22 +55,29 @@ export function ProductModal({
 
           {/* Nom */}
           <div>
-            <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Nom du produit *</label>
+            <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">
+              {isPrestation ? "Nom de la prestation / service *" : "Nom du produit *"}
+            </label>
             <input
               type="text"
-              placeholder="ex: Riz 25kg, Huile palme 5L, Savon Lux..."
+              placeholder={
+                isPrestation
+                  ? "ex: Coiffure Homme, Couture Robe, Réparation Téléphone, Lavage..."
+                  : "ex: Riz 25kg, Huile palme 5L, Savon Lux..."
+              }
               value={formData.name}
               onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-handwritten outline-none focus:border-gray-400 transition-colors"
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-handwritten outline-none focus:border-purple-400 transition-colors"
               autoFocus
             />
 
-            {/* Pilules d'attributs rapides génériques (Papeterie & Commerce) */}
+            {/* Pilules d'attributs rapides (Adaptées pour Prestations vs Produits) */}
             <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
               <span className="text-[9px] font-bold text-gray-400 font-mono uppercase">Attributs :</span>
-              {[
-                '100 Pages', '200 Pages', '300 Pages', 'Grand Format', 'Petit Format', 'Cartonné', 'Souple', 'TP', 'Boîte', 'Sachet'
-              ].map(attr => (
+              {(isPrestation
+                ? ['Tarif Fixe', 'Sur Devis', 'Par Heure', 'Express', 'Main d\'œuvre', 'Rendez-vous', 'Forfait']
+                : ['100 Pages', '200 Pages', '300 Pages', 'Grand Format', 'Petit Format', 'Cartonné', 'Souple', 'TP', 'Boîte', 'Sachet']
+              ).map(attr => (
                 <button
                   key={attr}
                   type="button"
@@ -73,7 +86,11 @@ export function ProductModal({
                     if (currentName.includes(attr)) return
                     setFormData(p => ({ ...p, name: currentName ? `${currentName} ${attr}` : attr }))
                   }}
-                  className="px-2 py-0.5 bg-gray-100 hover:bg-amber-100 border border-gray-200 hover:border-amber-300 rounded-lg text-[9.5px] font-bold text-gray-700 transition-all hover:scale-105 active:scale-95"
+                  className={`px-2 py-0.5 border rounded-lg text-[9.5px] font-bold transition-all hover:scale-105 active:scale-95 ${
+                    isPrestation
+                      ? 'bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-900'
+                      : 'bg-gray-100 hover:bg-amber-100 border-gray-200 text-gray-700'
+                  }`}
                 >
                   +{attr}
                 </button>
@@ -88,7 +105,7 @@ export function ProductModal({
                 <span className="text-base flex-shrink-0">⚠️</span>
                 <div className="leading-snug">
                   <p className="font-bold text-[11px]">Ventes passées détectées :</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Ce produit a été vendu <strong className="text-amber-900 font-mono">{orphanPastSales} fois</strong> avant d'être officiellement ajouté au catalogue.</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Cet article a été vendu <strong className="text-amber-900 font-mono">{orphanPastSales} fois</strong> avant d'être officiellement ajouté au catalogue.</p>
                 </div>
               </div>
               
@@ -111,14 +128,48 @@ export function ProductModal({
                     onChange={() => setDeductPastSales(true)}
                     className="text-gray-800 focus:ring-gray-800"
                   />
-                  <span>Déduire du stock initial ({orphanPastSales} ventes)</span>
+                  <span>Déduire des saisies antérieures ({orphanPastSales} ventes)</span>
                 </label>
               </div>
             </div>
           )}
 
-          {/* Adaptateur dynamique Menu Carte vs Stock Physique */}
-          {formData.category.includes('Cuisiné') || formData.category.includes('Cafétéria') ? (
+          {/* Formulaire dédié Prestations & Services (Masquage Total des Champs Physique) */}
+          {isPrestation ? (
+            <div className="bg-purple-50/70 border border-purple-200 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-2 text-purple-900">
+                <span className="text-base">✂️</span>
+                <div>
+                  <h4 className="font-bold text-xs">Prestation & Service Rendu</h4>
+                  <p className="text-[10px] text-purple-700">Service manuel, atelier ou main d'œuvre. Aucun stock physique requis.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-purple-950 tracking-wider font-sans block mb-1">Catégorie</label>
+                  <select
+                    value={formData.category}
+                    onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-purple-300 rounded-xl text-xs font-bold text-gray-800 outline-none"
+                  >
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[9px] uppercase font-bold text-purple-950 tracking-wider font-sans block mb-1">Tarif / Prix (FCFA) *</label>
+                  <input
+                    type="number" min="0" required
+                    value={formData.unit_price || ''}
+                    onChange={e => setFormData(p => ({ ...p, unit_price: parseInt(e.target.value) || 0 }))}
+                    placeholder="Ex: 2000"
+                    className="w-full px-3 py-2 bg-white border border-purple-300 rounded-xl text-sm font-mono font-bold text-purple-950 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : formData.category.includes('Cuisiné') || formData.category.includes('Cafétéria') ? (
             <div className="bg-amber-50 border border-amber-250 rounded-2xl p-3.5 space-y-3">
               <div className="flex items-center gap-2 text-amber-900">
                 <span className="text-base">🍽️</span>
@@ -154,12 +205,6 @@ export function ProductModal({
             </div>
           ) : (
             <>
-              {formData.category.includes('Prestations') && (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-2.5 flex items-center gap-2 text-purple-900 text-[10px] mb-3">
-                  <span className="text-sm">✂️</span>
-                  <p><strong>Carte Prestation / Service :</strong> Main d'œuvre ou service rendu (Coiffure, Couture, Réparation, Nettoyage). Aucun stock physique requis.</p>
-                </div>
-              )}
               {formData.category.includes('Matières') && (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-center gap-2 text-emerald-900 text-[10px] mb-3">
                   <span className="text-sm">🥬</span>
