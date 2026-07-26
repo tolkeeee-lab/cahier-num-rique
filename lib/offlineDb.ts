@@ -13,6 +13,7 @@ import {
   idbGetProducts, idbSaveProduct, idbReplaceProducts, idbDeleteProduct,
   migrateLocalStorageToIndexedDB
 } from './indexedDb'
+import { getCanonicalProductName } from './smartProductNormalizer'
 
 export interface OfflineSale {
   id: string
@@ -439,7 +440,8 @@ export function computeOfflineStock(
     if (!isIn && !isOut) continue
 
     for (const article of sale.articles) {
-      const key = article.name.toLowerCase().trim()
+      const canonical = getCanonicalProductName(article.name)
+      const key = canonical.toLowerCase().trim()
       if (!stockMap[key]) stockMap[key] = { total_in: 0, total_out: 0, movements: [] }
       if (isIn) {
         stockMap[key].total_in += article.quantity

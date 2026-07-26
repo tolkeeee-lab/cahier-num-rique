@@ -13,6 +13,7 @@ import { StockManager } from '@/components/StockManager'
 import { SettingsManager } from '@/components/SettingsManager'
 import { CashClosingModal } from '@/components/CashClosingModal'
 import { SyncManager } from '@/components/SyncManager'
+import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
 import {
   generateOfflineId,
   getOfflineSales,
@@ -513,22 +514,7 @@ export default function JournalPage() {
               const rawName = p.name || ''
               if (!rawName.trim()) return
 
-              let cleanName = rawName.trim()
-              const lowerName = cleanName.toLowerCase()
-
-              if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
-              else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
-              else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
-              else if (/^coca(-cola)?$/i.test(lowerName)) cleanName = 'Coca-Cola'
-              else if (/^possotome|possotomè$/i.test(lowerName)) cleanName = 'Eau Possotomè'
-              else if (/^colgate|brosse colgate$/i.test(lowerName)) cleanName = 'Colgate'
-              else if (/^boites?\s+de\s+sardines?$/i.test(lowerName)) cleanName = 'Boîte de Sardines'
-              else if (/^boites?\s+de\s+tomates?$/i.test(lowerName)) cleanName = 'Boîte de Tomate'
-              else {
-                cleanName = cleanName.split(/\s+/)
-                  .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                  .join(' ')
-              }
+              let cleanName = getCanonicalProductName(rawName)
 
               // Si ce nom de produit normalisé est dans la liste d'exclusion, on ne l'affiche pas dans le menu tactile
               const cleanLower = cleanName.toLowerCase().trim()
@@ -571,22 +557,7 @@ export default function JournalPage() {
             localProducts.forEach((p: any, idx: number) => {
               const rawName = p.name || ''
               if (!rawName.trim()) return
-              let cleanName = rawName.trim()
-              const lowerName = cleanName.toLowerCase()
-
-              if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
-              else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
-              else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
-              else if (/^coca(-cola)?$/i.test(lowerName)) cleanName = 'Coca-Cola'
-              else if (/^possotome|possotomè$/i.test(lowerName)) cleanName = 'Eau Possotomè'
-              else if (/^colgate|brosse colgate$/i.test(lowerName)) cleanName = 'Colgate'
-              else if (/^boites?\s+de\s+sardines?$/i.test(lowerName)) cleanName = 'Boîte de Sardines'
-              else if (/^boites?\s+de\s+tomates?$/i.test(lowerName)) cleanName = 'Boîte de Tomate'
-              else {
-                cleanName = cleanName.split(/\s+/)
-                  .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                  .join(' ')
-              }
+              let cleanName = getCanonicalProductName(rawName)
 
               if (excludedNames.some(name => name.toLowerCase().trim() === cleanName.toLowerCase().trim())) return
 
