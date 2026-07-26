@@ -429,71 +429,127 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
       <form onSubmit={handleSubmit} className="relative">
 
         {/* 💡 Assistant de Fiabilité de Stock en Temps Réel */}
-        {liveAssistant && liveAssistant.matchedProduct && (
+        {liveAssistant && (
           <div className="mb-2 p-3 bg-white border border-emerald-300 rounded-2xl shadow-md space-y-2 animate-fade-in text-xs font-sans">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-1.5">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
-                <span className="font-bold text-gray-900">
-                  💡 Assistant Stock : <strong className="text-emerald-950">{liveAssistant.matchedProduct.name}</strong>
-                </span>
-              </div>
-              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full font-mono text-[9px] font-bold">
-                🎯 {liveAssistant.confidence}% Fiable
-              </span>
-            </div>
+            {liveAssistant.isNewProduct ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-600 animate-pulse" />
+                    <span className="font-bold text-amber-950">
+                      🟡 Nouveau Produit Détecté
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-full font-mono text-[9px] font-bold">
+                    ✨ Création Automatique au Catalogue
+                  </span>
+                </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-              <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
-                <span className="text-[9px] text-gray-500 uppercase font-bold block">Action</span>
-                <span className="font-bold text-gray-900">
-                  {liveAssistant.transactionKind === 'stock_addition' ? '📦 Entrée Stock' : '🛍️ Déduction Vente'}
-                </span>
+                {liveAssistant.suggestedNewName && (
+                  <div className="flex items-center gap-2 bg-amber-50 p-2 border border-amber-200 rounded-xl text-amber-950">
+                    <span>💡 Orthographe suggérée par la base du marché :</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const segments = input.split(/[,;\n]/)
+                        segments.pop()
+                        const prefix = segments.length > 0 ? segments.join(', ') + ', ' : ''
+                        const pricePart = liveAssistant.unitPrice > 0 ? ` à ${liveAssistant.unitPrice}` : ''
+                        setInput(`${prefix}${liveAssistant.requestedQty} ${liveAssistant.suggestedNewName}${pricePart}`)
+                      }}
+                      className="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold text-[10px] shadow-xs"
+                    >
+                      🟢 Valider "{liveAssistant.suggestedNewName}"
+                    </button>
+                  </div>
+                )}
               </div>
+            ) : liveAssistant.matchedProduct ? (
+              <>
+                <div className="flex items-center justify-between border-b border-gray-100 pb-1.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
+                    <span className="font-bold text-gray-900">
+                      💡 Assistant Stock : <strong className="text-emerald-950">{liveAssistant.matchedProduct.name}</strong>
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full font-mono text-[9px] font-bold">
+                    🎯 {liveAssistant.confidence}% Fiable
+                  </span>
+                </div>
 
-              <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
-                <span className="text-[9px] text-gray-500 uppercase font-bold block">Quantité Impactée</span>
-                <span className="font-bold font-mono text-emerald-900">
-                  {liveAssistant.transactionKind === 'stock_addition' ? '+' : '-'}{liveAssistant.calculatedItemsCount} {liveAssistant.matchedProduct.unit || 'unités'}
-                </span>
-              </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                  <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block">Action</span>
+                    <span className="font-bold text-gray-900">
+                      {liveAssistant.transactionKind === 'stock_addition' ? '📦 Entrée Stock' : '🛍️ Déduction Vente'}
+                    </span>
+                  </div>
 
-              <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
-                <span className="text-[9px] text-gray-500 uppercase font-bold block">Nouveau Stock</span>
-                <span className="font-bold font-mono text-gray-900">
-                  {liveAssistant.stockBefore} ➔ <strong className={liveAssistant.stockAfter < 0 ? 'text-rose-700' : 'text-emerald-800'}>{liveAssistant.stockAfter}</strong>
-                </span>
-              </div>
+                  <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block">Quantité Impactée</span>
+                    <span className="font-bold font-mono text-emerald-900">
+                      {liveAssistant.transactionKind === 'stock_addition' ? '+' : '-'}{liveAssistant.calculatedItemsCount} {liveAssistant.matchedProduct.unit || 'unités'}
+                    </span>
+                  </div>
 
-              <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
-                <span className="text-[9px] text-gray-500 uppercase font-bold block">Prix Retenu</span>
-                <span className="font-bold font-mono text-gray-900">
-                  {formatPrice(liveAssistant.totalAmount)}
-                </span>
-              </div>
-            </div>
+                  <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block">Nouveau Stock</span>
+                    <span className="font-bold font-mono text-gray-900">
+                      {liveAssistant.stockBefore} ➔ <strong className={liveAssistant.stockAfter < 0 ? 'text-rose-700' : 'text-emerald-800'}>{liveAssistant.stockAfter}</strong>
+                    </span>
+                  </div>
 
-            {/* Variantes Cliquables 1-Tap si produit ambigu */}
-            {liveAssistant.alternativeVariants.length > 0 && (
-              <div className="pt-1 flex items-center gap-1.5 flex-wrap">
-                <span className="text-[9px] font-bold text-gray-400 font-mono">Variantes :</span>
-                {liveAssistant.alternativeVariants.map(alt => (
-                  <button
-                    key={alt.id}
-                    type="button"
-                    onClick={() => {
-                      const segments = input.split(/[,;\n]/)
-                      segments.pop()
-                      const prefix = segments.length > 0 ? segments.join(', ') + ', ' : ''
-                      setInput(`${prefix}${liveAssistant.requestedQty} ${alt.name} à ${alt.unit_price}`)
-                    }}
-                    className="px-2 py-0.5 bg-gray-100 hover:bg-emerald-100 border border-gray-200 hover:border-emerald-300 rounded-lg text-[9.5px] font-bold text-gray-800 transition-all"
-                  >
-                    👉 {alt.name} ({formatPrice(alt.unit_price)})
-                  </button>
-                ))}
-              </div>
-            )}
+                  <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block">Prix Retenu</span>
+                    <span className="font-bold font-mono text-gray-900">
+                      {formatPrice(liveAssistant.totalAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Alerte Anomalie de Prix (Zéro Manquant / Zéro en trop) */}
+                {liveAssistant.suspectPriceAnomaly && liveAssistant.suggestedCorrectPrice && (
+                  <div className="flex items-center justify-between gap-2 bg-rose-50 p-2 border border-rose-200 rounded-xl text-rose-900">
+                    <span className="text-[10px] font-bold">⚠️ Prix suspect ({formatPrice(liveAssistant.unitPrice)}). Zéro omis ?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const segments = input.split(/[,;\n]/)
+                        segments.pop()
+                        const prefix = segments.length > 0 ? segments.join(', ') + ', ' : ''
+                        setInput(`${prefix}${liveAssistant.requestedQty} ${liveAssistant.matchedProduct?.name} à ${liveAssistant.suggestedCorrectPrice}`)
+                      }}
+                      className="px-2 py-0.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg font-bold text-[9.5px]"
+                    >
+                      💡 Corriger en {formatPrice(liveAssistant.suggestedCorrectPrice)}
+                    </button>
+                  </div>
+                )}
+
+                {/* Variantes Cliquables 1-Tap si produit ambigu */}
+                {liveAssistant.alternativeVariants.length > 0 && (
+                  <div className="pt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[9px] font-bold text-gray-400 font-mono">Variantes :</span>
+                    {liveAssistant.alternativeVariants.map(alt => (
+                      <button
+                        key={alt.id}
+                        type="button"
+                        onClick={() => {
+                          const segments = input.split(/[,;\n]/)
+                          segments.pop()
+                          const prefix = segments.length > 0 ? segments.join(', ') + ', ' : ''
+                          setInput(`${prefix}${liveAssistant.requestedQty} ${alt.name} à ${alt.unit_price}`)
+                        }}
+                        className="px-2 py-0.5 bg-gray-100 hover:bg-emerald-100 border border-gray-200 hover:border-emerald-300 rounded-lg text-[9.5px] font-bold text-gray-800 transition-all"
+                      >
+                        👉 {alt.name} ({formatPrice(alt.unit_price)})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : null}
           </div>
         )}
         {matchingSuggestions.length > 0 && (
