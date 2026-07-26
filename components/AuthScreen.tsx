@@ -365,7 +365,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: SHOP-123456"
+                    placeholder="Ex: BTQ-58C54"
                     value={shopCode}
                     onChange={(e) => setShopCode(e.target.value)}
                     className="w-full pl-3 pr-4 py-2.5 text-sm bg-[#fffbeb] border border-amber-300 rounded-xl focus:border-amber-500 text-amber-950 font-bold tracking-wider placeholder-amber-200"

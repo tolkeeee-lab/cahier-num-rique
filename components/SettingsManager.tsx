@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Copy, Check, UserPlus, Trash2, Shield, Users, Database, AlertCircle, CheckCircle2, RefreshCw, Coins } from 'lucide-react'
 import { testSupabaseConnection } from '@/lib/supabaseClient'
 import { SUPPORTED_CURRENCIES, getShopCurrency, setShopCurrency } from '@/lib/currencyUtils'
+import { formatShortShopCode } from '@/lib/shopCodeUtils'
 
 interface Employee {
   id: string
@@ -100,7 +101,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
   }, [shopId, isOffline])
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(shopId)
+    navigator.clipboard.writeText(formatShortShopCode(shopId))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -276,31 +277,39 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
         )}
 
         {/* Section 1 : Code Boutique */}
-        <div className="bg-white border border-gray-250 rounded-[24px] p-5 shadow-sm">
-          <h3 className="font-handwritten text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
-            🔑 Code de la Boutique
-          </h3>
-          <p className="text-xs text-gray-500 mb-4 leading-relaxed font-sans">
-            Partagez ce code de sécurité avec vos employés. Ils devront le saisir lors de la création de leur compte pour pouvoir accéder aux comptes et aux stocks de votre boutique.
+        <div className="bg-white border border-amber-200 rounded-[24px] p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+              <span>🔑 Code de la Boutique (Accès Employés)</span>
+            </h3>
+            <span className="bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              Code Court Sécurisé
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 font-sans leading-relaxed">
+            Partagez ce code court avec vos employés. Ils devront le saisir lors de la création de leur compte pour être rattachés automatiquement à cette boutique.
           </p>
 
-          <div className="flex items-center gap-2 bg-[#faf7f0] border border-gray-200 rounded-2xl p-3">
-            <span className="font-mono text-sm font-bold text-gray-800 tracking-wider flex-grow break-all">
-              {shopId}
-            </span>
+          <div className="flex items-center gap-3 bg-[#fefcf6] border-2 border-amber-300 rounded-2xl p-3.5 shadow-inner">
+            <div className="flex-grow flex flex-col">
+              <span className="text-[9px] uppercase font-bold text-amber-800 tracking-wider">Code d'accès rapide</span>
+              <span className="font-mono text-2xl font-black text-amber-950 tracking-widest">
+                {formatShortShopCode(shopId)}
+              </span>
+            </div>
             <button
               onClick={handleCopyCode}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-900 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
             >
               {copied ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  Copié
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  Copié !
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5" />
-                  Copier
+                  <Copy className="w-4 h-4" />
+                  Copier Code
                 </>
               )}
             </button>
