@@ -111,6 +111,20 @@ const getSmartEmojiAndCategory = (name: string, activity: 'resto' | 'boutique' |
     } else if (/gel|huile|pommade|shampoing|produit/i.test(lower)) {
       category = 'produit'
     }
+  } else if (activity === 'particulier') {
+    if (/loyer|électricité|electricite|eau|sodeci|cie|gaz|recharge|canal|abonnement/i.test(lower)) {
+      category = 'foyer'
+      if (emoji === '📦') emoji = '🏠'
+    } else if (/riz|huile|tomate|viande|poisson|marché|marche|legume|nourriture|pain/i.test(lower)) {
+      category = 'alimentaire'
+      if (emoji === '📦') emoji = '🛒'
+    } else if (/scolarité|ecole|fourniture|cahier|tenue|frais/i.test(lower)) {
+      category = 'scolarité'
+      if (emoji === '📦') emoji = '📚'
+    } else if (/tontine|prêt|pret|argent|don/i.test(lower)) {
+      category = 'finance'
+      if (emoji === '📦') emoji = '🤝'
+    }
   }
 
   return { emoji, category }
@@ -2296,7 +2310,7 @@ export default function JournalPage() {
                     >
                       {userShops.map(s => (
                         <option key={s.id} value={s.id} className="bg-white text-gray-900 font-sans">
-                          {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : '🏬 Boutique'})
+                          {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : s.activity === 'particulier' ? '🏠 Particulier' : '🏬 Boutique'})
                         </option>
                       ))}
                       <option value="ADD_NEW_SHOP" className="bg-amber-50 font-bold text-amber-900">

@@ -15,7 +15,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<'owner' | 'employee'>('owner')
-  const [activity, setActivity] = useState<'boutique' | 'resto' | 'prestations'>('boutique')
+  const [activity, setActivity] = useState<'boutique' | 'resto' | 'prestations' | 'particulier'>('boutique')
   const [shopCode, setShopCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   
@@ -363,44 +363,57 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                 <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest pl-1 block">
                   🎯 Votre Secteur d'Activité *
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => setActivity('boutique')}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
                       activity === 'boutique'
                         ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
                         : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                     }`}
                   >
                     <span className="text-lg">🛒</span>
-                    <span className="text-[10px] leading-tight font-bold mt-1">Boutique / Épicerie</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Boutique</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActivity('resto')}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
                       activity === 'resto'
                         ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
                         : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                     }`}
                   >
                     <span className="text-lg">🍲</span>
-                    <span className="text-[10px] leading-tight font-bold mt-1">Resto / Cafétéria</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Resto</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActivity('prestations')}
-                    className={`p-2.5 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
                       activity === 'prestations'
                         ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
                         : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                     }`}
                   >
                     <span className="text-lg">✂️</span>
-                    <span className="text-[10px] leading-tight font-bold mt-1">Prestation / Service</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Prestation</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActivity('particulier')}
+                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                      activity === 'particulier'
+                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-lg">🏠</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Particulier</span>
                   </button>
                 </div>
               </div>

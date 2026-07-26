@@ -270,11 +270,11 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
                 <div key={shop.id} className="bg-white border border-amber-200 rounded-2xl p-4 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
-                      <span>{shop.activity === 'resto' ? '🍲' : shop.activity === 'prestations' ? '✂️' : '🏬'}</span>
+                      <span>{shop.activity === 'resto' ? '🍲' : shop.activity === 'prestations' ? '✂️' : shop.activity === 'particulier' ? '🏠' : '🏬'}</span>
                       <span>{shop.name}</span>
                     </span>
                     <span className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                      {shop.activity === 'resto' ? 'Resto / Cafétéria' : shop.activity === 'prestations' ? 'Services' : 'Boutique'}
+                      {shop.activity === 'resto' ? 'Resto / Cafétéria' : shop.activity === 'prestations' ? 'Services' : shop.activity === 'particulier' ? 'Particulier / Foyer' : 'Boutique'}
                     </span>
                   </div>
                   

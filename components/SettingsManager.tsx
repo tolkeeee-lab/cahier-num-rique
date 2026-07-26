@@ -19,7 +19,7 @@ interface SettingsManagerProps {
   shopId?: string
   userEmail?: string
   userShops?: Array<{ id: string; name: string; activity: string }>
-  onUpdateShopActivity?: (shopId: string, activity: 'boutique' | 'resto' | 'prestations') => void
+  onUpdateShopActivity?: (shopId: string, activity: 'boutique' | 'resto' | 'prestations' | 'particulier') => void
   onResetShopData?: () => void
   onError?: (err: string) => void
 }
@@ -33,7 +33,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
 
   // Modification du secteur d'activité
   const currentShop = userShops.find(s => s.id === shopId)
-  const [selectedActivity, setSelectedActivity] = useState<'boutique' | 'resto' | 'prestations'>(
+  const [selectedActivity, setSelectedActivity] = useState<'boutique' | 'resto' | 'prestations' | 'particulier'>(
     (currentShop?.activity as any) || 'boutique'
   )
   const [activitySavedMsg, setActivitySavedMsg] = useState<string | null>(null)
@@ -44,7 +44,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
     }
   }, [currentShop?.activity])
 
-  const handleActivityChange = (act: 'boutique' | 'resto' | 'prestations') => {
+  const handleActivityChange = (act: 'boutique' | 'resto' | 'prestations' | 'particulier') => {
     setSelectedActivity(act)
     onUpdateShopActivity?.(shopId, act)
     setActivitySavedMsg('✓ Secteur d\'activité rectifié avec succès !')
@@ -249,7 +249,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
             Corrigez ou ajustez le secteur d'activité de votre point de vente pour adapter les termes et la gestion du stock (ex: masquer le stock physique pour les prestations).
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
             <button
               type="button"
               onClick={() => handleActivityChange('boutique')}
@@ -278,7 +278,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
               <span className="text-xl">🍲</span>
               <div>
                 <div className="text-xs font-bold">Resto / Maquis</div>
-                <div className="text-[10px] text-gray-500">Cuisine & Boissons</div>
+                <div className="text-[10px] text-gray-500">Cuisine & Bar</div>
               </div>
             </button>
 
@@ -295,6 +295,22 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
               <div>
                 <div className="text-xs font-bold">Prestations</div>
                 <div className="text-[10px] text-gray-500">Services & Métiers</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleActivityChange('particulier')}
+              className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all ${
+                selectedActivity === 'particulier'
+                  ? 'border-amber-500 bg-amber-50 shadow-sm font-bold text-amber-950 scale-102'
+                  : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+              }`}
+            >
+              <span className="text-xl">🏠</span>
+              <div>
+                <div className="text-xs font-bold">Particulier</div>
+                <div className="text-[10px] text-gray-500">Budget & Foyer</div>
               </div>
             </button>
           </div>
@@ -490,7 +506,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
                 >
                   {userShops.map(s => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : '🏬 Boutique'})
+                      {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : s.activity === 'particulier' ? '🏠 Particulier' : '🏬 Boutique'})
                     </option>
                   ))}
                 </select>
