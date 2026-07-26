@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp, X, Mic, MicOff } from 'lucide-react'
 import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
 import { parseRequestedProductFromNotebookText, recordRequestedProductInStorage } from '@/lib/requestedProductsUtils'
+import { analyzeNotebookInputWithMasterCatalog, StockProductCard } from '@/lib/smartStockAssistant'
 
 interface Sale {
   id: string
@@ -182,7 +183,9 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
     }
   }, [input])
 
-  // Charger le stock réel de la boutique pour fusionner avec le menu s'il existe
+  const [masterCatalog, setMasterCatalog] = useState<StockProductCard[]>([])
+
+  // Charger le stock réel de la boutique pour alimenter le masterCatalog de fiabilité
   const fetchStockMenu = useCallback(async () => {
     try {
       const res = await fetch('/api/stock', {
@@ -191,6 +194,7 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
       if (res.ok) {
         const data = await res.json()
         if (data.products && data.products.length > 0) {
+          setMasterCatalog(data.products)
           const loadedMenu: MenuItem[] = data.products.map((p: any, idx: number) => ({
             id: p.id || `stk_${idx}`,
             name: p.name,
@@ -389,6 +393,8 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
     }
   }
 
+  const liveAssistant = analyzeNotebookInputWithMasterCatalog(input, selectedPen, masterCatalog)
+
   return (
     <div className="relative space-y-4 font-sans select-none">
       {/* ── 1. Sélection du Stylo Bic 4-Couleurs ── */}
@@ -419,8 +425,77 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
         </div>
       </div>
 
-      {/* ── 2. Zone d'Écriture Manuscrite du Cahier avec Suggestions Intelligentes ── */}
+      {/* ── 2. Zone d'Écriture Manuscrite du Cahier avec Assistant & Suggestions ── */}
       <form onSubmit={handleSubmit} className="relative">
+
+        {/* 💡 Assistant de Fiabilité de Stock en Temps Réel */}
+        {liveAssistant && liveAssistant.matchedProduct && (
+          <div className="mb-2 p-3 bg-white border border-emerald-300 rounded-2xl shadow-md space-y-2 animate-fade-in text-xs font-sans">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-1.5">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
+                <span className="font-bold text-gray-900">
+                  💡 Assistant Stock : <strong className="text-emerald-950">{liveAssistant.matchedProduct.name}</strong>
+                </span>
+              </div>
+              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full font-mono text-[9px] font-bold">
+                🎯 {liveAssistant.confidence}% Fiable
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+              <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                <span className="text-[9px] text-gray-500 uppercase font-bold block">Action</span>
+                <span className="font-bold text-gray-900">
+                  {liveAssistant.transactionKind === 'stock_addition' ? '📦 Entrée Stock' : '🛍️ Déduction Vente'}
+                </span>
+              </div>
+
+              <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                <span className="text-[9px] text-gray-500 uppercase font-bold block">Quantité Impactée</span>
+                <span className="font-bold font-mono text-emerald-900">
+                  {liveAssistant.transactionKind === 'stock_addition' ? '+' : '-'}{liveAssistant.calculatedItemsCount} {liveAssistant.matchedProduct.unit || 'unités'}
+                </span>
+              </div>
+
+              <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                <span className="text-[9px] text-gray-500 uppercase font-bold block">Nouveau Stock</span>
+                <span className="font-bold font-mono text-gray-900">
+                  {liveAssistant.stockBefore} ➔ <strong className={liveAssistant.stockAfter < 0 ? 'text-rose-700' : 'text-emerald-800'}>{liveAssistant.stockAfter}</strong>
+                </span>
+              </div>
+
+              <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                <span className="text-[9px] text-gray-500 uppercase font-bold block">Prix Retenu</span>
+                <span className="font-bold font-mono text-gray-900">
+                  {formatPrice(liveAssistant.totalAmount)}
+                </span>
+              </div>
+            </div>
+
+            {/* Variantes Cliquables 1-Tap si produit ambigu */}
+            {liveAssistant.alternativeVariants.length > 0 && (
+              <div className="pt-1 flex items-center gap-1.5 flex-wrap">
+                <span className="text-[9px] font-bold text-gray-400 font-mono">Variantes :</span>
+                {liveAssistant.alternativeVariants.map(alt => (
+                  <button
+                    key={alt.id}
+                    type="button"
+                    onClick={() => {
+                      const segments = input.split(/[,;\n]/)
+                      segments.pop()
+                      const prefix = segments.length > 0 ? segments.join(', ') + ', ' : ''
+                      setInput(`${prefix}${liveAssistant.requestedQty} ${alt.name} à ${alt.unit_price}`)
+                    }}
+                    className="px-2 py-0.5 bg-gray-100 hover:bg-emerald-100 border border-gray-200 hover:border-emerald-300 rounded-lg text-[9.5px] font-bold text-gray-800 transition-all"
+                  >
+                    👉 {alt.name} ({formatPrice(alt.unit_price)})
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {matchingSuggestions.length > 0 && (
           <div className="mb-2 p-2 bg-[#fffdf2] border border-amber-300 rounded-2xl shadow-md animate-fade-in">
             <div className="flex items-center justify-between gap-1.5 text-amber-900 text-[10px] font-bold mb-1.5 px-1">
