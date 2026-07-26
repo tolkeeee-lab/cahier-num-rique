@@ -266,28 +266,43 @@ export function ProductModal({
                 </div>
               </div>
 
-              {/* Prix */}
+              {/* Prix d'Achat & Prix de Vente (Fixé par le Propriétaire) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Prix achat (F)</label>
+                  <label className="text-[9px] uppercase font-bold text-gray-600 tracking-wider font-sans block mb-1">
+                    Coût Achat Unitaire (F)
+                  </label>
                   <input
                     type="number" min="0"
                     value={formData.unit_cost || ''}
                     onChange={e => setFormData(p => ({ ...p, unit_cost: parseInt(e.target.value) || 0 }))}
-                    placeholder="Optionnel"
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                    placeholder="Prix de revient"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-mono outline-none focus:border-amber-500 font-bold"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Prix vente (F)</label>
+                  <label className="text-[9px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
+                    Prix Vente Unitaire (F) *
+                  </label>
                   <input
                     type="number" min="0"
                     value={formData.unit_price || ''}
                     onChange={e => setFormData(p => ({ ...p, unit_price: parseInt(e.target.value) || 0 }))}
-                    placeholder="Optionnel"
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                    placeholder="Prix fixé par le gérant"
+                    className="w-full px-3 py-2 bg-[#fefcf6] border-2 border-amber-400 rounded-xl text-sm font-mono font-bold text-amber-950 outline-none focus:border-amber-600 shadow-xs"
                   />
                 </div>
+                
+                {formData.unit_price > 0 && formData.unit_cost > 0 && (
+                  <div className="col-span-2 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl flex items-center justify-between text-xs font-mono">
+                    <span className="text-emerald-900">
+                      💰 Marge Net / Unité : <strong className="text-emerald-950">+{formData.unit_price - formData.unit_cost} FCFA</strong>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      {Math.round(((formData.unit_price - formData.unit_cost) / formData.unit_cost) * 100)}% de marge
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Conditionnement / Multiplicateur */}
@@ -309,29 +324,51 @@ export function ProductModal({
                 </div>
 
                 {formData.multiplier > 1 && (
-                  <div className="grid grid-cols-2 gap-3 bg-white p-3 border border-gray-200 rounded-xl shadow-inner mt-2">
+                  <div className="grid grid-cols-2 gap-3 bg-[#fefcf6] p-3 border border-amber-300 rounded-xl shadow-inner mt-2">
                     <div>
-                      <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Nom du lot</label>
+                      <label className="text-[8px] uppercase font-bold text-amber-900 block mb-0.5">Nom du lot / gros</label>
                       <input
                         type="text"
-                        placeholder="ex: sac, carton, pack"
+                        placeholder="ex: carton, sac, caisse"
                         value={formData.packaging_name}
                         onChange={e => setFormData(p => ({ ...p, packaging_name: e.target.value }))}
-                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
+                        className="w-full px-2.5 py-1 border border-amber-300 rounded-lg text-xs outline-none focus:border-amber-500 font-mono bg-white text-amber-950 font-bold"
                       />
                     </div>
                     <div>
-                      <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Contenance (Multiplicateur)</label>
+                      <label className="text-[8px] uppercase font-bold text-amber-900 block mb-0.5">Nombre d'unités par lot</label>
                       <input
                         type="number"
                         min="2"
                         value={formData.multiplier}
-                        onChange={e => setFormData(p => ({ ...p, multiplier: Math.max(1, parseInt(e.target.value) || 1) }))}
-                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
+                        onChange={e => {
+                          const newMult = Math.max(1, parseInt(e.target.value) || 1)
+                          setFormData(p => ({ ...p, multiplier: newMult }))
+                        }}
+                        className="w-full px-2.5 py-1 border border-amber-300 rounded-lg text-xs outline-none focus:border-amber-500 font-mono bg-white text-amber-950 font-bold"
                       />
                     </div>
-                    <div className="col-span-2 text-[8px] text-gray-400 leading-tight">
-                      Chaque entrée/sortie de ce produit comptée dans le journal fera automatiquement <strong>+{formData.multiplier} / -{formData.multiplier} {formData.unit}</strong>.
+
+                    <div className="col-span-2 bg-white p-2.5 rounded-lg border border-amber-200">
+                      <label className="text-[9px] uppercase font-bold text-amber-900 block mb-1">
+                        Prix d'Achat du Lot Complet ({formData.packaging_name || 'Carton / Sac'}) (FCFA)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder={`Ex: ${formData.unit_cost * formData.multiplier || 12000}`}
+                        value={formData.unit_cost > 0 ? formData.unit_cost * formData.multiplier : ''}
+                        onChange={e => {
+                          const wholesaleVal = parseFloat(e.target.value) || 0
+                          const calculatedUnitCost = wholesaleVal > 0 && formData.multiplier > 0
+                            ? Math.round(wholesaleVal / formData.multiplier)
+                            : 0
+                          setFormData(p => ({ ...p, unit_cost: calculatedUnitCost }))
+                        }}
+                        className="w-full px-3 py-1.5 border border-amber-300 rounded-lg text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                      />
+                      <p className="text-[9px] text-amber-800 font-mono mt-1">
+                        💡 Coût d'achat unitaire calculé : <strong>{formData.unit_cost} F / {formData.unit}</strong>
+                      </p>
                     </div>
                   </div>
                 )}

@@ -29,6 +29,8 @@ interface SalesInputProps {
   onSaleRecorded: (sale: Sale) => void
   onError: (error: string) => void
   shopId?: string
+  shopCountry?: string
+  shopCity?: string
 }
 
 interface MenuItem {
@@ -114,7 +116,7 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(price) + ' F'
 }
 
-export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }: SalesInputProps) {
+export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', shopCountry = 'CI', shopCity }: SalesInputProps) {
   const [input, setInput] = useState('')
   const [selectedPen, setSelectedPen] = useState('blue')
   const [loading, setLoading] = useState(false)
@@ -313,7 +315,12 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
     try {
       const response = await fetch('/api/sales', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-shop-id': shopId,
+          'x-shop-country': shopCountry,
+          ...(shopCity ? { 'x-shop-city': shopCity } : {})
+        },
         body: JSON.stringify({ 
           text: input.trim(),
           penColor: selectedPen 

@@ -32,6 +32,7 @@ import {
   getOfflineProducts,
   saveOfflineProduct,
 } from '@/lib/offlineDb'
+import { parseRequestedProductFromNotebookText, recordRequestedProductInStorage } from '@/lib/requestedProductsUtils'
 
 const THEMES: Record<string, {
   filters: Array<{ id: string; label: string; emoji: string }>;
@@ -1294,6 +1295,12 @@ export default function JournalPage() {
     const shopId = mappedUser.shop_id
     const color = bodyData.penColor
     const text = bodyData.text
+
+    // Détection automatique d'une demande client saisie au cahier
+    const reqMatch = parseRequestedProductFromNotebookText(text.trim())
+    if (reqMatch && reqMatch.isRequestedProduct) {
+      recordRequestedProductInStorage(shopId, reqMatch.cleanName, reqMatch.price)
+    }
 
     let parsed: any = null
     if (bodyData.overrideData) {
@@ -3245,7 +3252,24 @@ export default function JournalPage() {
 
               {activeTab === 'settings' && mappedUser?.role !== 'employee' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
-                  <SettingsManager shopId={mappedUser?.shop_id} userEmail={mappedUser?.email} userShops={userShops} onError={handleError} />
+                  <SettingsManager 
+                    shopId={mappedUser?.shop_id} 
+                    userEmail={mappedUser?.email} 
+                    userShops={userShops} 
+                    onError={handleError} 
+                    onUpdateShopActivity={(sId, newActivity) => {
+                      setUserShops(prev => {
+                        const updated = prev.map(s => s.id === sId ? { ...s, activity: newActivity } : s)
+                        if (mappedUser?.id) {
+                          localStorage.setItem(`cahier_user_shops_${mappedUser.id}`, JSON.stringify(updated))
+                        }
+                        return updated
+                      })
+                    }}
+                    onResetShopData={() => {
+                      window.location.reload()
+                    }}
+                  />
                 </div>
               )}
 

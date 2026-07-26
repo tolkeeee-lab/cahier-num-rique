@@ -149,6 +149,10 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
   }
 
   const handleEnableTracking = async (item: StockItem) => {
+    // Calculer un stock de départ qui absorbe les ventes déjà saisies au cahier
+    const pastSales = item.total_out || 0
+    const targetInitial = Math.max(item.initial_stock || 0, pastSales + 10)
+
     try {
       const online = typeof window !== 'undefined' ? window.navigator.onLine : true
       if (online) {
@@ -158,13 +162,14 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
           body: JSON.stringify({
             id: item.id,
             alert_threshold: item.alert_threshold || 5,
-            initial_stock: Math.max(item.initial_stock || 0, 1),
+            initial_stock: targetInitial,
           }),
         })
       } else {
         saveOfflineProduct(shopId, {
           ...item,
-          initial_stock: Math.max(item.initial_stock || 0, 1),
+          initial_stock: targetInitial,
+          alert_threshold: item.alert_threshold || 5,
         })
       }
       await loadStock()

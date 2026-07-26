@@ -107,11 +107,12 @@ export async function GET(request: Request) {
       const hasPurchases = totalIn > 0
       const stockTracked = hasInitialStock || hasPurchases
       
+      const rawStock = (((product.initial_stock || 0) * mult) + totalIn - totalOut)
       const currentStock = isUnlimited 
         ? 999999 
         : stockTracked
-          ? (((product.initial_stock || 0) * mult) + totalIn - totalOut)
-          : 0 // Stock non suivi = 0 neutre (pas de RUPTURE fictive)
+          ? Math.max(0, rawStock) // Le stock physique ne peut jamais être négatif (-2 u)
+          : 0 // Stock non suivi = 0 neutre (pas de fausse alerte RUPTURE)
 
       return {
         ...product,

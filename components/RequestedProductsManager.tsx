@@ -43,6 +43,8 @@ export function RequestedProductsManager({
     } catch { }
   }
 
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null)
+
   const handleQuickAddHandwritten = (e: React.FormEvent) => {
     e.preventDefault()
     if (!quickInput.trim()) return
@@ -58,6 +60,8 @@ export function RequestedProductsManager({
 
     const updated = recordRequestedProductInStorage(shopId, cleanName, price)
     setItems(updated)
+    setFeedbackMsg(`✓ Demande client « ${cleanName} » inscrite dans votre cahier !`)
+    setTimeout(() => setFeedbackMsg(null), 3500)
     setQuickInput('')
   }
 
@@ -172,25 +176,49 @@ export function RequestedProductsManager({
         </div>
       </div>
 
-      {/* Saisie Manuscrite Rapide du Cahier */}
-      <form onSubmit={handleQuickAddHandwritten} className="bg-white border border-amber-300 rounded-2xl p-2.5 shadow-sm flex items-center gap-2">
-        <span className="text-sm pl-2">🖊️</span>
-        <input
-          type="text"
-          placeholder="Écrire directement une demande client... (ex: Eau Possotomè 1.5L à 400)"
-          value={quickInput}
-          onChange={e => setQuickInput(e.target.value)}
-          className="flex-1 px-3 py-1.5 text-sm font-handwritten text-amber-950 placeholder-gray-400 outline-none bg-transparent"
-        />
-        <button
-          type="submit"
-          disabled={!quickInput.trim()}
-          className="px-4 py-2 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer shadow-xs"
-        >
-          <Send className="w-3.5 h-3.5" />
-          <span>Ajouter</span>
-        </button>
-      </form>
+      {/* Saisie Manuscrite au Cahier (Signature Stylo & Effet Papier) */}
+      <div className="bg-[#fefcf6] border-2 border-amber-300 rounded-2xl p-3.5 shadow-sm space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🖊️</span>
+            <span className="text-xs font-bold text-amber-950 uppercase tracking-wider">
+              Saisie Manuscrite au Cahier des Demandes
+            </span>
+          </div>
+          {feedbackMsg ? (
+            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full animate-bounce">
+              {feedbackMsg}
+            </span>
+          ) : (
+            <span className="text-[9px] font-mono text-amber-800 bg-amber-100/70 border border-amber-200 px-2.5 py-0.5 rounded-full">
+              Écriture libre • Détection automatique
+            </span>
+          )}
+        </div>
+
+        <form onSubmit={handleQuickAddHandwritten} className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Écrivez directement ici comme dans votre cahier... (ex: Eau Possotomè 1.5L à 400 ou 2 Sacs de Riz 25kg)"
+            value={quickInput}
+            onChange={e => setQuickInput(e.target.value)}
+            className="flex-1 px-4 py-2.5 text-base font-handwritten text-purple-950 bg-white border border-amber-300 rounded-xl outline-none focus:border-amber-500 shadow-inner placeholder-gray-400"
+          />
+          <button
+            type="submit"
+            disabled={!quickInput.trim()}
+            className="px-5 py-2.5 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer shadow-md active:scale-95"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>Écrire au Cahier</span>
+          </button>
+        </form>
+
+        <p className="text-[10px] text-amber-800/80 font-sans italic flex items-center gap-1">
+          <span>💡</span>
+          <span>Astuce : Vous pouvez aussi écrire vos demandes depuis l'onglet principal <strong>Mon Cahier</strong> en tapant <code>demande client [nom du produit]</code>.</span>
+        </p>
+      </div>
 
       {/* KPI Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

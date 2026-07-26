@@ -62,7 +62,7 @@ export function StockItemRow({
             <div className="flex items-center gap-2">
               <span className={`font-mono text-xs font-bold flex-shrink-0 ${colors.text}`}>
                 {status === 'untracked'
-                  ? '📋 Non suivi'
+                  ? '📋 Non suivi (Ventes seules)'
                   : item.current_stock <= 0
                   ? '⚠️ RUPTURE'
                   : `${item.current_stock} ${item.unit} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'lots'})` : ''}`}
@@ -162,7 +162,16 @@ export function StockItemRow({
             {item.unit_cost > 0 && <span>Achat: <strong className="text-gray-700">{formatPrice(item.unit_cost)}</strong></span>}
             {item.unit_price > 0 && <span>Vente: <strong className="text-gray-700">{formatPrice(item.unit_price)}</strong></span>}
             {item.multiplier && item.multiplier > 1 && (
-              <span>Conditionnement: <strong className="text-gray-700">1 {item.packaging_name || 'lot'} = {item.multiplier} {item.unit}</strong></span>
+              <>
+                <span className="bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
+                  📦 1 {item.packaging_name || 'lot'} = {item.multiplier} {item.unit}s
+                </span>
+                {item.unit_cost > 0 && (
+                  <span className="text-amber-800 font-bold">
+                    Prix Gros ({item.packaging_name || 'Carton'}): <strong>{formatPrice(item.unit_cost * item.multiplier)}</strong>
+                  </span>
+                )}
+              </>
             )}
             {item.current_stock > 0 && (
               <>

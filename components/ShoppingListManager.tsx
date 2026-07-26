@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { ShoppingBag, Plus, Trash2, CheckSquare, Square, Share2, AlertTriangle, Check, Sparkles, RefreshCw } from 'lucide-react'
+import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
 
 interface ShoppingItem {
   id: string
@@ -20,10 +21,14 @@ interface Product {
   id: string
   name: string
   initial_stock: number
+  current_stock?: number
   alert_threshold: number
   unit_cost: number
   category?: string
   unit?: string
+  stock_tracked?: boolean
+  is_service?: boolean
+  is_unlimited?: boolean
 }
 
 interface ShoppingListManagerProps {
@@ -75,9 +80,52 @@ export function ShoppingListManager({
       if (response.ok) {
         const data = await response.json()
         const productsList: Product[] = data.products || []
-        // Filtrer les produits sous ou au niveau du seuil d'alerte
-        const alerts = productsList.filter(p => p.initial_stock <= p.alert_threshold)
-        setLowStockProducts(alerts)
+
+        // Charger les exclusions locales (produits supprimés/masqués)
+        const exclusionsKey = `cahier_stock_exclusions_${shopId}`
+        const exclusions: string[] = typeof window !== 'undefined'
+          ? JSON.parse(localStorage.getItem(exclusionsKey) || '[]')
+          : []
+
+        // Filtrer les vrais produits en alerte de stock physique
+        const alertProducts = productsList.filter(p => {
+          // 1. Exclure si le produit est masqué/exclu
+          if (exclusions.includes(p.id)) return false
+
+          // 2. Exclure les prestations & services (pas de stock physique)
+          if (p.is_service || p.is_unlimited) return false
+          if (p.category && (
+            p.category.toLowerCase().includes('prestation') || 
+            p.category.toLowerCase().includes('service') || 
+            p.category.includes('✂️')
+          )) return false
+
+          // 3. Exclure si le suivi de stock n'est pas activé (stock_tracked === false)
+          if (p.stock_tracked === false) return false
+
+          // 4. Seuil d'alerte configuré (> 0)
+          const threshold = p.alert_threshold ?? 5
+          if (threshold <= 0) return false
+
+          // 5. Comparaison : stock actuel calculé <= seuil d'alerte
+          const currentStock = p.current_stock ?? p.initial_stock ?? 0
+          return currentStock <= threshold
+        })
+
+        // Déduplication par nom canonique pour éviter les doublons de pills
+        const dedupMap = new Map<string, Product>()
+        alertProducts.forEach(p => {
+          const canonicalName = getCanonicalProductName(p.name)
+          const key = canonicalName.toLowerCase().trim()
+          if (!dedupMap.has(key)) {
+            dedupMap.set(key, {
+              ...p,
+              name: canonicalName
+            })
+          }
+        })
+
+        setLowStockProducts(Array.from(dedupMap.values()))
       }
     } catch (err) {
       console.error('Erreur chargement stock alertes:', err)
@@ -447,7 +495,7 @@ export function ShoppingListManager({
                     }`}
                   >
                     <span>⚠️ {prod.name}</span>
-                    <span className="text-[10px] font-mono text-amber-700 font-bold">({prod.initial_stock} u)</span>
+                    <span className="text-[10px] font-mono text-amber-700 font-bold">({prod.current_stock ?? prod.initial_stock ?? 0} u)</span>
                     {!isAlreadyInList && <Plus className="w-3.5 h-3.5 text-amber-600" />}
                   </button>
                 )
