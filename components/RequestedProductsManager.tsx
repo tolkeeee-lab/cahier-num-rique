@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Share2, Sparkles, Check, Search } from 'lucide-react'
+import { Plus, Trash2, Share2, Sparkles, Check, Search, Send } from 'lucide-react'
 import { formatCurrency } from '@/lib/currencyUtils'
-
-export interface RequestedProduct {
-  id: string
-  name: string
-  category: string
-  requestCount: number
-  estimatedPrice?: number
-  notes?: string
-  date: string
-  status: 'pending' | 'ordered' | 'added_to_stock'
-}
+import { recordRequestedProductInStorage, RequestedProduct } from '@/lib/requestedProductsUtils'
 
 interface RequestedProductsManagerProps {
   shopId: string
@@ -23,6 +13,7 @@ export function RequestedProductsManager({
 }: RequestedProductsManagerProps) {
   const [items, setItems] = useState<RequestedProduct[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [quickInput, setQuickInput] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
 
   // Form states
@@ -40,31 +31,7 @@ export function RequestedProductsManager({
       if (stored) {
         setItems(JSON.parse(stored))
       } else {
-        // Initial sample items for Beninese / West African boutique
-        const samples: RequestedProduct[] = [
-          {
-            id: 'req_1',
-            name: "Eau Possotomè 1.5L (Grand Format)",
-            category: 'Boissons',
-            requestCount: 8,
-            estimatedPrice: 400,
-            notes: "Demandé par 8 clients cette semaine au rayon boissons fraîches",
-            date: new Date().toISOString().slice(0, 10),
-            status: 'pending'
-          },
-          {
-            id: 'req_2',
-            name: "Lait Bonnet Rouge en Poudre 400g",
-            category: 'Alimentation',
-            requestCount: 5,
-            estimatedPrice: 2200,
-            notes: "Manque fréquent le matin pour les petits-déjeuners",
-            date: new Date().toISOString().slice(0, 10),
-            status: 'pending'
-          }
-        ]
-        setItems(samples)
-        localStorage.setItem(storageKey, JSON.stringify(samples))
+        setItems([])
       }
     } catch { }
   }, [storageKey])
@@ -74,6 +41,24 @@ export function RequestedProductsManager({
     try {
       localStorage.setItem(storageKey, JSON.stringify(updated))
     } catch { }
+  }
+
+  const handleQuickAddHandwritten = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!quickInput.trim()) return
+
+    // Auto-detect price or clean text
+    let cleanName = quickInput.trim()
+    let price: number | undefined = undefined
+    const priceMatch = cleanName.match(/(?:à\s*|:\s*)?(\d+)\s*(?:f|fcfa)?$/i)
+    if (priceMatch) {
+      price = parseInt(priceMatch[1], 10)
+      cleanName = cleanName.replace(priceMatch[0], '').trim()
+    }
+
+    const updated = recordRequestedProductInStorage(shopId, cleanName, price)
+    setItems(updated)
+    setQuickInput('')
   }
 
   const handleAddRequestedProduct = (e: React.FormEvent) => {
@@ -186,6 +171,26 @@ export function RequestedProductsManager({
           </a>
         </div>
       </div>
+
+      {/* Saisie Manuscrite Rapide du Cahier */}
+      <form onSubmit={handleQuickAddHandwritten} className="bg-white border border-amber-300 rounded-2xl p-2.5 shadow-sm flex items-center gap-2">
+        <span className="text-sm pl-2">🖊️</span>
+        <input
+          type="text"
+          placeholder="Écrire directement une demande client... (ex: Eau Possotomè 1.5L à 400)"
+          value={quickInput}
+          onChange={e => setQuickInput(e.target.value)}
+          className="flex-1 px-3 py-1.5 text-sm font-handwritten text-amber-950 placeholder-gray-400 outline-none bg-transparent"
+        />
+        <button
+          type="submit"
+          disabled={!quickInput.trim()}
+          className="px-4 py-2 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer shadow-xs"
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Ajouter</span>
+        </button>
+      </form>
 
       {/* KPI Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

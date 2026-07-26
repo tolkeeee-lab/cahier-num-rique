@@ -181,7 +181,18 @@ export async function POST(request: NextRequest) {
 
     // Forcer en Achat Stock (purchase_cash / purchase_credit) si le texte commence par "stock" ou "achat"
     const lowercaseText = text.trim().toLowerCase()
-    if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
+    const isDemandeClient = /^(demande|client demande|demande client|manque|besoin|réclamation|reclamation)\b/i.test(lowercaseText)
+
+    if (isDemandeClient) {
+      type = 'client_request'
+      if (parsedData) {
+        parsedData.total_facture = 0
+        parsedData.montant_paye = 0
+        parsedData.montant_dette = 0
+        parsedData.nom_client = "Demande Client"
+        parsedData.categorie = "Demande Client"
+      }
+    } else if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
       if (type === 'cash_in' || type === 'sale_credit') {
         type = 'purchase_cash'
       }

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp, X, Mic, MicOff } from 'lucide-react'
 import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
+import { parseRequestedProductFromNotebookText, recordRequestedProductInStorage } from '@/lib/requestedProductsUtils'
 
 interface Sale {
   id: string
@@ -294,6 +295,12 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
     if (!input.trim()) {
       onError('Veuillez entrer une transaction')
       return
+    }
+
+    // Détecter si la saisie est une demande client
+    const reqMatch = parseRequestedProductFromNotebookText(input.trim())
+    if (reqMatch && reqMatch.isRequestedProduct) {
+      recordRequestedProductInStorage(shopId, reqMatch.cleanName, reqMatch.price)
     }
 
     setLoading(true)
