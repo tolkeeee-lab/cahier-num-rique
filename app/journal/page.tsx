@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X } from 'lucide-react'
+import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X, ClipboardList } from 'lucide-react'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
+import { RequestedProductsManager } from '@/components/RequestedProductsManager'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { AuthScreen } from '@/components/AuthScreen'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -307,7 +308,7 @@ export default function JournalPage() {
   const [nosDettes, setNosDettes] = useState(0)
   const [soldeDuJour, setSoldeDuJour] = useState(0)
 
-  const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives' | 'stock' | 'settings' | 'analytics' | 'shopping'>('cahier')
+  const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives' | 'stock' | 'settings' | 'analytics' | 'shopping' | 'demandes'>('cahier')
   const [allSales, setAllSales] = useState<Sale[]>([])
   const [journalFilter, setJournalFilter] = useState<FilterId>('all')
   const [archiveFilter, setArchiveFilter] = useState<FilterId>('all')
@@ -2487,6 +2488,18 @@ export default function JournalPage() {
               )}
               {mappedUser?.role !== 'employee' && (
                 <button
+                  onClick={() => setActiveTab('demandes')}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'demandes'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
+                    }`}
+                >
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  Produits Demandés
+                </button>
+              )}
+              {mappedUser?.role !== 'employee' && (
+                <button
                   onClick={() => setActiveTab('analytics')}
                   className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'analytics'
                       ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
@@ -2516,39 +2529,6 @@ export default function JournalPage() {
 
               {activeTab === 'cahier' && (
                 <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden relative">
-
-                  {/* Pen selector — compact circles on mobile, pills on desktop */}
-                  <div className="px-3 md:px-6 py-2 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-4 bg-white bg-opacity-40 select-none z-10 overflow-x-auto scrollbar-hide">
-                    <span className="hidden md:block text-xs font-bold text-gray-500 font-mono tracking-wider flex-shrink-0">
-                      🖊️ STYLO BIC :
-                    </span>
-                    <div className="flex gap-2 md:gap-2 flex-nowrap">
-                      {PENS.map((pen) => {
-                        const isSelected = selectedPen === pen.id
-                        return (
-                          <button
-                            key={pen.id}
-                            type="button"
-                            title={pen.name}
-                            onClick={() => { setSelectedPen(pen.id); setJournalFilter(pen.id as FilterId) }}
-                            className={`flex items-center gap-1.5 transition-all flex-shrink-0 ${isSelected
-                                ? `${pen.bg} ${pen.border} text-white shadow-sm scale-105`
-                                : 'bg-white bg-opacity-65 border-gray-200 text-gray-600 hover:bg-white'
-                              } 
-                            md:px-3 md:py-1 md:rounded-full md:border md:text-[10px] md:font-bold md:tracking-wide
-                            px-2.5 py-2.5 rounded-full border`}
-                          >
-                            <span className={`w-2.5 h-2.5 md:w-2 md:h-2 rounded-full flex-shrink-0 ${pen.dotBg}`}></span>
-                            <span className="hidden md:inline text-[10px] font-bold tracking-wide">{pen.name}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {/* Show current pen label on mobile */}
-                    <span className="md:hidden text-[10px] font-bold text-gray-600 flex-shrink-0 ml-1">
-                      {PENS.find(p => p.id === selectedPen)?.name}
-                    </span>
-                  </div>
 
                   {/* ── Barre de filtre par type d'écriture ── */}
                   <div className="px-3 md:px-6 py-1.5 border-b border-gray-200 flex items-center gap-2 bg-[#f5f1e8] select-none overflow-x-auto scrollbar-hide flex-shrink-0">
@@ -3249,6 +3229,15 @@ export default function JournalPage() {
                     shopId={mappedUser?.shop_id}
                     onConvertToStockPurchase={handleConvertToStockPurchase}
                     onError={handleError}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'demandes' && (
+                <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
+                  <RequestedProductsManager
+                    shopId={mappedUser?.shop_id || 'default-shop'}
+                    userRole={mappedUser?.role}
                   />
                 </div>
               )}
