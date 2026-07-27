@@ -291,10 +291,10 @@ export default function JournalPage() {
         } catch { }
       }
 
-      // Si aucune boutique n'est enregistrée localement, initialiser uniquement avec sa boutique principale
-      const userActivity = (mappedUser as any)?.user_metadata?.shop_activity || 'boutique'
+      // Si aucune boutique n'est enregistrée localement, initialiser avec son activité réelle
+      const userActivity = (mappedUser as any)?.activity || (mappedUser as any)?.user_metadata?.shop_activity || 'boutique'
       const defaultShops = [
-        { id: uShopId, name: 'Mon Point de Vente', activity: userActivity }
+        { id: uShopId, name: (mappedUser as any)?.shop_name || 'Mon Point de Vente', activity: userActivity }
       ]
       if (JSON.stringify(userShops) !== JSON.stringify(defaultShops)) {
         setUserShops(defaultShops)
@@ -304,11 +304,11 @@ export default function JournalPage() {
         setSelectedShopId(uShopId)
       }
     }
-  }, [mappedUser?.id, mappedUser?.shop_id, selectedShopId, userShops])
+  }, [mappedUser?.id, mappedUser?.shop_id, selectedShopId, userShops, mappedUser])
 
   const shopId = selectedShopId || mappedUser?.shop_id || 'default-shop'
   const currentShop = userShops.find(s => s.id === shopId)
-  const shopActivity = currentShop?.activity || 'boutique'
+  const shopActivity = currentShop?.activity || (mappedUser as any)?.activity || 'boutique'
   const theme = THEMES[shopActivity] || THEMES.boutique
 
   const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopId)

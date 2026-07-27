@@ -118,12 +118,13 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                 email: data.user.email,
                 name: data.user.user_metadata?.full_name || 'Utilisateur',
                 role: data.user.user_metadata?.role || 'owner',
+                activity: data.user.user_metadata?.shop_activity || activity || 'boutique',
                 shop_id: data.user.user_metadata?.shop_id || data.user.id,
                 password_fallback: password
               }
               localStorage.setItem(`cahier_offline_credentials_${email.toLowerCase().trim()}`, JSON.stringify(localUser))
               if (onLoginSuccess) {
-                onLoginSuccess(data.user)
+                onLoginSuccess({ ...data.user, activity: localUser.activity })
               }
             }
             setSuccess('✓ Connexion réussie !')
@@ -140,9 +141,11 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                   const syntheticUser = {
                     id: creds.id,
                     email: creds.email,
+                    activity: creds.activity || 'boutique',
                     user_metadata: {
                       full_name: creds.name,
                       role: creds.role,
+                      shop_activity: creds.activity || 'boutique',
                       shop_id: creds.shop_id
                     }
                   }
@@ -189,6 +192,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
             password,
             full_name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
             role,
+            activity,
             shop_id: employeeShopId
           }
           
