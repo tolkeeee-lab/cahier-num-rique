@@ -403,7 +403,7 @@ export async function POST(request: NextRequest) {
                       shop_id: shopId,
                       name: cleanName,
                       unit_price: article.prix_unitaire || 0,
-                      unit_cost: Math.round((article.prix_unitaire || 0) * 0.6),
+                      unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
                       initial_stock: 0,
                       alert_threshold: 5,
                       category: dbCategory,

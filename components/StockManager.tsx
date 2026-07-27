@@ -148,34 +148,9 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
     }
   }
 
-  const handleEnableTracking = async (item: StockItem) => {
-    // Calculer un stock de départ qui absorbe les ventes déjà saisies au cahier
-    const pastSales = item.total_out || 0
-    const targetInitial = Math.max(item.initial_stock || 0, pastSales + 10)
-
-    try {
-      const online = typeof window !== 'undefined' ? window.navigator.onLine : true
-      if (online) {
-        await fetch('/api/stock', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
-          body: JSON.stringify({
-            id: item.id,
-            alert_threshold: item.alert_threshold || 5,
-            initial_stock: targetInitial,
-          }),
-        })
-      } else {
-        saveOfflineProduct(shopId, {
-          ...item,
-          initial_stock: targetInitial,
-          alert_threshold: item.alert_threshold || 5,
-        })
-      }
-      await loadStock()
-    } catch (err: any) {
-      onError?.(err?.message || 'Erreur d\'activation du suivi')
-    }
+  const handleEnableTracking = (item: StockItem) => {
+    // Ouvrir directement la modale d'édition pour saisir le stock physique réel compté aujourd'hui
+    openEditModal(item)
   }
 
   // ── Chargement ──────────────────────────────────────────────────────────────

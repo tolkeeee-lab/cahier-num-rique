@@ -158,8 +158,11 @@ export function StockItemRow({
 
           {/* Seuil + Prix */}
           <div className="flex gap-4 text-[10px] font-mono mb-3 text-gray-500 flex-wrap">
-            <span>Seuil: <strong className="text-gray-700">{item.alert_threshold} {item.unit}</strong></span>
-            {item.unit_cost > 0 && <span>Achat: <strong className="text-gray-700">{formatPrice(item.unit_cost)}</strong></span>}
+            {item.unit_cost > 0 ? (
+              <span>Achat: <strong className="text-gray-700">{formatPrice(item.unit_cost)}</strong></span>
+            ) : (
+              <span className="text-gray-400 italic">Achat: Non renseigné</span>
+            )}
             {item.unit_price > 0 && <span>Vente: <strong className="text-gray-700">{formatPrice(item.unit_price)}</strong></span>}
             {item.multiplier && item.multiplier > 1 && (
               <>

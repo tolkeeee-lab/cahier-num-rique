@@ -743,7 +743,7 @@ export default function JournalPage() {
         body: JSON.stringify({
           name: quickPlatName.trim(),
           unit_price: priceNum,
-          unit_cost: Math.round(priceNum * 0.6),
+          unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
           initial_stock: 100,
           alert_threshold: 5,
           category: dbCategory,
@@ -4002,7 +4002,7 @@ export default function JournalPage() {
                     unit: 'pièce',
                     alert_threshold: 5,
                     initial_stock: 100,
-                    unit_cost: Math.round(autoLearnData.price * 0.7),
+                    unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
                     unit_price: autoLearnData.price,
                     created_at: new Date().toISOString()
                   })
@@ -4020,7 +4020,7 @@ export default function JournalPage() {
                       body: JSON.stringify({
                         name: autoLearnData.name,
                         unit_price: autoLearnData.price,
-                        unit_cost: Math.round(autoLearnData.price * 0.7),
+                        unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
                         initial_stock: 100,
                         alert_threshold: 5,
                         category: 'Alimentation'

@@ -241,7 +241,7 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
         body: JSON.stringify({
           name: newPlatName.trim(),
           unit_price: priceNum,
-          unit_cost: Math.round(priceNum * 0.6),
+          unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
           initial_stock: 100,
           alert_threshold: 5,
           category: newPlatCat === 'boisson' ? 'Boissons' : newPlatCat === 'cuisine' ? 'Cuisine' : 'Cafétéria'
