@@ -141,22 +141,34 @@ export function ShoppingListManager({
       console.error('Erreur chargement stock alertes:', err)
     }
 
-    // 2. Charger les items enregistrés dans le localStorage
+    // 2. Charger et nettoyer rigoureusement la liste d'achats du localStorage
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(storageKey)
       if (saved) {
         try {
           const parsedItems: ShoppingItem[] = JSON.parse(saved)
-          // Nettoyer automatiquement les suggestions d'alertes qui appartenaient à des produits non suivis
+          // Supprimer systématiquement tous les articles dont le produit n'a PAS le suivi activé
           const cleanItems = parsedItems.filter(item => {
-            if (!item.isAutoSuggested) return true
-            const matchProd = productsList.find(p => p.name.toLowerCase().trim() === item.name.toLowerCase().trim())
+            const canonicalItemName = getCanonicalProductName(item.name).toLowerCase().trim()
+            const matchProd = productsList.find(p => getCanonicalProductName(p.name).toLowerCase().trim() === canonicalItemName)
+            
+            // Si le produit existe au catalogue mais qu'il n'est pas suivi -> le retirer de la liste d'achats !
             if (matchProd && !matchProd.stock_tracked && (matchProd.initial_stock || 0) === 0) {
               return false
             }
+
+            // Si l'article est marqué comme Alerte Stock mais n'a aucun produit suivi actif -> le retirer !
+            if (item.isAutoSuggested) {
+              if (!matchProd || (!matchProd.stock_tracked && (matchProd.initial_stock || 0) === 0)) {
+                return false
+              }
+            }
+
             return true
           })
+
           setItems(cleanItems)
+          localStorage.setItem(storageKey, JSON.stringify(cleanItems))
         } catch (e) {
           setItems([])
         }
