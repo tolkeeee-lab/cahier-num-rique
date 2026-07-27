@@ -30,12 +30,15 @@ interface Sale {
 interface AnalyticsDashboardProps {
   sales: Sale[]
   userShops?: Array<{ id: string; name: string; activity: string }>
+  currentShopActivity?: string
 }
 
 const PRODUCT_CATEGORY_INFOS: Record<string, { label: string; emoji: string; bg: string; text: string }> = {
-  'Alimentation': { label: 'Alimentation', emoji: '🌾', bg: 'bg-amber-500', text: 'text-amber-700' },
-  'Boissons': { label: 'Boissons', emoji: '🥤', bg: 'bg-blue-500', text: 'text-blue-700' },
-  'Hygiène & Cosmétique': { label: 'Hygiène & Cosmétique', emoji: '🧼', bg: 'bg-[#9d60ec]', text: 'text-[#9d60ec]' },
+  'Alimentation': { label: 'Alimentation & Marché', emoji: '🌾', bg: 'bg-amber-500', text: 'text-amber-700' },
+  'Foyer & Maison': { label: 'Foyer & Maison (Loyer/Gaz/Factures)', emoji: '🏠', bg: 'bg-indigo-500', text: 'text-indigo-700' },
+  'Scolarité': { label: 'Scolarité & Éducation', emoji: '📚', bg: 'bg-emerald-500', text: 'text-emerald-700' },
+  'Boissons': { label: 'Boissons & Bar', emoji: '🥤', bg: 'bg-blue-500', text: 'text-blue-700' },
+  'Hygiène & Cosmétique': { label: 'Hygiène & Soins', emoji: '🧼', bg: 'bg-[#9d60ec]', text: 'text-[#9d60ec]' },
   'Électronique': { label: 'Électronique & Mobile', emoji: '📱', bg: 'bg-emerald-500', text: 'text-emerald-700' },
   'Habillement': { label: 'Habillement & Textile', emoji: '👕', bg: 'bg-rose-500', text: 'text-rose-700' },
   'Divers': { label: 'Divers & Général', emoji: '📦', bg: 'bg-gray-400', text: 'text-gray-600' }
@@ -47,10 +50,72 @@ function formatPrice(price: number): string {
   }).format(price) + ' F'
 }
 
-export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboardProps) {
+export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity }: AnalyticsDashboardProps) {
   const [period, setPeriod] = useState<'today' | '7days' | 'month' | 'all'>('all')
   const [sortBy, setSortBy] = useState<'revenue' | 'quantity' | 'frequency'>('revenue')
   const [viewMode, setViewMode] = useState<'single' | 'network'>(userShops.length > 1 ? 'network' : 'single')
+
+  // Intitulés adaptés sur-mesure au secteur d'activité
+  const labels = useMemo(() => {
+    const act = currentShopActivity || (userShops.find(s => s.activity)?.activity) || 'boutique'
+    if (act === 'particulier') {
+      return {
+        title: 'Analyses & Dépenses du Foyer',
+        subtitle: 'SUIVI DES DÉPENSES DU MÉNAGE, COURSES, SCOLARITÉ ET ABONNEMENTS',
+        kpi1Label: 'Dépenses Foyer',
+        kpi2Label: 'Articles & Achats',
+        kpi3Label: 'Dépense Moyenne',
+        kpi4Label: 'Poste N°1 Dépenses',
+        catChartTitle: 'Répartition des Dépenses de la Maison par Catégorie',
+        tableTitle: '📋 Classement des Postes de Dépenses (Foyer)',
+        tableSub: 'Trie par montant dépensé',
+        productCol: 'Poste / Article',
+        qtyCol: 'Quantité / Fréquence',
+      }
+    } else if (act === 'resto') {
+      return {
+        title: 'Analyses Cuisine & Bar',
+        subtitle: 'SUIVI DES REPAS SERVIS, BOISSONS ET RECETTES DU RESTO',
+        kpi1Label: 'Recette Cuisine & Bar',
+        kpi2Label: 'Plats & Boissons Servis',
+        kpi3Label: 'Addition Moyenne',
+        kpi4Label: 'Plat / Boisson N°1',
+        catChartTitle: 'Répartition des Recettes (Cuisine, Boissons, Cafétéria)',
+        tableTitle: '🍲 Classement de la Carte & du Menu',
+        tableSub: 'Trie par chiffre d\'affaires généré',
+        productCol: 'Plat / Boisson',
+        qtyCol: 'Quantité servie',
+      }
+    } else if (act === 'prestations') {
+      return {
+        title: 'Analyses Prestations & Services',
+        subtitle: 'SUIVI DES SERVICES RÉALISÉS ET RECETTES DU SALON / ATELIER',
+        kpi1Label: 'Recettes Services',
+        kpi2Label: 'Prestations Réalisées',
+        kpi3Label: 'Recette Moyenne / Client',
+        kpi4Label: 'Prestation N°1',
+        catChartTitle: 'Répartition des Recettes par Type de Service',
+        tableTitle: '✂️ Classement des Prestations & Services',
+        tableSub: 'Trie par volume de prestations réalisées',
+        productCol: 'Prestation / Service',
+        qtyCol: 'Nombre de clients',
+      }
+    } else {
+      return {
+        title: 'Analyses Ventes & Chiffre d\'Affaires',
+        subtitle: 'PERFORMANCE DES PRODUITS ET ROTATION DES STOCKS',
+        kpi1Label: 'CA Ventes',
+        kpi2Label: 'Articles Vendus',
+        kpi3Label: 'Panier Moyen',
+        kpi4Label: 'N°1 des Ventes',
+        catChartTitle: 'Répartition du Chiffre d\'Affaires par Catégorie de Produit',
+        tableTitle: '🏆 Classement des Produits',
+        tableSub: 'Trie par Chiffre d\'Affaires généré',
+        productCol: 'Produit',
+        qtyCol: 'Quantité vendue',
+      }
+    }
+  }, [currentShopActivity, userShops])
 
   // Filtrer les ventes selon la période choisie
   const filteredSales = useMemo(() => {
@@ -160,10 +225,10 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
           <BarChart3 className="w-5 h-5 text-amber-700" />
           <div>
             <h2 className="font-handwritten text-2xl font-bold text-gray-900">
-              Analyses & Statistiques de Ventes
+              {labels.title}
             </h2>
             <p className="text-[9px] font-mono uppercase text-gray-400 tracking-wider">
-              PERFORMANCE DES PRODUITS ET ROTATION DES STOCKS
+              {labels.subtitle}
             </p>
           </div>
         </div>
@@ -300,7 +365,7 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">CA Ventes</span>
+              <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">{labels.kpi1Label}</span>
               <span className="text-lg font-bold font-mono text-emerald-800">{formatPrice(totalRevenue)}</span>
             </div>
           </div>
@@ -310,7 +375,7 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
               <Package className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Articles Vendus</span>
+              <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">{labels.kpi2Label}</span>
               <span className="text-lg font-bold font-mono text-gray-800">{totalQuantitySold} u</span>
             </div>
           </div>
@@ -320,7 +385,7 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Panier Moyen</span>
+              <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">{labels.kpi3Label}</span>
               <span className="text-lg font-bold font-mono text-gray-800">{formatPrice(averageBasket)}</span>
             </div>
           </div>
@@ -330,7 +395,7 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
               <Award className="w-5 h-5" />
             </div>
             <div className="overflow-hidden">
-              <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">N°1 des Ventes</span>
+              <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">{labels.kpi4Label}</span>
               <span className="text-xs font-bold text-gray-800 block truncate font-handwritten">
                 {topProduct ? topProduct.name : 'Aucun'}
               </span>
@@ -343,7 +408,7 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
           <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm">
             <h3 className="font-handwritten text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <Layers className="w-5 h-5 text-gray-700" />
-              Répartition du Chiffre d'Affaires par Catégorie de Produit
+              {labels.catChartTitle}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {categoryStats.map((cat, idx) => (
@@ -374,10 +439,10 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none">
             <div>
               <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
-                🏆 Classement des Produits ({productStats.length})
+                {labels.tableTitle} ({productStats.length})
               </h3>
               <p className="text-[9px] font-mono uppercase text-gray-400">
-                {sortBy === 'revenue' ? 'Trié par Chiffre d\'Affaires généré' : sortBy === 'quantity' ? 'Trié par volume d\'articles vendus' : 'Trié par fréquence de vente'}
+                {labels.tableSub}
               </p>
             </div>
 
@@ -415,9 +480,9 @@ export function AnalyticsDashboard({ sales, userShops = [] }: AnalyticsDashboard
               <thead className="bg-[#f5f1e8] text-[9px] uppercase font-bold text-gray-400 font-mono tracking-wider border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                 <tr>
                   <th className="py-3.5 px-4 bg-[#f5f1e8]">Rang</th>
-                  <th className="py-3.5 px-4 bg-[#f5f1e8]">Produit</th>
+                  <th className="py-3.5 px-4 bg-[#f5f1e8]">{labels.productCol}</th>
                   <th className="py-3.5 px-4 bg-[#f5f1e8]">Catégorie</th>
-                  <th className="py-3.5 px-4 text-center bg-[#f5f1e8]">Quantité Vendue</th>
+                  <th className="py-3.5 px-4 text-center bg-[#f5f1e8]">{labels.qtyCol}</th>
                   <th className="py-3.5 px-4 text-center bg-[#f5f1e8]">Fréquence Ventes</th>
                   <th className="py-3.5 px-4 text-right bg-[#f5f1e8]">CA Généré</th>
                 </tr>

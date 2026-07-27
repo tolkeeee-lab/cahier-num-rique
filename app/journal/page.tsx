@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
 import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X, ClipboardList } from 'lucide-react'
@@ -2240,6 +2240,71 @@ export default function JournalPage() {
     />
   }
 
+  const activityLabels = useMemo(() => {
+    const act = shopActivity || 'boutique'
+    if (act === 'particulier') {
+      return {
+        title: 'Cahier du Foyer & Budget',
+        spine: 'CAHIER DU FOYER & BUDGET',
+        soldeJour: '☀️ Solde du jour',
+        tiroirCash: '💰 Portefeuille / Budget',
+        creditsDehors: '🔴 Prêts accordés',
+        nosDettes: '🟣 Mes Dettes (Boutique/Factures)',
+        tabCahier: 'Mon Foyer (Budget)',
+        tabDettes: 'Prêts & Emprunts',
+        tabTrends: 'Analyse Budget',
+        tabStock: 'Réserve Foyer',
+        tabShopping: 'Liste de Marché',
+        tabDemandes: 'Achats Souhaités',
+      }
+    } else if (act === 'resto') {
+      return {
+        title: 'Cahier de Caisse Resto & Bar',
+        spine: 'COMPAGNON DE CUISINE & CAISSE',
+        soldeJour: '☀️ Recette du jour',
+        tiroirCash: '💰 Caisse Resto',
+        creditsDehors: '🔴 Arriérés Clients',
+        nosDettes: '🟣 Dettes Fournisseurs',
+        tabCahier: 'Mon Cahier Resto',
+        tabDettes: 'Carnet des Dettes',
+        tabTrends: 'Analyse Ventes',
+        tabStock: 'Cuisine & Bar',
+        tabShopping: 'Ravitaillement Cuisine',
+        tabDemandes: 'Plats & Demandes',
+      }
+    } else if (act === 'prestations') {
+      return {
+        title: 'Cahier des Prestations & Services',
+        spine: 'CAHIER DE CAISSE SERVICES',
+        soldeJour: '☀️ Recette Services',
+        tiroirCash: '💰 Caisse Services',
+        creditsDehors: '🔴 Crans & Reste à Payer',
+        nosDettes: '🟣 Dettes Matériel',
+        tabCahier: 'Mes Prestations',
+        tabDettes: 'Carnet des Dettes',
+        tabTrends: 'Analyse Services',
+        tabStock: 'Produits & Matériel',
+        tabShopping: 'Achats Fournitures',
+        tabDemandes: 'Services Demandés',
+      }
+    } else {
+      return {
+        title: 'Cahier de Caisse Intelligent',
+        spine: 'CAHIER DE CAISSE INTELLIGENT',
+        soldeJour: '☀️ Aujourd\'hui',
+        tiroirCash: '💰 Tiroir Cash',
+        creditsDehors: '🔴 Crédits dehors',
+        nosDettes: '🟣 Nos Dettes',
+        tabCahier: 'Mon Cahier',
+        tabDettes: 'Livre des Dettes',
+        tabTrends: 'Analyse Marché',
+        tabStock: 'Stock',
+        tabShopping: 'Courses',
+        tabDemandes: 'Produits Demandés',
+      }
+    }
+  }, [shopActivity])
+
   return (
     <main className="min-h-dvh md:min-h-screen md:py-8 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative overflow-x-hidden">
 
@@ -2259,7 +2324,7 @@ export default function JournalPage() {
 
             {/* Vertical gold letter spine title */}
             <div className="font-extrabold text-[7px] md:text-[9px] text-[#f59e0b] font-sans tracking-[0.2em] md:tracking-[0.4em] uppercase select-none my-auto whitespace-nowrap [writing-mode:vertical-lr] rotate-180 text-center opacity-85">
-              Cahier de Caisse Intelligent
+              {activityLabels.spine}
             </div>
 
             {/* Middle brass medallion */}
@@ -2292,11 +2357,11 @@ export default function JournalPage() {
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="hidden md:inline text-xl md:text-3xl">📖</span>
                   <h1 className="hidden md:block text-base md:text-2xl font-bold text-gray-900 font-handwritten truncate">
-                    Cahier de Caisse Intelligent
+                    {activityLabels.title}
                   </h1>
                   {/* Sélecteur Multi-Boutique / Point de Vente Proprio */}
                   <div className="flex items-center gap-1 bg-amber-100 bg-opacity-80 border border-amber-300 rounded-2xl px-2 py-0.5 select-none flex-shrink-0 shadow-sm relative z-10">
-                    <span className="text-xs">🏬</span>
+                    <span className="text-xs">{shopActivity === 'resto' ? '🍲' : shopActivity === 'prestations' ? '✂️' : shopActivity === 'particulier' ? '🏠' : '🏬'}</span>
                     <select
                       value={shopId}
                       onChange={(e) => {
@@ -2314,7 +2379,7 @@ export default function JournalPage() {
                         </option>
                       ))}
                       <option value="ADD_NEW_SHOP" className="bg-amber-50 font-bold text-amber-900">
-                        ➕ Ajouter un Point de Vente...
+                        ➕ Ajouter un Point de Vente / Foyer...
                       </option>
                     </select>
                   </div>
@@ -2394,7 +2459,7 @@ export default function JournalPage() {
                     ? 'bg-[#f0f9ff] border-sky-300'
                     : 'bg-[#fff5f5] border-rose-300'
                   }`}>
-                  <span className="text-[8px] font-bold text-sky-700 uppercase tracking-wide whitespace-nowrap">☀️ Aujourd'hui</span>
+                  <span className="text-[8px] font-bold text-sky-700 uppercase tracking-wide whitespace-nowrap">{activityLabels.soldeJour}</span>
                   <span className={`font-mono text-sm font-bold mt-0.5 whitespace-nowrap ${soldeDuJour >= 0 ? 'text-sky-900' : 'text-rose-700'
                     }`}>
                     {soldeDuJour >= 0 ? '+' : ''}{formatPrice(soldeDuJour)}
@@ -2403,7 +2468,7 @@ export default function JournalPage() {
                 {/* Tiroir cash global */}
                 <div className="bg-[#fffdf9] border border-emerald-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wide whitespace-nowrap">💰 Tiroir Cash</span>
+                    <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wide whitespace-nowrap">{activityLabels.tiroirCash}</span>
                     {mappedUser?.role !== 'employee' && (
                       <button
                         type="button"
@@ -2426,11 +2491,11 @@ export default function JournalPage() {
                   <span className="font-bold uppercase tracking-wider text-[10px]">Clôture Z</span>
                 </button>
                 <div className="bg-[#fffdf9] border border-rose-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
-                  <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wide whitespace-nowrap">🔴 Crédits dehors</span>
+                  <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wide whitespace-nowrap">{activityLabels.creditsDehors}</span>
                   <span className="font-mono text-sm font-bold text-rose-950 mt-0.5 whitespace-nowrap">{formatPrice(argentDehors)}</span>
                 </div>
                 <div className="bg-[#fffdf9] border border-purple-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
-                  <span className="text-[8px] font-bold text-purple-700 uppercase tracking-wide whitespace-nowrap">🟣 Nos Dettes</span>
+                  <span className="text-[8px] font-bold text-purple-700 uppercase tracking-wide whitespace-nowrap">{activityLabels.nosDettes}</span>
                   <span className="font-mono text-sm font-bold text-purple-950 mt-0.5 whitespace-nowrap">{formatPrice(nosDettes)}</span>
                 </div>
               </div>
@@ -2446,7 +2511,7 @@ export default function JournalPage() {
                   }`}
               >
                 <Notebook className="w-3.5 h-3.5" />
-                Mon Cahier
+                {activityLabels.tabCahier}
               </button>
               {mappedUser?.role !== 'employee' && (
                 <button
@@ -2457,7 +2522,7 @@ export default function JournalPage() {
                     }`}
                 >
                   <BookText className="w-3.5 h-3.5" />
-                  Livre des Dettes
+                  {activityLabels.tabDettes}
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
@@ -2469,7 +2534,7 @@ export default function JournalPage() {
                     }`}
                 >
                   <BarChart3 className="w-3.5 h-3.5" />
-                  Analyse Marché
+                  {activityLabels.tabTrends}
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
@@ -2493,7 +2558,7 @@ export default function JournalPage() {
                     }`}
                 >
                   <Package className="w-3.5 h-3.5" />
-                  Stock
+                  {activityLabels.tabStock}
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
@@ -2505,7 +2570,7 @@ export default function JournalPage() {
                     }`}
                 >
                   <ShoppingCart className="w-3.5 h-3.5" />
-                  Courses
+                  {activityLabels.tabShopping}
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
@@ -2517,7 +2582,7 @@ export default function JournalPage() {
                     }`}
                 >
                   <ClipboardList className="w-3.5 h-3.5" />
-                  Produits Demandés
+                  {activityLabels.tabDemandes}
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
@@ -3045,10 +3110,10 @@ export default function JournalPage() {
 
                   <div className="border-b border-dashed border-sky-300 border-opacity-40 pb-4 mb-6">
                     <h2 className="text-3xl font-bold text-gray-900 font-handwritten">
-                      Statistiques du Marché & Éléments Structurés
+                      {shopActivity === 'particulier' ? 'Statistiques du Foyer & Budget' : shopActivity === 'resto' ? 'Statistiques Cuisine & Bar' : shopActivity === 'prestations' ? 'Statistiques Prestations & Services' : 'Statistiques du Marché & Éléments Structurés'}
                     </h2>
                     <p className="text-xs text-gray-400 mt-1 font-mono uppercase tracking-wider">
-                      COLLECTE DE TENDANCES (ARRIÈRE-PLAN)
+                      {shopActivity === 'particulier' ? 'SUIVI DES DÉPENSES ET BUDGET DU MÉNAGE' : shopActivity === 'resto' ? 'VENTES & ROTATION DU MENU' : shopActivity === 'prestations' ? 'ACTIVITÉ DES SERVICES ET CLIENTS' : 'COLLECTE DE TENDANCES (ARRIÈRE-PLAN)'}
                     </p>
                   </div>
 
@@ -3059,7 +3124,7 @@ export default function JournalPage() {
                     <div className="lg:col-span-6 space-y-6">
                       <div>
                         <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 font-sans">
-                          📊 RÉPARTITION DE L'ACTIVITÉ (VOLUME)
+                          {shopActivity === 'particulier' ? '📊 RÉPARTITION DES DÉPENSES (MÉNAgE)' : shopActivity === 'resto' ? '📊 RÉPARTITION DES RECETTES (RESTO)' : shopActivity === 'prestations' ? '📊 RÉPARTITION DES PRESTATIONS' : '📊 RÉPARTITION DE L\'ACTIVITÉ (VOLUME)'}
                         </h3>
                       </div>
 
@@ -3090,7 +3155,7 @@ export default function JournalPage() {
                     <div className="lg:col-span-6 space-y-6">
                       <div>
                         <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 font-sans">
-                          📦 TOP MARCHANDISES ÉMERGENTES
+                          {shopActivity === 'particulier' ? '🏠 TOP POSTES & DÉPENSES DE LA MAISON' : shopActivity === 'resto' ? '🍲 TOP PLATS & BOISSONS DU RESTO' : shopActivity === 'prestations' ? '✂️ TOP SERVICES RÉALISÉS' : '📦 TOP MARCHANDISES ÉMERGENTES'}
                         </h3>
                       </div>
 
