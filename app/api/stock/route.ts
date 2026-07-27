@@ -86,11 +86,25 @@ export async function GET(request: Request) {
       const key = (product.name as string).toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
       
-      // Filtrer les mouvements pour n'inclure que ceux après ou égal à la date de création du produit (moins 1 minute de marge)
-      const prodTime = product.created_at ? new Date(product.created_at).getTime() - 60000 : 0
+      const hasInitialStock = (product.initial_stock || 0) > 0
+      const hasPurchases = data.movements.some((m: any) => m.type === 'in')
+      const stockTracked = product.stock_tracked || hasInitialStock || hasPurchases
+
+      // Déterminer le timestamp à partir duquel le suivi est actif
+      let trackingStart = 0
+      if (product.tracking_started_at) {
+        trackingStart = new Date(product.tracking_started_at).getTime()
+      } else if (hasInitialStock && product.created_at) {
+        trackingStart = new Date(product.created_at).getTime()
+      }
+
+      // Si le stock N'EST PAS suivi, les anciennes ventes ne réduisent pas le stock
       const filteredMovements = data.movements.filter((m: any) => {
+        if (!stockTracked) return false
+        if (trackingStart === 0) return true
         const mTime = m.created_at ? new Date(m.created_at).getTime() : new Date(m.date).getTime()
-        return mTime >= prodTime
+        // Conserver les mouvements postérieurs à la date d'activation du suivi (moins 1 minute de marge)
+        return mTime >= trackingStart - 60000
       })
 
       // Recalculer les totaux d'entrées et de sorties après filtrage
@@ -100,28 +114,29 @@ export async function GET(request: Request) {
       const mult = product.multiplier || 1
       const isUnlimited = product.is_service || product.category === 'Cuisine'
       
-      // Un produit est "suivi" seulement si le propriétaire a défini un stock initial > 0
-      // OU s'il y a eu au moins un achat/entrée de stock.
-      // Les produits auto-créés depuis les ventes (initial_stock=0, aucun achat) ne sont PAS suivis.
-      const hasInitialStock = (product.initial_stock || 0) > 0
-      const hasPurchases = totalIn > 0
-      const stockTracked = hasInitialStock || hasPurchases
-      
       const rawStock = (((product.initial_stock || 0) * mult) + totalIn - totalOut)
       const currentStock = isUnlimited 
         ? 999999 
         : stockTracked
-          ? Math.max(0, rawStock) // Le stock physique ne peut jamais être négatif (-2 u)
-          : 0 // Stock non suivi = 0 neutre (pas de fausse alerte RUPTURE)
+          ? Math.max(0, rawStock)
+          : 0
+
+      // Annuler les fausses valeurs unit_cost imaginaires (ex: 240 F pour 400 F) créées en arrière-plan
+      let cleanUnitCost = product.unit_cost || 0
+      const isFakeCost = cleanUnitCost === Math.round((product.unit_price || 0) * 0.6) || cleanUnitCost === Math.round((product.unit_price || 0) * 0.7)
+      if (!stockTracked || (isFakeCost && !hasPurchases)) {
+        cleanUnitCost = 0
+      }
 
       return {
         ...product,
+        unit_cost: cleanUnitCost,
         total_in: totalIn,
-        total_out: totalOut,
+        total_out: stockTracked ? totalOut : 0,
         current_stock: currentStock,
         is_unlimited: isUnlimited,
         stock_tracked: stockTracked,
-        movements: filteredMovements
+        movements: data.movements
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
           .slice(0, 20),
       }
@@ -224,7 +239,19 @@ export async function PATCH(request: Request) {
     if (category !== undefined) updates.category = category
     if (unit !== undefined) updates.unit = unit
     if (alert_threshold !== undefined) updates.alert_threshold = alert_threshold
-    if (initial_stock !== undefined) updates.initial_stock = initial_stock
+    if (initial_stock !== undefined) {
+      updates.initial_stock = initial_stock
+      if (initial_stock > 0) {
+        updates.stock_tracked = true
+        updates.tracking_started_at = new Date().toISOString()
+      }
+    }
+    if (body.stock_tracked !== undefined) {
+      updates.stock_tracked = body.stock_tracked
+      if (body.stock_tracked) {
+        updates.tracking_started_at = new Date().toISOString()
+      }
+    }
     if (unit_cost !== undefined) updates.unit_cost = unit_cost
     if (unit_price !== undefined) updates.unit_price = unit_price
     if (multiplier !== undefined) updates.multiplier = multiplier

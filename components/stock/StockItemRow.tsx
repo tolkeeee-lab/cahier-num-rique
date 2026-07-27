@@ -130,10 +130,10 @@ export function StockItemRow({
           {/* Stats */}
           <div className="grid grid-cols-4 gap-2 mb-3">
             {[
-              { label: 'Initial', value: item.initial_stock, color: 'text-gray-700' },
-              { label: 'Entrées', value: `+${item.total_in}`, color: 'text-emerald-700' },
-              { label: 'Sorties', value: `-${item.total_out}`, color: 'text-red-600' },
-              { label: 'Actuel', value: `${item.current_stock} ${item.unit}`, color: colors.text },
+              { label: 'Initial', value: item.stock_tracked ? item.initial_stock : 0, color: 'text-gray-700' },
+              { label: 'Entrées', value: `+${item.stock_tracked ? item.total_in : 0}`, color: 'text-emerald-700' },
+              { label: 'Sorties', value: `-${item.stock_tracked ? item.total_out : 0}`, color: 'text-red-600' },
+              { label: 'Actuel', value: item.stock_tracked ? `${item.current_stock} ${item.unit}` : `0 ${item.unit}`, color: colors.text },
             ].map(s => (
               <div key={s.label} className="text-center">
                 <div className="text-[8px] uppercase font-bold text-gray-400">{s.label}</div>
@@ -142,8 +142,8 @@ export function StockItemRow({
             ))}
           </div>
 
-          {/* Profitabilité & Marge (Masqué pour les employés) */}
-          {canViewFinancialMargins(userRole) && item.unit_price > 0 && item.unit_cost > 0 && (
+          {/* Profitabilité & Marge (Masqué pour les employés ou si stock non suivi) */}
+          {canViewFinancialMargins(userRole) && item.stock_tracked && item.unit_price > 0 && item.unit_cost > 0 && item.unit_cost !== Math.round(item.unit_price * 0.6) && item.unit_cost !== Math.round(item.unit_price * 0.7) && (
             <div className="mb-3 p-2 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between text-xs font-mono">
               <span className="text-amber-800">
                 💰 Marge Unitaire: <strong>{formatPrice(item.unit_price - item.unit_cost)}</strong> ({Math.round(((item.unit_price - item.unit_cost) / item.unit_cost) * 100)}%)
@@ -158,7 +158,7 @@ export function StockItemRow({
 
           {/* Seuil + Prix */}
           <div className="flex gap-4 text-[10px] font-mono mb-3 text-gray-500 flex-wrap">
-            {item.unit_cost > 0 ? (
+            {item.stock_tracked && item.unit_cost > 0 && item.unit_cost !== Math.round(item.unit_price * 0.6) && item.unit_cost !== Math.round(item.unit_price * 0.7) ? (
               <span>Achat: <strong className="text-gray-700">{formatPrice(item.unit_cost)}</strong></span>
             ) : (
               <span className="text-gray-400 italic">Achat: Non renseigné</span>
