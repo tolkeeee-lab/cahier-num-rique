@@ -100,8 +100,13 @@ export function ShoppingListManager({
             p.category.includes('✂️')
           )) return false
 
-          // 3. Exclure si le suivi de stock n'est pas activé (stock_tracked === false)
-          if (p.stock_tracked === false) return false
+          // 3. Exclure si le suivi de stock n'est pas activé (stock_tracked === false ou sans stock initial)
+          const isExplicitlyTracked = p.stock_tracked === true
+          const isExplicitlyUntracked = p.stock_tracked === false
+          const hasInitial = (p.initial_stock || 0) > 0
+          const isTracked = isExplicitlyTracked || (!isExplicitlyUntracked && hasInitial)
+
+          if (!isTracked) return false
 
           // 4. Seuil d'alerte configuré (> 0)
           const threshold = p.alert_threshold ?? 5
