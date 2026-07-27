@@ -2215,31 +2215,6 @@ export default function JournalPage() {
   const filteredSales = journalFilter === 'all' ? sales : sales.filter(s => s.pen_color === journalFilter)
   const filteredAllSales = archiveFilter === 'all' ? allSales : allSales.filter(s => s.pen_color === archiveFilter)
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#141210] flex items-center justify-center">
-        <Loader className="w-8 h-8 text-amber-600 animate-spin" />
-      </div>
-    )
-  }
-
-  if (!user && !localDemo) {
-    return <AuthScreen
-      onBypass={(role) => {
-        setDemoRole(role)
-        // Create a synthetic demo user so mappedUser resolves correctly
-        setUser({
-          id: `demo-${role}-001`,
-          email: `demo-${role}@cahier.local`,
-          full_name: role === 'owner' ? '👑 Démo Propriétaire' : '🙋 Démo Gérant',
-          role: role,
-          shop_id: role === 'owner' ? 'demo-owner-shop' : 'demo-owner-shop'
-        })
-      }}
-      onLoginSuccess={(usr) => setUser(usr)}
-    />
-  }
-
   const activityLabels = useMemo(() => {
     const act = shopActivity || 'boutique'
     if (act === 'particulier') {
@@ -2304,6 +2279,31 @@ export default function JournalPage() {
       }
     }
   }, [shopActivity])
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#141210] flex items-center justify-center">
+        <Loader className="w-8 h-8 text-amber-600 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!user && !localDemo) {
+    return <AuthScreen
+      onBypass={(role) => {
+        setDemoRole(role)
+        // Create a synthetic demo user so mappedUser resolves correctly
+        setUser({
+          id: `demo-${role}-001`,
+          email: `demo-${role}@cahier.local`,
+          full_name: role === 'owner' ? '👑 Démo Propriétaire' : '🙋 Démo Gérant',
+          role: role,
+          shop_id: role === 'owner' ? 'demo-owner-shop' : 'demo-owner-shop'
+        })
+      }}
+      onLoginSuccess={(usr) => setUser(usr)}
+    />
+  }
 
   return (
     <main className="min-h-dvh md:min-h-screen md:py-8 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative overflow-x-hidden">
