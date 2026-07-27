@@ -43,10 +43,26 @@ export function formatPrice(price: number): string {
 }
 
 export function getStockStatus(item: StockItem): StockStatus {
-  if (item.is_unlimited) return 'ok'
-  if (item.stock_tracked === false) return 'untracked'
-  if (item.current_stock <= 0) return 'out'
-  if (item.current_stock <= item.alert_threshold) return 'low'
+  if (item.is_unlimited || item.is_service) return 'ok'
+  if (item.category && (
+    item.category.toLowerCase().includes('prestation') || 
+    item.category.toLowerCase().includes('service') || 
+    item.category.includes('✂️')
+  )) return 'ok'
+
+  // Un produit est "suivi" seulement si le propriétaire a défini un stock initial > 0,
+  // ou s'il y a eu au moins un achat/entrée de stock, ou si stock_tracked est explicitement true.
+  const hasInitial = (item.initial_stock || 0) > 0
+  const hasPurchases = (item.total_in || 0) > 0
+  const isExplicitlyTracked = item.stock_tracked === true
+  const isExplicitlyUntracked = item.stock_tracked === false
+
+  if (isExplicitlyUntracked) return 'untracked'
+  if (!isExplicitlyTracked && !hasInitial && !hasPurchases) return 'untracked'
+
+  const current = item.current_stock ?? 0
+  if (current <= 0) return 'out'
+  if (current <= (item.alert_threshold ?? 5)) return 'low'
   return 'ok'
 }
 

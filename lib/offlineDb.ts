@@ -212,6 +212,9 @@ export interface OfflineProduct {
   created_at: string
   multiplier?: number
   packaging_name?: string
+  stock_tracked?: boolean
+  is_service?: boolean
+  is_unlimited?: boolean
 }
 
 // ─── Clés localStorage ────────────────────────────────────────────────────────

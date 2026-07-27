@@ -199,11 +199,17 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
       const totalOut = filteredMovements.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0)
 
       const mult = p.multiplier || 1
+      const hasInitial = (p.initial_stock || 0) > 0
+      const hasPurchases = totalIn > 0
+      const stockTracked = p.stock_tracked === true || (p.stock_tracked !== false && (hasInitial || hasPurchases))
+      const currentStock = stockTracked ? Math.max(0, ((p.initial_stock || 0) * mult) + totalIn - totalOut) : 0
+
       return { 
         ...p, 
         total_in: totalIn, 
         total_out: totalOut, 
-        current_stock: ((p.initial_stock || 0) * mult) + totalIn - totalOut, 
+        stock_tracked: stockTracked,
+        current_stock: currentStock, 
         movements: filteredMovements 
       }
     })
@@ -227,7 +233,8 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
           id: `orphan_${name}`, shop_id: shopId, name: cleanName, category: '', unit: 'unité',
           alert_threshold: 0, initial_stock: 0, unit_cost: 0, unit_price: 0,
           created_at: '', total_in: data.total_in, total_out: data.total_out,
-          current_stock: data.total_in - data.total_out, movements: data.movements, is_orphan: true,
+          stock_tracked: false,
+          current_stock: 0, movements: data.movements, is_orphan: true,
         }
       })
 
