@@ -351,20 +351,31 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
 
   // ── Données dérivées ─────────────────────────────────────────────────────────
 
+  const [trackModeFilter, setTrackModeFilter] = useState<'ALL' | 'TRACKED' | 'UNTRACKED'>('ALL')
+
   const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', '✂️ Prestations & Services']
   const existingCategories = Array.from(new Set(items.map(i => i.category).filter(Boolean)))
   const allCategories = Array.from(new Set([...defaultCategories, ...existingCategories]))
 
+  const trackedCount = items.filter(i => i.stock_tracked).length
+  const untrackedCount = items.filter(i => !i.stock_tracked).length
+
   const filteredItems = items.filter(i => {
     const matchSearch = !searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchCat = categoryFilter === 'TOUT' || i.category === categoryFilter
-    return matchSearch && matchCat
+    const matchTrack = trackModeFilter === 'ALL'
+      ? true
+      : trackModeFilter === 'TRACKED'
+        ? i.stock_tracked
+        : !i.stock_tracked
+    return matchSearch && matchCat && matchTrack
   })
-  const alertCount = items.filter(i => { const s = getStockStatus(i); return s === 'out' || s === 'low' }).length
-  const stockValue = items.reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_cost || 0), 0)
-  const stockValueSale = items.reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_price || 0), 0)
-  const totalIn = items.reduce((s, i) => s + i.total_in, 0)
-  const totalOut = items.reduce((s, i) => s + i.total_out, 0)
+
+  const alertCount = items.filter(i => i.stock_tracked && (getStockStatus(i) === 'out' || getStockStatus(i) === 'low')).length
+  const stockValue = items.filter(i => i.stock_tracked).reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_cost || 0), 0)
+  const stockValueSale = items.filter(i => i.stock_tracked).reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_price || 0), 0)
+  const totalIn = items.filter(i => i.stock_tracked).reduce((s, i) => s + i.total_in, 0)
+  const totalOut = items.filter(i => i.stock_tracked).reduce((s, i) => s + i.total_out, 0)
 
   if (loading) {
     return (
@@ -450,7 +461,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
 
       {/* ── KPI bar ── */}
       <StockKpiBar
-        items={items}
+        items={items.filter(i => i.stock_tracked)}
         alertCount={alertCount}
         stockValue={stockValue}
         stockValueSale={stockValueSale}
@@ -458,12 +469,14 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
         totalOut={totalOut}
       />
 
-      {/* ── Search + Category filter + Duplicate alert ── */}
+      {/* ── Search + Mode de Suivi + Category filter + Duplicate alert ── */}
       <StockFilterBar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         categoryFilter={categoryFilter}
         setCategoryFilter={setCategoryFilter}
+        trackModeFilter={trackModeFilter}
+        setTrackModeFilter={setTrackModeFilter}
         allCategories={allCategories}
         duplicatePairsCount={duplicatePairs.length}
         firstDuplicatePairNames={
@@ -475,6 +488,9 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
           setActivePairIndex(0)
           setShowMergeModal(true)
         }}
+        trackedCount={trackedCount}
+        untrackedCount={untrackedCount}
+        totalCount={items.length}
       />
 
       {/* ── Product list ── */}
