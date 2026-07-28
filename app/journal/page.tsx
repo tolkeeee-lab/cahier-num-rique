@@ -4156,6 +4156,10 @@ export default function JournalPage() {
                 onClick={() => {
                   setShowAutoLearnModal(false)
                   setAutoLearnData(null)
+                  setRefreshMenuTrigger(p => p + 1)
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new Event('cahier_sales_updated'))
+                  }
                 }}
                 className="flex-1 py-2.5 px-4 border border-amber-300 text-amber-950 text-xs font-bold uppercase rounded-xl hover:bg-amber-50 transition-all"
               >
