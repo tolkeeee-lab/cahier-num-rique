@@ -242,7 +242,7 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
           name: newPlatName.trim(),
           unit_price: priceNum,
           unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
-          initial_stock: 100,
+          initial_stock: 0,
           alert_threshold: 5,
           category: newPlatCat === 'boisson' ? 'Boissons' : newPlatCat === 'cuisine' ? 'Cuisine' : 'Cafétéria'
         })

@@ -744,7 +744,7 @@ export default function JournalPage() {
           name: quickPlatName.trim(),
           unit_price: priceNum,
           unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
-          initial_stock: 100,
+          initial_stock: 0,
           alert_threshold: 5,
           category: dbCategory,
           is_service: (shopActivity === 'prestations' && categoryToSave === 'service') || (shopActivity === 'resto' && categoryToSave === 'cuisine')
@@ -836,7 +836,7 @@ export default function JournalPage() {
             name: item.name,
             unit_price: item.price,
             unit_cost: item.cost,
-            initial_stock: 50,
+            initial_stock: 0,
             alert_threshold: 5,
             category: item.category
           })
@@ -848,7 +848,7 @@ export default function JournalPage() {
           name: item.name,
           unit_price: item.price,
           unit_cost: item.cost,
-          initial_stock: 50,
+          initial_stock: 0,
           alert_threshold: 5,
           category: item.category,
           updated_at: new Date().toISOString()
@@ -4173,7 +4173,7 @@ export default function JournalPage() {
                     category: 'Général',
                     unit: 'pièce',
                     alert_threshold: 5,
-                    initial_stock: 100,
+                    initial_stock: 0,
                     unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
                     unit_price: autoLearnData.price,
                     created_at: new Date().toISOString()
@@ -4193,7 +4193,7 @@ export default function JournalPage() {
                         name: autoLearnData.name,
                         unit_price: autoLearnData.price,
                         unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
-                        initial_stock: 100,
+                        initial_stock: 0,
                         alert_threshold: 5,
                         category: 'Alimentation'
                       })
