@@ -362,16 +362,25 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
   const trackedCount = items.filter(i => i.stock_tracked).length
   const untrackedCount = items.filter(i => !i.stock_tracked).length
 
-  const filteredItems = items.filter(i => {
-    const matchSearch = !searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchCat = categoryFilter === 'TOUT' || i.category === categoryFilter
-    const matchTrack = trackModeFilter === 'ALL'
-      ? true
-      : trackModeFilter === 'TRACKED'
-        ? i.stock_tracked
-        : !i.stock_tracked
-    return matchSearch && matchCat && matchTrack
-  })
+  const filteredItems = items
+    .filter(i => {
+      const matchSearch = !searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchCat = categoryFilter === 'TOUT' || i.category === categoryFilter
+      const matchTrack = trackModeFilter === 'ALL'
+        ? true
+        : trackModeFilter === 'TRACKED'
+          ? i.stock_tracked
+          : !i.stock_tracked
+      return matchSearch && matchCat && matchTrack
+    })
+    .sort((a, b) => {
+      // 1. Priorité aux produits dont le stock est suivi en haut, et non suivis (ventes seules) en bas
+      if (a.stock_tracked !== b.stock_tracked) {
+        return a.stock_tracked ? -1 : 1
+      }
+      // 2. Tri par ordre alphabétique au sein de chaque groupe
+      return a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' })
+    })
 
   const alertCount = items.filter(i => i.stock_tracked && (getStockStatus(i) === 'out' || getStockStatus(i) === 'low')).length
   const stockValue = items.filter(i => i.stock_tracked).reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_cost || 0), 0)

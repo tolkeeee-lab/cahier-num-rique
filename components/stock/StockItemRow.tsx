@@ -127,6 +127,19 @@ export function StockItemRow({
               </div>
             </div>
           )}
+          {!item.is_orphan && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(item)
+              }}
+              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title={`Supprimer « ${item.name} »`}
+            >
+              <Trash2 className="w-4 h-4 text-red-500 hover:text-red-700" />
+            </button>
+          )}
+
           {isExpanded
             ? <ChevronUp className="w-4 h-4 text-gray-400" />
             : <ChevronDown className="w-4 h-4 text-gray-400" />}
