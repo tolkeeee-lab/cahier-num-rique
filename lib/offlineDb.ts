@@ -8,6 +8,8 @@
  * Pour le fallback côté API Route (serveur), voir lib/localDb.ts.
  */
 
+import { normalizeProductName } from './productUtils'
+
 export interface OfflineSale {
   id: string
   shop_id: string
@@ -417,12 +419,14 @@ export function computeOfflineStock(
 
   for (const sale of sales) {
     if (sale.status === 'crossed_out') continue
-    const isIn = sale.type === 'purchase_cash' || sale.type === 'purchase_credit'
+    const isIn = sale.type === 'purchase_cash' || sale.type === 'purchase_credit' || sale.type === 'stock_cash'
     const isOut = sale.type === 'cash_in' || sale.type === 'sale_credit'
     if (!isIn && !isOut) continue
 
     for (const article of sale.articles) {
-      const key = article.name.toLowerCase().trim()
+      if (!article.name) continue
+      const cleanName = normalizeProductName(article.name)
+      const key = cleanName.toLowerCase().trim()
       if (!stockMap[key]) stockMap[key] = { total_in: 0, total_out: 0, movements: [] }
       if (isIn) {
         stockMap[key].total_in += article.quantity
@@ -432,7 +436,7 @@ export function computeOfflineStock(
           type: 'in', 
           quantity: article.quantity, 
           unit_price: article.unit_price, 
-          notes: `${article.quantity} ${article.name} à ${article.unit_price} F` 
+          notes: `${article.quantity} ${cleanName} à ${article.unit_price} F` 
         })
       } else {
         stockMap[key].total_out += article.quantity
@@ -442,7 +446,7 @@ export function computeOfflineStock(
           type: 'out', 
           quantity: article.quantity, 
           unit_price: article.unit_price, 
-          notes: `${article.quantity} ${article.name} à ${article.unit_price} F` 
+          notes: `${article.quantity} ${cleanName} à ${article.unit_price} F` 
         })
       }
     }

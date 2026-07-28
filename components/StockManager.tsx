@@ -116,8 +116,15 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
   const [expressType, setExpressType] = useState<'in' | 'out'>('in')
   const [expressQty, setExpressQty] = useState(1)
   const [expressReason, setExpressReason] = useState('purchase')
+  const [expressUnitCost, setExpressUnitCost] = useState('')
   const [expressNotes, setExpressNotes] = useState('')
   const [adjusting, setAdjusting] = useState(false)
+
+  useEffect(() => {
+    if (expressItem) {
+      setExpressUnitCost(expressItem.unit_cost ? expressItem.unit_cost.toString() : '')
+    }
+  }, [expressItem])
 
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
   const [supplierPhone, setSupplierPhone] = useState('')
@@ -139,6 +146,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
           quantity: expressQty,
           type: expressType,
           reason: expressReason,
+          unitCost: parseInt(expressUnitCost) || 0,
           notes: expressNotes,
         }),
       })
@@ -150,6 +158,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
 
       setExpressItem(null)
       setExpressQty(1)
+      setExpressUnitCost('')
       setExpressNotes('')
       await loadStock()
     } catch (err: any) {
@@ -247,10 +256,11 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
   const buildFromOffline = useCallback(() => {
     const offlineProducts = getOfflineProducts(shopId)
     const stockMap = computeOfflineStock(shopId)
-    const catalogNames = new Set(offlineProducts.map(p => p.name.toLowerCase().trim()))
+    const catalogKeys = new Set(offlineProducts.map(p => normalizeProductName(p.name).toLowerCase().trim()))
 
     const stockItems: StockItem[] = offlineProducts.map(p => {
-      const key = p.name.toLowerCase().trim()
+      const cleanName = normalizeProductName(p.name)
+      const key = cleanName.toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
       
       // Filtrer les mouvements pour n'inclure que ceux après ou égal à la date de création du produit (moins 1 minute de marge)
@@ -266,6 +276,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
       const mult = p.multiplier || 1
       return { 
         ...p, 
+        name: cleanName,
         total_in: totalIn, 
         total_out: totalOut, 
         current_stock: ((p.initial_stock || 0) * mult) + totalIn - totalOut, 
@@ -274,22 +285,11 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     })
 
     const orphanItems: StockItem[] = Object.entries(stockMap)
-      .filter(([name]) => !catalogNames.has(name.toLowerCase().trim()))
-      .map(([name, data]) => {
-        let cleanName = name.trim()
-        const lowerName = cleanName.toLowerCase()
-        if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
-        else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
-        else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
-        else if (/^coca(-cola)?$/i.test(lowerName)) cleanName = 'Coca-Cola'
-        else {
-          cleanName = cleanName.split(/\s+/)
-            .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-            .join(' ')
-        }
-
+      .filter(([rawKey]) => !catalogKeys.has(normalizeProductName(rawKey).toLowerCase().trim()))
+      .map(([rawKey, data]) => {
+        const cleanName = normalizeProductName(rawKey)
         return {
-          id: `orphan_${name}`, shop_id: shopId, name: cleanName, category: '', unit: 'unité',
+          id: `orphan_${rawKey}`, shop_id: shopId, name: cleanName, category: '', unit: 'unité',
           alert_threshold: 0, initial_stock: 0, unit_cost: 0, unit_price: 0,
           created_at: '', total_in: data.total_in, total_out: data.total_out,
           current_stock: data.total_in - data.total_out, movements: data.movements, is_orphan: true,
@@ -1342,6 +1342,26 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
                   )}
                 </select>
               </div>
+
+              {expressType === 'in' && expressReason === 'purchase' && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                  <label className="block text-[10px] font-bold text-amber-900 uppercase">
+                    Prix d'Achat unitaire (FCFA) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    placeholder="Ex: 450"
+                    value={expressUnitCost}
+                    onChange={e => setExpressUnitCost(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-amber-300 rounded-xl font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
+                  />
+                  <p className="text-[9px] font-mono text-amber-800">
+                    Saisissez le prix exact payé au grossiste pour 1 unité.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Notes optionnelles</label>

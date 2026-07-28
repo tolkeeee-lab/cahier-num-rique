@@ -34,8 +34,29 @@ export async function POST(request: Request) {
       personal_use: 'Consommation Personnelle',
     }[reason as string] || reason || 'Ajustement Manuel'
 
-    const saleType = type === 'in' ? 'purchase_cash' : 'cash_in'
-    const fullNotes = `[${reasonLabel}] ${notes ? `${notes} - ` : ''}Par ${employeeName}`
+    const signSymbol = type === 'in' ? '+' : '-'
+    const fullNotes = `[${reasonLabel}] ${signSymbol}${quantity} ${product.name} par ${employeeName}${notes ? ` (${notes})` : ''}`
+
+    // Coût d'achat unitaire effectif fourni par le propriétaire ou pré-existant en base (sans estimation à 60%)
+    const inputUnitCost = typeof body.unitCost === 'number' ? body.unitCost : (parseInt(body.unitCost) || 0)
+    const effectiveUnitCost = inputUnitCost > 0 ? inputUnitCost : (product.unit_cost || 0)
+
+    // Calcul de l'impact financier en caisse :
+    // - Un simple ajustement d'inventaire (inventaire physique) N'IMPACTE PAS le tiroir cash (0 F)
+    // - Un achat réel d'approvisionnement déduit le montant réel (unit_cost * qté)
+    // - Une casse/perte enregistre la valeur d'achat du produit perdu
+    let calculatedAmount = 0
+    if (reason === 'inventory_correction') {
+      calculatedAmount = 0
+    } else if (type === 'in') {
+      calculatedAmount = effectiveUnitCost * quantity
+    } else {
+      calculatedAmount = (reason === 'damage' || reason === 'personal_use')
+        ? effectiveUnitCost * quantity
+        : (product.unit_price || 0) * quantity
+    }
+
+    const saleType = type === 'in' ? 'stock_cash' : 'cash_in'
 
     // 2. Créer l'écriture dans sales
     const { data: sale, error: saleErr } = await supabase
@@ -45,11 +66,12 @@ export async function POST(request: Request) {
         client_name: fullNotes,
         date: todayStr,
         time: timeStr,
-        total_amount: type === 'in' ? (product.unit_cost || 0) * quantity : (product.unit_price || 0) * quantity,
-        paid_amount: type === 'in' ? (product.unit_cost || 0) * quantity : (product.unit_price || 0) * quantity,
+        total_amount: calculatedAmount,
+        paid_amount: calculatedAmount,
         debt_amount: 0,
         status: 'paid',
         type: saleType,
+        pen_color: type === 'in' ? 'green' : 'black',
         notes: fullNotes,
       })
       .select()
@@ -66,15 +88,30 @@ export async function POST(request: Request) {
         product_name: product.name,
         product_name_canonical: product.name,
         quantity: quantity,
-        unit_price: type === 'in' ? (product.unit_cost || 0) : (product.unit_price || 0),
-        subtotal: type === 'in' ? (product.unit_cost || 0) * quantity : (product.unit_price || 0) * quantity,
+        unit_price: type === 'in' ? effectiveUnitCost : (product.unit_price || 0),
+        subtotal: calculatedAmount,
       })
 
     if (articleErr) throw articleErr
 
+    // 4. Mettre à jour la quantité globale en stock du produit
+    const updatePayload: any = {
+      initial_stock: Math.max(0, newStockVal),
+      updated_at: new Date().toISOString()
+    }
+
+    if (effectiveUnitCost > 0) {
+      updatePayload.unit_cost = effectiveUnitCost
+    }
+
+    await supabase
+      .from('products')
+      .update(updatePayload)
+      .eq('id', product.id)
+
     return NextResponse.json({
       success: true,
-      message: `Stock ajusté (${type === 'in' ? '+' : '-'}${quantity} ${product.unit || 'unités'}) pour « ${product.name} ».`,
+      message: `Stock ajusté (${signSymbol}${quantity} ${product.unit || 'unités'}) pour « ${product.name} ».`,
     })
   } catch (err: any) {
     const msg = err instanceof Error ? err.message : String(err)

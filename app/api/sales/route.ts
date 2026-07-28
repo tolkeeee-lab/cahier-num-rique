@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import OpenAI from 'openai'
 import { randomUUID } from 'crypto'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
+import { normalizeProductName } from '@/lib/productUtils'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'mock-key-for-build',
@@ -35,26 +36,7 @@ interface ParsedSale {
 }
 
 function cleanProductName(name: string): string {
-  let clean = name.trim()
-  if (!clean) return ""
-
-  const lower = clean.toLowerCase()
-  if (/^lb(\s*600)?$/i.test(lower)) return "LB"
-  if (/^flag(\s*6002?\s*lb)?$/i.test(lower)) return "Flag"
-  if (/^beufort$/i.test(lower) || /^beaufort$/i.test(lower)) return "Beaufort"
-  if (/^coca(-cola)?$/i.test(lower)) return "Coca-Cola"
-  if (/^possotome|possotomè$/i.test(lower)) return "Eau Possotomè"
-  if (/^colgate|brosse colgate$/i.test(lower)) return "Colgate"
-  if (/^boites?\s+de\s+sardines?$/i.test(lower)) return "Boîte de Sardines"
-  if (/^boites?\s+de\s+tomates?$/i.test(lower)) return "Boîte de Tomate"
-
-  if (clean.length > 3 && (lower.endsWith('s') || lower.endsWith('x')) && !lower.endsWith('ess') && !lower.endsWith('aux')) {
-    clean = clean.substring(0, clean.length - 1)
-  }
-
-  return clean.split(/\s+/)
-    .map(w => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ')
+  return normalizeProductName(name)
 }
 
 // Calcule le solde actuel du tiroir-caisse (Cash)

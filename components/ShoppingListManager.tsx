@@ -45,6 +45,7 @@ export function ShoppingListManager({
 }: ShoppingListManagerProps) {
   const [items, setItems] = useState<ShoppingItem[]>([])
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([])
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([])
   
   // Formulaire ajout manuel
   const [name, setName] = useState('')
@@ -75,6 +76,7 @@ export function ShoppingListManager({
       if (response.ok) {
         const data = await response.json()
         const productsList: Product[] = data.products || []
+        setCatalogProducts(productsList)
         // Filtrer les produits sous ou au niveau du seuil d'alerte
         const alerts = productsList.filter(p => p.initial_stock <= p.alert_threshold)
         setLowStockProducts(alerts)
@@ -498,9 +500,17 @@ export function ShoppingListManager({
                     <input
                       type="text"
                       required
+                      list="catalog-products-list"
                       placeholder="Ex: Cartons Huile Dinor, Sacs Riz..."
                       value={name}
-                      onChange={e => setName(e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value
+                        setName(val)
+                        const match = catalogProducts.find(p => p.name.toLowerCase().trim() === val.trim().toLowerCase())
+                        if (match && match.unit_cost && !unitCost) {
+                          setUnitCost(match.unit_cost.toString())
+                        }
+                      }}
                       className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-250 rounded-xl text-xs font-semibold outline-none focus:border-gray-400"
                     />
                   </div>
@@ -591,9 +601,17 @@ export function ShoppingListManager({
                   <input
                     type="text"
                     required
+                    list="catalog-products-list"
                     placeholder="Ex: Sacs emballage 10kg, Bouteille Gaz..."
                     value={name}
-                    onChange={e => setName(e.target.value)}
+                    onChange={e => {
+                      const val = e.target.value
+                      setName(val)
+                      const match = catalogProducts.find(p => p.name.toLowerCase().trim() === val.trim().toLowerCase())
+                      if (match && match.unit_cost && !unitCost) {
+                        setUnitCost(match.unit_cost.toString())
+                      }
+                    }}
                     className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-200 rounded-xl text-xs outline-none focus:border-gray-400"
                   />
                 </div>
@@ -864,6 +882,15 @@ export function ShoppingListManager({
           )}
         </div>
       </div>
+
+      {/* Datalist d'Autocomplétion du Catalogue Produit Central */}
+      <datalist id="catalog-products-list">
+        {catalogProducts.map(p => (
+          <option key={p.id} value={p.name}>
+            {p.unit_cost ? `${formatPrice(p.unit_cost)} / unité` : p.category ? p.category : ''}
+          </option>
+        ))}
+      </datalist>
     </div>
   )
 }
