@@ -58,7 +58,7 @@ export default function SuperAdminPage() {
   const [adminPassword, setAdminPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState<'shops' | 'users' | 'analytics'>('shops')
+  const [activeTab, setActiveTab] = useState<'shops' | 'users' | 'analytics' | 'raw_data'>('shops')
   
   // Data States
   const [kpis, setKpis] = useState<AdminKPIs | null>(null)
@@ -175,8 +175,8 @@ export default function SuperAdminPage() {
   }
 
   // Export CSV
-  const exportToCSV = (type: 'shops' | 'users' | 'analytics') => {
-    let csvContent = "data:text/csv;charset=utf-8,"
+  const exportToCSV = (type: 'shops' | 'users' | 'analytics' | 'raw_data') => {
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF" // UTF-8 BOM pour Excel
     
     if (type === 'shops') {
       csvContent += "ID Boutique,Nom,Email Proprio,Transactions,Volume Ventes,Solde Caisse,Employes,Date Creation\n"
@@ -188,6 +188,12 @@ export default function SuperAdminPage() {
       users.forEach(u => {
         csvContent += `"${u.id}","${u.shop_id}","${u.name}","${u.email}","${u.role}","${u.created_at.slice(0, 10)}"\n`
       })
+    } else if (type === 'raw_data') {
+      csvContent += "ID Transaction,ID Boutique,Date,Heure,Texte Brut Saisi (Notes),Client,Total FCFA,Payé,Reste Dette,Statut,Type,Couleur Stylo,Articles Détaillés\n"
+      allNetworkSales.forEach(s => {
+        const articlesStr = (s.articles || []).map((a: any) => `${a.quantity || a.quantite}x ${a.name || a.nom} (${a.unit_price || a.prix_unitaire}F)`).join(' | ')
+        csvContent += `"${s.id}","${s.shop_id || ''}","${s.date}","${s.time || ''}","${(s.notes || '').replace(/"/g, '""')}","${s.client || ''}",${s.total || 0},${s.paid || 0},${s.debt || 0},"${s.status || ''}","${s.type || ''}","${s.pen_color || ''}","${articlesStr.replace(/"/g, '""')}"\n`
+      })
     } else {
       csvContent += "ID Transaction,Date,Heure,Client,Total,Statut,Type,Notes,Categorie\n"
       allNetworkSales.forEach(s => {
@@ -198,10 +204,43 @@ export default function SuperAdminPage() {
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
-    link.setAttribute("download", `export_admin_${type}_${new Date().toISOString().slice(0, 10)}.csv`)
+    link.setAttribute("download", `export_donnees_brutes_${type}_${new Date().toISOString().slice(0, 10)}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  // Export JSON complet pour entraînement / analyse IA & NLP
+  const exportRawDataToJSON = () => {
+    const rawDataPayload = allNetworkSales.map(s => ({
+      transaction_id: s.id,
+      shop_id: s.shop_id,
+      created_at: s.created_at,
+      date: s.date,
+      time: s.time,
+      raw_typed_text: s.notes,
+      client_name: s.client,
+      pen_color: s.pen_color,
+      transaction_type: s.type,
+      status: s.status,
+      financials: {
+        total_fcfa: s.total,
+        paid_fcfa: s.paid,
+        debt_fcfa: s.debt
+      },
+      parsed_articles: s.articles || []
+    }))
+
+    const jsonStr = JSON.stringify(rawDataPayload, null, 2)
+    const blob = new Blob([jsonStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `dataset_textes_bruts_nlp_${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   // Filtres de recherche & tri
@@ -415,6 +454,14 @@ export default function SuperAdminPage() {
             >
               📊 Analyses Réseau
             </button>
+            <button
+              onClick={() => { setActiveTab('raw_data'); setSearchQuery('') }}
+              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
+                activeTab === 'raw_data' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-250 text-gray-500 hover:text-gray-850'
+              }`}
+            >
+              📝 Données Brutes ({allNetworkSales.length})
+            </button>
           </div>
 
           <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
@@ -534,6 +581,83 @@ export default function SuperAdminPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          ) : activeTab === 'raw_data' ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-amber-50 p-4 border border-amber-200 rounded-2xl">
+                <div>
+                  <h3 className="font-bold text-sm text-amber-950 flex items-center gap-2">
+                    <span>📝 Dataset des Textes Bruts Saisis par les Caissiers</span>
+                  </h3>
+                  <p className="text-xs text-amber-800 font-sans mt-0.5">
+                    Exportez l'ensemble des phrases vernaculaires saisies pour entraîner l'IA, analyser le langage naturel (NLP) et améliorer les suggestions du site.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => exportToCSV('raw_data')}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Exporter CSV (Excel)</span>
+                  </button>
+                  <button
+                    onClick={exportRawDataToJSON}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Exporter Dataset JSON (IA / NLP)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="min-w-full overflow-x-auto max-h-[480px] overflow-y-auto border border-gray-200 rounded-2xl bg-white shadow-sm">
+                <table className="min-w-full divide-y divide-gray-200 font-sans text-xs border-collapse">
+                  <thead className="bg-gray-50 uppercase text-[9px] font-bold text-gray-400 tracking-wider sticky top-0 z-10 shadow-sm">
+                    <tr>
+                      <th className="px-4 py-3.5 text-left bg-gray-50">Date & Heure</th>
+                      <th className="px-4 py-3.5 text-left bg-gray-50">Code Boutique</th>
+                      <th className="px-4 py-3.5 text-left bg-gray-50">Texte Brut Saisi (Notes)</th>
+                      <th className="px-4 py-3.5 text-left bg-gray-50">Client</th>
+                      <th className="px-4 py-3.5 text-right bg-gray-50">Montant Total</th>
+                      <th className="px-4 py-3.5 text-left bg-gray-50">Articles Extraits</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 text-gray-700 bg-white font-mono">
+                    {allNetworkSales
+                      .filter(s => 
+                        (s.notes || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (s.client || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        (s.shop_id || '').toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map((sale, idx) => (
+                        <tr key={idx} className="hover:bg-amber-50/50 transition-colors">
+                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{sale.date} {sale.time || ''}</td>
+                          <td className="px-4 py-3 font-bold text-gray-600">{sale.shop_id}</td>
+                          <td className="px-4 py-3 font-sans font-bold text-gray-900 bg-amber-50/30 rounded-lg max-w-xs truncate">
+                            {sale.notes || '—'}
+                          </td>
+                          <td className="px-4 py-3 font-sans font-semibold text-gray-800">{sale.client || 'Client anonyme'}</td>
+                          <td className="px-4 py-3 text-right font-bold text-emerald-700">{formatPrice(sale.total || 0)}</td>
+                          <td className="px-4 py-3 font-sans text-xs text-gray-600">
+                            {(sale.articles || []).map((a: any, i: number) => (
+                              <span key={i} className="inline-block bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5 text-[10px] mr-1 mb-1">
+                                {a.quantity || a.quantite}x {a.name || a.nom} ({formatPrice(a.unit_price || a.prix_unitaire || 0)})
+                              </span>
+                            ))}
+                          </td>
+                        </tr>
+                      ))}
+                    {allNetworkSales.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-8 text-center text-gray-400 font-handwritten text-lg font-bold">
+                          Aucune donnée brute enregistrée.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             <div className="min-w-full">

@@ -1,16 +1,20 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X } from 'lucide-react'
+import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X, ClipboardList } from 'lucide-react'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
+import { RequestedProductsManager } from '@/components/RequestedProductsManager'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { AuthScreen } from '@/components/AuthScreen'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { StockManager } from '@/components/StockManager'
 import { SettingsManager } from '@/components/SettingsManager'
+import { CashClosingModal } from '@/components/CashClosingModal'
+import { SyncManager } from '@/components/SyncManager'
+import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
 import {
   generateOfflineId,
   getOfflineSales,
@@ -28,6 +32,7 @@ import {
   getOfflineProducts,
   saveOfflineProduct,
 } from '@/lib/offlineDb'
+import { parseRequestedProductFromNotebookText, recordRequestedProductInStorage } from '@/lib/requestedProductsUtils'
 
 const THEMES: Record<string, {
   filters: Array<{ id: string; label: string; emoji: string }>;
@@ -105,6 +110,20 @@ const getSmartEmojiAndCategory = (name: string, activity: 'resto' | 'boutique' |
       category = 'service'
     } else if (/gel|huile|pommade|shampoing|produit/i.test(lower)) {
       category = 'produit'
+    }
+  } else if (activity === 'particulier') {
+    if (/loyer|électricité|electricite|eau|sodeci|cie|gaz|recharge|canal|abonnement/i.test(lower)) {
+      category = 'foyer'
+      if (emoji === '📦') emoji = '🏠'
+    } else if (/riz|huile|tomate|viande|poisson|marché|marche|legume|nourriture|pain/i.test(lower)) {
+      category = 'alimentaire'
+      if (emoji === '📦') emoji = '🛒'
+    } else if (/scolarité|ecole|fourniture|cahier|tenue|frais/i.test(lower)) {
+      category = 'scolarité'
+      if (emoji === '📦') emoji = '📚'
+    } else if (/tontine|prêt|pret|argent|don/i.test(lower)) {
+      category = 'finance'
+      if (emoji === '📦') emoji = '🤝'
     }
   }
 
@@ -272,9 +291,10 @@ export default function JournalPage() {
         } catch { }
       }
 
-      // Si aucune boutique n'est enregistrée localement, initialiser uniquement avec sa boutique principale
+      // Si aucune boutique n'est enregistrée localement, initialiser avec son activité réelle
+      const userActivity = (mappedUser as any)?.activity || (mappedUser as any)?.user_metadata?.shop_activity || 'boutique'
       const defaultShops = [
-        { id: uShopId, name: 'Mon Point de Vente', activity: 'boutique' }
+        { id: uShopId, name: (mappedUser as any)?.shop_name || 'Mon Point de Vente', activity: userActivity }
       ]
       if (JSON.stringify(userShops) !== JSON.stringify(defaultShops)) {
         setUserShops(defaultShops)
@@ -284,11 +304,11 @@ export default function JournalPage() {
         setSelectedShopId(uShopId)
       }
     }
-  }, [mappedUser?.id, mappedUser?.shop_id, selectedShopId, userShops])
+  }, [mappedUser?.id, mappedUser?.shop_id, selectedShopId, userShops, mappedUser])
 
   const shopId = selectedShopId || mappedUser?.shop_id || 'default-shop'
   const currentShop = userShops.find(s => s.id === shopId)
-  const shopActivity = currentShop?.activity || 'boutique'
+  const shopActivity = currentShop?.activity || (mappedUser as any)?.activity || 'boutique'
   const theme = THEMES[shopActivity] || THEMES.boutique
 
   const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopId)
@@ -304,7 +324,7 @@ export default function JournalPage() {
   const [nosDettes, setNosDettes] = useState(0)
   const [soldeDuJour, setSoldeDuJour] = useState(0)
 
-  const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives' | 'stock' | 'settings' | 'analytics' | 'shopping'>('cahier')
+  const [activeTab, setActiveTab] = useState<'cahier' | 'dettes' | 'trends' | 'archives' | 'stock' | 'settings' | 'analytics' | 'shopping' | 'demandes'>('cahier')
   const [allSales, setAllSales] = useState<Sale[]>([])
   const [journalFilter, setJournalFilter] = useState<FilterId>('all')
   const [archiveFilter, setArchiveFilter] = useState<FilterId>('all')
@@ -317,6 +337,7 @@ export default function JournalPage() {
   const [currentTime, setCurrentTime] = useState('')
 
 
+  const [showCashClosing, setShowCashClosing] = useState(false)
   const [showChangeCalc, setShowChangeCalc] = useState(false)
   const [changeTotal, setChangeTotal] = useState('')
   const [changeReceived, setChangeReceived] = useState('')
@@ -510,22 +531,7 @@ export default function JournalPage() {
               const rawName = p.name || ''
               if (!rawName.trim()) return
 
-              let cleanName = rawName.trim()
-              const lowerName = cleanName.toLowerCase()
-
-              if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
-              else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
-              else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
-              else if (/^coca(-cola)?$/i.test(lowerName)) cleanName = 'Coca-Cola'
-              else if (/^possotome|possotomè$/i.test(lowerName)) cleanName = 'Eau Possotomè'
-              else if (/^colgate|brosse colgate$/i.test(lowerName)) cleanName = 'Colgate'
-              else if (/^boites?\s+de\s+sardines?$/i.test(lowerName)) cleanName = 'Boîte de Sardines'
-              else if (/^boites?\s+de\s+tomates?$/i.test(lowerName)) cleanName = 'Boîte de Tomate'
-              else {
-                cleanName = cleanName.split(/\s+/)
-                  .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                  .join(' ')
-              }
+              let cleanName = getCanonicalProductName(rawName)
 
               // Si ce nom de produit normalisé est dans la liste d'exclusion, on ne l'affiche pas dans le menu tactile
               const cleanLower = cleanName.toLowerCase().trim()
@@ -568,22 +574,7 @@ export default function JournalPage() {
             localProducts.forEach((p: any, idx: number) => {
               const rawName = p.name || ''
               if (!rawName.trim()) return
-              let cleanName = rawName.trim()
-              const lowerName = cleanName.toLowerCase()
-
-              if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
-              else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
-              else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
-              else if (/^coca(-cola)?$/i.test(lowerName)) cleanName = 'Coca-Cola'
-              else if (/^possotome|possotomè$/i.test(lowerName)) cleanName = 'Eau Possotomè'
-              else if (/^colgate|brosse colgate$/i.test(lowerName)) cleanName = 'Colgate'
-              else if (/^boites?\s+de\s+sardines?$/i.test(lowerName)) cleanName = 'Boîte de Sardines'
-              else if (/^boites?\s+de\s+tomates?$/i.test(lowerName)) cleanName = 'Boîte de Tomate'
-              else {
-                cleanName = cleanName.split(/\s+/)
-                  .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                  .join(' ')
-              }
+              let cleanName = getCanonicalProductName(rawName)
 
               if (excludedNames.some(name => name.toLowerCase().trim() === cleanName.toLowerCase().trim())) return
 
@@ -752,10 +743,11 @@ export default function JournalPage() {
         body: JSON.stringify({
           name: quickPlatName.trim(),
           unit_price: priceNum,
-          unit_cost: Math.round(priceNum * 0.6),
+          unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
           initial_stock: 100,
           alert_threshold: 5,
-          category: dbCategory
+          category: dbCategory,
+          is_service: (shopActivity === 'prestations' && categoryToSave === 'service') || (shopActivity === 'resto' && categoryToSave === 'cuisine')
         })
       })
     } catch (err) {
@@ -1345,6 +1337,21 @@ export default function JournalPage() {
       }
     }
 
+    // Remises & Réductions Commerciales (% ou FCFA)
+    const remisePercentRegex = /(?:remise|réduction|reduction|rabais)\s+(\d{1,2})\s*%/i
+    const remiseAmountRegex = /(?:remise|réduction|reduction|rabais)\s+(\d{3,6})(?:\s*f|\s*fcfa)?/i
+    const percentMatch = text.match(remisePercentRegex)
+    const amountRemiseMatch = text.match(remiseAmountRegex)
+
+    if (percentMatch) {
+      const pct = parseInt(percentMatch[1], 10)
+      const discount = Math.round((totalFacture * pct) / 100)
+      totalFacture = Math.max(0, totalFacture - discount)
+    } else if (amountRemiseMatch) {
+      const discount = parseInt(amountRemiseMatch[1], 10)
+      totalFacture = Math.max(0, totalFacture - discount)
+    }
+
     let nomClient = "Client anonyme"
     const clientRegex = /(?:pour|de|client|grossiste|fournisseur|a)\s+([A-Za-z]+)/i
     const clientMatch = text.match(clientRegex)
@@ -1401,6 +1408,12 @@ export default function JournalPage() {
     const shopId = mappedUser.shop_id
     const color = bodyData.penColor
     const text = bodyData.text
+
+    // Détection automatique d'une demande client saisie au cahier
+    const reqMatch = parseRequestedProductFromNotebookText(text.trim())
+    if (reqMatch && reqMatch.isRequestedProduct) {
+      recordRequestedProductInStorage(shopId, reqMatch.cleanName, reqMatch.price)
+    }
 
     let parsed: any = null
     if (bodyData.overrideData) {
@@ -2301,6 +2314,71 @@ export default function JournalPage() {
   const filteredSales = journalFilter === 'all' ? sales : sales.filter(s => s.pen_color === journalFilter)
   const filteredAllSales = archiveFilter === 'all' ? allSales : allSales.filter(s => s.pen_color === archiveFilter)
 
+  const activityLabels = useMemo(() => {
+    const act = shopActivity || 'boutique'
+    if (act === 'particulier') {
+      return {
+        title: 'Cahier du Foyer & Budget',
+        spine: 'CAHIER DU FOYER & BUDGET',
+        soldeJour: '☀️ Solde du jour',
+        tiroirCash: '💰 Portefeuille / Budget',
+        creditsDehors: '🔴 Prêts accordés',
+        nosDettes: '🟣 Mes Dettes (Boutique/Factures)',
+        tabCahier: 'Mon Foyer (Budget)',
+        tabDettes: 'Prêts & Emprunts',
+        tabTrends: 'Analyse Budget',
+        tabStock: 'Réserve Foyer',
+        tabShopping: 'Liste de Marché',
+        tabDemandes: 'Achats Souhaités',
+      }
+    } else if (act === 'resto') {
+      return {
+        title: 'Cahier de Caisse Resto & Bar',
+        spine: 'COMPAGNON DE CUISINE & CAISSE',
+        soldeJour: '☀️ Recette du jour',
+        tiroirCash: '💰 Caisse Resto',
+        creditsDehors: '🔴 Arriérés Clients',
+        nosDettes: '🟣 Dettes Fournisseurs',
+        tabCahier: 'Mon Cahier Resto',
+        tabDettes: 'Carnet des Dettes',
+        tabTrends: 'Analyse Ventes',
+        tabStock: 'Cuisine & Bar',
+        tabShopping: 'Ravitaillement Cuisine',
+        tabDemandes: 'Plats & Demandes',
+      }
+    } else if (act === 'prestations') {
+      return {
+        title: 'Cahier des Prestations & Services',
+        spine: 'CAHIER DE CAISSE SERVICES',
+        soldeJour: '☀️ Recette Services',
+        tiroirCash: '💰 Caisse Services',
+        creditsDehors: '🔴 Crans & Reste à Payer',
+        nosDettes: '🟣 Dettes Matériel',
+        tabCahier: 'Mes Prestations',
+        tabDettes: 'Carnet des Dettes',
+        tabTrends: 'Analyse Services',
+        tabStock: 'Produits & Matériel',
+        tabShopping: 'Achats Fournitures',
+        tabDemandes: 'Services Demandés',
+      }
+    } else {
+      return {
+        title: 'Cahier de Caisse Intelligent',
+        spine: 'CAHIER DE CAISSE INTELLIGENT',
+        soldeJour: '☀️ Aujourd\'hui',
+        tiroirCash: '💰 Tiroir Cash',
+        creditsDehors: '🔴 Crédits dehors',
+        nosDettes: '🟣 Nos Dettes',
+        tabCahier: 'Mon Cahier',
+        tabDettes: 'Livre des Dettes',
+        tabTrends: 'Analyse Marché',
+        tabStock: 'Stock',
+        tabShopping: 'Courses',
+        tabDemandes: 'Produits Demandés',
+      }
+    }
+  }, [shopActivity])
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#141210] flex items-center justify-center">
@@ -2345,7 +2423,7 @@ export default function JournalPage() {
 
             {/* Vertical gold letter spine title */}
             <div className="font-extrabold text-[7px] md:text-[9px] text-[#f59e0b] font-sans tracking-[0.2em] md:tracking-[0.4em] uppercase select-none my-auto whitespace-nowrap [writing-mode:vertical-lr] rotate-180 text-center opacity-85">
-              Cahier de Caisse Intelligent
+              {activityLabels.spine}
             </div>
 
             {/* Middle brass medallion */}
@@ -2378,11 +2456,11 @@ export default function JournalPage() {
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="hidden md:inline text-xl md:text-3xl">📖</span>
                   <h1 className="hidden md:block text-base md:text-2xl font-bold text-gray-900 font-handwritten truncate">
-                    Cahier de Caisse Intelligent
+                    {activityLabels.title}
                   </h1>
                   {/* Sélecteur Multi-Boutique / Point de Vente Proprio */}
                   <div className="flex items-center gap-1 bg-amber-100 bg-opacity-80 border border-amber-300 rounded-2xl px-2 py-0.5 select-none flex-shrink-0 shadow-sm relative z-10">
-                    <span className="text-xs">🏬</span>
+                    <span className="text-xs">{shopActivity === 'resto' ? '🍲' : shopActivity === 'prestations' ? '✂️' : shopActivity === 'particulier' ? '🏠' : '🏬'}</span>
                     <select
                       value={shopId}
                       onChange={(e) => {
@@ -2396,11 +2474,11 @@ export default function JournalPage() {
                     >
                       {userShops.map(s => (
                         <option key={s.id} value={s.id} className="bg-white text-gray-900 font-sans">
-                          {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : '🏬 Boutique'})
+                          {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : s.activity === 'particulier' ? '🏠 Particulier' : '🏬 Boutique'})
                         </option>
                       ))}
                       <option value="ADD_NEW_SHOP" className="bg-amber-50 font-bold text-amber-900">
-                        ➕ Ajouter un Point de Vente...
+                        ➕ Ajouter un Point de Vente / Foyer...
                       </option>
                     </select>
                   </div>
@@ -2480,7 +2558,7 @@ export default function JournalPage() {
                     ? 'bg-[#f0f9ff] border-sky-300'
                     : 'bg-[#fff5f5] border-rose-300'
                   }`}>
-                  <span className="text-[8px] font-bold text-sky-700 uppercase tracking-wide whitespace-nowrap">☀️ Aujourd'hui</span>
+                  <span className="text-[8px] font-bold text-sky-700 uppercase tracking-wide whitespace-nowrap">{activityLabels.soldeJour}</span>
                   <span className={`font-mono text-sm font-bold mt-0.5 whitespace-nowrap ${soldeDuJour >= 0 ? 'text-sky-900' : 'text-rose-700'
                     }`}>
                     {soldeDuJour >= 0 ? '+' : ''}{formatPrice(soldeDuJour)}
@@ -2489,7 +2567,7 @@ export default function JournalPage() {
                 {/* Tiroir cash global */}
                 <div className="bg-[#fffdf9] border border-emerald-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wide whitespace-nowrap">💰 Tiroir Cash</span>
+                    <span className="text-[8px] font-bold text-emerald-700 uppercase tracking-wide whitespace-nowrap">{activityLabels.tiroirCash}</span>
                     {mappedUser?.role !== 'employee' && (
                       <button
                         type="button"
@@ -2502,58 +2580,67 @@ export default function JournalPage() {
                   </div>
                   <span className="font-mono text-sm font-bold text-emerald-950 mt-0.5 whitespace-nowrap">{formatPrice(tiroirCaisse)}</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCashClosing(true)}
+                  className="bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-xl px-3 py-2 flex items-center gap-1.5 shadow-md flex-shrink-0 transition-transform hover:scale-105 active:scale-95 cursor-pointer text-xs"
+                  title="Effectuer le bilan et la clôture de caisse journalière (Z)"
+                >
+                  <span>📊</span>
+                  <span className="font-bold uppercase tracking-wider text-[10px]">Clôture Z</span>
+                </button>
                 <div className="bg-[#fffdf9] border border-rose-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
-                  <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wide whitespace-nowrap">🔴 Crédits dehors</span>
+                  <span className="text-[8px] font-bold text-rose-700 uppercase tracking-wide whitespace-nowrap">{activityLabels.creditsDehors}</span>
                   <span className="font-mono text-sm font-bold text-rose-950 mt-0.5 whitespace-nowrap">{formatPrice(argentDehors)}</span>
                 </div>
                 <div className="bg-[#fffdf9] border border-purple-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
-                  <span className="text-[8px] font-bold text-purple-700 uppercase tracking-wide whitespace-nowrap">🟣 Nos Dettes</span>
+                  <span className="text-[8px] font-bold text-purple-700 uppercase tracking-wide whitespace-nowrap">{activityLabels.nosDettes}</span>
                   <span className="font-mono text-sm font-bold text-purple-950 mt-0.5 whitespace-nowrap">{formatPrice(nosDettes)}</span>
                 </div>
               </div>
             </div>
 
             {/* In-page horizontal tab bar — scrollable, matches desktop look inside the page */}
-            <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-200 bg-[#f7f3ea] select-none flex-shrink-0">
+            <div className="flex overflow-x-auto border-b border-gray-200 bg-[#f7f3ea] select-none flex-shrink-0 px-1 py-0.5 space-x-1 scrollbar-hide">
               <button
                 onClick={() => setActiveTab('cahier')}
-                className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'cahier'
-                    ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'cahier'
+                    ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
                     : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
                   }`}
               >
                 <Notebook className="w-3.5 h-3.5" />
-                Mon Cahier
+                {activityLabels.tabCahier}
               </button>
               {mappedUser?.role !== 'employee' && (
                 <button
                   onClick={() => setActiveTab('dettes')}
-                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'dettes'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'dettes'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
                       : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
                     }`}
                 >
                   <BookText className="w-3.5 h-3.5" />
-                  Livre des Dettes
+                  {activityLabels.tabDettes}
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
                 <button
                   onClick={() => setActiveTab('trends')}
-                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'trends'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'trends'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
                       : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
                     }`}
                 >
                   <BarChart3 className="w-3.5 h-3.5" />
-                  Analyse Marché
+                  {activityLabels.tabTrends}
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
                 <button
                   onClick={() => setActiveTab('archives')}
-                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'archives'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'archives'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
                       : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
                     }`}
                 >
@@ -2564,32 +2651,44 @@ export default function JournalPage() {
               {mappedUser?.role !== 'employee' && (
                 <button
                   onClick={() => setActiveTab('stock')}
-                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'stock'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'stock'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
                       : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
                     }`}
                 >
                   <Package className="w-3.5 h-3.5" />
-                  Stock
+                  {activityLabels.tabStock}
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
                 <button
                   onClick={() => setActiveTab('shopping')}
-                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'shopping'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'shopping'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
                       : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
                     }`}
                 >
                   <ShoppingCart className="w-3.5 h-3.5" />
-                  Courses
+                  {activityLabels.tabShopping}
+                </button>
+              )}
+              {mappedUser?.role !== 'employee' && (
+                <button
+                  onClick={() => setActiveTab('demandes')}
+                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'demandes'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
+                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
+                    }`}
+                >
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  {activityLabels.tabDemandes}
                 </button>
               )}
               {mappedUser?.role !== 'employee' && (
                 <button
                   onClick={() => setActiveTab('analytics')}
-                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'analytics'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'analytics'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
                       : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
                     }`}
                 >
@@ -2600,8 +2699,8 @@ export default function JournalPage() {
               {mappedUser?.role !== 'employee' && (
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className={`flex items-center gap-1.5 px-4 py-3 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'settings'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2]'
+                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'settings'
+                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
                       : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
                     }`}
                 >
@@ -2616,39 +2715,6 @@ export default function JournalPage() {
 
               {activeTab === 'cahier' && (
                 <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden relative">
-
-                  {/* Pen selector — compact circles on mobile, pills on desktop */}
-                  <div className="px-3 md:px-6 py-2 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-4 bg-white bg-opacity-40 select-none z-10 overflow-x-auto scrollbar-hide">
-                    <span className="hidden md:block text-xs font-bold text-gray-500 font-mono tracking-wider flex-shrink-0">
-                      🖊️ STYLO BIC :
-                    </span>
-                    <div className="flex gap-2 md:gap-2 flex-nowrap">
-                      {PENS.map((pen) => {
-                        const isSelected = selectedPen === pen.id
-                        return (
-                          <button
-                            key={pen.id}
-                            type="button"
-                            title={pen.name}
-                            onClick={() => { setSelectedPen(pen.id); setJournalFilter(pen.id as FilterId) }}
-                            className={`flex items-center gap-1.5 transition-all flex-shrink-0 ${isSelected
-                                ? `${pen.bg} ${pen.border} text-white shadow-sm scale-105`
-                                : 'bg-white bg-opacity-65 border-gray-200 text-gray-600 hover:bg-white'
-                              } 
-                            md:px-3 md:py-1 md:rounded-full md:border md:text-[10px] md:font-bold md:tracking-wide
-                            px-2.5 py-2.5 rounded-full border`}
-                          >
-                            <span className={`w-2.5 h-2.5 md:w-2 md:h-2 rounded-full flex-shrink-0 ${pen.dotBg}`}></span>
-                            <span className="hidden md:inline text-[10px] font-bold tracking-wide">{pen.name}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {/* Show current pen label on mobile */}
-                    <span className="md:hidden text-[10px] font-bold text-gray-600 flex-shrink-0 ml-1">
-                      {PENS.find(p => p.id === selectedPen)?.name}
-                    </span>
-                  </div>
 
                   {/* ── Barre de filtre par type d'écriture ── */}
                   <div className="px-3 md:px-6 py-1.5 border-b border-gray-200 flex items-center gap-2 bg-[#f5f1e8] select-none overflow-x-auto scrollbar-hide flex-shrink-0">
@@ -3151,10 +3217,10 @@ export default function JournalPage() {
 
                   <div className="border-b border-dashed border-sky-300 border-opacity-40 pb-4 mb-6">
                     <h2 className="text-3xl font-bold text-gray-900 font-handwritten">
-                      Statistiques du Marché & Éléments Structurés
+                      {shopActivity === 'particulier' ? 'Statistiques du Foyer & Budget' : shopActivity === 'resto' ? 'Statistiques Cuisine & Bar' : shopActivity === 'prestations' ? 'Statistiques Prestations & Services' : 'Statistiques du Marché & Éléments Structurés'}
                     </h2>
                     <p className="text-xs text-gray-400 mt-1 font-mono uppercase tracking-wider">
-                      COLLECTE DE TENDANCES (ARRIÈRE-PLAN)
+                      {shopActivity === 'particulier' ? 'SUIVI DES DÉPENSES ET BUDGET DU MÉNAGE' : shopActivity === 'resto' ? 'VENTES & ROTATION DU MENU' : shopActivity === 'prestations' ? 'ACTIVITÉ DES SERVICES ET CLIENTS' : 'COLLECTE DE TENDANCES (ARRIÈRE-PLAN)'}
                     </p>
                   </div>
 
@@ -3165,7 +3231,7 @@ export default function JournalPage() {
                     <div className="lg:col-span-6 space-y-6">
                       <div>
                         <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 font-sans">
-                          📊 RÉPARTITION DE L'ACTIVITÉ (VOLUME)
+                          {shopActivity === 'particulier' ? '📊 RÉPARTITION DES DÉPENSES (MÉNAgE)' : shopActivity === 'resto' ? '📊 RÉPARTITION DES RECETTES (RESTO)' : shopActivity === 'prestations' ? '📊 RÉPARTITION DES PRESTATIONS' : '📊 RÉPARTITION DE L\'ACTIVITÉ (VOLUME)'}
                         </h3>
                       </div>
 
@@ -3196,7 +3262,7 @@ export default function JournalPage() {
                     <div className="lg:col-span-6 space-y-6">
                       <div>
                         <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 font-sans">
-                          📦 TOP MARCHANDISES ÉMERGENTES
+                          {shopActivity === 'particulier' ? '🏠 TOP POSTES & DÉPENSES DE LA MAISON' : shopActivity === 'resto' ? '🍲 TOP PLATS & BOISSONS DU RESTO' : shopActivity === 'prestations' ? '✂️ TOP SERVICES RÉALISÉS' : '📦 TOP MARCHANDISES ÉMERGENTES'}
                         </h3>
                       </div>
 
@@ -3347,7 +3413,7 @@ export default function JournalPage() {
 
               {activeTab === 'stock' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
-                  <StockManager shopId={mappedUser?.shop_id} onError={handleError} />
+                  <StockManager shopId={mappedUser?.shop_id} userRole={mappedUser?.role} onError={handleError} />
                 </div>
               )}
 
@@ -3361,9 +3427,35 @@ export default function JournalPage() {
                 </div>
               )}
 
+              {activeTab === 'demandes' && (
+                <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
+                  <RequestedProductsManager
+                    shopId={mappedUser?.shop_id || 'default-shop'}
+                    userRole={mappedUser?.role}
+                  />
+                </div>
+              )}
+
               {activeTab === 'settings' && mappedUser?.role !== 'employee' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
-                  <SettingsManager shopId={mappedUser?.shop_id} userEmail={mappedUser?.email} userShops={userShops} onError={handleError} />
+                  <SettingsManager 
+                    shopId={mappedUser?.shop_id} 
+                    userEmail={mappedUser?.email} 
+                    userShops={userShops} 
+                    onError={handleError} 
+                    onUpdateShopActivity={(sId, newActivity) => {
+                      setUserShops(prev => {
+                        const updated = prev.map(s => s.id === sId ? { ...s, activity: newActivity } : s)
+                        if (mappedUser?.id) {
+                          localStorage.setItem(`cahier_user_shops_${mappedUser.id}`, JSON.stringify(updated))
+                        }
+                        return updated
+                      })
+                    }}
+                    onResetShopData={() => {
+                      window.location.reload()
+                    }}
+                  />
                 </div>
               )}
 
@@ -4082,7 +4174,7 @@ export default function JournalPage() {
                     unit: 'pièce',
                     alert_threshold: 5,
                     initial_stock: 100,
-                    unit_cost: Math.round(autoLearnData.price * 0.7),
+                    unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
                     unit_price: autoLearnData.price,
                     created_at: new Date().toISOString()
                   })
@@ -4100,7 +4192,7 @@ export default function JournalPage() {
                       body: JSON.stringify({
                         name: autoLearnData.name,
                         unit_price: autoLearnData.price,
-                        unit_cost: Math.round(autoLearnData.price * 0.7),
+                        unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
                         initial_stock: 100,
                         alert_threshold: 5,
                         category: 'Alimentation'
@@ -4127,6 +4219,17 @@ export default function JournalPage() {
       <footer className="text-center text-[10px] text-[#8e857b]/60 font-mono py-2 uppercase tracking-widest mt-auto z-10 select-none">
         CAHIER NO. 200 • WEST AFRICA MARKET RD.
       </footer>
+
+      {/* Service Sync en arrière-plan */}
+      <SyncManager shopId={shopId} />
+
+      {/* Modale de Clôture de Caisse Journalière (Z de Caisse) */}
+      <CashClosingModal
+        isOpen={showCashClosing}
+        onClose={() => setShowCashClosing(false)}
+        sales={sales}
+        shopName={currentShop?.name || 'Mon Point de Vente'}
+      />
 
     </main>
   )

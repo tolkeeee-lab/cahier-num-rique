@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Search, Plus, ChevronRight, AlertCircle, Loader } from 'lucide-react'
+import { Search, Plus, ChevronRight, AlertCircle, Loader, Share2 } from 'lucide-react'
 
 interface HistoryItem {
   id: string
@@ -305,13 +305,32 @@ export function DebtsBook({ onRefreshTotals, onError, shopId }: DebtsBookProps) 
                   </h3>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-[10px] uppercase font-mono tracking-wider text-gray-400">
-                  {activeSubTab === 'supplier' ? "Somme qu'on lui doit" : "Somme qu'il nous doit"}
-                </span>
-                <div className={`text-lg font-bold font-mono mt-0.5 ${selectedEntity.amount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {formatPrice(selectedEntity.amount)}
+              <div className="flex items-center gap-3 text-right">
+                <div>
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-gray-400">
+                    {activeSubTab === 'supplier' ? "Somme qu'on lui doit" : "Somme qu'il nous doit"}
+                  </span>
+                  <div className={`text-lg font-bold font-mono mt-0.5 ${selectedEntity.amount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {formatPrice(selectedEntity.amount)}
+                  </div>
                 </div>
+
+                {selectedEntity.amount > 0 && (
+                  <a
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                      activeSubTab === 'client'
+                        ? `Bonjour ${selectedEntity.name} 👋,\n\nSauf erreur de notre part, votre solde débiteur dans notre commerce s'élève à *${formatPrice(selectedEntity.amount)}*.\n\nMerci de bien vouloir effectuer votre règlement à votre convenance (espèces ou Mobile Money).\nMerci pour votre confiance ! 🙏`
+                        : `Bonjour ${selectedEntity.name} 👋,\n\nNous reprenons contact concernant notre solde envers vous de *${formatPrice(selectedEntity.amount)}*.\nLe paiement sera effectué selon nos engagements convenus.\nMerci bien !`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Envoyer un rappel de solde par WhatsApp"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Relancer WhatsApp</span>
+                  </a>
+                )}
               </div>
             </div>
 

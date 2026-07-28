@@ -249,12 +249,15 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
       case 'sale_credit': return 'CRÉDIT CLIENT'
       case 'payment_client': return 'PAIEMENT CLIENT'
       case 'payment_supplier': return 'PAIEMENT GROSSISTE'
+      case 'client_request': return '📋 DEMANDE CLIENT'
       default: return 'VENTE'
     }
   }
 
   const getTypeBadgeStyle = (type: string) => {
     switch (type) {
+      case 'client_request':
+        return 'bg-amber-100 text-amber-900 border-amber-300'
       case 'cash_in':
       case 'payment_client':
         return 'bg-blue-100 text-blue-800 border-blue-200'

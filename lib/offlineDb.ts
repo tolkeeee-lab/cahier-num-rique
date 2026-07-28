@@ -1,5 +1,5 @@
 /**
- * offlineDb.ts — Couche d'abstraction localStorage côté CLIENT
+ * offlineDb.ts — Couche d'abstraction locale (localStorage + IndexedDB) côté CLIENT
  *
  * Ce module centralise toutes les opérations de persistance locale
  * pour le mode hors-ligne du Cahier Numérique.
@@ -8,6 +8,15 @@
  * Pour le fallback côté API Route (serveur), voir lib/localDb.ts.
  */
 
+<<<<<<< HEAD
+=======
+import {
+  idbGetSales, idbSaveSale, idbReplaceSales,
+  idbGetProducts, idbSaveProduct, idbReplaceProducts, idbDeleteProduct,
+  migrateLocalStorageToIndexedDB
+} from './indexedDb'
+import { getCanonicalProductName } from './smartProductNormalizer'
+>>>>>>> f7aaf2d
 import { normalizeProductName } from './productUtils'
 
 export interface OfflineSale {
@@ -207,6 +216,9 @@ export interface OfflineProduct {
   created_at: string
   multiplier?: number
   packaging_name?: string
+  stock_tracked?: boolean
+  is_service?: boolean
+  is_unlimited?: boolean
 }
 
 // ─── Clés localStorage ────────────────────────────────────────────────────────
@@ -238,13 +250,11 @@ function writeJson<T>(key: string, value: T): void {
 
 /**
  * Génère un UUID v4 compatible navigateur.
- * Utilise `crypto.randomUUID()` si disponible, sinon fallback manuel.
  */
 export function generateOfflineId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
   }
-  // Fallback pour navigateurs très anciens
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
     const v = c === 'x' ? r : (r & 0x3) | 0x8
@@ -254,12 +264,19 @@ export function generateOfflineId(): string {
 
 // ─── Opérations sur les Ventes ────────────────────────────────────────────────
 
-/** Retourne toutes les ventes stockées localement pour une boutique. */
 export function getOfflineSales(shopId: string): OfflineSale[] {
+  if (typeof window !== 'undefined') {
+    migrateLocalStorageToIndexedDB(shopId).catch(() => {})
+  }
   return readJson<OfflineSale[]>(salesKey(shopId), [])
 }
 
-/** Sauvegarde une nouvelle vente dans le cache local. */
+export async function getOfflineSalesAsync(shopId: string): Promise<OfflineSale[]> {
+  const sales = await idbGetSales(shopId)
+  if (sales && sales.length > 0) return sales
+  return getOfflineSales(shopId)
+}
+
 export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
   const sales = getOfflineSales(shopId)
   if (sale.type === 'cash_out' && !sale.category) {
@@ -274,9 +291,9 @@ export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
   }
   sales.push(sale)
   writeJson(salesKey(shopId), sales)
+  idbSaveSale(sale).catch(() => {})
 }
 
-/** Met à jour une vente existante dans le cache local (ex: statut crossed_out). */
 export function updateOfflineSale(
   shopId: string,
   saleId: string,
@@ -287,25 +304,23 @@ export function updateOfflineSale(
   if (idx !== -1) {
     sales[idx] = { ...sales[idx], ...patch }
     writeJson(salesKey(shopId), sales)
+    idbSaveSale(sales[idx]).catch(() => {})
   }
 }
 
-/** Remplace entièrement le cache des ventes (utilisé après une sync réseau réussie). */
 export function replaceOfflineSales(shopId: string, sales: OfflineSale[]): void {
   writeJson(salesKey(shopId), sales)
+  idbReplaceSales(shopId, sales).catch(() => {})
 }
 
-/** Retourne uniquement les ventes qui n'ont pas encore été synchronisées avec Supabase. */
 export function getPendingSync(shopId: string): OfflineSale[] {
   return getOfflineSales(shopId).filter((s) => s.is_synced === false)
 }
 
-/** Marque une vente comme synchronisée avec succès. */
 export function markAsSynced(shopId: string, saleId: string): void {
   updateOfflineSale(shopId, saleId, { is_synced: true, sync_error: undefined })
 }
 
-/** Marque une vente avec une erreur de synchronisation. */
 export function markSyncError(shopId: string, saleId: string, error: string): void {
   updateOfflineSale(shopId, saleId, { sync_error: error })
 }
@@ -366,7 +381,6 @@ export function addOrUpdateOfflineSupplierDebt(
 
 // ─── Statistiques ─────────────────────────────────────────────────────────────
 
-/** Retourne un résumé de l'état du cache hors-ligne. */
 export function getOfflineStats(shopId: string): {
   totalSales: number
   pendingSync: number
@@ -383,11 +397,21 @@ export function getOfflineStats(shopId: string): {
 // ─── Opérations sur les Produits (Catalogue Stock) ───────────────────────────
 
 export function getOfflineProducts(shopId: string): OfflineProduct[] {
+  if (typeof window !== 'undefined') {
+    migrateLocalStorageToIndexedDB(shopId).catch(() => {})
+  }
   return readJson<OfflineProduct[]>(productsKey(shopId), [])
+}
+
+export async function getOfflineProductsAsync(shopId: string): Promise<OfflineProduct[]> {
+  const products = await idbGetProducts(shopId)
+  if (products && products.length > 0) return products
+  return getOfflineProducts(shopId)
 }
 
 export function replaceOfflineProducts(shopId: string, products: OfflineProduct[]): void {
   writeJson(productsKey(shopId), products)
+  idbReplaceProducts(shopId, products).catch(() => {})
 }
 
 export function saveOfflineProduct(shopId: string, product: OfflineProduct): void {
@@ -399,18 +423,17 @@ export function saveOfflineProduct(shopId: string, product: OfflineProduct): voi
     products.push(product)
   }
   writeJson(productsKey(shopId), products)
+  idbSaveProduct(product).catch(() => {})
 }
 
 export function deleteOfflineProduct(shopId: string, productId: string): void {
   const products = getOfflineProducts(shopId).filter((p) => p.id !== productId)
   writeJson(productsKey(shopId), products)
+  idbDeleteProduct(productId).catch(() => {})
 }
 
-/**
- * Calcule les niveaux de stock depuis les ventes hors-ligne.
- * Entrées = purchase_cash / purchase_credit
- * Sorties = cash_in / sale_credit
- */
+// ─── Calcul du stock offline ──────────────────────────────────────────────────
+
 export function computeOfflineStock(
   shopId: string
 ): Record<string, { total_in: number; total_out: number; movements: Array<{ date: string; created_at: string; type: 'in' | 'out'; quantity: number; unit_price: number; notes: string }> }> {
@@ -454,4 +477,3 @@ export function computeOfflineStock(
 
   return stockMap
 }
-

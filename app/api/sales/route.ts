@@ -79,7 +79,9 @@ function calculateCash(list: any[]): number {
 async function feedMarketKnowledge(
   articles: Array<{ nom: string; prix_unitaire: number; [key: string]: any }>,
   transactionType: string,
-  _shopId: string
+  _shopId: string,
+  country: string = 'CI',
+  city: string | null = null
 ) {
   if (!isSupabaseConfigured()) return
 
@@ -96,8 +98,8 @@ async function feedMarketKnowledge(
       p_product_name: name.toLowerCase(),
       p_unit_price: isSale ? price : 0,
       p_unit_cost: isPurchase ? price : 0,
-      p_country: 'CI', // TODO: dériver du shop_id ou profil boutique
-      p_city: null      // TODO: ajouter la ville dans le profil boutique
+      p_country: country || 'CI',
+      p_city: city || null
     })
   }
 }
@@ -107,6 +109,8 @@ export async function POST(request: NextRequest) {
     const { text, penColor, overrideData } = await request.json()
     const shopId = request.headers.get('x-shop-id') || 'default-shop'
     const shopActivity = request.headers.get('x-shop-activity') || 'boutique'
+    const shopCountry = request.headers.get('x-shop-country') || 'CI'
+    const shopCity = request.headers.get('x-shop-city') || null
 
     if ((!text || typeof text !== 'string' || text.trim().length === 0) && !overrideData) {
       return NextResponse.json(
@@ -163,7 +167,18 @@ export async function POST(request: NextRequest) {
 
     // Forcer en Achat Stock (purchase_cash / purchase_credit) si le texte commence par "stock" ou "achat"
     const lowercaseText = text.trim().toLowerCase()
-    if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
+    const isDemandeClient = /^(demande|client demande|demande client|manque|besoin|réclamation|reclamation)\b/i.test(lowercaseText)
+
+    if (isDemandeClient) {
+      type = 'client_request'
+      if (parsedData) {
+        parsedData.total_facture = 0
+        parsedData.montant_paye = 0
+        parsedData.montant_dette = 0
+        parsedData.nom_client = "Demande Client"
+        parsedData.categorie = "Demande Client"
+      }
+    } else if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
       if (type === 'cash_in' || type === 'sale_credit') {
         type = 'purchase_cash'
       }
@@ -370,7 +385,7 @@ export async function POST(request: NextRequest) {
                       shop_id: shopId,
                       name: cleanName,
                       unit_price: article.prix_unitaire || 0,
-                      unit_cost: Math.round((article.prix_unitaire || 0) * 0.6),
+                      unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
                       initial_stock: 0,
                       alert_threshold: 5,
                       category: dbCategory,
@@ -521,7 +536,7 @@ export async function POST(request: NextRequest) {
         // ─── ALIMENTATION DE LA BASE DE CONNAISSANCE COLLECTIVE ───
         // Chaque transaction valide nourrit silencieusement la connaissance de marché (anonymisée)
         if (parsedData.articles.length > 0) {
-          feedMarketKnowledge(parsedData.articles, type, shopId).catch(err =>
+          feedMarketKnowledge(parsedData.articles, type, shopId, shopCountry, shopCity).catch(err =>
             console.warn('[market_knowledge] Erreur non bloquante:', err)
           )
         }

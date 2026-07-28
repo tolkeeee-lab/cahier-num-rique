@@ -2,94 +2,26 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import {
-  Package, Plus, AlertTriangle, TrendingUp, TrendingDown,
-  X, Search, RefreshCw, Edit3, Trash2, ChevronDown, ChevronUp, WifiOff,
-  Download, GitMerge, Layers, Sparkles, CheckCircle2,
+  Package, AlertTriangle, WifiOff, Download, RefreshCw, Plus, ChevronUp, ChevronDown
 } from 'lucide-react'
 import {
   getOfflineProducts, replaceOfflineProducts, saveOfflineProduct,
   deleteOfflineProduct, computeOfflineStock, generateOfflineId,
-  type OfflineProduct,
 } from '@/lib/offlineDb'
-import { findDuplicateCandidates, normalizeProductName, type DuplicatePair } from '@/lib/productUtils'
+import { findDuplicateCandidates, type DuplicatePair } from '@/lib/productUtils'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Subcomponents & Utilities
+import { StockItem, StockManagerProps } from './stock/types'
+import { EMPTY_FORM, getStockStatus, exportStockToCSV } from './stock/stockUtils'
+import { StockKpiBar } from './stock/StockKpiBar'
+import { StockFilterBar } from './stock/StockFilterBar'
+import { StockItemRow } from './stock/StockItemRow'
+import { ProductModal } from './stock/ProductModal'
+import { ExpressAdjustmentModal } from './stock/ExpressAdjustmentModal'
+import { WhatsAppPOModal } from './stock/WhatsAppPOModal'
+import { ProductMergeModal } from './stock/ProductMergeModal'
 
-interface Movement {
-  date: string
-  type: 'in' | 'out'
-  quantity: number
-  unit_price: number
-  notes: string
-  sale_type?: string
-}
-
-interface StockItem extends OfflineProduct {
-  total_in: number
-  total_out: number
-  current_stock: number
-  movements: Movement[]
-  is_orphan?: boolean
-  stock_tracked?: boolean
-  is_unlimited?: boolean
-}
-
-interface StockManagerProps {
-  shopId?: string
-  onError?: (err: string) => void
-}
-
-// ─── Constantes ───────────────────────────────────────────────────────────────
-
-const CATEGORIES = ['Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', '✂️ Prestations & Services', 'Alimentation', 'Hygiène', 'Autre']
-const UNITS = ['unité', 'pièce', 'kg', 'g', 'litre', 'cl', 'carton', 'sac', 'colis', 'boîte', 'bouteille']
-
-const EMPTY_FORM = {
-  name: '',
-  category: 'Général',
-  unit: 'unité',
-  alert_threshold: 5,
-  initial_stock: 0,
-  unit_cost: 0,
-  unit_price: 0,
-  multiplier: 1,
-  packaging_name: '',
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('fr-FR').format(price) + ' F'
-}
-
-function getStockStatus(item: StockItem): 'ok' | 'low' | 'out' | 'untracked' {
-  // Les produits non suivis (auto-créés depuis les ventes, sans stock initial ni achat)
-  // ne déclenchent pas d'alerte de rupture
-  if (item.is_unlimited) return 'ok'
-  if (item.stock_tracked === false) return 'untracked'
-  if (item.current_stock <= 0) return 'out'
-  if (item.current_stock <= item.alert_threshold) return 'low'
-  return 'ok'
-}
-
-function getStatusColors(status: 'ok' | 'low' | 'out' | 'untracked') {
-  switch (status) {
-    case 'ok':        return { dot: 'bg-emerald-500', bar: 'bg-emerald-400', text: 'text-emerald-700', border: 'border-emerald-200', bg: 'bg-emerald-50' }
-    case 'low':       return { dot: 'bg-amber-500',   bar: 'bg-amber-400',   text: 'text-amber-700',   border: 'border-amber-200',   bg: 'bg-amber-50'   }
-    case 'out':       return { dot: 'bg-red-500',      bar: 'bg-red-400',     text: 'text-red-700',     border: 'border-red-200',     bg: 'bg-red-50'     }
-    case 'untracked': return { dot: 'bg-slate-400',    bar: 'bg-slate-300',   text: 'text-slate-500',   border: 'border-slate-200',   bg: 'bg-slate-50'   }
-  }
-}
-
-function getBarWidth(item: StockItem): number {
-  if (item.current_stock <= 0) return 0
-  const max = Math.max(item.initial_stock + item.total_in, item.alert_threshold * 3, item.current_stock * 2, 1)
-  return Math.min(100, (item.current_stock / max) * 100)
-}
-
-// ─── Composant principal ──────────────────────────────────────────────────────
-
-export function StockManager({ shopId = 'default-shop', onError }: StockManagerProps) {
+export function StockManager({ shopId = 'default-shop', userRole, onError }: StockManagerProps) {
   const [items, setItems] = useState<StockItem[]>([])
   const [orphans, setOrphans] = useState<StockItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -211,7 +143,6 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
         throw new Error(data.error || 'Erreur lors de la fusion')
       }
 
-      // Recharger le catalogue
       await loadStock()
 
       if (activePairIndex < duplicatePairs.length - 1) {
@@ -226,29 +157,9 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     }
   }
 
-  const handleEnableTracking = async (item: StockItem) => {
-    try {
-      const online = typeof window !== 'undefined' ? window.navigator.onLine : true
-      if (online) {
-        await fetch('/api/stock', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
-          body: JSON.stringify({
-            id: item.id,
-            alert_threshold: item.alert_threshold || 5,
-            initial_stock: Math.max(item.initial_stock || 0, 1),
-          }),
-        })
-      } else {
-        saveOfflineProduct(shopId, {
-          ...item,
-          initial_stock: Math.max(item.initial_stock || 0, 1),
-        })
-      }
-      await loadStock()
-    } catch (err: any) {
-      onError?.(err?.message || 'Erreur d\'activation du suivi')
-    }
+  const handleEnableTracking = (item: StockItem) => {
+    // Ouvrir directement la modale d'édition pour saisir le stock physique réel compté aujourd'hui
+    openEditModal(item)
   }
 
   // ── Chargement ──────────────────────────────────────────────────────────────
@@ -263,7 +174,6 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
       const key = cleanName.toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
       
-      // Filtrer les mouvements pour n'inclure que ceux après ou égal à la date de création du produit (moins 1 minute de marge)
       const prodTime = p.created_at ? new Date(p.created_at).getTime() - 60000 : 0
       const filteredMovements = data.movements.filter((m: any) => {
         const mTime = m.created_at ? new Date(m.created_at).getTime() : new Date(m.date).getTime()
@@ -274,12 +184,18 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
       const totalOut = filteredMovements.filter(m => m.type === 'out').reduce((sum, m) => sum + m.quantity, 0)
 
       const mult = p.multiplier || 1
+      const hasInitial = (p.initial_stock || 0) > 0
+      const hasPurchases = totalIn > 0
+      const stockTracked = p.stock_tracked === true || (p.stock_tracked !== false && (hasInitial || hasPurchases))
+      const currentStock = stockTracked ? Math.max(0, ((p.initial_stock || 0) * mult) + totalIn - totalOut) : 0
+
       return { 
         ...p, 
         name: cleanName,
         total_in: totalIn, 
         total_out: totalOut, 
-        current_stock: ((p.initial_stock || 0) * mult) + totalIn - totalOut, 
+        stock_tracked: stockTracked,
+        current_stock: currentStock, 
         movements: filteredMovements 
       }
     })
@@ -292,7 +208,8 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
           id: `orphan_${rawKey}`, shop_id: shopId, name: cleanName, category: '', unit: 'unité',
           alert_threshold: 0, initial_stock: 0, unit_cost: 0, unit_price: 0,
           created_at: '', total_in: data.total_in, total_out: data.total_out,
-          current_stock: data.total_in - data.total_out, movements: data.movements, is_orphan: true,
+          stock_tracked: false,
+          current_stock: 0, movements: data.movements, is_orphan: true,
         }
       })
 
@@ -321,7 +238,6 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
       } else {
         setItems(data.products || [])
         setOrphans(data.orphans || [])
-        // Mettre en cache pour le mode hors-ligne
         replaceOfflineProducts(shopId, (data.products || []).map((p: any) => ({
           id: p.id, shop_id: p.shop_id, name: p.name, category: p.category,
           unit: p.unit, alert_threshold: p.alert_threshold, initial_stock: p.initial_stock,
@@ -347,7 +263,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     const matchedOrphan = orphans.find(o => o.name.toLowerCase().trim() === name.toLowerCase().trim())
     if (matchedOrphan && matchedOrphan.total_out > 0) {
       setOrphanPastSales(matchedOrphan.total_out)
-      setDeductPastSales(false) // Par défaut, on repart à zéro
+      setDeductPastSales(false)
     } else {
       setOrphanPastSales(0)
       setDeductPastSales(false)
@@ -393,7 +309,6 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
           throw new Error(err.error || `Erreur HTTP ${response.status}`)
         }
       } else {
-        // Mode hors-ligne — CRUD local
         const now = deductPastSales ? '2000-01-01T00:00:00.000Z' : new Date().toISOString()
         if (editingItem && !editingItem.is_orphan) {
           saveOfflineProduct(shopId, { ...editingItem, ...formData })
@@ -434,78 +349,33 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
     }
   }
 
-  const handleExportStock = () => {
-    if (items.length === 0) {
-      alert("Aucun produit à exporter dans le stock.")
-      return
-    }
-
-    const headers = [
-      "Nom du Produit",
-      "Catégorie",
-      "Unité",
-      "Prix d'Achat (F)",
-      "Prix de Vente (F)",
-      "Stock Initial",
-      "Entrées de stock",
-      "Sorties de stock",
-      "Stock Actuel",
-      "Valeur Stock Achat (F)",
-      "Valeur Stock Vente (F)",
-      "Statut Stock"
-    ]
-
-    const rows = items.map(item => {
-      const st = getStockStatus(item)
-      const status = st === 'untracked' ? 'Non suivi' : st === 'out' ? 'Rupture' : st === 'low' ? 'Stock Bas' : 'OK'
-      const valAchat = Math.max(0, item.current_stock) * (item.unit_cost || 0)
-      const valVente = Math.max(0, item.current_stock) * (item.unit_price || 0)
-
-      return [
-        `"${item.name.replace(/"/g, '""')}"`,
-        `"${(item.category || 'Général').replace(/"/g, '""')}"`,
-        `"${(item.unit || 'unité').replace(/"/g, '""')}"`,
-        item.unit_cost || 0,
-        item.unit_price || 0,
-        item.initial_stock || 0,
-        item.total_in || 0,
-        item.total_out || 0,
-        item.current_stock,
-        valAchat,
-        valVente,
-        `"${status}"`
-      ]
-    })
-
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n")
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.setAttribute("href", url)
-    link.setAttribute("download", `Cahier_Stock_${shopId}_${new Date().toISOString().split('T')[0]}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
   // ── Données dérivées ─────────────────────────────────────────────────────────
+
+  const [trackModeFilter, setTrackModeFilter] = useState<'ALL' | 'TRACKED' | 'UNTRACKED'>('ALL')
 
   const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', '✂️ Prestations & Services']
   const existingCategories = Array.from(new Set(items.map(i => i.category).filter(Boolean)))
   const allCategories = Array.from(new Set([...defaultCategories, ...existingCategories]))
 
+  const trackedCount = items.filter(i => i.stock_tracked).length
+  const untrackedCount = items.filter(i => !i.stock_tracked).length
+
   const filteredItems = items.filter(i => {
     const matchSearch = !searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchCat = categoryFilter === 'TOUT' || i.category === categoryFilter
-    return matchSearch && matchCat
+    const matchTrack = trackModeFilter === 'ALL'
+      ? true
+      : trackModeFilter === 'TRACKED'
+        ? i.stock_tracked
+        : !i.stock_tracked
+    return matchSearch && matchCat && matchTrack
   })
-  const alertCount = items.filter(i => { const s = getStockStatus(i); return s === 'out' || s === 'low' }).length
-  const stockValue = items.reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_cost || 0), 0)
-  const stockValueSale = items.reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_price || 0), 0)
-  const totalIn = items.reduce((s, i) => s + i.total_in, 0)
-  const totalOut = items.reduce((s, i) => s + i.total_out, 0)
 
-  // ── Rendu ────────────────────────────────────────────────────────────────────
+  const alertCount = items.filter(i => i.stock_tracked && (getStockStatus(i) === 'out' || getStockStatus(i) === 'low')).length
+  const stockValue = items.filter(i => i.stock_tracked).reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_cost || 0), 0)
+  const stockValueSale = items.filter(i => i.stock_tracked).reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_price || 0), 0)
+  const totalIn = items.filter(i => i.stock_tracked).reduce((s, i) => s + i.total_in, 0)
+  const totalOut = items.filter(i => i.stock_tracked).reduce((s, i) => s + i.total_out, 0)
 
   if (loading) {
     return (
@@ -539,9 +409,9 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
-            onClick={handleExportStock}
+            onClick={() => exportStockToCSV(items, shopId)}
             title="Exporter le stock en Excel/CSV"
             className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
@@ -590,82 +460,41 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
       </div>
 
       {/* ── KPI bar ── */}
-      <div className="flex gap-2 px-4 py-2 border-b border-gray-100 overflow-x-auto scrollbar-hide flex-shrink-0 bg-white bg-opacity-50">
-        {[
-          { label: 'Produits', value: items.length, color: 'border-gray-200 text-gray-800' },
-          { label: 'Alertes', value: alertCount, color: 'border-red-200 text-red-700' },
-          { label: 'Valeur Achat', value: formatPrice(stockValue), color: 'border-emerald-200 text-emerald-800' },
-          { label: 'Valeur Vente', value: formatPrice(stockValueSale), color: 'border-indigo-200 text-indigo-800' },
-          { label: 'Marge Estimée', value: formatPrice(Math.max(0, stockValueSale - stockValue)), color: 'border-amber-300 text-amber-900 bg-amber-50' },
-          { label: 'Total entrées', value: totalIn, color: 'border-blue-200 text-blue-800' },
-          { label: 'Total sorties', value: totalOut, color: 'border-rose-200 text-rose-800' },
-        ].map(kpi => (
-          <div key={kpi.label} className={`flex-shrink-0 text-center px-3 py-1 bg-[#fffdf9] border rounded-xl ${kpi.color}`}>
-            <div className="text-[8px] font-bold uppercase opacity-70">{kpi.label}</div>
-            <div className={`font-mono text-sm font-bold ${kpi.color}`}>{kpi.value}</div>
-          </div>
-        ))}
-      </div>
+      <StockKpiBar
+        items={items.filter(i => i.stock_tracked)}
+        alertCount={alertCount}
+        stockValue={stockValue}
+        stockValueSale={stockValueSale}
+        totalIn={totalIn}
+        totalOut={totalOut}
+      />
 
-      {/* ── Bannière d'alerte doublons ── */}
-      {duplicatePairs.length > 0 && (
-        <div className="mx-4 my-2 p-2.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-xs text-amber-900 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <GitMerge className="w-4 h-4 text-amber-600 flex-shrink-0" />
-            <span>
-              <strong>{duplicatePairs.length} doublon(s) potentiel(s)</strong> détecté(s) (ex: « {duplicatePairs[0].item1.name} » & « {duplicatePairs[0].item2.name} »)
-            </span>
-          </div>
-          <button
-            onClick={() => {
-              setActivePairIndex(0)
-              setShowMergeModal(true)
-            }}
-            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center gap-1 flex-shrink-0 shadow-sm"
-          >
-            <GitMerge className="w-3 h-3" />
-            <span>Fusionner</span>
-          </button>
-        </div>
-      )}
-
-      {/* ── Search + Category filter ── */}
-      <div className="px-4 py-2 border-b border-gray-100 flex flex-col gap-2 bg-[#faf7f0] flex-shrink-0">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Chercher un produit..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs font-mono outline-none focus:border-gray-400 transition-colors"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <X className="w-3 h-3" />
-            </button>
-          )}
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
-          {allCategories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex-shrink-0 transition-all ${
-                categoryFilter === cat
-                  ? 'bg-gray-800 border-gray-800 text-white scale-105'
-                  : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* ── Search + Mode de Suivi + Category filter + Duplicate alert ── */}
+      <StockFilterBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        trackModeFilter={trackModeFilter}
+        setTrackModeFilter={setTrackModeFilter}
+        allCategories={allCategories}
+        duplicatePairsCount={duplicatePairs.length}
+        firstDuplicatePairNames={
+          duplicatePairs.length > 0
+            ? { name1: duplicatePairs[0].item1.name, name2: duplicatePairs[0].item2.name }
+            : undefined
+        }
+        onOpenMergeModal={() => {
+          setActivePairIndex(0)
+          setShowMergeModal(true)
+        }}
+        trackedCount={trackedCount}
+        untrackedCount={untrackedCount}
+        totalCount={items.length}
+      />
 
       {/* ── Product list ── */}
       <div className="flex-1 overflow-y-auto pb-6">
-
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center min-h-[280px]">
             <Package className="w-10 h-10 text-gray-200 mb-4" />
@@ -689,205 +518,27 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
           </div>
         ) : (
           <div className="p-3 space-y-2">
-            {filteredItems.map(item => {
-              const status = getStockStatus(item)
-              const colors = getStatusColors(status)
-              const barWidth = getBarWidth(item)
-              const isExpanded = expandedId === item.id
-
-              return (
-                <div
-                  key={item.id}
-                  className={`border rounded-xl overflow-hidden transition-all ${colors.bg} ${colors.border}`}
-                >
-                  {/* Product row */}
-                  <div
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
-                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                  >
-                    <div className={`w-3 h-3 rounded-full flex-shrink-0 shadow-sm ${colors.dot}`} />
-
-                    <div className="flex-grow min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-handwritten text-lg font-bold text-gray-800 leading-tight">{item.name}</span>
-                        {item.category && (
-                          <span className="text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 bg-white bg-opacity-70 border border-gray-200 rounded-md text-gray-500 flex-shrink-0">
-                            {item.category}
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <div className="flex-grow h-1.5 bg-white bg-opacity-60 rounded-full overflow-hidden border border-white border-opacity-80">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${colors.bar}`}
-                            style={{ width: `${barWidth}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`font-mono text-xs font-bold flex-shrink-0 ${colors.text}`}>
-                            {status === 'untracked'
-                              ? '📋 Non suivi'
-                              : item.current_stock <= 0
-                              ? '⚠️ RUPTURE'
-                              : `${item.current_stock} ${item.unit} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'lots'})` : ''}`}
-                          </span>
-                          {status === 'untracked' && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleEnableTracking(item)
-                              }}
-                              className="px-2 py-0.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-[9px] font-bold rounded-full transition-colors flex items-center gap-1"
-                              title="Activer le suivi du stock pour ce produit"
-                            >
-                              <Plus className="w-2.5 h-2.5" />
-                              <span>Activer suivi</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Boutons Ajustement Express */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setExpressItem(item)
-                            setExpressType('in')
-                            setExpressQty(1)
-                          }}
-                          className="w-7 h-7 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold rounded-lg flex items-center justify-center text-xs transition-colors shadow-xs"
-                          title="Ajouter du stock (+ Entrée)"
-                        >
-                          +
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setExpressItem(item)
-                            setExpressType('out')
-                            setExpressQty(1)
-                          }}
-                          className="w-7 h-7 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-lg flex items-center justify-center text-xs transition-colors shadow-xs"
-                          title="Retirer du stock (- Sortie)"
-                        >
-                          -
-                        </button>
-                      </div>
-
-                      <div className="text-right hidden sm:block">
-                        <div className="flex items-center gap-1 text-[9px] text-emerald-700 font-mono font-bold">
-                          <TrendingUp className="w-2.5 h-2.5" /> +{item.total_in}
-                        </div>
-                        <div className="flex items-center gap-1 text-[9px] text-red-600 font-mono font-bold">
-                          <TrendingDown className="w-2.5 h-2.5" /> -{item.total_out}
-                        </div>
-                      </div>
-                      {isExpanded
-                        ? <ChevronUp className="w-4 h-4 text-gray-400" />
-                        : <ChevronDown className="w-4 h-4 text-gray-400" />}
-                    </div>
-                  </div>
-
-                  {/* Expanded detail */}
-                  {isExpanded && (
-                    <div className="border-t border-white border-opacity-60 px-4 py-3 bg-white bg-opacity-40">
-
-                      {/* Stats */}
-                      <div className="grid grid-cols-4 gap-2 mb-3">
-                        {[
-                          { label: 'Initial', value: item.initial_stock, color: 'text-gray-700' },
-                          { label: 'Entrées', value: `+${item.total_in}`, color: 'text-emerald-700' },
-                          { label: 'Sorties', value: `-${item.total_out}`, color: 'text-red-600' },
-                          { label: 'Actuel', value: `${item.current_stock} ${item.unit}`, color: colors.text },
-                        ].map(s => (
-                          <div key={s.label} className="text-center">
-                            <div className="text-[8px] uppercase font-bold text-gray-400">{s.label}</div>
-                            <div className={`font-mono text-xs font-bold ${s.color}`}>{s.value}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Profitabilité & Marge */}
-                      {item.unit_price > 0 && item.unit_cost > 0 && (
-                        <div className="mb-3 p-2 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between text-xs font-mono">
-                          <span className="text-amber-800">
-                            💰 Marge Unitaire: <strong>{formatPrice(item.unit_price - item.unit_cost)}</strong> ({Math.round(((item.unit_price - item.unit_cost) / item.unit_cost) * 100)}%)
-                          </span>
-                          {item.current_stock > 0 && (
-                            <span className="text-amber-900 font-bold">
-                              Profit Potentiel: {formatPrice((item.unit_price - item.unit_cost) * item.current_stock)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Seuil + Prix */}
-                      <div className="flex gap-4 text-[10px] font-mono mb-3 text-gray-500 flex-wrap">
-                        <span>Seuil: <strong className="text-gray-700">{item.alert_threshold} {item.unit}</strong></span>
-                        {item.unit_cost > 0 && <span>Achat: <strong className="text-gray-700">{formatPrice(item.unit_cost)}</strong></span>}
-                        {item.unit_price > 0 && <span>Vente: <strong className="text-gray-700">{formatPrice(item.unit_price)}</strong></span>}
-                        {item.multiplier && item.multiplier > 1 && (
-                          <span>Conditionnement: <strong className="text-gray-700">1 {item.packaging_name || 'lot'} = {item.multiplier} {item.unit}</strong></span>
-                        )}
-                        {item.current_stock > 0 && (
-                          <>
-                            {item.unit_cost > 0 && (
-                              <span className="text-emerald-700">Valeur Achat: <strong>{formatPrice(Math.max(0, item.current_stock) * item.unit_cost)}</strong></span>
-                            )}
-                            {item.unit_price > 0 && (
-                              <span className="text-indigo-700">Valeur Vente: <strong>{formatPrice(Math.max(0, item.current_stock) * item.unit_price)}</strong></span>
-                            )}
-                          </>
-                        )}
-                      </div>
-
-                      {/* Historique mouvements */}
-                      {item.movements && item.movements.length > 0 && (
-                        <div className="mb-3">
-                          <div className="text-[9px] uppercase font-bold text-gray-400 mb-1.5 tracking-wider">Derniers mouvements</div>
-                          <div className="space-y-1 max-h-28 overflow-y-auto">
-                            {item.movements.slice(0, 8).map((mv, idx) => (
-                              <div key={idx} className="flex items-center gap-2 text-[10px] font-mono py-0.5 border-b border-white border-opacity-40 last:border-0">
-                                <span className="text-gray-400 flex-shrink-0">{mv.date}</span>
-                                <span className="text-gray-500 truncate flex-grow">{mv.notes?.slice(0, 35) || '—'}</span>
-                                <span className={`font-bold flex-shrink-0 ${mv.type === 'in' ? 'text-emerald-700' : 'text-red-600'}`}>
-                                  {mv.type === 'in' ? '+' : '-'}{mv.quantity}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Actions */}
-                      {!item.is_orphan && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={e => { e.stopPropagation(); openEditModal(item) }}
-                            className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-300 rounded-full text-[10px] font-bold text-gray-600 hover:bg-gray-50 transition-all"
-                          >
-                            <Edit3 className="w-2.5 h-2.5" /> Modifier
-                          </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); handleDelete(item) }}
-                            className="flex items-center gap-1 px-3 py-1 bg-red-50 border border-red-200 rounded-full text-[10px] font-bold text-red-600 hover:bg-red-100 transition-all"
-                          >
-                            <Trash2 className="w-2.5 h-2.5" /> Supprimer
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+            {filteredItems.map(item => (
+              <StockItemRow
+                key={item.id}
+                item={item}
+                isExpanded={expandedId === item.id}
+                userRole={userRole}
+                onToggleExpand={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                onEnableTracking={handleEnableTracking}
+                onOpenExpressAdjust={(targetItem, type) => {
+                  setExpressItem(targetItem)
+                  setExpressType(type)
+                  setExpressQty(1)
+                }}
+                onEdit={openEditModal}
+                onDelete={handleDelete}
+              />
+            ))}
           </div>
         )}
 
-        {/* Articles hors-catalogue */}
+        {/* Articles hors-catalogue (Orphelins) */}
         {orphans.length > 0 && (
           <div className="px-3 mt-1">
             <button
@@ -923,73 +574,52 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
         )}
       </div>
 
-      {/* ── Modal Ajouter / Modifier ── */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
-          <div className="w-full max-w-sm bg-[#fdfaf2] border border-gray-300 shadow-2xl rounded-2xl overflow-hidden">
+      {/* ── Modales ── */}
+      <ProductModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        editingItem={editingItem}
+        formData={formData}
+        setFormData={setFormData}
+        saving={saving}
+        onSave={handleSave}
+        orphanPastSales={orphanPastSales}
+        deductPastSales={deductPastSales}
+        setDeductPastSales={setDeductPastSales}
+      />
 
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-[#f5f1e8]">
-              <h3 className="font-handwritten text-xl font-bold text-gray-800">
-                {editingItem ? 'Modifier le produit' : 'Nouveau produit'}
-              </h3>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-700 transition-colors p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <ProductMergeModal
+        isOpen={showMergeModal}
+        onClose={() => setShowMergeModal(false)}
+        duplicatePairs={duplicatePairs}
+        activePairIndex={activePairIndex}
+        merging={merging}
+        onMergeProducts={handleMergeProducts}
+      />
 
-            <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+      <ExpressAdjustmentModal
+        expressItem={expressItem}
+        expressType={expressType}
+        expressQty={expressQty}
+        setExpressQty={setExpressQty}
+        expressReason={expressReason}
+        setExpressReason={setExpressReason}
+        expressUnitCost={expressUnitCost}
+        setExpressUnitCost={setExpressUnitCost}
+        expressNotes={expressNotes}
+        setExpressNotes={setExpressNotes}
+        adjusting={adjusting}
+        onClose={() => setExpressItem(null)}
+        onSubmit={handleExpressAdjust}
+      />
 
-              {/* Nom */}
-              <div>
-                <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Nom du produit *</label>
-                <input
-                  type="text"
-                  placeholder="ex: Riz 25kg, Huile palme 5L, Savon Lux..."
-                  value={formData.name}
-                  onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-handwritten outline-none focus:border-gray-400 transition-colors"
-                  autoFocus
-                />
-
-                {/* Pilules d'attributs rapides génériques (Papeterie & Commerce) */}
-                <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
-                  <span className="text-[9px] font-bold text-gray-400 font-mono uppercase">Attributs :</span>
-                  {[
-                    '100 Pages', '200 Pages', '300 Pages', 'Grand Format', 'Petit Format', 'Cartonné', 'Souple', 'TP', 'Boîte', 'Sachet'
-                  ].map(attr => (
-                    <button
-                      key={attr}
-                      type="button"
-                      onClick={() => {
-                        const currentName = formData.name.trim()
-                        if (currentName.includes(attr)) return
-                        setFormData(p => ({ ...p, name: currentName ? `${currentName} ${attr}` : attr }))
-                      }}
-                      className="px-2 py-0.5 bg-gray-100 hover:bg-amber-100 border border-gray-200 hover:border-amber-300 rounded-lg text-[9.5px] font-bold text-gray-700 transition-all hover:scale-105 active:scale-95"
-                    >
-                      +{attr}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Ventes antérieures détectées (Orphelin) */}
-              {orphanPastSales > 0 && !editingItem && (
-                <div className="bg-[#fffdf2] border border-amber-250 rounded-2xl p-3.5 text-xs space-y-2 select-none shadow-sm">
-                  <div className="flex gap-2 items-start text-amber-800">
-                    <span className="text-base flex-shrink-0">⚠️</span>
-                    <div className="leading-snug">
-                      <p className="font-bold text-[11px]">Ventes passées détectées :</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Ce produit a été vendu <strong className="text-amber-900 font-mono">{orphanPastSales} fois</strong> avant d'être officiellement ajouté au catalogue.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2 pt-2 border-t border-amber-100 font-sans text-gray-700">
-                    <label className="flex items-center gap-2 cursor-pointer text-[10px] font-medium">
-                      <input
-                        type="radio"
-                        name="deductPastSales"
-                        checked={!deductPastSales}
+      <WhatsAppPOModal
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        supplierPhone={supplierPhone}
+        setSupplierPhone={setSupplierPhone}
+        items={items}
+        generateWhatsAppUrl={generateWhatsAppUrl}
                         onChange={() => setDeductPastSales(false)}
                         className="text-gray-800 focus:ring-gray-800"
                       />
@@ -1459,6 +1089,7 @@ export function StockManager({ shopId = 'default-shop', onError }: StockManagerP
           </div>
         </div>
       )}
+>>>>>>> e69e8ce (fix: unified product catalog, clean canonical normalization and exact stock adjustment cash calculations)
     </div>
   )
 }

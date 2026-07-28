@@ -15,6 +15,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<'owner' | 'employee'>('owner')
+  const [activity, setActivity] = useState<'boutique' | 'resto' | 'prestations' | 'particulier'>('boutique')
   const [shopCode, setShopCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   
@@ -80,7 +81,8 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
               data: {
                 full_name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
                 role: role,
-                shop_id: generatedShopId
+                shop_id: generatedShopId,
+                shop_activity: activity
               },
             },
           })
@@ -116,12 +118,13 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                 email: data.user.email,
                 name: data.user.user_metadata?.full_name || 'Utilisateur',
                 role: data.user.user_metadata?.role || 'owner',
+                activity: data.user.user_metadata?.shop_activity || activity || 'boutique',
                 shop_id: data.user.user_metadata?.shop_id || data.user.id,
                 password_fallback: password
               }
               localStorage.setItem(`cahier_offline_credentials_${email.toLowerCase().trim()}`, JSON.stringify(localUser))
               if (onLoginSuccess) {
-                onLoginSuccess(data.user)
+                onLoginSuccess({ ...data.user, activity: localUser.activity })
               }
             }
             setSuccess('✓ Connexion réussie !')
@@ -138,9 +141,11 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                   const syntheticUser = {
                     id: creds.id,
                     email: creds.email,
+                    activity: creds.activity || 'boutique',
                     user_metadata: {
                       full_name: creds.name,
                       role: creds.role,
+                      shop_activity: creds.activity || 'boutique',
                       shop_id: creds.shop_id
                     }
                   }
@@ -187,6 +192,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
             password,
             full_name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
             role,
+            activity,
             shop_id: employeeShopId
           }
           
@@ -356,6 +362,67 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
               </div>
             )}
 
+            {isSignUp && role === 'owner' && (
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest pl-1 block">
+                  🎯 Votre Secteur d'Activité *
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActivity('boutique')}
+                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                      activity === 'boutique'
+                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-lg">🛒</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Boutique</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActivity('resto')}
+                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                      activity === 'resto'
+                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-lg">🍲</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Resto</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActivity('prestations')}
+                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                      activity === 'prestations'
+                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-lg">✂️</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Prestation</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActivity('particulier')}
+                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
+                      activity === 'particulier'
+                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-lg">🏠</span>
+                    <span className="text-[10px] leading-tight font-bold mt-1">Particulier</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {isSignUp && role === 'employee' && (
               <div>
                 <label className="text-[9px] font-bold text-amber-700 uppercase tracking-widest pl-1 flex items-center gap-1">
@@ -365,7 +432,7 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: SHOP-123456"
+                    placeholder="Ex: BTQ-58C54"
                     value={shopCode}
                     onChange={(e) => setShopCode(e.target.value)}
                     className="w-full pl-3 pr-4 py-2.5 text-sm bg-[#fffbeb] border border-amber-300 rounded-xl focus:border-amber-500 text-amber-950 font-bold tracking-wider placeholder-amber-200"

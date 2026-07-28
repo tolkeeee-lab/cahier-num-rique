@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Copy, Check, UserPlus, Trash2, Shield, Users, Database, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
+import { Copy, Check, UserPlus, Trash2, Shield, Users, Database, AlertCircle, CheckCircle2, RefreshCw, Coins, Store, RotateCcw, AlertTriangle } from 'lucide-react'
 import { testSupabaseConnection } from '@/lib/supabaseClient'
+import { SUPPORTED_CURRENCIES, getShopCurrency, setShopCurrency } from '@/lib/currencyUtils'
+import { formatShortShopCode } from '@/lib/shopCodeUtils'
 
 interface Employee {
   id: string
@@ -17,14 +19,74 @@ interface SettingsManagerProps {
   shopId?: string
   userEmail?: string
   userShops?: Array<{ id: string; name: string; activity: string }>
+  onUpdateShopActivity?: (shopId: string, activity: 'boutique' | 'resto' | 'prestations' | 'particulier') => void
+  onResetShopData?: () => void
   onError?: (err: string) => void
 }
 
-export function SettingsManager({ shopId = 'default-shop', userEmail, userShops = [], onError }: SettingsManagerProps) {
+export function SettingsManager({ shopId = 'default-shop', userEmail, userShops = [], onUpdateShopActivity, onResetShopData, onError }: SettingsManagerProps) {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [isOffline, setIsOffline] = useState(false)
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(() => getShopCurrency(shopId))
+
+  // Modification du secteur d'activité
+  const currentShop = userShops.find(s => s.id === shopId)
+  const [selectedActivity, setSelectedActivity] = useState<'boutique' | 'resto' | 'prestations' | 'particulier'>(
+    (currentShop?.activity as any) || 'boutique'
+  )
+  const [activitySavedMsg, setActivitySavedMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (currentShop?.activity) {
+      setSelectedActivity(currentShop.activity as any)
+    }
+  }, [currentShop?.activity])
+
+  const handleActivityChange = (act: 'boutique' | 'resto' | 'prestations' | 'particulier') => {
+    setSelectedActivity(act)
+    onUpdateShopActivity?.(shopId, act)
+    setActivitySavedMsg('✓ Secteur d\'activité rectifié avec succès !')
+    setTimeout(() => setActivitySavedMsg(null), 3500)
+  }
+
+  // Zone de Danger - Réinitialisation
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetConfirmInput, setResetConfirmInput] = useState('')
+  const [isResetting, setIsResetting] = useState(false)
+
+  const executeShopReset = async () => {
+    setIsResetting(true)
+    try {
+      localStorage.removeItem(`cahier_offline_sales_${shopId}`)
+      localStorage.removeItem(`cahier_offline_products_${shopId}`)
+      localStorage.removeItem(`cahier_offline_debts_${shopId}`)
+      localStorage.removeItem(`cahier_offline_cash_closing_${shopId}`)
+      localStorage.removeItem(`cahier_requested_products_${shopId}`)
+      localStorage.removeItem(`cahier_offline_supplier_debts_${shopId}`)
+      localStorage.removeItem(`cahier_offline_supplier_transactions_${shopId}`)
+
+      if (typeof window !== 'undefined' && window.navigator.onLine) {
+        await fetch('/api/shop/reset', {
+          method: 'POST',
+          headers: { 'x-shop-id': shopId }
+        })
+      }
+
+      setShowResetModal(false)
+      if (onResetShopData) {
+        onResetShopData()
+      } else {
+        window.location.reload()
+      }
+    } catch (err: any) {
+      console.error('Erreur réinitialisation:', err)
+      onError?.(err.message || 'Erreur lors de la réinitialisation des données')
+    } finally {
+      setIsResetting(false)
+    }
+  }
 
   // Diagnostic BDD
   const [dbStatus, setDbStatus] = useState<{ ok: boolean; message: string; code?: number } | null>(null)
@@ -98,7 +160,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
   }, [shopId, isOffline])
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(shopId)
+    navigator.clipboard.writeText(formatShortShopCode(shopId))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -170,6 +232,123 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full space-y-6">
+        {/* Rectification du Secteur d'Activité */}
+        <div className="bg-white border border-amber-200 rounded-[24px] p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Store className="w-5 h-5 text-amber-800" />
+              <h3 className="font-bold text-sm text-gray-900">Secteur d'Activité de la Boutique</h3>
+            </div>
+            {activitySavedMsg && (
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full animate-bounce">
+                {activitySavedMsg}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 font-sans leading-relaxed">
+            Corrigez ou ajustez le secteur d'activité de votre point de vente pour adapter les termes et la gestion du stock (ex: masquer le stock physique pour les prestations).
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={() => handleActivityChange('boutique')}
+              className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all ${
+                selectedActivity === 'boutique'
+                  ? 'border-amber-500 bg-amber-50 shadow-sm font-bold text-amber-950 scale-102'
+                  : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+              }`}
+            >
+              <span className="text-xl">🏬</span>
+              <div>
+                <div className="text-xs font-bold">Boutique</div>
+                <div className="text-[10px] text-gray-500">Commerce & Vente</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleActivityChange('resto')}
+              className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all ${
+                selectedActivity === 'resto'
+                  ? 'border-amber-500 bg-amber-50 shadow-sm font-bold text-amber-950 scale-102'
+                  : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+              }`}
+            >
+              <span className="text-xl">🍲</span>
+              <div>
+                <div className="text-xs font-bold">Resto / Maquis</div>
+                <div className="text-[10px] text-gray-500">Cuisine & Bar</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleActivityChange('prestations')}
+              className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all ${
+                selectedActivity === 'prestations'
+                  ? 'border-amber-500 bg-amber-50 shadow-sm font-bold text-amber-950 scale-102'
+                  : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+              }`}
+            >
+              <span className="text-xl">✂️</span>
+              <div>
+                <div className="text-xs font-bold">Prestations</div>
+                <div className="text-[10px] text-gray-500">Services & Métiers</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleActivityChange('particulier')}
+              className={`p-3 rounded-2xl border text-left flex items-center gap-3 transition-all ${
+                selectedActivity === 'particulier'
+                  ? 'border-amber-500 bg-amber-50 shadow-sm font-bold text-amber-950 scale-102'
+                  : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+              }`}
+            >
+              <span className="text-xl">🏠</span>
+              <div>
+                <div className="text-xs font-bold">Particulier</div>
+                <div className="text-[10px] text-gray-500">Budget & Foyer</div>
+              </div>
+            </button>
+          </div>
+        </div>
+        {/* Configuration de la Devise Régionale / Internationale */}
+        <div className="bg-white border border-amber-200 rounded-[24px] p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2">
+            <Coins className="w-5 h-5 text-amber-700" />
+            <h3 className="font-bold text-sm text-gray-900">Devise Principale du Point de Vente</h3>
+          </div>
+          <p className="text-xs text-gray-500 font-mono">
+            Sélectionnez la monnaie d'affichage pour vos prix, ventes et reçus de caisse.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+            {Object.values(SUPPORTED_CURRENCIES).map(curr => {
+              const isSelected = selectedCurrency === curr.code
+              return (
+                <button
+                  key={curr.code}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCurrency(curr.code)
+                    setShopCurrency(shopId, curr.code)
+                  }}
+                  className={`p-3 rounded-2xl border text-left transition-all font-mono ${
+                    isSelected
+                      ? 'border-amber-500 bg-amber-50 shadow-sm scale-105'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="text-xs font-bold text-gray-900">{curr.symbol}</div>
+                  <div className="text-[10px] text-gray-500 truncate">{curr.name}</div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Diagnostic Connexion Supabase */}
         <div className="bg-white border border-gray-200 rounded-[24px] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
@@ -240,31 +419,39 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
         )}
 
         {/* Section 1 : Code Boutique */}
-        <div className="bg-white border border-gray-250 rounded-[24px] p-5 shadow-sm">
-          <h3 className="font-handwritten text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
-            🔑 Code de la Boutique
-          </h3>
-          <p className="text-xs text-gray-500 mb-4 leading-relaxed font-sans">
-            Partagez ce code de sécurité avec vos employés. Ils devront le saisir lors de la création de leur compte pour pouvoir accéder aux comptes et aux stocks de votre boutique.
+        <div className="bg-white border border-amber-200 rounded-[24px] p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+              <span>🔑 Code de la Boutique (Accès Employés)</span>
+            </h3>
+            <span className="bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              Code Court Sécurisé
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 font-sans leading-relaxed">
+            Partagez ce code court avec vos employés. Ils devront le saisir lors de la création de leur compte pour être rattachés automatiquement à cette boutique.
           </p>
 
-          <div className="flex items-center gap-2 bg-[#faf7f0] border border-gray-200 rounded-2xl p-3">
-            <span className="font-mono text-sm font-bold text-gray-800 tracking-wider flex-grow break-all">
-              {shopId}
-            </span>
+          <div className="flex items-center gap-3 bg-[#fefcf6] border-2 border-amber-300 rounded-2xl p-3.5 shadow-inner">
+            <div className="flex-grow flex flex-col">
+              <span className="text-[9px] uppercase font-bold text-amber-800 tracking-wider">Code d'accès rapide</span>
+              <span className="font-mono text-2xl font-black text-amber-950 tracking-widest">
+                {formatShortShopCode(shopId)}
+              </span>
+            </div>
             <button
               onClick={handleCopyCode}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-900 hover:bg-black text-white text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
             >
               {copied ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  Copié
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  Copié !
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5" />
-                  Copier
+                  <Copy className="w-4 h-4" />
+                  Copier Code
                 </>
               )}
             </button>
@@ -319,7 +506,7 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
                 >
                   {userShops.map(s => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : '🏬 Boutique'})
+                      {s.name} ({s.activity === 'resto' ? '🍲 Resto' : s.activity === 'prestations' ? '✂️ Service' : s.activity === 'particulier' ? '🏠 Particulier' : '🏬 Boutique'})
                     </option>
                   ))}
                 </select>
@@ -401,7 +588,84 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
             </div>
           )}
         </div>
+
+        {/* Section Zone de Danger : Repartir de zéro */}
+        <div className="bg-red-50/50 border border-red-200 rounded-[24px] p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <h3 className="font-bold text-sm text-red-950">Zone de Danger — Repartir de Zéro</h3>
+          </div>
+          <p className="text-xs text-red-800 font-sans leading-relaxed">
+            Vous souhaitez réinitialiser cette boutique ? Cette action effacera toutes les ventes, les créances et les articles en stock pour vous permettre de démarrer sur un cahier vierge.
+          </p>
+
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setResetConfirmInput('')
+                setShowResetModal(true)
+              }}
+              className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-xs flex items-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Réinitialiser la boutique & Repartir à zéro
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Modal de Confirmation Réinitialisation Totale */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white border-2 border-red-500 rounded-[28px] max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="p-3 bg-red-100 rounded-2xl">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-gray-900">Attention — Action Irréversible</h3>
+                <p className="text-xs text-gray-500">Réinitialisation complète de la boutique</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed font-sans">
+              Toutes les transactions enregistrées, le stock actuel, le carnet de dettes et les statistiques de ce point de vente seront effacés définitivement.
+            </p>
+
+            <div className="bg-red-50 p-3 rounded-xl border border-red-200">
+              <label className="block text-[10px] font-bold text-red-900 uppercase tracking-wider mb-1">
+                Tapez <strong className="font-mono text-red-700">EFFACER</strong> pour confirmer :
+              </label>
+              <input
+                type="text"
+                value={resetConfirmInput}
+                onChange={(e) => setResetConfirmInput(e.target.value)}
+                placeholder="EFFACER"
+                className="w-full px-3 py-2 bg-white border border-red-300 rounded-xl text-xs font-mono font-bold text-gray-900 outline-none uppercase tracking-widest"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                className="flex-1 py-2.5 px-4 border border-gray-300 text-gray-700 text-xs font-bold uppercase rounded-xl hover:bg-gray-100 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={resetConfirmInput.trim().toUpperCase() !== 'EFFACER' || isResetting}
+                onClick={executeShopReset}
+                className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase rounded-xl transition-all disabled:opacity-40 disabled:hover:bg-red-600 shadow-md flex items-center justify-center gap-1.5"
+              >
+                {isResetting ? 'Effacement...' : 'Confirmer & Effacer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { ShoppingBag, Plus, Trash2, CheckSquare, Square, Share2, AlertTriangle, Check, Sparkles, RefreshCw } from 'lucide-react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { ShoppingBag, Plus, Trash2, CheckSquare, Square, Share2, AlertTriangle, Check, Sparkles, RefreshCw, Search, X } from 'lucide-react'
+import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
 
 interface ShoppingItem {
   id: string
@@ -20,10 +21,14 @@ interface Product {
   id: string
   name: string
   initial_stock: number
+  current_stock?: number
   alert_threshold: number
   unit_cost: number
   category?: string
   unit?: string
+  stock_tracked?: boolean
+  is_service?: boolean
+  is_unlimited?: boolean
 }
 
 interface ShoppingListManagerProps {
@@ -47,6 +52,10 @@ export function ShoppingListManager({
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([])
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([])
   
+  // Recherche & Filtres par catégorie
+  const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('TOUT')
+
   // Formulaire ajout manuel
   const [name, setName] = useState('')
   const [isWholesaleMode, setIsWholesaleMode] = useState(false)
@@ -68,6 +77,7 @@ export function ShoppingListManager({
 
   // Charger les données de stock et la liste de courses enregistrée
   const loadData = useCallback(async () => {
+    let productsList: Product[] = []
     try {
       // 1. Charger le stock pour trouver les alertes
       const response = await fetch('/api/stock', {
@@ -75,22 +85,100 @@ export function ShoppingListManager({
       })
       if (response.ok) {
         const data = await response.json()
+<<<<<<< HEAD
         const productsList: Product[] = data.products || []
         setCatalogProducts(productsList)
         // Filtrer les produits sous ou au niveau du seuil d'alerte
         const alerts = productsList.filter(p => p.initial_stock <= p.alert_threshold)
         setLowStockProducts(alerts)
+=======
+        productsList = data.products || []
+        setCatalogProducts(productsList)
+
+        // Charger les exclusions locales (produits supprimés/masqués)
+        const exclusionsKey = `cahier_stock_exclusions_${shopId}`
+        const exclusions: string[] = typeof window !== 'undefined'
+          ? JSON.parse(localStorage.getItem(exclusionsKey) || '[]')
+          : []
+
+        // Filtrer les vrais produits en alerte de stock physique
+        const alertProducts = productsList.filter(p => {
+          // 1. Exclure si le produit est masqué/exclu
+          if (exclusions.includes(p.id)) return false
+
+          // 2. Exclure les prestations & services (pas de stock physique)
+          if (p.is_service || p.is_unlimited) return false
+          if (p.category && (
+            p.category.toLowerCase().includes('prestation') || 
+            p.category.toLowerCase().includes('service') || 
+            p.category.includes('✂️')
+          )) return false
+
+          // 3. Exclure si le suivi de stock n'est pas activé
+          const isExplicitlyTracked = p.stock_tracked === true
+          const isExplicitlyUntracked = p.stock_tracked === false
+          const hasInitial = (p.initial_stock || 0) > 0
+          const isTracked = isExplicitlyTracked || (!isExplicitlyUntracked && hasInitial)
+
+          if (!isTracked) return false
+
+          // 4. Seuil d'alerte configuré (> 0)
+          const threshold = p.alert_threshold ?? 5
+          if (threshold <= 0) return false
+
+          // 5. Comparaison : stock actuel calculé <= seuil d'alerte
+          const currentStock = p.current_stock ?? p.initial_stock ?? 0
+          return currentStock <= threshold
+        })
+
+        // Déduplication par nom canonique pour éviter les doublons de pills
+        const dedupMap = new Map<string, Product>()
+        alertProducts.forEach(p => {
+          const canonicalName = normalizeProductName(p.name)
+          const key = canonicalName.toLowerCase().trim()
+          if (!dedupMap.has(key)) {
+            dedupMap.set(key, {
+              ...p,
+              name: canonicalName
+            })
+          }
+        })
+
+        setLowStockProducts(Array.from(dedupMap.values()))
+>>>>>>> f7aaf2d
       }
     } catch (err) {
       console.error('Erreur chargement stock alertes:', err)
     }
 
-    // 2. Charger les items enregistrés dans le localStorage
+    // 2. Charger et nettoyer rigoureusement la liste d'achats du localStorage
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(storageKey)
       if (saved) {
         try {
-          setItems(JSON.parse(saved))
+          const parsedItems: ShoppingItem[] = JSON.parse(saved)
+          // Supprimer systématiquement tous les articles dont le produit n'a PAS le suivi activé
+          const cleanItems = parsedItems.filter(item => {
+            const canonicalItemName = getCanonicalProductName(item.name).toLowerCase().trim()
+            const matchProd = productsList.find(p => getCanonicalProductName(p.name).toLowerCase().trim() === canonicalItemName)
+            
+            // Si le produit existe au catalogue mais qu'il n'est pas suivi -> le retirer de la liste d'achats !
+            if (matchProd && !matchProd.stock_tracked && (matchProd.initial_stock || 0) === 0) {
+              return false
+            }
+
+            // Si l'article est marqué comme Alerte Stock mais n'a aucun produit suivi actif -> le retirer !
+            if (item.isAutoSuggested) {
+              if (!matchProd || (!matchProd.stock_tracked && (matchProd.initial_stock || 0) === 0)) {
+                return false
+              }
+            }
+
+            return true
+          })
+
+          setItems(cleanItems)
+          localStorage.setItem(storageKey, JSON.stringify(cleanItems))
         } catch (e) {
           setItems([])
         }
@@ -366,6 +454,44 @@ export function ShoppingListManager({
     }
   }
 
+  // Catégories de filtres
+  const filterCategories = [
+    'TOUT',
+    '⚠️ Alertes Stock',
+    '🛒 À Acheter',
+    '✅ Cochés',
+    '🍲 Cuisine & Ingrédients',
+    '🥤 Boissons',
+    '📦 Fournitures & Divers'
+  ]
+
+  const getItemCategory = (item: ShoppingItem): string => {
+    const lower = item.name.toLowerCase()
+    if (item.isAutoSuggested) return '⚠️ Alertes Stock'
+    if (/riz|huile|tomate|viande|poisson|sardine|sucre|lait|pain|farine|œuf|spaghetti|maki|poulet|sauce/i.test(lower)) {
+      return '🍲 Cuisine & Ingrédients'
+    }
+    if (/eau|jus|coca|biere|beaufort|vin|soda|boisson|canette|bouteille/i.test(lower)) {
+      return '🥤 Boissons'
+    }
+    return '📦 Fournitures & Divers'
+  }
+
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const matchSearch = !searchQuery.trim() || item.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
+      if (!matchSearch) return false
+
+      if (categoryFilter === 'TOUT') return true
+      if (categoryFilter === '⚠️ Alertes Stock') return item.isAutoSuggested
+      if (categoryFilter === '🛒 À Acheter') return !item.isChecked
+      if (categoryFilter === '✅ Cochés') return item.isChecked
+      
+      const cat = getItemCategory(item)
+      return cat === categoryFilter
+    })
+  }, [items, searchQuery, categoryFilter])
+
   // Calcul du total de la liste
   const totalEstimatedBudget = items.reduce((acc, curr) => acc + (curr.quantity * curr.unitCost), 0)
   const checkedBudget = items.filter(i => i.isChecked).reduce((acc, curr) => acc + (curr.quantity * curr.unitCost), 0)
@@ -409,6 +535,46 @@ export function ShoppingListManager({
         </div>
       </div>
 
+      {/* Barre de Recherche + Pilules de Filtres */}
+      <div className="px-6 py-3 bg-[#f5f1e8] border-b border-gray-200 flex flex-col gap-2.5 flex-shrink-0">
+        <div className="flex items-center gap-2 bg-white border border-gray-250 rounded-2xl px-3 py-1.5 shadow-inner">
+          <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <input
+            type="text"
+            placeholder="🔍 Rechercher un produit dans la liste de courses..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full text-xs font-semibold text-gray-800 bg-transparent outline-none placeholder-gray-400"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="p-0.5 text-gray-400 hover:text-gray-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Pilules de filtres par catégorie */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+          {filterCategories.map(cat => {
+            const isActive = categoryFilter === cat
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategoryFilter(cat)}
+                className={`px-3 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-gray-900 text-white shadow-sm'
+                    : 'bg-white/80 text-gray-600 border border-gray-200 hover:bg-white hover:text-gray-900'
+                }`}
+              >
+                {cat}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 max-w-4xl mx-auto w-full">
         {/* En-tête avec message de succès */}
         {successMsg && (
@@ -449,7 +615,7 @@ export function ShoppingListManager({
                     }`}
                   >
                     <span>⚠️ {prod.name}</span>
-                    <span className="text-[10px] font-mono text-amber-700 font-bold">({prod.initial_stock} u)</span>
+                    <span className="text-[10px] font-mono text-amber-700 font-bold">({prod.current_stock ?? prod.initial_stock ?? 0} u)</span>
                     {!isAlreadyInList && <Plus className="w-3.5 h-3.5 text-amber-600" />}
                   </button>
                 )
@@ -660,7 +826,7 @@ export function ShoppingListManager({
         <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
-              📋 Ma Liste d'Achats ({items.length} article{items.length > 1 ? 's' : ''})
+              📋 Ma Liste d'Achats ({filteredItems.length} / {items.length} article{items.length > 1 ? 's' : ''})
             </h3>
             {totalEstimatedBudget > 0 && (
               <div className="text-right">
@@ -670,9 +836,9 @@ export function ShoppingListManager({
             )}
           </div>
 
-          {items.length > 0 ? (
+          {filteredItems.length > 0 ? (
             <div className="divide-y divide-gray-150">
-              {items.map(item => {
+              {filteredItems.map(item => {
                 const itemTotal = item.quantity * item.unitCost
                 return (
                   <div

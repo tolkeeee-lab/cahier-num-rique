@@ -1,7 +1,10 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, ChevronUp, X, Mic, MicOff } from 'lucide-react'
+import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
+import { parseRequestedProductFromNotebookText, recordRequestedProductInStorage } from '@/lib/requestedProductsUtils'
+import { analyzeNotebookInputWithMasterCatalog, StockProductCard } from '@/lib/smartStockAssistant'
 
 interface Sale {
   id: string
@@ -26,6 +29,8 @@ interface SalesInputProps {
   onSaleRecorded: (sale: Sale) => void
   onError: (error: string) => void
   shopId?: string
+  shopCountry?: string
+  shopCity?: string
 }
 
 interface MenuItem {
@@ -111,11 +116,53 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(price) + ' F'
 }
 
-export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }: SalesInputProps) {
+export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', shopCountry = 'CI', shopCity }: SalesInputProps) {
   const [input, setInput] = useState('')
   const [selectedPen, setSelectedPen] = useState('blue')
   const [loading, setLoading] = useState(false)
   const [postItWarning, setPostItWarning] = useState<string | null>(null)
+  const [lastPrintedSale, setLastPrintedSale] = useState<any | null>(null)
+  const [isListening, setIsListening] = useState(false)
+
+  const toggleVoiceDictation = useCallback(() => {
+    if (typeof window === 'undefined') return
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      alert("La dictée vocale n'est pas prise en charge sur ce navigateur.")
+      return
+    }
+
+    if (isListening) {
+      setIsListening(false)
+      return
+    }
+
+    try {
+      const recognition = new SpeechRecognition()
+      recognition.lang = 'fr-FR'
+      recognition.interimResults = false
+      recognition.maxAlternatives = 1
+
+      recognition.onstart = () => setIsListening(true)
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript
+        if (transcript) {
+          setInput(prev => (prev ? `${prev} ${transcript}` : transcript))
+        }
+        setIsListening(false)
+      }
+      recognition.onerror = (err: any) => {
+        console.warn('[Speech Recognition]', err)
+        setIsListening(false)
+      }
+      recognition.onend = () => setIsListening(false)
+
+      recognition.start()
+    } catch (e) {
+      console.warn(e)
+      setIsListening(false)
+    }
+  }, [isListening])
   
   // États Menu Tactile
   const [showMenuGrid, setShowMenuGrid] = useState(true)
@@ -138,7 +185,9 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
     }
   }, [input])
 
-  // Charger le stock réel de la boutique pour fusionner avec le menu s'il existe
+  const [masterCatalog, setMasterCatalog] = useState<StockProductCard[]>([])
+
+  // Charger le stock réel de la boutique pour alimenter le masterCatalog de fiabilité
   const fetchStockMenu = useCallback(async () => {
     try {
       const res = await fetch('/api/stock', {
@@ -147,6 +196,7 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
       if (res.ok) {
         const data = await res.json()
         if (data.products && data.products.length > 0) {
+          setMasterCatalog(data.products)
           const loadedMenu: MenuItem[] = data.products.map((p: any, idx: number) => ({
             id: p.id || `stk_${idx}`,
             name: p.name,
@@ -191,7 +241,7 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
         body: JSON.stringify({
           name: newPlatName.trim(),
           unit_price: priceNum,
-          unit_cost: Math.round(priceNum * 0.6),
+          unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
           initial_stock: 100,
           alert_threshold: 5,
           category: newPlatCat === 'boisson' ? 'Boissons' : newPlatCat === 'cuisine' ? 'Cuisine' : 'Cafétéria'
@@ -253,13 +303,24 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
       return
     }
 
+    // Détecter si la saisie est une demande client
+    const reqMatch = parseRequestedProductFromNotebookText(input.trim())
+    if (reqMatch && reqMatch.isRequestedProduct) {
+      recordRequestedProductInStorage(shopId, reqMatch.cleanName, reqMatch.price)
+    }
+
     setLoading(true)
     setPostItWarning(null)
 
     try {
       const response = await fetch('/api/sales', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-shop-id': shopId,
+          'x-shop-country': shopCountry,
+          ...(shopCity ? { 'x-shop-city': shopCity } : {})
+        },
         body: JSON.stringify({ 
           text: input.trim(),
           penColor: selectedPen 
@@ -339,6 +400,8 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
     }
   }
 
+  const liveAssistant = analyzeNotebookInputWithMasterCatalog(input, selectedPen, masterCatalog)
+
   return (
     <div className="relative space-y-4 font-sans select-none">
       {/* ── 1. Sélection du Stylo Bic 4-Couleurs ── */}
@@ -369,8 +432,133 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
         </div>
       </div>
 
-      {/* ── 2. Zone d'Écriture Manuscrite du Cahier avec Suggestions Intelligentes ── */}
+      {/* ── 2. Zone d'Écriture Manuscrite du Cahier avec Assistant & Suggestions ── */}
       <form onSubmit={handleSubmit} className="relative">
+
+        {/* 💡 Assistant de Fiabilité de Stock en Temps Réel */}
+        {liveAssistant && (
+          <div className="mb-2 p-3 bg-white border border-emerald-300 rounded-2xl shadow-md space-y-2 animate-fade-in text-xs font-sans">
+            {liveAssistant.isNewProduct ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-600 animate-pulse" />
+                    <span className="font-bold text-amber-950">
+                      🟡 Nouveau Produit Détecté
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-full font-mono text-[9px] font-bold">
+                    ✨ Création Automatique au Catalogue
+                  </span>
+                </div>
+
+                {liveAssistant.suggestedNewName && (
+                  <div className="flex items-center gap-2 bg-amber-50 p-2 border border-amber-200 rounded-xl text-amber-950">
+                    <span>💡 Orthographe suggérée par la base du marché :</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const segments = input.split(/[,;\n]/)
+                        segments.pop()
+                        const prefix = segments.length > 0 ? segments.join(', ') + ', ' : ''
+                        const pricePart = liveAssistant.unitPrice > 0 ? ` à ${liveAssistant.unitPrice}` : ''
+                        setInput(`${prefix}${liveAssistant.requestedQty} ${liveAssistant.suggestedNewName}${pricePart}`)
+                      }}
+                      className="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 text-white rounded-lg font-bold text-[10px] shadow-xs"
+                    >
+                      🟢 Valider "{liveAssistant.suggestedNewName}"
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : liveAssistant.matchedProduct ? (
+              <>
+                <div className="flex items-center justify-between border-b border-gray-100 pb-1.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
+                    <span className="font-bold text-gray-900">
+                      💡 Assistant Stock : <strong className="text-emerald-950">{liveAssistant.matchedProduct.name}</strong>
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full font-mono text-[9px] font-bold">
+                    🎯 {liveAssistant.confidence}% Fiable
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                  <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block">Action</span>
+                    <span className="font-bold text-gray-900">
+                      {liveAssistant.transactionKind === 'stock_addition' ? '📦 Entrée Stock' : '🛍️ Déduction Vente'}
+                    </span>
+                  </div>
+
+                  <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block">Quantité Impactée</span>
+                    <span className="font-bold font-mono text-emerald-900">
+                      {liveAssistant.transactionKind === 'stock_addition' ? '+' : '-'}{liveAssistant.calculatedItemsCount} {liveAssistant.matchedProduct.unit || 'unités'}
+                    </span>
+                  </div>
+
+                  <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block">Nouveau Stock</span>
+                    <span className="font-bold font-mono text-gray-900">
+                      {liveAssistant.stockBefore} ➔ <strong className={liveAssistant.stockAfter < 0 ? 'text-rose-700' : 'text-emerald-800'}>{liveAssistant.stockAfter}</strong>
+                    </span>
+                  </div>
+
+                  <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-150">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold block">Prix Retenu</span>
+                    <span className="font-bold font-mono text-gray-900">
+                      {formatPrice(liveAssistant.totalAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Alerte Anomalie de Prix (Zéro Manquant / Zéro en trop) */}
+                {liveAssistant.suspectPriceAnomaly && liveAssistant.suggestedCorrectPrice && (
+                  <div className="flex items-center justify-between gap-2 bg-rose-50 p-2 border border-rose-200 rounded-xl text-rose-900">
+                    <span className="text-[10px] font-bold">⚠️ Prix suspect ({formatPrice(liveAssistant.unitPrice)}). Zéro omis ?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const segments = input.split(/[,;\n]/)
+                        segments.pop()
+                        const prefix = segments.length > 0 ? segments.join(', ') + ', ' : ''
+                        setInput(`${prefix}${liveAssistant.requestedQty} ${liveAssistant.matchedProduct?.name} à ${liveAssistant.suggestedCorrectPrice}`)
+                      }}
+                      className="px-2 py-0.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg font-bold text-[9.5px]"
+                    >
+                      💡 Corriger en {formatPrice(liveAssistant.suggestedCorrectPrice)}
+                    </button>
+                  </div>
+                )}
+
+                {/* Variantes Cliquables 1-Tap si produit ambigu */}
+                {liveAssistant.alternativeVariants.length > 0 && (
+                  <div className="pt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[9px] font-bold text-gray-400 font-mono">Variantes :</span>
+                    {liveAssistant.alternativeVariants.map(alt => (
+                      <button
+                        key={alt.id}
+                        type="button"
+                        onClick={() => {
+                          const segments = input.split(/[,;\n]/)
+                          segments.pop()
+                          const prefix = segments.length > 0 ? segments.join(', ') + ', ' : ''
+                          setInput(`${prefix}${liveAssistant.requestedQty} ${alt.name} à ${alt.unit_price}`)
+                        }}
+                        className="px-2 py-0.5 bg-gray-100 hover:bg-emerald-100 border border-gray-200 hover:border-emerald-300 rounded-lg text-[9.5px] font-bold text-gray-800 transition-all"
+                      >
+                        👉 {alt.name} ({formatPrice(alt.unit_price)})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : null}
+          </div>
+        )}
         {matchingSuggestions.length > 0 && (
           <div className="mb-2 p-2 bg-[#fffdf2] border border-amber-300 rounded-2xl shadow-md animate-fade-in">
             <div className="flex items-center justify-between gap-1.5 text-amber-900 text-[10px] font-bold mb-1.5 px-1">
@@ -430,7 +618,21 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
               {showMenuGrid ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+              <button
+                type="button"
+                onClick={toggleVoiceDictation}
+                title={isListening ? "Écoute en cours... Parlez !" : "Dicter la vente à la voix"}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                  isListening
+                    ? 'bg-red-600 text-white animate-pulse'
+                    : 'bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300'
+                }`}
+              >
+                {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5 text-amber-700" />}
+                <span>{isListening ? 'Écoute...' : '🎙️ Dictée'}</span>
+              </button>
+
               {input.trim() && (
                 <button
                   type="button"
@@ -633,6 +835,13 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop' }:
           </button>
         </div>
       )}
+
+      {/* Modale d'Impression de Ticket de Caisse */}
+      <ReceiptPrinterModal
+        isOpen={!!lastPrintedSale}
+        sale={lastPrintedSale}
+        onClose={() => setLastPrintedSale(null)}
+      />
     </div>
   )
 }

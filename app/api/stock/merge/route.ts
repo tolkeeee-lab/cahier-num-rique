@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { stockMergeSchema, validatePayload } from '@/lib/validations'
 
 export async function POST(request: Request) {
   const shopId = request.headers.get('x-shop-id') || 'default-shop'
   try {
-    const { sourceProductId, targetProductId } = await request.json()
-
-    if (!sourceProductId || !targetProductId) {
-      return NextResponse.json({ error: 'IDs de produit source et cible obligatoires' }, { status: 400 })
+    const rawBody = await request.json()
+    const validation = validatePayload(stockMergeSchema, rawBody)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
+
+    const { sourceProductId, targetProductId } = validation.data
 
     if (sourceProductId === targetProductId) {
       return NextResponse.json({ error: 'Impossible de fusionner un produit avec lui-même' }, { status: 400 })
