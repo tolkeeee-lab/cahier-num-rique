@@ -243,6 +243,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
           unit: p.unit, alert_threshold: p.alert_threshold, initial_stock: p.initial_stock,
           unit_cost: p.unit_cost, unit_price: p.unit_price, created_at: p.created_at || '',
           multiplier: p.multiplier || 1, packaging_name: p.packaging_name || '',
+          lot_quantity: p.lot_quantity || 0, lot_price: p.lot_price || 0,
         })))
       }
     } catch (err) {
@@ -280,6 +281,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
       alert_threshold: item.alert_threshold, initial_stock: item.initial_stock,
       unit_cost: item.unit_cost, unit_price: item.unit_price,
       multiplier: item.multiplier || 1, packaging_name: item.packaging_name || '',
+      lot_quantity: item.lot_quantity || 0, lot_price: item.lot_price || 0,
     })
     setEditingItem(item)
     setShowAddModal(true)

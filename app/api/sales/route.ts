@@ -221,15 +221,26 @@ export async function POST(request: NextRequest) {
                 const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1
 
                 const isPurchase = ['purchase_cash', 'purchase_credit'].includes(type)
-                const price = isPurchase ? (prod.unit_cost || prod.unit_price) : prod.unit_price
+                let price = isPurchase ? (prod.unit_cost || prod.unit_price) : prod.unit_price
+                let calculatedTotal = 0
 
-                if (price) {
+                if (!isPurchase && prod.lot_quantity > 1 && prod.lot_price > 0 && qty >= prod.lot_quantity) {
+                  const numLots = Math.floor(qty / prod.lot_quantity)
+                  const remainder = qty % prod.lot_quantity
+                  calculatedTotal = (numLots * prod.lot_price) + (remainder * (prod.unit_price || 0))
+                  price = Math.round(calculatedTotal / qty)
+                } else if (price) {
+                  calculatedTotal = qty * price
+                }
+
+                if (calculatedTotal > 0 || price > 0) {
                   parsedData.articles = [{
                     nom: prod.name,
                     quantite: qty,
                     prix_unitaire: price,
                     unite_vente: prod.unit
                   }]
+                  parsedData.total_facture = calculatedTotal
                   hasPriceUpdated = true
                   break
                 }

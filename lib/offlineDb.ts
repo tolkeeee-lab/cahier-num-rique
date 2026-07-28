@@ -219,6 +219,8 @@ export interface OfflineProduct {
   stock_tracked?: boolean
   is_service?: boolean
   is_unlimited?: boolean
+  lot_quantity?: number
+  lot_price?: number
 }
 
 // ─── Clés localStorage ────────────────────────────────────────────────────────

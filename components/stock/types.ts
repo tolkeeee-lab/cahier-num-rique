@@ -35,6 +35,8 @@ export interface StockFormState {
   unit_price: number
   multiplier: number
   packaging_name: string
+  lot_quantity: number
+  lot_price: number
 }
 
 export type StockStatus = 'ok' | 'low' | 'out' | 'untracked'

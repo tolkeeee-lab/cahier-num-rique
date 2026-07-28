@@ -36,6 +36,8 @@ export const EMPTY_FORM: StockFormState = {
   unit_price: 0,
   multiplier: 1,
   packaging_name: '',
+  lot_quantity: 0,
+  lot_price: 0,
 }
 
 export function formatPrice(price: number): string {

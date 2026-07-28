@@ -197,7 +197,7 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json()
-    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, created_at } = body
+    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, created_at } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Le nom du produit est obligatoire' }, { status: 400 })
@@ -217,6 +217,8 @@ export async function POST(request: Request) {
       multiplier: multiplier ?? 1,
       packaging_name: packaging_name || '',
       is_service: is_service ?? false,
+      lot_quantity: lot_quantity ?? 0,
+      lot_price: lot_price ?? 0,
     }
 
     if (created_at) {
@@ -248,7 +250,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json()
-    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service } = body
+    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price } = body
 
     if (!id) {
       return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
@@ -277,6 +279,8 @@ export async function PATCH(request: Request) {
     if (multiplier !== undefined) updates.multiplier = multiplier
     if (packaging_name !== undefined) updates.packaging_name = packaging_name
     if (is_service !== undefined) updates.is_service = is_service
+    if (lot_quantity !== undefined) updates.lot_quantity = lot_quantity
+    if (lot_price !== undefined) updates.lot_price = lot_price
 
     const { data, error } = await supabase
       .from('products')

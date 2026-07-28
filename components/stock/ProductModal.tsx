@@ -305,6 +305,61 @@ export function ProductModal({
                 )}
               </div>
 
+              {/* 🎁 Tarification Dégressive par Lot (Optionnel) */}
+              <div className="border-t border-dashed border-amber-300 pt-3 bg-amber-50/50 p-3 rounded-2xl">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">🎁</span>
+                    <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wide">
+                      Offre / Tarif par Lot (Optionnel)
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-mono text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
+                    Ex: 3 pour 275 F
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
+                      Taille du lot (Quantité)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.lot_quantity || ''}
+                      onChange={e => setFormData(p => ({ ...p, lot_quantity: parseInt(e.target.value) || 0 }))}
+                      placeholder="Ex: 3"
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono outline-none focus:border-amber-500 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
+                      Prix Global du lot (FCFA)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.lot_price || ''}
+                      onChange={e => setFormData(p => ({ ...p, lot_price: parseInt(e.target.value) || 0 }))}
+                      placeholder="Ex: 275"
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono outline-none focus:border-amber-500 font-bold text-amber-950"
+                    />
+                  </div>
+                </div>
+
+                {formData.lot_quantity > 1 && formData.lot_price > 0 && (
+                  <div className="mt-2 text-[10px] text-amber-900 bg-amber-100/70 border border-amber-300 p-2 rounded-xl font-mono leading-tight">
+                    💡 <strong>{formData.lot_quantity} {formData.name || 'articles'}</strong> vendus pour <strong>{formData.lot_price} FCFA</strong> au lieu de {formData.unit_price * formData.lot_quantity} FCFA
+                    {formData.unit_price * formData.lot_quantity > formData.lot_price && (
+                      <span className="text-emerald-800 font-bold block mt-0.5">
+                        (Réduction accordée au client : -{formData.unit_price * formData.lot_quantity - formData.lot_price} FCFA)
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Conditionnement / Multiplicateur */}
               <div className="border-t border-dashed border-gray-200 pt-3">
                 <div className="flex items-center justify-between mb-2">

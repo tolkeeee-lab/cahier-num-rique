@@ -189,6 +189,11 @@ export function StockItemRow({
               <span className="text-gray-400 italic">Achat: Non renseigné</span>
             )}
             {item.unit_price > 0 && <span>Vente: <strong className="text-gray-700">{formatPrice(item.unit_price)}</strong></span>}
+            {item.lot_quantity && item.lot_quantity > 1 && item.lot_price && item.lot_price > 0 ? (
+              <span className="bg-amber-100 text-amber-950 border border-amber-300 px-2 py-0.5 rounded-md font-bold">
+                🎁 Lot de {item.lot_quantity} à {formatPrice(item.lot_price)}
+              </span>
+            ) : null}
             {item.multiplier && item.multiplier > 1 && (
               <>
                 <span className="bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
