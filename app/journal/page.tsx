@@ -1265,67 +1265,132 @@ export default function JournalPage() {
     const articles: any[] = []
     let totalFacture = 0
 
-    const hasExplicitSeparator = /(?:^|\s)(?:à|a|@)(?:\s|$)/i.test(text)
-    const articleRegex = hasExplicitSeparator
-      ? /(\d+)\s*(.*?)\s*(?:à|a|@)\s*(\d+)/gi
-      : /(\d+)\s+(.+?)\s+(\d+)/gi
-    let match
+    // Nettoyage des virgules, points et points-virgules de fin de chaîne
+    const rawCleaned = text.replace(/[,;\.\s]+$/, '').trim()
 
-    const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
-    const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:de\s+|a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)*(\d+)/i
+    // Découper si plusieurs articles sont séparés par des virgules ou retours à la ligne (ex: "2 Beaufort à 360, 3 oeufs à 275")
+    const segments = rawCleaned.includes('\n') 
+      ? rawCleaned.split('\n')
+      : (/,/g.test(rawCleaned) && /\d/.test(rawCleaned) ? rawCleaned.split(',') : [rawCleaned])
 
-    while ((match = articleRegex.exec(text)) !== null) {
-      const qty = parseInt(match[1], 10)
-      const name = match[2].trim() || "Article(s)"
-      const price = parseInt(match[3], 10)
+    for (const seg of segments) {
+      const cleanedText = seg.replace(/[,;\.\s]+$/, '').trim()
+      if (!cleanedText) continue
 
-      if (qty > 1 && qty >= price) {
-        continue
-      }
+      // ─── REGEX PATTERNS POUR VENTES DE DÉTAIL ET PAR LOT ───
+      const lotPourRegex = /^(\d+)\s+(?:pour|a|à)?\s*(\d{2,6})\s*(?:f|fcfa|cfa|francs)?\s+(.+)$/i
+      const lotItemPourRegex = /^(\d+)\s+(.+?)\s+(?:pour)\s+(\d{2,6})\s*(?:f|fcfa|cfa|francs)?$/i
 
-      const packMatch = name.match(packRegex)
-      const salePriceMatch = text.match(salePriceRegex)
+      const singleItemNoQtyRegex = /^([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@|pour)?\s*(\d{2,6})\s*(?:f|fcfa|cfa|francs)?$/i
 
-      let finalQty = qty
-      let finalUnitPrice = price
-      let uniteAchat = undefined
-      let uniteVente = undefined
-      let quantiteParBoite = undefined
-      let prixVenteUnitaire = salePriceMatch ? parseInt(salePriceMatch[1], 10) : undefined
-      let simplifiedName = name
+      const hasExplicitSeparator = /(?:^|\s)(?:à|a|@)(?:\s|$)/i.test(cleanedText)
+      const articleRegex = hasExplicitSeparator
+        ? /(\d+)\s*(.*?)\s*(?:à|a|@)\s*(\d+)/gi
+        : /(\d+)\s+(.+?)\s+(\d+)/gi
 
-      if (packMatch) {
-        const multiplier = parseInt(packMatch[1], 10)
-        uniteVente = packMatch[2].trim()
-        quantiteParBoite = multiplier
+      let match
+      let segmentMatched = false
 
-        const firstWord = name.split(/\s+/)[0]
-        if (['caissier', 'carton', 'sac', 'boite', 'boîte', 'paquet'].includes(firstWord.toLowerCase())) {
-          uniteAchat = firstWord
-          simplifiedName = name.replace(new RegExp(`^${firstWord}\\s+(?:de\\s+)?`, 'i'), '')
+      // TEST 1 : Format "3 pour 50F super mint" ou "3 super mint pour 50F"
+      const matchLotPour = cleanedText.match(lotPourRegex) || cleanedText.match(lotItemPourRegex)
+      if (matchLotPour && !hasExplicitSeparator) {
+        const qty = parseInt(matchLotPour[1], 10)
+        let lotPrice = parseInt(matchLotPour[2], 10)
+        let prodName = matchLotPour[3].trim()
+
+        if (isNaN(lotPrice)) {
+          lotPrice = parseInt(matchLotPour[3], 10)
+          prodName = matchLotPour[2].trim()
         }
 
-        simplifiedName = simplifiedName.replace(packRegex, '').replace(/\s+de\s*$/, '').trim()
-
-        finalQty = qty * multiplier
-        finalUnitPrice = Math.round(price / multiplier)
+        if (qty >= 1 && !isNaN(lotPrice) && lotPrice > 0) {
+          const unitPrice = Math.round(lotPrice / qty)
+          articles.push({
+            nom: prodName,
+            quantite: qty,
+            prix_unitaire: unitPrice
+          })
+          totalFacture += lotPrice
+          segmentMatched = true
+        }
       }
 
-      articles.push({
-        nom: simplifiedName,
-        quantite: finalQty,
-        prix_unitaire: finalUnitPrice,
-        unite_achat: uniteAchat,
-        unite_vente: uniteVente,
-        quantite_par_boite: quantiteParBoite,
-        prix_vente_unitaire: prixVenteUnitaire
-      })
-      totalFacture += qty * price
+      // TEST 2 : Saisie directe sans quantité (ex: "super mint 50F", "super mint à 50", "Beaufort 360", "Beaufort 360,")
+      if (!segmentMatched) {
+        const matchSingleNoQty = cleanedText.match(singleItemNoQtyRegex)
+        if (matchSingleNoQty) {
+          const prodName = matchSingleNoQty[1].trim()
+          const price = parseInt(matchSingleNoQty[2], 10)
+
+          if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
+            articles.push({
+              nom: prodName,
+              quantite: 1,
+              prix_unitaire: price
+            })
+            totalFacture += price
+            segmentMatched = true
+          }
+        }
+      }
+
+      // TEST 3 : Traitement Regex standard pour articles multiples ou saisies classiques
+      if (!segmentMatched) {
+        const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
+        const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:de\s+|a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)*(\d+)/i
+
+        while ((match = articleRegex.exec(cleanedText)) !== null) {
+          const qty = parseInt(match[1], 10)
+          const name = match[2].trim() || "Article(s)"
+          const price = parseInt(match[3], 10)
+
+          const isLotSale = qty > 1 && price <= 500 && !hasExplicitSeparator
+
+          const packMatch = name.match(packRegex)
+          const salePriceMatch = cleanedText.match(salePriceRegex)
+
+          let finalQty = qty
+          let finalUnitPrice = isLotSale ? Math.round(price / qty) : price
+          let uniteAchat = undefined
+          let uniteVente = undefined
+          let quantiteParBoite = undefined
+          let prixVenteUnitaire = salePriceMatch ? parseInt(salePriceMatch[1], 10) : undefined
+          let simplifiedName = name
+
+          if (packMatch) {
+            const multiplier = parseInt(packMatch[1], 10)
+            uniteVente = packMatch[2].trim()
+            quantiteParBoite = multiplier
+
+            const firstWord = name.split(/\s+/)[0]
+            if (['caissier', 'carton', 'sac', 'boite', 'boîte', 'paquet'].includes(firstWord.toLowerCase())) {
+              uniteAchat = firstWord
+              simplifiedName = name.replace(new RegExp(`^${firstWord}\\s+(?:de\\s+)?`, 'i'), '')
+            }
+
+            simplifiedName = simplifiedName.replace(packRegex, '').replace(/\s+de\s*$/, '').trim()
+
+            finalQty = qty * multiplier
+            finalUnitPrice = Math.round(price / multiplier)
+          }
+
+          articles.push({
+            nom: simplifiedName,
+            quantite: finalQty,
+            prix_unitaire: finalUnitPrice,
+            unite_achat: uniteAchat,
+            unite_vente: uniteVente,
+            quantite_par_boite: quantiteParBoite,
+            prix_vente_unitaire: prixVenteUnitaire
+          })
+          totalFacture += isLotSale ? price : (qty * price)
+        }
+      }
     }
 
     if (articles.length === 0) {
-      const amountRegex = /(?:total|montant|somme|de)?\s*(\d{3,7})(?:\s*f|\s*fcfa|\s*cfa|\s*francs)?/i
-      const amountMatch = text.match(amountRegex)
+      const amountRegex = /(?:total|montant|somme|de)?\s*(\d{2,7})(?:\s*f|\s*fcfa|\s*cfa|\s*francs)?/i
+      const amountMatch = rawCleaned.match(amountRegex)
       if (amountMatch) {
         const amount = parseInt(amountMatch[1], 10)
         totalFacture = amount
