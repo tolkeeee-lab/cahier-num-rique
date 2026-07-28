@@ -52,7 +52,10 @@ export async function GET(request: Request) {
       if (!isIn && !isOut) continue
 
       for (const article of (sale.sold_articles as any[] | null) || []) {
-        const key = (article.product_name as string).toLowerCase().trim()
+        const rawName = (article.product_name as string) || ''
+        if (!rawName.trim()) continue
+        const cleanName = normalizeProductName(rawName)
+        const key = cleanName.toLowerCase().trim()
         if (!stockMap[key]) stockMap[key] = { total_in: 0, total_out: 0, movements: [] }
 
         if (isIn) {
@@ -63,7 +66,7 @@ export async function GET(request: Request) {
             type: 'in', 
             quantity: article.quantity, 
             unit_price: article.unit_price, 
-            notes: `${article.quantity} ${article.product_name} à ${article.unit_price} F`, 
+            notes: `${article.quantity} ${cleanName} à ${article.unit_price} F`, 
             sale_type: sale.type 
           })
         } else {
@@ -74,16 +77,17 @@ export async function GET(request: Request) {
             type: 'out', 
             quantity: article.quantity, 
             unit_price: article.unit_price, 
-            notes: `${article.quantity} ${article.product_name} à ${article.unit_price} F`, 
+            notes: `${article.quantity} ${cleanName} à ${article.unit_price} F`, 
             sale_type: sale.type 
           })
         }
       }
     }
 
-    // 4. Fusionner catalogue + niveaux de stock
+    // 4. Fusionner catalogue + niveaux de stock (avec normalisation canonique)
     const stockItems = (products || []).map((product: any) => {
-      const key = (product.name as string).toLowerCase().trim()
+      const cleanName = normalizeProductName(product.name)
+      const key = cleanName.toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
       
       const hasInitialStock = (product.initial_stock || 0) > 0
@@ -115,6 +119,10 @@ export async function GET(request: Request) {
       const isUnlimited = product.is_service || product.category === 'Cuisine'
       
       const rawStock = (((product.initial_stock || 0) * mult) + totalIn - totalOut)
+      const hasInitialStock = (product.initial_stock || 0) > 0
+      const hasPurchases = totalIn > 0
+      const stockTracked = hasInitialStock || hasPurchases
+      
       const currentStock = isUnlimited 
         ? 999999 
         : stockTracked
@@ -130,6 +138,7 @@ export async function GET(request: Request) {
 
       return {
         ...product,
+        name: cleanName,
         unit_cost: cleanUnitCost,
         total_in: totalIn,
         total_out: stockTracked ? totalOut : 0,
@@ -143,18 +152,21 @@ export async function GET(request: Request) {
     })
 
     // 5. Articles hors-catalogue (présents dans les écritures mais pas dans le catalogue)
-    const catalogNames = new Set((products || []).map((p: any) => (p.name as string).toLowerCase().trim()))
+    const catalogKeys = new Set((products || []).map((p: any) => normalizeProductName(p.name).toLowerCase().trim()))
     const orphans = Object.entries(stockMap)
-      .filter(([name]) => !catalogNames.has(name))
-      .map(([name, data]) => ({
-        id: `orphan_${name}`,
-        name,
-        is_orphan: true,
-        total_in: data.total_in,
-        total_out: data.total_out,
-        current_stock: data.total_in - data.total_out,
-        movements: data.movements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10),
-      }))
+      .filter(([key]) => !catalogKeys.has(key))
+      .map(([key, data]) => {
+        const cleanName = normalizeProductName(key)
+        return {
+          id: `orphan_${key}`,
+          name: cleanName,
+          is_orphan: true,
+          total_in: data.total_in,
+          total_out: data.total_out,
+          current_stock: data.total_in - data.total_out,
+          movements: data.movements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10),
+        }
+      })
 
     return NextResponse.json({
       products: stockItems,

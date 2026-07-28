@@ -760,6 +760,105 @@ export default function JournalPage() {
     setShowQuickAddMenuForm(false)
   }
 
+  // 🛒 Conversion des Achats de la Liste de Courses en Écriture Comptable (Stylo Vert) et Mise à jour du Stock
+  const handleConvertToStockPurchase = async (textToSubmit: string) => {
+    if (!textToSubmit || !textToSubmit.trim()) return
+
+    try {
+      setLoading(true)
+      const currentShop = userShops.find(s => s.id === shopId)
+      const activity = currentShop?.activity || 'boutique'
+
+      const res = await fetch('/api/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-shop-id': shopId,
+          'x-shop-activity': activity
+        },
+        body: JSON.stringify({
+          text: textToSubmit,
+          pen_color: 'green',
+          type: 'stock_cash',
+          notes: 'Réapprovisionnement depuis la Liste de Courses'
+        })
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Erreur lors de l\'enregistrement des achats')
+      }
+
+      // Recharger le menu, les totaux financiers et le stock
+      setRefreshMenuTrigger(prev => prev + 1)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cahier_sales_updated'))
+      }
+    } catch (err: any) {
+      handleError(err?.message || 'Erreur lors du traitement du réapprovisionnement')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 🚀 Initialisation en 1-Click de la Carte Modèle dans le Stock Officiel (si catalogue vide)
+  const handleSeedDefaultCatalog = async () => {
+    const currentShop = userShops.find(s => s.id === shopId)
+    const activity = currentShop?.activity || 'boutique'
+
+    const defaultItems = [
+      { name: 'Atassi Viande / Poulet', price: 1500, category: 'Cuisine', cost: 900 },
+      { name: 'Riz au Gras Poisson', price: 1500, category: 'Cuisine', cost: 900 },
+      { name: 'Spaghetti Omelette', price: 1000, category: 'Cuisine', cost: 600 },
+      { name: 'Igname Pilée Sauce', price: 2500, category: 'Cuisine', cost: 1500 },
+      { name: 'Poulet Braisé / Frit', price: 2000, category: 'Cuisine', cost: 1200 },
+      { name: 'Café au Lait', price: 500, category: 'Cafétéria', cost: 250 },
+      { name: 'Pain Omelette Avocat', price: 800, category: 'Cafétéria', cost: 450 },
+      { name: 'Bouillie de Millet', price: 300, category: 'Cafétéria', cost: 150 },
+      { name: 'Sandwich Viande Hachée', price: 1200, category: 'Cafétéria', cost: 700 },
+      { name: 'Jus de Bissap Maison', price: 300, category: 'Boissons', cost: 150 },
+      { name: 'Bière Beaufort / Sobebra', price: 800, category: 'Boissons', cost: 550 },
+      { name: 'Eau Possotomè 1.5L', price: 400, category: 'Boissons', cost: 250 },
+      { name: 'Coca-Cola / Sucrerie', price: 500, category: 'Boissons', cost: 350 },
+      { name: 'Jus de Gingembre (Gnamakoudji)', price: 400, category: 'Boissons', cost: 200 },
+    ]
+
+    for (const item of defaultItems) {
+      try {
+        await fetch('/api/stock', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId,
+            'x-shop-activity': activity
+          },
+          body: JSON.stringify({
+            name: item.name,
+            unit_price: item.price,
+            unit_cost: item.cost,
+            initial_stock: 50,
+            alert_threshold: 5,
+            category: item.category
+          })
+        })
+      } catch (err) {
+        saveOfflineProduct({
+          id: generateOfflineId('prod'),
+          shop_id: shopId,
+          name: item.name,
+          unit_price: item.price,
+          unit_cost: item.cost,
+          initial_stock: 50,
+          alert_threshold: 5,
+          category: item.category,
+          updated_at: new Date().toISOString()
+        })
+      }
+    }
+
+    setRefreshMenuTrigger(prev => prev + 1)
+  }
+
 
   // Context-aware stock confirmation & price mismatch alert states
   const [showStockConfirmation, setShowStockConfirmation] = useState(false)
@@ -2318,7 +2417,7 @@ export default function JournalPage() {
         <div className="bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-gray-300 shadow-none md:shadow-2xl flex relative z-0 h-dvh md:h-[720px] overflow-hidden w-full max-w-full">
 
           {/* Left leather cover binder spine */}
-          <div className="flex w-6 sm:w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-12 z-10 flex-shrink-0 select-none">
+          <div className="hidden sm:flex w-6 sm:w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-12 z-10 flex-shrink-0 select-none">
             {/* Top brass screw */}
             <div className="brass-screw"></div>
 
@@ -2338,7 +2437,7 @@ export default function JournalPage() {
           </div>
 
           {/* Spiral loops */}
-          <div className="flex absolute left-[18px] sm:left-[32px] md:left-[54px] top-0 bottom-0 w-4 md:w-5 flex-col items-center justify-around py-4 md:py-6 z-20 pointer-events-none">
+          <div className="hidden sm:flex absolute left-[18px] sm:left-[32px] md:left-[54px] top-0 bottom-0 w-4 md:w-5 flex-col items-center justify-around py-4 md:py-6 z-20 pointer-events-none">
             {spiralRings.map((_, i) => (
               <div
                 key={i}
@@ -2840,8 +2939,16 @@ export default function JournalPage() {
                       {/* Touches Tactiles de Plats/Boissons sur une SEULE LIGNE CONTINUE DÉFILANTE */}
                       <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-0.5 select-none w-full">
                         {journalMenuItems.filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter).length === 0 ? (
-                          <div className="text-center py-2 text-gray-500 font-handwritten text-sm w-full">
-                            Aucun produit dans cet onglet. Utilisez le bouton <span className="font-bold text-amber-800">"+"</span> ci-dessus pour en ajouter, ou écrivez simplement vos ventes !
+                          <div className="text-center py-2 text-gray-500 font-sans text-xs w-full flex flex-col items-center gap-1.5">
+                            <span>Aucun produit dans cet onglet du Stock.</span>
+                            <button
+                              type="button"
+                              onClick={handleSeedDefaultCatalog}
+                              className="px-3 py-1 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all flex items-center gap-1"
+                            >
+                              <Sparkles className="w-3 h-3" />
+                              <span>🚀 Initialiser la carte modèle dans le stock (14 produits)</span>
+                            </button>
                           </div>
                         ) : (
                           journalMenuItems

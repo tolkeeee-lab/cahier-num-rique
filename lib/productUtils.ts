@@ -6,12 +6,21 @@ const CANONICAL_ALIASES: Record<string, string> = {
   'flag': 'Flag',
   'flag 600': 'Flag',
   'flag 600ml': 'Flag',
+  'flag 6002 lb': 'Flag',
+  'flag 600 2 lb': 'Flag',
   'lb': 'LB',
   'lb 600': 'LB',
+  'fifa': 'Fifa',
+  'eau fifa': 'Fifa',
   'coca': 'Coca-Cola',
   'coca-cola': 'Coca-Cola',
   'boite de tomate': 'Boîte de Tomate',
   'boite de sardine': 'Boîte de Sardine',
+  'colgate': 'Colgate',
+  'possotome': 'Eau Possotomè',
+  'possotomè': 'Eau Possotomè',
+  'eau possotome': 'Eau Possotomè',
+  'eau possotomè': 'Eau Possotomè',
 }
 
 /**
@@ -19,8 +28,15 @@ const CANONICAL_ALIASES: Record<string, string> = {
  */
 export function normalizeProductName(name: string): string {
   if (!name) return ''
-  const trimmed = name.trim().replace(/\s+/g, ' ')
-  const lower = trimmed.toLowerCase()
+  let trimmed = name.trim().replace(/\s+/g, ' ')
+  let lower = trimmed.toLowerCase()
+
+  // Nettoyage des bruits de frappe courants (ex: flag 6002 lb -> flag)
+  lower = lower
+    .replace(/^flag(\s*6002?\s*lb|\s*600ml?|\s*600)?$/i, 'flag')
+    .replace(/^lb(\s*600)?$/i, 'lb')
+    .replace(/^beufort$/i, 'beaufort')
+    .replace(/^coca(-cola)?$/i, 'coca-cola')
 
   if (CANONICAL_ALIASES[lower]) {
     return CANONICAL_ALIASES[lower]

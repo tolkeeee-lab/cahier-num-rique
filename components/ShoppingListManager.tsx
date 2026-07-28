@@ -50,6 +50,7 @@ export function ShoppingListManager({
 }: ShoppingListManagerProps) {
   const [items, setItems] = useState<ShoppingItem[]>([])
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([])
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([])
   
   // Recherche & Filtres par catégorie
   const [searchQuery, setSearchQuery] = useState('')
@@ -85,6 +86,7 @@ export function ShoppingListManager({
       if (response.ok) {
         const data = await response.json()
         productsList = data.products || []
+        setCatalogProducts(productsList)
 
         // Charger les exclusions locales (produits supprimés/masqués)
         const exclusionsKey = `cahier_stock_exclusions_${shopId}`
@@ -105,7 +107,7 @@ export function ShoppingListManager({
             p.category.includes('✂️')
           )) return false
 
-          // 3. Exclure si le suivi de stock n'est pas activé (stock_tracked === false ou sans stock initial)
+          // 3. Exclure si le suivi de stock n'est pas activé
           const isExplicitlyTracked = p.stock_tracked === true
           const isExplicitlyUntracked = p.stock_tracked === false
           const hasInitial = (p.initial_stock || 0) > 0
@@ -125,7 +127,7 @@ export function ShoppingListManager({
         // Déduplication par nom canonique pour éviter les doublons de pills
         const dedupMap = new Map<string, Product>()
         alertProducts.forEach(p => {
-          const canonicalName = getCanonicalProductName(p.name)
+          const canonicalName = normalizeProductName(p.name)
           const key = canonicalName.toLowerCase().trim()
           if (!dedupMap.has(key)) {
             dedupMap.set(key, {
@@ -656,9 +658,17 @@ export function ShoppingListManager({
                     <input
                       type="text"
                       required
+                      list="catalog-products-list"
                       placeholder="Ex: Cartons Huile Dinor, Sacs Riz..."
                       value={name}
-                      onChange={e => setName(e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value
+                        setName(val)
+                        const match = catalogProducts.find(p => p.name.toLowerCase().trim() === val.trim().toLowerCase())
+                        if (match && match.unit_cost && !unitCost) {
+                          setUnitCost(match.unit_cost.toString())
+                        }
+                      }}
                       className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-250 rounded-xl text-xs font-semibold outline-none focus:border-gray-400"
                     />
                   </div>
@@ -749,9 +759,17 @@ export function ShoppingListManager({
                   <input
                     type="text"
                     required
+                    list="catalog-products-list"
                     placeholder="Ex: Sacs emballage 10kg, Bouteille Gaz..."
                     value={name}
-                    onChange={e => setName(e.target.value)}
+                    onChange={e => {
+                      const val = e.target.value
+                      setName(val)
+                      const match = catalogProducts.find(p => p.name.toLowerCase().trim() === val.trim().toLowerCase())
+                      if (match && match.unit_cost && !unitCost) {
+                        setUnitCost(match.unit_cost.toString())
+                      }
+                    }}
                     className="w-full px-3.5 py-2 bg-[#faf7f0] border border-gray-200 rounded-xl text-xs outline-none focus:border-gray-400"
                   />
                 </div>
@@ -1022,6 +1040,15 @@ export function ShoppingListManager({
           )}
         </div>
       </div>
+
+      {/* Datalist d'Autocomplétion du Catalogue Produit Central */}
+      <datalist id="catalog-products-list">
+        {catalogProducts.map(p => (
+          <option key={p.id} value={p.name}>
+            {p.unit_cost ? `${formatPrice(p.unit_cost)} / unité` : p.category ? p.category : ''}
+          </option>
+        ))}
+      </datalist>
     </div>
   )
 }

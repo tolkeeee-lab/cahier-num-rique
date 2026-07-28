@@ -48,8 +48,15 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
   const [expressType, setExpressType] = useState<'in' | 'out'>('in')
   const [expressQty, setExpressQty] = useState(1)
   const [expressReason, setExpressReason] = useState('purchase')
+  const [expressUnitCost, setExpressUnitCost] = useState('')
   const [expressNotes, setExpressNotes] = useState('')
   const [adjusting, setAdjusting] = useState(false)
+
+  useEffect(() => {
+    if (expressItem) {
+      setExpressUnitCost(expressItem.unit_cost ? expressItem.unit_cost.toString() : '')
+    }
+  }, [expressItem])
 
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
   const [supplierPhone, setSupplierPhone] = useState('')
@@ -71,6 +78,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
           quantity: expressQty,
           type: expressType,
           reason: expressReason,
+          unitCost: parseInt(expressUnitCost) || 0,
           notes: expressNotes,
         }),
       })
@@ -82,6 +90,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
 
       setExpressItem(null)
       setExpressQty(1)
+      setExpressUnitCost('')
       setExpressNotes('')
       await loadStock()
     } catch (err: any) {
@@ -158,10 +167,11 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
   const buildFromOffline = useCallback(() => {
     const offlineProducts = getOfflineProducts(shopId)
     const stockMap = computeOfflineStock(shopId)
-    const catalogNames = new Set(offlineProducts.map(p => p.name.toLowerCase().trim()))
+    const catalogKeys = new Set(offlineProducts.map(p => normalizeProductName(p.name).toLowerCase().trim()))
 
     const stockItems: StockItem[] = offlineProducts.map(p => {
-      const key = p.name.toLowerCase().trim()
+      const cleanName = normalizeProductName(p.name)
+      const key = cleanName.toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
       
       const prodTime = p.created_at ? new Date(p.created_at).getTime() - 60000 : 0
@@ -181,6 +191,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
 
       return { 
         ...p, 
+        name: cleanName,
         total_in: totalIn, 
         total_out: totalOut, 
         stock_tracked: stockTracked,
@@ -190,22 +201,11 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
     })
 
     const orphanItems: StockItem[] = Object.entries(stockMap)
-      .filter(([name]) => !catalogNames.has(name.toLowerCase().trim()))
-      .map(([name, data]) => {
-        let cleanName = name.trim()
-        const lowerName = cleanName.toLowerCase()
-        if (/^lb(\s*600)?$/i.test(lowerName)) cleanName = 'LB'
-        else if (/^flag(\s*6002?\s*lb)?$/i.test(lowerName)) cleanName = 'Flag'
-        else if (/^beufort$/i.test(lowerName) || /^beaufort$/i.test(lowerName)) cleanName = 'Beaufort'
-        else if (/^coca(-cola)?$/i.test(lowerName)) cleanName = 'Coca-Cola'
-        else {
-          cleanName = cleanName.split(/\s+/)
-            .map((w: string) => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-            .join(' ')
-        }
-
+      .filter(([rawKey]) => !catalogKeys.has(normalizeProductName(rawKey).toLowerCase().trim()))
+      .map(([rawKey, data]) => {
+        const cleanName = normalizeProductName(rawKey)
         return {
-          id: `orphan_${name}`, shop_id: shopId, name: cleanName, category: '', unit: 'unité',
+          id: `orphan_${rawKey}`, shop_id: shopId, name: cleanName, category: '', unit: 'unité',
           alert_threshold: 0, initial_stock: 0, unit_cost: 0, unit_price: 0,
           created_at: '', total_in: data.total_in, total_out: data.total_out,
           stock_tracked: false,
@@ -618,7 +618,476 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
         setSupplierPhone={setSupplierPhone}
         items={items}
         generateWhatsAppUrl={generateWhatsAppUrl}
-      />
+                        onChange={() => setDeductPastSales(false)}
+                        className="text-gray-800 focus:ring-gray-800"
+                      />
+                      <span>Repartir à zéro (Ignorer les ventes passées)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-[10px] font-medium">
+                      <input
+                        type="radio"
+                        name="deductPastSales"
+                        checked={deductPastSales}
+                        onChange={() => setDeductPastSales(true)}
+                        className="text-gray-800 focus:ring-gray-800"
+                      />
+                      <span>Déduire du stock initial ({orphanPastSales} ventes)</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Adaptateur dynamique Menu Carte vs Stock Physique */}
+              {formData.category.includes('Cuisiné') || formData.category.includes('Cafétéria') ? (
+                <div className="bg-amber-50 border border-amber-250 rounded-2xl p-3.5 space-y-3">
+                  <div className="flex items-center gap-2 text-amber-900">
+                    <span className="text-base">🍽️</span>
+                    <div>
+                      <h4 className="font-bold text-xs">Mode Plat / Menu Carte</h4>
+                      <p className="text-[10px] text-amber-700">Plat cuisiné ou servi à la demande. Aucun stock physique d'alerte ni prix d'achat grossiste requis.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-amber-950 tracking-wider font-sans block mb-1">Catégorie Carte</label>
+                      <select
+                        value={formData.category}
+                        onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-gray-800 outline-none"
+                      >
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-amber-950 tracking-wider font-sans block mb-1">Prix Vente (FCFA) *</label>
+                      <input
+                        type="number" min="0" required
+                        value={formData.unit_price || ''}
+                        onChange={e => setFormData(p => ({ ...p, unit_price: parseInt(e.target.value) || 0 }))}
+                        placeholder="Ex: 1500"
+                        className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-sm font-mono font-bold text-amber-950 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {formData.category.includes('Prestations') && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-2.5 flex items-center gap-2 text-purple-900 text-[10px] mb-3">
+                      <span className="text-sm">✂️</span>
+                      <p><strong>Carte Prestation / Service :</strong> Main d'œuvre ou service rendu (Coiffure, Couture, Réparation, Nettoyage). Aucun stock physique requis.</p>
+                    </div>
+                  )}
+                  {formData.category.includes('Matières') && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-center gap-2 text-emerald-900 text-[10px] mb-3">
+                      <span className="text-sm">🥬</span>
+                      <p><strong>Matière Première / Cuisine :</strong> Ingrédients achetés au marché (sacs de riz, huile, viandes, condiments) pour préparer les plats et calculer le bénéfice brut global de la cuisine.</p>
+                    </div>
+                  )}
+                  {formData.category.includes('Boissons') && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 flex items-center gap-2 text-blue-900 text-[10px] mb-3">
+                      <span className="text-sm">🥤</span>
+                      <p><strong>Boisson / Bar en Stock :</strong> Produit acheté tout fait et revendu (avec suivi du nombre de bouteilles/casiers, prix d'achat grossiste et alerte de rupture).</p>
+                    </div>
+                  )}
+
+                  {/* Catégorie + Unité */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Catégorie</label>
+                      <select
+                        value={formData.category}
+                        onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-gray-400"
+                      >
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Unité</label>
+                      <select
+                        value={formData.unit}
+                        onChange={e => setFormData(p => ({ ...p, unit: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-gray-400"
+                      >
+                        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Stock initial + Seuil alerte */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Stock initial</label>
+                      <input
+                        type="number" min="0"
+                        value={formData.initial_stock}
+                        onChange={e => setFormData(p => ({ ...p, initial_stock: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                      />
+                      <p className="text-[8px] text-gray-400 mt-0.5">Ce que tu as déjà</p>
+                    </div>
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Seuil d'alerte</label>
+                      <input
+                        type="number" min="0"
+                        value={formData.alert_threshold}
+                        onChange={e => setFormData(p => ({ ...p, alert_threshold: parseInt(e.target.value) || 0 }))}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                      />
+                      <p className="text-[8px] text-gray-400 mt-0.5">Alerte en dessous de</p>
+                    </div>
+                  </div>
+
+                  {/* Prix */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Prix achat (F)</label>
+                      <input
+                        type="number" min="0"
+                        value={formData.unit_cost || ''}
+                        onChange={e => setFormData(p => ({ ...p, unit_cost: parseInt(e.target.value) || 0 }))}
+                        placeholder="Optionnel"
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">Prix vente (F)</label>
+                      <input
+                        type="number" min="0"
+                        value={formData.unit_price || ''}
+                        onChange={e => setFormData(p => ({ ...p, unit_price: parseInt(e.target.value) || 0 }))}
+                        placeholder="Optionnel"
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-mono outline-none focus:border-gray-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Conditionnement / Multiplicateur */}
+                  <div className="border-t border-dashed border-gray-200 pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">📦 Conditionnement / Lots</span>
+                      <input
+                        type="checkbox"
+                        checked={formData.multiplier > 1}
+                        onChange={e => {
+                          setFormData(p => ({
+                            ...p,
+                            multiplier: e.target.checked ? 50 : 1,
+                            packaging_name: e.target.checked ? 'sac' : '',
+                          }))
+                        }}
+                        className="rounded text-gray-800 focus:ring-gray-800"
+                      />
+                    </div>
+
+                    {formData.multiplier > 1 && (
+                      <div className="grid grid-cols-2 gap-3 bg-white p-3 border border-gray-200 rounded-xl shadow-inner mt-2">
+                        <div>
+                          <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Nom du lot</label>
+                          <input
+                            type="text"
+                            placeholder="ex: sac, carton, pack"
+                            value={formData.packaging_name}
+                            onChange={e => setFormData(p => ({ ...p, packaging_name: e.target.value }))}
+                            className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[8px] uppercase font-bold text-gray-500 block mb-0.5">Contenance (Multiplicateur)</label>
+                          <input
+                            type="number"
+                            min="2"
+                            value={formData.multiplier}
+                            onChange={e => setFormData(p => ({ ...p, multiplier: Math.max(1, parseInt(e.target.value) || 1) }))}
+                            className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs outline-none focus:border-gray-400 font-mono"
+                          />
+                        </div>
+                        <div className="col-span-2 text-[8px] text-gray-400 leading-tight">
+                          Chaque entrée/sortie de ce produit comptée dans le journal fera automatiquement <strong>+{formData.multiplier} / -{formData.multiplier} {formData.unit}</strong>.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-3 px-5 py-4 border-t border-gray-200 bg-[#f5f1e8]">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!formData.name.trim() || saving}
+                className="flex-1 px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-full text-xs font-bold disabled:opacity-40 transition-all hover:scale-105 active:scale-95"
+              >
+                {saving ? 'Sauvegarde...' : editingItem ? 'Modifier' : 'Ajouter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de Fusion de Doublons ── */}
+      {showMergeModal && duplicatePairs.length > 0 && activePairIndex < duplicatePairs.length && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#fbf9f4] border-2 border-amber-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-4 border-b border-amber-200 bg-amber-100 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                <GitMerge className="w-5 h-5 text-amber-700" />
+                <span>Fusionner les doublons ({activePairIndex + 1}/{duplicatePairs.length})</span>
+              </div>
+              <button
+                onClick={() => setShowMergeModal(false)}
+                className="p-1 text-amber-800 hover:text-amber-950 rounded-full hover:bg-amber-200/60"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs text-gray-700">
+              <p className="text-gray-600">
+                Ces deux articles semblent identiques. Choisissez le nom canonique à conserver :
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Choix 1 */}
+                <button
+                  onClick={() => handleMergeProducts(
+                    duplicatePairs[activePairIndex].item2.id,
+                    duplicatePairs[activePairIndex].item1.id
+                  )}
+                  disabled={merging}
+                  className="p-3.5 bg-white border border-amber-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-2xl text-left transition-all group flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="font-bold text-sm text-gray-900 group-hover:text-amber-900">
+                      « {duplicatePairs[activePairIndex].item1.name} »
+                    </div>
+                    <span className="text-[10px] text-gray-400 block mt-1">Conserver ce nom</span>
+                  </div>
+                  <div className="mt-3 px-2 py-1 bg-amber-600 text-white text-[9px] font-bold uppercase rounded-lg text-center">
+                    Garder celui-ci
+                  </div>
+                </button>
+
+                {/* Choix 2 */}
+                <button
+                  onClick={() => handleMergeProducts(
+                    duplicatePairs[activePairIndex].item1.id,
+                    duplicatePairs[activePairIndex].item2.id
+                  )}
+                  disabled={merging}
+                  className="p-3.5 bg-white border border-amber-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-2xl text-left transition-all group flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="font-bold text-sm text-gray-900 group-hover:text-amber-900">
+                      « {duplicatePairs[activePairIndex].item2.name} »
+                    </div>
+                    <span className="text-[10px] text-gray-400 block mt-1">Conserver ce nom</span>
+                  </div>
+                  <div className="mt-3 px-2 py-1 bg-amber-600 text-white text-[9px] font-bold uppercase rounded-lg text-center">
+                    Garder celui-ci
+                  </div>
+                </button>
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-[10px] text-amber-800">
+                ℹ️ <strong>Remarque :</strong> La fusion transférera automatiquement l'historique complet des ventes et mouvements sous le nom sélectionné et supprimera l'autre version.
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-amber-200 bg-amber-100/50 flex justify-between items-center">
+              <button
+                onClick={() => setShowMergeModal(false)}
+                className="px-3 py-1.5 text-xs text-amber-900 hover:text-black font-semibold"
+              >
+                Passer
+              </button>
+              {merging && <span className="text-xs font-mono text-amber-700 animate-pulse">Fusion en cours...</span>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Ajustement Express (+ / -) ── */}
+      {expressItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#fbf9f4] border border-gray-200 rounded-[28px] max-w-sm w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className={`px-5 py-4 border-b flex items-center justify-between ${
+              expressType === 'in' ? 'bg-emerald-100 border-emerald-200 text-emerald-900' : 'bg-rose-100 border-rose-200 text-rose-900'
+            }`}>
+              <div className="font-bold text-sm flex items-center gap-2">
+                <span>{expressType === 'in' ? '⚡ Entrée de Stock (+)' : '⚡ Sortie de Stock (-)'}</span>
+              </div>
+              <button onClick={() => setExpressItem(null)} className="p-1 rounded-full hover:bg-black/10">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleExpressAdjust} className="p-5 space-y-4 text-xs">
+              <div className="bg-white p-3 rounded-xl border border-gray-200">
+                <div className="text-[10px] text-gray-400 font-mono uppercase">Produit sélectionné</div>
+                <div className="font-handwritten text-lg font-bold text-gray-800">{expressItem.name}</div>
+                <div className="text-[11px] text-gray-500 font-mono">Stock actuel : {expressItem.current_stock} {expressItem.unit}</div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Quantité à {expressType === 'in' ? 'ajouter' : 'retirer'}</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={expressQty}
+                  onChange={e => setExpressQty(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-sm font-bold text-gray-800 outline-none focus:border-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Motif de l'ajustement</label>
+                <select
+                  value={expressReason}
+                  onChange={e => setExpressReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-xs text-gray-800 outline-none focus:border-gray-900 bg-white"
+                >
+                  {expressType === 'in' ? (
+                    <>
+                      <option value="purchase">📦 Achat / Reconstitution de stock</option>
+                      <option value="inventory_correction">⚖️ Ajustement d'inventaire (+)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="damage">⚠️ Casse / Perte / Produit périmé</option>
+                      <option value="personal_use">🥤 Consommation personnelle / Équipe</option>
+                      <option value="inventory_correction">⚖️ Ajustement d'inventaire (-)</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {expressType === 'in' && expressReason === 'purchase' && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                  <label className="block text-[10px] font-bold text-amber-900 uppercase">
+                    Prix d'Achat unitaire (FCFA) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    placeholder="Ex: 450"
+                    value={expressUnitCost}
+                    onChange={e => setExpressUnitCost(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-amber-300 rounded-xl font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
+                  />
+                  <p className="text-[9px] font-mono text-amber-800">
+                    Saisissez le prix exact payé au grossiste pour 1 unité.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Notes optionnelles</label>
+                <input
+                  type="text"
+                  placeholder="ex: Carton cassé lors du déchargement"
+                  value={expressNotes}
+                  onChange={e => setExpressNotes(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-gray-200 rounded-xl font-mono text-xs outline-none focus:border-gray-400"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setExpressItem(null)}
+                  className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={adjusting}
+                  className={`flex-1 py-2 text-white font-bold rounded-full transition-transform hover:scale-105 active:scale-95 ${
+                    expressType === 'in' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                  }`}
+                >
+                  {adjusting ? 'Validation...' : 'Valider'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Bon de Commande WhatsApp ── */}
+      {showWhatsAppModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#fbf9f4] border border-emerald-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-4 border-b border-emerald-200 bg-emerald-100 flex items-center justify-between text-emerald-950">
+              <div className="font-bold text-sm flex items-center gap-2">
+                <span>📲 Bon de Commande WhatsApp</span>
+              </div>
+              <button onClick={() => setShowWhatsAppModal(false)} className="p-1 rounded-full hover:bg-emerald-200/60">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Numéro WhatsApp du Grossiste / Fournisseur (Optionnel)</label>
+                <input
+                  type="tel"
+                  placeholder="ex: +22997000000 ou laisser vide"
+                  value={supplierPhone}
+                  onChange={e => setSupplierPhone(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-xs outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              <div className="bg-white p-3.5 border border-gray-200 rounded-2xl max-h-48 overflow-y-auto space-y-2">
+                <div className="font-bold text-gray-800 text-[11px] uppercase tracking-wider mb-1">Articles en alerte de rupture :</div>
+                {items.filter(i => getStockStatus(i) === 'low' || getStockStatus(i) === 'out').length === 0 ? (
+                  <p className="text-gray-400 italic py-2 text-center">Aucun produit en alerte de rupture pour le moment !</p>
+                ) : (
+                  items.filter(i => getStockStatus(i) === 'low' || getStockStatus(i) === 'out').map(item => (
+                    <div key={item.id} className="flex justify-between items-center text-xs py-1 border-b border-gray-100 last:border-0 font-mono">
+                      <span className="font-bold text-gray-800">{item.name}</span>
+                      <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">
+                        A commander: {Math.max(item.alert_threshold * 2 - Math.max(0, item.current_stock), 10)} {item.unit}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowWhatsAppModal(false)}
+                  className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100"
+                >
+                  Fermer
+                </button>
+                <a
+                  href={generateWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full text-center transition-transform hover:scale-105 active:scale-95 flex items-center justify-center gap-1"
+                >
+                  <span>Envoyer WhatsApp</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+>>>>>>> e69e8ce (fix: unified product catalog, clean canonical normalization and exact stock adjustment cash calculations)
     </div>
   )
 }
