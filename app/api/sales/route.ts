@@ -1013,70 +1013,126 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
   const articles: any[] = []
   let totalFacture = 0
   
-  // Format: [quantité] [nom] à [prix] (ex: "10 mèches à 2000" ou "3 sacs de riz à 12000")
-  const hasExplicitSeparator = /(?:^|\s)(?:à|a|@)(?:\s|$)/i.test(text)
+  const cleanedText = text.trim()
+
+  // ─── REGEX PATTERNS POUR VENTES DE DÉTAIL ET PAR LOT ───
+  // 1. Détection des Ventes par Lot : "3 super mint 50F", "3 super mint pour 50F", "3 pour 50F super mint"
+  const lotPourRegex = /^(\d+)\s+(?:pour|a|à)?\s*(\d{2,6})\s*(?:f|fcfa|cfa|francs)?\s+(.+)$/i
+  const lotItemPourRegex = /^(\d+)\s+(.+?)\s+(?:pour)\s+(\d{2,6})\s*(?:f|fcfa|cfa|francs)?$/i
+  const lotDirectRegex = /^(\d+)\s+(.+?)\s+(\d{2,6})\s*(?:f|fcfa|cfa|francs)?$/i
+
+  // 2. Détection sans quantité explicite (ex: "super mint 50F", "super mint à 50", "super mint 50", "eau fifa 100f")
+  const singleItemNoQtyRegex = /^([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@|pour)?\s*(\d{2,6})\s*(?:f|fcfa|cfa|francs)?$/i
+
+  // 3. Format classique avec multiplicateur explicite (ex: "3 x super mint à 50", "3 super mint à 50")
+  const hasExplicitSeparator = /(?:^|\s)(?:à|a|@)(?:\s|$)/i.test(cleanedText)
   const articleRegex = hasExplicitSeparator
     ? /(\d+)\s*(.*?)\s*(?:à|a|@)\s*(\d+)/gi
     : /(\d+)\s+(.+?)\s+(\d+)/gi
+
   let match
-  
-  const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
-  const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:de\s+|a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)*(\d+)/i
 
-  while ((match = articleRegex.exec(text)) !== null) {
-    const qty = parseInt(match[1], 10)
-    const name = match[2].trim() || "Article(s)"
-    const price = parseInt(match[3], 10)
+  // TEST 1 : Format "3 pour 50F super mint" ou "3 super mint pour 50F"
+  const matchLotPour = cleanedText.match(lotPourRegex) || cleanedText.match(lotItemPourRegex)
+  if (matchLotPour && !hasExplicitSeparator) {
+    const qty = parseInt(matchLotPour[1], 10)
+    let lotPrice = parseInt(matchLotPour[2], 10)
+    let prodName = matchLotPour[3].trim()
 
-    // Ignorer si c'est un faux positif (ex: la quantité est supérieure ou égale au prix unitaire)
-    if (qty > 1 && qty >= price) {
-      continue
+    if (isNaN(lotPrice)) {
+      // Inversion possible dans la captation
+      lotPrice = parseInt(matchLotPour[3], 10)
+      prodName = matchLotPour[2].trim()
     }
 
-    const packMatch = name.match(packRegex)
-    const salePriceMatch = text.match(salePriceRegex)
+    if (qty >= 1 && !isNaN(lotPrice) && lotPrice > 0) {
+      const unitPrice = Math.round(lotPrice / qty)
+      articles.push({
+        nom: prodName,
+        quantite: qty,
+        prix_unitaire: unitPrice
+      })
+      totalFacture = lotPrice
+    }
+  }
 
-    let finalQty = qty
-    let finalUnitPrice = price
-    let uniteAchat = undefined
-    let uniteVente = undefined
-    let quantiteParBoite = undefined
-    let prixVenteUnitaire = salePriceMatch ? parseInt(salePriceMatch[1], 10) : undefined
-    let simplifiedName = name
+  // TEST 2 : Saisie directe sans quantité (ex: "super mint 50F", "super mint à 50", "super mint 50")
+  if (articles.length === 0) {
+    const matchSingleNoQty = cleanedText.match(singleItemNoQtyRegex)
+    if (matchSingleNoQty) {
+      const prodName = matchSingleNoQty[1].trim()
+      const price = parseInt(matchSingleNoQty[2], 10)
 
-    if (packMatch) {
-      const multiplier = parseInt(packMatch[1], 10)
-      uniteVente = packMatch[2].trim()
-      quantiteParBoite = multiplier
-      
-      const firstWord = name.split(/\s+/)[0]
-      if (['caissier', 'carton', 'sac', 'boite', 'boîte', 'paquet'].includes(firstWord.toLowerCase())) {
-        uniteAchat = firstWord
-        simplifiedName = name.replace(new RegExp(`^${firstWord}\\s+(?:de\\s+)?`, 'i'), '')
+      // S'assurer que le nom n'est pas juste un chiffre ou une commande système
+      if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
+        articles.push({
+          nom: prodName,
+          quantite: 1,
+          prix_unitaire: price
+        })
+        totalFacture = price
       }
-      
-      simplifiedName = simplifiedName.replace(packRegex, '').replace(/\s+de\s*$/, '').trim()
-      
-      finalQty = qty * multiplier
-      finalUnitPrice = Math.round(price / multiplier)
     }
+  }
 
-    articles.push({
-      nom: simplifiedName,
-      quantite: finalQty,
-      prix_unitaire: finalUnitPrice,
-      unite_achat: uniteAchat,
-      unite_vente: uniteVente,
-      quantite_par_boite: quantiteParBoite,
-      prix_vente_unitaire: prixVenteUnitaire
-    })
-    totalFacture += qty * price
+  // TEST 3 : Traitement Regex standard pour articles multiples ou saisies classiques
+  if (articles.length === 0) {
+    const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
+    const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:de\s+|a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)*(\d+)/i
+
+    while ((match = articleRegex.exec(cleanedText)) !== null) {
+      const qty = parseInt(match[1], 10)
+      const name = match[2].trim() || "Article(s)"
+      const price = parseInt(match[3], 10)
+
+      // Détecter si c'est une vente par lot (ex: "3 super mint 50F" sans "à" / "@", où 50F est le montant total)
+      const isLotSale = qty > 1 && price <= 500 && !hasExplicitSeparator
+
+      const packMatch = name.match(packRegex)
+      const salePriceMatch = cleanedText.match(salePriceRegex)
+
+      let finalQty = qty
+      let finalUnitPrice = isLotSale ? Math.round(price / qty) : price
+      let uniteAchat = undefined
+      let uniteVente = undefined
+      let quantiteParBoite = undefined
+      let prixVenteUnitaire = salePriceMatch ? parseInt(salePriceMatch[1], 10) : undefined
+      let simplifiedName = name
+
+      if (packMatch) {
+        const multiplier = parseInt(packMatch[1], 10)
+        uniteVente = packMatch[2].trim()
+        quantiteParBoite = multiplier
+        
+        const firstWord = name.split(/\s+/)[0]
+        if (['caissier', 'carton', 'sac', 'boite', 'boîte', 'paquet'].includes(firstWord.toLowerCase())) {
+          uniteAchat = firstWord
+          simplifiedName = name.replace(new RegExp(`^${firstWord}\\s+(?:de\\s+)?`, 'i'), '')
+        }
+        
+        simplifiedName = simplifiedName.replace(packRegex, '').replace(/\s+de\s*$/, '').trim()
+        
+        finalQty = qty * multiplier
+        finalUnitPrice = Math.round(price / multiplier)
+      }
+
+      articles.push({
+        nom: simplifiedName,
+        quantite: finalQty,
+        prix_unitaire: finalUnitPrice,
+        unite_achat: uniteAchat,
+        unite_vente: uniteVente,
+        quantite_par_boite: quantiteParBoite,
+        prix_vente_unitaire: prixVenteUnitaire
+      })
+      totalFacture += isLotSale ? price : (qty * price)
+    }
   }
   
-  // Si aucun article détecté, chercher un montant global brut (ex: "depense 5000 transport")
+  // Si aucun article détecté, chercher un montant global brut (ex: "depense 5000 transport" ou "50F")
   if (articles.length === 0) {
-    const amountRegex = /(?:total|montant|somme|de)?\s*(\d{3,7})(?:\s*f|\s*fcfa|\s*cfa|\s*francs)?/i
-    const amountMatch = text.match(amountRegex)
+    const amountRegex = /(?:total|montant|somme|de)?\s*(\d{2,7})(?:\s*f|\s*fcfa|\s*cfa|\s*francs)?/i
+    const amountMatch = cleanedText.match(amountRegex)
     if (amountMatch) {
       const amount = parseInt(amountMatch[1], 10)
       totalFacture = amount
@@ -1243,7 +1299,16 @@ Règles STRICTES:
      * "prix_vente_unitaire" doit être extrait si mentionné (ex: "prix de vente a l'unite 600" ou "vente à 600" -> 600).
    - S'il n'y a pas de conditionnement multiple ou de sous-unité mentionné, conserve la quantité et le prix unitaire d'origine, et mets "unite_vente" = "unité".
 
-3. En fonction de la couleur du Bic sélectionné (${penColor}) :
+3. RÈGLE IMPÉRATIVE PRIX SANS QUANTITÉ ET VENTES PAR LOT :
+   - Si la quantité n'est pas écrite explicitement (ex: "super mint 50F", "super mint à 50", "super mint 50", "eau fifa 100f") :
+     * Considère "quantite" = 1 et "prix_unitaire" = 50 (ou 100).
+     * Ne renvoie JAMAIS total_facture = 0 pour ces saisies !
+   - Si la transaction est une Vente par Lot (ex: "3 super mint 50F", "3 super mint pour 50F", "3 pour 50F super mint") :
+     * Le prix indiqué (ex: 50 FCFA) est le PRIX TOTAL DU LOT (total_facture = 50 F), et NON un prix unitaire à multiplier !
+     * "quantite" = 3, "prix_unitaire" = 17 (soit 50 / 3).
+   - Si et seulement si la transaction écrit explicitement "à" ou "@" (ex: "3 super mint à 50F" ou "3 x super mint à 50"), alors total_facture = 3 × 50 = 150 F.
+
+4. En fonction de la couleur du Bic sélectionné (${penColor}) :
    - bleu: Vente Cash (montant_paye=total_facture, montant_dette=0)
    - rouge: Dépense (montant_paye=total_facture, montant_dette=0)
    - vert: Achat Stock Cash (montant_paye=total_facture, montant_dette=0)
