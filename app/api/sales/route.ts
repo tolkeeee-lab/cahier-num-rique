@@ -1113,8 +1113,11 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
       }
     }
 
-    // TEST 3 : Traitement Regex standard pour articles multiples ou saisies classiques
+    // TEST 4 : Traitement Regex standard pour articles multiples ou saisies classiques
     if (!segmentMatched) {
+      const articleRegex = hasExplicitSeparator
+        ? /(\d+)\s*(.*?)\s*(?:à|a|@)\s*(\d+)/gi
+        : /(\d+)\s+(.+?)\s+(\d+)/gi
       const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
       const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:de\s+|a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)*(\d+)/i
 
