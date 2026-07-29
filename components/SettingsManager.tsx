@@ -466,32 +466,43 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
               </h4>
             </div>
 
-            <p className="text-xs text-emerald-100 font-sans leading-relaxed">
-              Pour renouveler ou recharger votre boutique, effectuez votre paiement par Mobile Money en indiquant votre code boutique <strong className="font-mono text-amber-300 bg-emerald-900 px-1.5 py-0.5 rounded">{formatShortShopCode(shopId)}</strong> dans le motif :
-            </p>
+            <div className="bg-emerald-900/90 border border-amber-500/40 rounded-xl p-3.5 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="text-[10px] font-bold text-amber-300 uppercase tracking-wider">Numéro Officiel de Dépôt MoMo / Wave</div>
+                  <div className="text-xl font-black text-white font-mono flex items-center gap-2">
+                    +229 01 54 33 05 45
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText('0154330545')
+                    alert("Numéro MoMo 0154330545 copié dans le presse-papier !")
+                  }}
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-emerald-950 font-bold text-[11px] uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Copier Numéro
+                </button>
+              </div>
+
+              <p className="text-[10px] text-emerald-200 font-sans border-t border-emerald-800/80 pt-2">
+                💡 Indiquez le code de votre boutique <strong className="font-mono text-amber-300 bg-emerald-950 px-1.5 py-0.5 rounded">{formatShortShopCode(shopId)}</strong> dans le motif du transfert ou envoyez votre reçu sur WhatsApp.
+              </p>
+            </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
               <a
-                href={`https://wa.me/22900000000?text=${encodeURIComponent(`Bonjour, je souhaite recharger l'abonnement de ma boutique (Code: ${formatShortShopCode(shopId)}).`)}`}
+                href={`https://wa.me/2290154330545?text=${encodeURIComponent(`Bonjour, je souhaite recharger l'abonnement de ma boutique (Code: ${formatShortShopCode(shopId)}).`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                className="w-full flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
               >
                 <span>💬</span>
-                Envoyer Preuve par WhatsApp
+                Envoyer le Reçu par WhatsApp (+229 01 54 33 05 45)
               </a>
-
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(`Recharge Cahier Numérique - Boutique Code ${formatShortShopCode(shopId)}`)
-                  alert("Code de boutique copié dans le presse-papier !")
-                }}
-                className="w-full sm:w-auto py-2.5 px-4 bg-emerald-900/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                Copier motif dépôt
-              </button>
             </div>
           </div>
         </div>
