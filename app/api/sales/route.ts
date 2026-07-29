@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
             if (!cleanName) continue
 
             let productId: string | null = null
-            let canonicalName = cleanName
+            let canonicalName = normalizeProductName(cleanName)
 
             // 1. Recherche de correspondance exacte (insensible à la casse)
             let matchedProd = productsList.find(
@@ -1060,7 +1060,7 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
       if (qty >= 1 && !isNaN(lotPrice) && lotPrice > 0) {
         const unitPrice = Math.round(lotPrice / qty)
         articles.push({
-          nom: prodName,
+          nom: normalizeProductName(prodName),
           quantite: qty,
           prix_unitaire: unitPrice
         })
@@ -1084,7 +1084,7 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
           const unitPrice = isLotPrice ? Math.round(givenPrice / qty) : givenPrice
 
           articles.push({
-            nom: prodName,
+            nom: normalizeProductName(prodName),
             quantite: qty,
             prix_unitaire: unitPrice
           })
@@ -1103,7 +1103,7 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
 
         if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
           articles.push({
-            nom: prodName,
+            nom: normalizeProductName(prodName),
             quantite: 1,
             prix_unitaire: price
           })

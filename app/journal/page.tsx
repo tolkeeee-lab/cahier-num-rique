@@ -15,6 +15,7 @@ import { SettingsManager } from '@/components/SettingsManager'
 import { CashClosingModal } from '@/components/CashClosingModal'
 import { SyncManager } from '@/components/SyncManager'
 import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
+import { normalizeProductName } from '@/lib/productUtils'
 import {
   generateOfflineId,
   getOfflineSales,
@@ -1302,7 +1303,7 @@ export default function JournalPage() {
         if (qty >= 1 && !isNaN(lotPrice) && lotPrice > 0) {
           const unitPrice = Math.round(lotPrice / qty)
           articles.push({
-            nom: prodName,
+            nom: normalizeProductName(prodName),
             quantite: qty,
             prix_unitaire: unitPrice
           })
@@ -1326,7 +1327,7 @@ export default function JournalPage() {
             const unitPrice = isLotPrice ? Math.round(givenPrice / qty) : givenPrice
 
             articles.push({
-              nom: prodName,
+              nom: normalizeProductName(prodName),
               quantite: qty,
               prix_unitaire: unitPrice
             })
@@ -1345,7 +1346,7 @@ export default function JournalPage() {
 
           if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
             articles.push({
-              nom: prodName,
+              nom: normalizeProductName(prodName),
               quantite: 1,
               prix_unitaire: price
             })
@@ -1400,7 +1401,7 @@ export default function JournalPage() {
           }
 
           articles.push({
-            nom: simplifiedName,
+            nom: normalizeProductName(simplifiedName),
             quantite: finalQty,
             prix_unitaire: finalUnitPrice,
             unite_achat: uniteAchat,
