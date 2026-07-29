@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Produit introuvable' }, { status: 404 })
     }
 
-    const todayStr = new Date().toISOString().split('T')[0]
+    const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
     const timeStr = new Date().toTimeString().split(' ')[0]
     const reasonLabel = {
       purchase: 'Achat / Reconstitution',

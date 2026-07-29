@@ -34,6 +34,7 @@ import {
   saveOfflineProduct,
 } from '@/lib/offlineDb'
 import { parseRequestedProductFromNotebookText, recordRequestedProductInStorage } from '@/lib/requestedProductsUtils'
+import { getTodayDateString } from '@/lib/dateUtils'
 
 const THEMES: Record<string, {
   filters: Array<{ id: string; label: string; emoji: string }>;
@@ -1084,12 +1085,51 @@ export default function JournalPage() {
 
   const loadFinancialData = async () => {
     if (!mappedUser) return
+    const sid = mappedUser.shop_id
+    const todayStr = getTodayDateString()
+
+    // ⚡ INSTANT UPDATE : Charger d'abord les données locales pour un affichage immédiat sans attente (0ms)
+    try {
+      const localSales = getOfflineSales(sid)
+      const localClients = getOfflineClients(sid)
+      const localSuppliers = getOfflineSuppliers(sid)
+
+      const todaysLocal = localSales.filter((s: any) => s.date === todayStr)
+      setSales(todaysLocal.reverse())
+      setAllSales(localSales)
+
+      let cashInstant = 0
+      for (const item of localSales) {
+        if (item.status === 'crossed_out') continue
+        const type = item.type
+        const paid = item.paid ?? 0
+        const total = item.total ?? 0
+        if (type === 'cash_in' || type === 'payment_client') cashInstant += paid
+        else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') cashInstant -= total
+      }
+
+      let cashTodayInstant = 0
+      for (const item of todaysLocal) {
+        if (item.status === 'crossed_out') continue
+        const type = item.type
+        const paid = item.paid ?? 0
+        const total = item.total ?? 0
+        if (type === 'cash_in' || type === 'payment_client') cashTodayInstant += paid
+        else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') cashTodayInstant -= total
+      }
+
+      setTiroirCaisse(cashInstant)
+      setSoldeDuJour(cashTodayInstant)
+      setArgentDehors(localClients.reduce((sum: number, c: any) => sum + (c.amount || c.amount_owed || 0), 0))
+      setNosDettes(localSuppliers.reduce((sum: number, s: any) => sum + (s.amount || s.amount_owed || 0), 0))
+    } catch (e) {
+      console.warn('[Instant Load Warning]', e)
+    }
+
     try {
       let salesList: any[] = []
       let clientsList: any[] = []
       let suppliersList: any[] = []
-
-      const sid = mappedUser.shop_id
 
       if (isConfigured && isOnline) {
         try {
@@ -1150,8 +1190,7 @@ export default function JournalPage() {
       setArgentDehors(clientDebtsSum)
       setNosDettes(supplierDebtsSum)
 
-      // Filtrer les ventes pour afficher seulement celles d'aujourd'hui dans le journal
-      const todayStr = new Date().toISOString().split('T')[0]
+      // Filtrer les ventes pour afficher seulement celles d'aujourd'hui dans le journal (format YYYY-MM-DD local)
       const todaysSales = salesList.filter((s: any) => s.date === todayStr)
 
       // Solde du jour (uniquement les transactions d'aujourd'hui)
@@ -1174,7 +1213,6 @@ export default function JournalPage() {
 
     } catch (err) {
       console.warn('[loadFinancialData] Repli sur cache hors-ligne :', err)
-      const sid = mappedUser.shop_id
       const fallbackSales = getOfflineSales(sid)
       const fallbackClients = getOfflineClients(sid)
       const fallbackSuppliers = getOfflineSuppliers(sid)
@@ -1196,7 +1234,6 @@ export default function JournalPage() {
       setArgentDehors(fallbackClients.reduce((sum: number, c: any) => sum + (c.amount || c.amount_owed || 0), 0))
       setNosDettes(fallbackSuppliers.reduce((sum: number, s: any) => sum + (s.amount || s.amount_owed || 0), 0))
 
-      const todayStr = new Date().toISOString().split('T')[0]
       const todayFallback = fallbackSales.filter((s: any) => s.date === todayStr)
 
       // Solde du jour — fallback hors-ligne
@@ -1591,7 +1628,7 @@ export default function JournalPage() {
         const newSale = {
           id: generateOfflineId(),
           shop_id: sid,
-          date: now.toISOString().split('T')[0],
+          date: getTodayDateString(now),
           time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
           client: parsed.nom_client,
           total: parsed.total_facture,

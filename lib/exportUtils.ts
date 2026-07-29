@@ -1,6 +1,4 @@
-/**
- * exportUtils.ts — Générateur d'exportations CSV/Excel et Rapports WhatsApp
- */
+import { getTodayDateString } from './dateUtils'
 
 export interface SaleExportItem {
   id: string
@@ -71,7 +69,7 @@ export function exportSalesToCSV(
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   const cleanShopName = shopName.replace(/[^a-zA-Z0-9_-]/g, '_')
-  const dateStr = new Date().toISOString().split('T')[0]
+  const dateStr = getTodayDateString()
   
   link.setAttribute("href", url)
   link.setAttribute("download", `Rapport_Ventes_${cleanShopName}_${periodLabel}_${dateStr}.csv`)
