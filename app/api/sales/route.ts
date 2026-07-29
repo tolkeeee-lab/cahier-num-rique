@@ -1121,6 +1121,7 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
       const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
       const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:de\s+|a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)*(\d+)/i
 
+      let match: RegExpExecArray | null
       while ((match = articleRegex.exec(cleanedText)) !== null) {
         const qty = parseInt(match[1], 10)
         const name = match[2].trim() || "Article(s)"
@@ -1173,7 +1174,7 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
   // Si aucun article détecté, chercher un montant global brut (ex: "depense 5000 transport" ou "50F")
   if (articles.length === 0) {
     const amountRegex = /(?:total|montant|somme|de)?\s*(\d{2,7})(?:\s*f|\s*fcfa|\s*cfa|\s*francs)?/i
-    const amountMatch = cleanedText.match(amountRegex)
+    const amountMatch = rawCleaned.match(amountRegex)
     if (amountMatch) {
       const amount = parseInt(amountMatch[1], 10)
       totalFacture = amount

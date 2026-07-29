@@ -118,15 +118,7 @@ export async function GET(request: Request) {
       const mult = product.multiplier || 1
       const isUnlimited = product.is_service || product.category === 'Cuisine'
       
-<<<<<<< HEAD
-      // Un produit est "suivi" seulement si le propriétaire a défini un stock initial > 0
-      // OU s'il y a eu au moins un achat/entrée de stock.
-=======
       const rawStock = (((product.initial_stock || 0) * mult) + totalIn - totalOut)
->>>>>>> f7aaf2d
-      const hasInitialStock = (product.initial_stock || 0) > 0
-      const hasPurchases = totalIn > 0
-      const stockTracked = hasInitialStock || hasPurchases
       
       const currentStock = isUnlimited 
         ? 999999 
@@ -144,10 +136,7 @@ export async function GET(request: Request) {
       return {
         ...product,
         name: cleanName,
-<<<<<<< HEAD
-=======
         unit_cost: cleanUnitCost,
->>>>>>> f7aaf2d
         total_in: totalIn,
         total_out: stockTracked ? totalOut : 0,
         current_stock: currentStock,

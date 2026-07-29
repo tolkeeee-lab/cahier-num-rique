@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const fullNotes = `[${reasonLabel}] ${signSymbol}${quantity} ${product.name} par ${employeeName}${notes ? ` (${notes})` : ''}`
 
     // Coût d'achat unitaire effectif fourni par le propriétaire ou pré-existant en base (sans estimation à 60%)
-    const inputUnitCost = typeof body.unitCost === 'number' ? body.unitCost : (parseInt(body.unitCost) || 0)
+    const inputUnitCost = typeof rawBody?.unitCost === 'number' ? rawBody.unitCost : (parseInt(rawBody?.unitCost) || 0)
     const effectiveUnitCost = inputUnitCost > 0 ? inputUnitCost : (product.unit_cost || 0)
 
     // Calcul de l'impact financier en caisse :
@@ -97,6 +97,9 @@ export async function POST(request: Request) {
     if (articleErr) throw articleErr
 
     // 4. Mettre à jour la quantité globale en stock du produit
+    const currentVal = product.initial_stock || 0
+    const newStockVal = type === 'in' ? currentVal + quantity : Math.max(0, currentVal - quantity)
+
     const updatePayload: any = {
       initial_stock: Math.max(0, newStockVal),
       updated_at: new Date().toISOString()

@@ -842,8 +842,8 @@ export default function JournalPage() {
           })
         })
       } catch (err) {
-        saveOfflineProduct({
-          id: generateOfflineId('prod'),
+        saveOfflineProduct(shopId, {
+          id: generateOfflineId(),
           shop_id: shopId,
           name: item.name,
           unit_price: item.price,
@@ -851,7 +851,8 @@ export default function JournalPage() {
           initial_stock: 0,
           alert_threshold: 5,
           category: item.category,
-          updated_at: new Date().toISOString()
+          unit: 'unité',
+          created_at: new Date().toISOString()
         })
       }
     }
@@ -1362,6 +1363,7 @@ export default function JournalPage() {
         const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
         const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:de\s+|a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)*(\d+)/i
 
+        let match: RegExpExecArray | null
         while ((match = articleRegex.exec(cleanedText)) !== null) {
           const qty = parseInt(match[1], 10)
           const name = match[2].trim() || "Article(s)"
@@ -2381,13 +2383,6 @@ export default function JournalPage() {
       setPostItWarning(msg)
       throw err
     }
-  }
-
-  const handleConvertToStockPurchase = async (text: string) => {
-    await submitTransaction({
-      text,
-      penColor: 'green'
-    })
   }
 
   const handleError = (err: string) => {

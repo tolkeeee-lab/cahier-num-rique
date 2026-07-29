@@ -8,15 +8,11 @@
  * Pour le fallback côté API Route (serveur), voir lib/localDb.ts.
  */
 
-<<<<<<< HEAD
-=======
 import {
   idbGetSales, idbSaveSale, idbReplaceSales,
   idbGetProducts, idbSaveProduct, idbReplaceProducts, idbDeleteProduct,
   migrateLocalStorageToIndexedDB
 } from './indexedDb'
-import { getCanonicalProductName } from './smartProductNormalizer'
->>>>>>> f7aaf2d
 import { normalizeProductName } from './productUtils'
 
 export interface OfflineSale {

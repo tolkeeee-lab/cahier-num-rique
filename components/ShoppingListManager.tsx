@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { ShoppingBag, Plus, Trash2, CheckSquare, Square, Share2, AlertTriangle, Check, Sparkles, RefreshCw, Search, X } from 'lucide-react'
 import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
+import { normalizeProductName } from '@/lib/productUtils'
 
 interface ShoppingItem {
   id: string
@@ -85,13 +86,6 @@ export function ShoppingListManager({
       })
       if (response.ok) {
         const data = await response.json()
-<<<<<<< HEAD
-        const productsList: Product[] = data.products || []
-        setCatalogProducts(productsList)
-        // Filtrer les produits sous ou au niveau du seuil d'alerte
-        const alerts = productsList.filter(p => p.initial_stock <= p.alert_threshold)
-        setLowStockProducts(alerts)
-=======
         productsList = data.products || []
         setCatalogProducts(productsList)
 
@@ -145,7 +139,6 @@ export function ShoppingListManager({
         })
 
         setLowStockProducts(Array.from(dedupMap.values()))
->>>>>>> f7aaf2d
       }
     } catch (err) {
       console.error('Erreur chargement stock alertes:', err)
