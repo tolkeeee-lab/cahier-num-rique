@@ -473,6 +473,10 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
                   <div className="text-xl font-black text-white font-mono flex items-center gap-2">
                     +229 01 54 33 05 45
                   </div>
+                  <div className="text-xs font-bold text-amber-200 font-sans mt-0.5 flex items-center gap-1">
+                    <span>👤 Titulaire :</span>
+                    <span className="underline decoration-amber-400">KOUISSOU Sèdjro Merveil Vianney</span>
+                  </div>
                 </div>
 
                 <button

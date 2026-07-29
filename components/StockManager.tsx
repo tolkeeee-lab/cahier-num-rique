@@ -420,17 +420,13 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full flex-nowrap">
           <button
-            onClick={() => exportStockToCSV(items, shopId)}
-            title="Exporter le stock en Excel/CSV"
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            onClick={() => openAddModal()}
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-gray-900 hover:bg-black text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
-            <Download className="w-3 h-3" />
-            <span>Exporter</span>
-          </button>
-          <button onClick={loadStock} title="Rafraîchir" className="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors">
-            <RefreshCw className="w-3.5 h-3.5" />
+            <Plus className="w-3 h-3" />
+            <span>📦 Carte Stock</span>
           </button>
           <button
             onClick={() => {
@@ -438,7 +434,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
               setEditingItem(null)
               setShowAddModal(true)
             }}
-            className="flex items-center gap-1 px-2 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
             <Plus className="w-3 h-3" />
             <span>🍽️ Carte Menu</span>
@@ -449,23 +445,27 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
               setEditingItem(null)
               setShowAddModal(true)
             }}
-            className="flex items-center gap-1 px-2 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
             <Plus className="w-3 h-3" />
             <span>✂️ Prestation</span>
           </button>
           <button
             onClick={() => setShowWhatsAppModal(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
             <span>📲 Bon WhatsApp</span>
           </button>
           <button
-            onClick={() => openAddModal()}
-            className="flex items-center gap-1 px-2 py-1.5 bg-gray-900 hover:bg-black text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            onClick={() => exportStockToCSV(items, shopId)}
+            title="Exporter le stock en Excel/CSV"
+            className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
           >
-            <Plus className="w-3 h-3" />
-            <span>📦 Carte Stock</span>
+            <Download className="w-3 h-3" />
+            <span>Exporter</span>
+          </button>
+          <button onClick={loadStock} title="Rafraîchir" className="flex-shrink-0 p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors">
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
