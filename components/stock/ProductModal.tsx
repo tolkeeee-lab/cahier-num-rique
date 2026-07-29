@@ -348,12 +348,12 @@ export function ProductModal({
                   </div>
                 </div>
 
-                {formData.lot_quantity > 1 && formData.lot_price > 0 && (
+                {(formData.lot_quantity || 0) > 1 && (formData.lot_price || 0) > 0 && (
                   <div className="mt-2 text-[10px] text-amber-900 bg-amber-100/70 border border-amber-300 p-2 rounded-xl font-mono leading-tight">
-                    💡 <strong>{formData.lot_quantity} {formData.name || 'articles'}</strong> vendus pour <strong>{formData.lot_price} FCFA</strong> au lieu de {formData.unit_price * formData.lot_quantity} FCFA
-                    {formData.unit_price * formData.lot_quantity > formData.lot_price && (
+                    💡 <strong>{formData.lot_quantity} {formData.name || 'articles'}</strong> vendus pour <strong>{formData.lot_price} FCFA</strong> au lieu de {(formData.unit_price || 0) * (formData.lot_quantity || 0)} FCFA
+                    {(formData.unit_price || 0) * (formData.lot_quantity || 0) > (formData.lot_price || 0) && (
                       <span className="text-emerald-800 font-bold block mt-0.5">
-                        (Réduction accordée au client : -{formData.unit_price * formData.lot_quantity - formData.lot_price} FCFA)
+                        (Réduction accordée au client : -{(formData.unit_price || 0) * (formData.lot_quantity || 0) - (formData.lot_price || 0)} FCFA)
                       </span>
                     )}
                   </div>
