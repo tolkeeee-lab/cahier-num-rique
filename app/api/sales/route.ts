@@ -1078,8 +1078,8 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
         const givenPrice = parseInt(matchQtyItemPrice[3], 10)
 
         if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
-          // Si quantité > 1 et le prix semble être un tarif global de lot (ex: 3 oeufs à 250/275 ou <= 500F)
-          const isLotPrice = qty > 1 && (givenPrice <= 600 || givenPrice % qty !== 0)
+          const hasPour = /(?:^|\s)pour(?:\s|$)/i.test(cleanedText)
+          const isLotPrice = !hasExplicitSeparator && (hasPour || (qty > 1 && givenPrice % qty !== 0))
           const lotTotal = isLotPrice ? givenPrice : (qty * givenPrice)
           const unitPrice = isLotPrice ? Math.round(givenPrice / qty) : givenPrice
 
