@@ -1277,31 +1277,26 @@ export default function JournalPage() {
       const cleanedText = seg.replace(/[,;\.\s]+$/, '').trim()
       if (!cleanedText) continue
 
-      // ─── REGEX PATTERNS POUR VENTES DE DÉTAIL ET PAR LOT ───
+      // ─── REGEX PATTERNS UNIFIÉS : PETITS PRIX & VENTES PAR LOT ───
+      // 1. Détection "3 pour 250 oeufs"
       const lotPourRegex = /^(\d+)\s+(?:pour|a|à)?\s*(\d{2,6})\s*(?:f|fcfa|cfa|francs)?\s+(.+)$/i
-      const lotItemPourRegex = /^(\d+)\s+(.+?)\s+(?:pour)\s+(\d{2,6})\s*(?:f|fcfa|cfa|francs)?$/i
 
-      const singleItemNoQtyRegex = /^([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@|pour)?\s*(\d{2,6})\s*(?:f|fcfa|cfa|francs)?$/i
+      // 2. Détection "3 oeufs 275", "3 oeufs 250", "3 oeufs à 275", "3 oeufs 275F", "1 kopiko 25"
+      const qtyItemPriceRegex = /^(\d+)\s+([A-Za-zÀ-ÿ0-9\s'-]+?)\s+(?:à|a|@|pour)?\s*(\d{1,6})\s*(?:f|fcfa|cfa|francs)?$/i
+
+      // 3. Détection sans quantité "kopiko 25", "super mint 50F", "Beaufort 360,"
+      const singleItemNoQtyRegex = /^([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@|pour)?\s*(\d{1,6})\s*(?:f|fcfa|cfa|francs)?$/i
 
       const hasExplicitSeparator = /(?:^|\s)(?:à|a|@)(?:\s|$)/i.test(cleanedText)
-      const articleRegex = hasExplicitSeparator
-        ? /(\d+)\s*(.*?)\s*(?:à|a|@)\s*(\d+)/gi
-        : /(\d+)\s+(.+?)\s+(\d+)/gi
 
-      let match
       let segmentMatched = false
 
-      // TEST 1 : Format "3 pour 50F super mint" ou "3 super mint pour 50F"
-      const matchLotPour = cleanedText.match(lotPourRegex) || cleanedText.match(lotItemPourRegex)
-      if (matchLotPour && !hasExplicitSeparator) {
+      // TEST 1 : Format "3 pour 250F oeufs"
+      const matchLotPour = cleanedText.match(lotPourRegex)
+      if (matchLotPour) {
         const qty = parseInt(matchLotPour[1], 10)
-        let lotPrice = parseInt(matchLotPour[2], 10)
-        let prodName = matchLotPour[3].trim()
-
-        if (isNaN(lotPrice)) {
-          lotPrice = parseInt(matchLotPour[3], 10)
-          prodName = matchLotPour[2].trim()
-        }
+        const lotPrice = parseInt(matchLotPour[2], 10)
+        const prodName = matchLotPour[3].trim()
 
         if (qty >= 1 && !isNaN(lotPrice) && lotPrice > 0) {
           const unitPrice = Math.round(lotPrice / qty)
@@ -1315,7 +1310,32 @@ export default function JournalPage() {
         }
       }
 
-      // TEST 2 : Saisie directe sans quantité (ex: "super mint 50F", "super mint à 50", "Beaufort 360", "Beaufort 360,")
+      // TEST 2 : Format "3 oeufs 275", "3 oeufs 250", "3 oeufs à 275", "1 kopiko 25"
+      if (!segmentMatched) {
+        const matchQtyItemPrice = cleanedText.match(qtyItemPriceRegex)
+        if (matchQtyItemPrice) {
+          const qty = parseInt(matchQtyItemPrice[1], 10)
+          const prodName = matchQtyItemPrice[2].trim()
+          const givenPrice = parseInt(matchQtyItemPrice[3], 10)
+
+          if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
+            // Si quantité > 1 et le prix semble être un tarif global de lot (ex: 3 oeufs à 250/275 ou <= 500F)
+            const isLotPrice = qty > 1 && (givenPrice <= 600 || givenPrice % qty !== 0)
+            const lotTotal = isLotPrice ? givenPrice : (qty * givenPrice)
+            const unitPrice = isLotPrice ? Math.round(givenPrice / qty) : givenPrice
+
+            articles.push({
+              nom: prodName,
+              quantite: qty,
+              prix_unitaire: unitPrice
+            })
+            totalFacture += lotTotal
+            segmentMatched = true
+          }
+        }
+      }
+
+      // TEST 3 : Saisie directe sans quantité (ex: "kopiko 25", "super mint 50F", "Beaufort 360,")
       if (!segmentMatched) {
         const matchSingleNoQty = cleanedText.match(singleItemNoQtyRegex)
         if (matchSingleNoQty) {
