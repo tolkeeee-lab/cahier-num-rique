@@ -418,6 +418,84 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
           </div>
         )}
 
+        {/* Section 0 : Statut Abonnement & Recharge Mobile Money */}
+        <div className="bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 text-white rounded-[28px] p-6 shadow-xl space-y-4 border border-emerald-700/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-500/20 border border-emerald-400/30 rounded-2xl">
+                <Coins className="w-6 h-6 text-amber-300" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-white">Statut de votre Abonnement</h3>
+                <p className="text-xs text-emerald-200 font-sans">Compte Professionnel & Service Actif</p>
+              </div>
+            </div>
+
+            <span className="px-3 py-1 bg-emerald-400/20 border border-emerald-300/40 text-emerald-200 text-[10px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1.5 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Essai Gratuit Illimité
+            </span>
+          </div>
+
+          {/* Grille Tarifs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="bg-emerald-950/60 border border-emerald-700/60 rounded-2xl p-4 space-y-1">
+              <div className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">Formule Mensuelle</div>
+              <div className="text-2xl font-black text-amber-300 font-mono">1 500 <span className="text-sm font-bold">FCFA / mois</span></div>
+              <p className="text-[10px] text-emerald-200 font-sans">Accès complet Caisse, Stock, Dettes & Rapport Z</p>
+            </div>
+
+            <div className="bg-emerald-950/60 border border-amber-500/40 rounded-2xl p-4 space-y-1 relative">
+              <span className="absolute top-2 right-2 px-2 py-0.5 bg-amber-500 text-emerald-950 font-bold text-[8px] uppercase rounded-full tracking-wider">
+                -17% Réduction
+              </span>
+              <div className="text-[10px] font-bold text-amber-300 uppercase tracking-wider">Formule Annuelle</div>
+              <div className="text-2xl font-black text-amber-300 font-mono">15 000 <span className="text-sm font-bold">FCFA / an</span></div>
+              <p className="text-[10px] text-emerald-200 font-sans">2 mois gratuits + Support prioritaire</p>
+            </div>
+          </div>
+
+          {/* Zone d'Activation Mobile Money */}
+          <div className="bg-emerald-950/80 border border-emerald-600/50 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📲</span>
+              <h4 className="font-bold text-xs text-amber-200 uppercase tracking-wider">
+                Recharge & Activation par Mobile Money (MTN / Moov / Wave)
+              </h4>
+            </div>
+
+            <p className="text-xs text-emerald-100 font-sans leading-relaxed">
+              Pour renouveler ou recharger votre boutique, effectuez votre paiement par Mobile Money en indiquant votre code boutique <strong className="font-mono text-amber-300 bg-emerald-900 px-1.5 py-0.5 rounded">{formatShortShopCode(shopId)}</strong> dans le motif :
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+              <a
+                href={`https://wa.me/22900000000?text=${encodeURIComponent(`Bonjour, je souhaite recharger l'abonnement de ma boutique (Code: ${formatShortShopCode(shopId)}).`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                <span>💬</span>
+                Envoyer Preuve par WhatsApp
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`Recharge Cahier Numérique - Boutique Code ${formatShortShopCode(shopId)}`)
+                  alert("Code de boutique copié dans le presse-papier !")
+                }}
+                className="w-full sm:w-auto py-2.5 px-4 bg-emerald-900/80 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                Copier motif dépôt
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Section 1 : Code Boutique */}
         <div className="bg-white border border-amber-200 rounded-[24px] p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
