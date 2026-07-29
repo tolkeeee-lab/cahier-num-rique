@@ -1321,8 +1321,8 @@ export default function JournalPage() {
           const givenPrice = parseInt(matchQtyItemPrice[3], 10)
 
           if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
-            const hasPour = /(?:^|\s)pour(?:\s|$)/i.test(cleanedText)
-            const isLotPrice = !hasExplicitSeparator && (hasPour || (qty > 1 && givenPrice % qty !== 0))
+            const hasPourOrLot = /(?:^|\s)(?:pour|lot)(?:\s|$)/i.test(cleanedText)
+            const isLotPrice = hasPourOrLot
             const lotTotal = isLotPrice ? givenPrice : (qty * givenPrice)
             const unitPrice = isLotPrice ? Math.round(givenPrice / qty) : givenPrice
 
@@ -1370,7 +1370,8 @@ export default function JournalPage() {
           const name = match[2].trim() || "Article(s)"
           const price = parseInt(match[3], 10)
 
-          const isLotSale = qty > 1 && price <= 500 && !hasExplicitSeparator
+          const hasPourOrLot = /(?:^|\s)(?:pour|lot)(?:\s|$)/i.test(cleanedText)
+          const isLotSale = hasPourOrLot
 
           const packMatch = name.match(packRegex)
           const salePriceMatch = cleanedText.match(salePriceRegex)
