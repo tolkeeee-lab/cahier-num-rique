@@ -48,16 +48,21 @@ export default function RootLayout({
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
+              var registerSW = function() {
                 navigator.serviceWorker.register('/sw.js').then(
                   function(reg) {
                     console.log('SW enregistré scope:', reg.scope);
                   },
                   function(err) {
-                    console.error('SW echec enregistrement:', err);
+                    console.error('SW échec enregistrement:', err);
                   }
                 );
-              });
+              };
+              if (document.readyState === 'complete') {
+                registerSW();
+              } else {
+                window.addEventListener('load', registerSW);
+              }
             }
           `}
         </Script>

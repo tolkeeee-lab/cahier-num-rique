@@ -139,13 +139,13 @@ export function RequestedProductsManager({
   const totalRequestsCount = items.reduce((sum, i) => sum + i.requestCount, 0)
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#fbf9f4] p-4 space-y-4">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fbf9f4] p-3 sm:p-4 space-y-4 pb-24 md:pb-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 border border-amber-200 rounded-2xl shadow-sm">
         <div>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-700 animate-pulse" />
-            <h2 className="font-handwritten text-2xl font-bold text-gray-900">
+            <Sparkles className="w-5 h-5 text-amber-700 animate-pulse flex-shrink-0" />
+            <h2 className="font-handwritten text-xl sm:text-2xl font-bold text-gray-900">
               Produits Demandés par les Clients
             </h2>
           </div>
@@ -202,7 +202,7 @@ export function RequestedProductsManager({
             placeholder="Écrivez directement ici comme dans votre cahier... (ex: Eau Possotomè 1.5L à 400 ou 2 Sacs de Riz 25kg)"
             value={quickInput}
             onChange={e => setQuickInput(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm sm:text-base font-handwritten text-purple-950 bg-white border border-amber-300 rounded-xl outline-none focus:border-amber-500 shadow-inner placeholder-gray-400"
+            className="flex-1 px-3 py-2 text-sm sm:text-base font-handwritten text-purple-950 bg-white border border-amber-300 rounded-xl outline-none focus:border-amber-500 shadow-inner placeholder-gray-400 min-w-0"
           />
           <button
             type="submit"
@@ -260,7 +260,7 @@ export function RequestedProductsManager({
       </div>
 
       {/* Grid of Requested Products */}
-      <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredItems.map(item => {
           const isHighDemand = item.requestCount >= 5
           return (
