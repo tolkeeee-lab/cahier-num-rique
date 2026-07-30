@@ -110,11 +110,14 @@ export function calculateSimilarity(str1: string, str2: string): number {
 export function adjustLotRoundingArtifact(qty: number, givenUnitPrice: number, currentTotal: number): number {
   if (qty > 1 && givenUnitPrice > 0) {
     const rawTotal = currentTotal || (qty * givenUnitPrice)
-    const lotTargets = [50, 100, 150, 200, 250, 275, 300, 500, 1000]
-    for (const target of lotTargets) {
-      const roundedUnit = Math.round(target / qty)
-      if (givenUnitPrice === roundedUnit && Math.abs(rawTotal - target) <= 2) {
-        return target
+
+    // Chercher s'il existe un prix de lot exact T (ex: 50, 100, 275, 350, 1000, 2500...)
+    // dont la division entière arrondie a produit le prix unitaire donné (ex: 50/3 = 17)
+    for (let diff = -2; diff <= 2; diff++) {
+      if (diff === 0) continue
+      const candidateTarget = rawTotal + diff
+      if (candidateTarget > 0 && Math.round(candidateTarget / qty) === givenUnitPrice) {
+        return candidateTarget
       }
     }
   }
