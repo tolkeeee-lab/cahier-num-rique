@@ -1149,7 +1149,7 @@ export default function JournalPage() {
     updateTime()
     const interval = setInterval(updateTime, 60000)
     return () => clearInterval(interval)
-  }, [user, localDemo])
+  }, [user, localDemo, shopId])
 
   const handleLogout = async () => {
     localStorage.removeItem('cahier_mock_session')
@@ -1187,7 +1187,7 @@ export default function JournalPage() {
 
   const syncOfflineData = async () => {
     if (!mappedUser) return
-    const sid = mappedUser.shop_id
+    const sid = shopId
     if (!isOnline) return
 
     const pending = getPendingSync(sid)
@@ -1260,7 +1260,7 @@ export default function JournalPage() {
 
   const loadFinancialData = async () => {
     if (!mappedUser) return
-    const sid = mappedUser.shop_id
+    const sid = shopId
     const todayStr = getTodayDateString()
 
     // ⚡ INSTANT UPDATE : Charger d'abord les données locales pour un affichage immédiat sans attente (0ms)
@@ -1789,7 +1789,7 @@ export default function JournalPage() {
 
       if (!isConfigured || !online || useOfflineFallback) {
         // Mode hors-ligne -> Enregistrer localement via offlineDb
-        const sid = mappedUser.shop_id
+        const sid = shopId
 
         // Safeguard tiroir caisse
         const isExpense = type === 'cash_out' || type === 'purchase_cash'
@@ -2216,7 +2216,7 @@ export default function JournalPage() {
   const handleRejectPriceChange = async () => {
     if (!priceChangeData || !mappedUser) return
     const { product, rawText, penColor } = priceChangeData
-    const sid = mappedUser.shop_id
+    const sid = shopId
     const isOnline = typeof window !== 'undefined' ? window.navigator.onLine : false
 
     try {
@@ -2420,7 +2420,7 @@ export default function JournalPage() {
 
   const handleAddArticle = async (saleId: string, text: string) => {
     if (!mappedUser) return
-    const sid = mappedUser.shop_id
+    const sid = shopId
     const online = typeof window !== 'undefined' ? window.navigator.onLine : false
 
     try {
@@ -2506,7 +2506,7 @@ export default function JournalPage() {
     clientName?: string
   ) => {
     if (!mappedUser) return
-    const sid = mappedUser.shop_id || 'default-shop'
+    const sid = shopId
     const isOnline = typeof window !== 'undefined' ? window.navigator.onLine : false
 
     try {
@@ -2563,7 +2563,7 @@ export default function JournalPage() {
 
   const handleUpdateCategory = async (saleId: string, category: string) => {
     if (!mappedUser) return
-    const sid = mappedUser.shop_id
+    const sid = shopId
     const online = typeof window !== 'undefined' ? window.navigator.onLine : false
 
     try {
