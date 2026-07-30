@@ -45,6 +45,35 @@ export function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR').format(price) + ' F'
 }
 
+export function getItemPurchaseValue(item: StockItem): number {
+  if (!item.unit_cost || item.current_stock <= 0) return 0
+  const stock = Math.max(0, item.current_stock)
+  const mult = item.multiplier && item.multiplier > 1 ? item.multiplier : 1
+
+  if (mult > 1) {
+    const wholeCartons = Math.floor(stock / mult)
+    const extraUnits = stock % mult
+    const wholesalePrice = Math.round(item.unit_cost * mult)
+    
+    let cleanWholesale = wholesalePrice
+    if (wholesalePrice > 500) {
+      const nearestThousand = Math.round(wholesalePrice / 1000) * 1000
+      if (Math.abs(wholesalePrice - nearestThousand) <= 20) {
+        cleanWholesale = nearestThousand
+      } else {
+        const nearestHundred = Math.round(wholesalePrice / 100) * 100
+        if (Math.abs(wholesalePrice - nearestHundred) <= 20) {
+          cleanWholesale = nearestHundred
+        }
+      }
+    }
+
+    return (wholeCartons * cleanWholesale) + (extraUnits * item.unit_cost)
+  }
+
+  return stock * item.unit_cost
+}
+
 export function getStockStatus(item: StockItem): StockStatus {
   if (item.is_unlimited || item.is_service) return 'ok'
   if (item.category && (
@@ -53,8 +82,6 @@ export function getStockStatus(item: StockItem): StockStatus {
     item.category.includes('✂️')
   )) return 'ok'
 
-  // Un produit est "suivi" seulement si le propriétaire a défini un stock initial > 0,
-  // ou s'il y a eu au moins un achat/entrée de stock, ou si stock_tracked est explicitement true.
   const hasInitial = (item.initial_stock || 0) > 0
   const hasPurchases = (item.total_in || 0) > 0
   const isExplicitlyTracked = item.stock_tracked === true
@@ -112,7 +139,7 @@ export function exportStockToCSV(items: StockItem[], shopId: string) {
   const rows = items.map(item => {
     const st = getStockStatus(item)
     const status = st === 'untracked' ? 'Non suivi' : st === 'out' ? 'Rupture' : st === 'low' ? 'Stock Bas' : 'OK'
-    const valAchat = Math.max(0, item.current_stock) * (item.unit_cost || 0)
+    const valAchat = getItemPurchaseValue(item)
     const valVente = Math.max(0, item.current_stock) * (item.unit_price || 0)
 
     return [

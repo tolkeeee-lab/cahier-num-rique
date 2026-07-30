@@ -12,7 +12,7 @@ import { findDuplicateCandidates, normalizeProductName, type DuplicatePair } fro
 
 // Subcomponents & Utilities
 import { StockItem, StockManagerProps } from './stock/types'
-import { EMPTY_FORM, getStockStatus, exportStockToCSV } from './stock/stockUtils'
+import { EMPTY_FORM, getStockStatus, exportStockToCSV, getItemPurchaseValue } from './stock/stockUtils'
 import { StockKpiBar } from './stock/StockKpiBar'
 import { StockFilterBar } from './stock/StockFilterBar'
 import { StockItemRow } from './stock/StockItemRow'
@@ -389,7 +389,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
     })
 
   const alertCount = items.filter(i => i.stock_tracked && (getStockStatus(i) === 'out' || getStockStatus(i) === 'low')).length
-  const stockValue = items.filter(i => i.stock_tracked).reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_cost || 0), 0)
+  const stockValue = items.filter(i => i.stock_tracked).reduce((sum, i) => sum + getItemPurchaseValue(i), 0)
   const stockValueSale = items.filter(i => i.stock_tracked).reduce((sum, i) => sum + Math.max(0, i.current_stock) * (i.unit_price || 0), 0)
   const totalIn = items.filter(i => i.stock_tracked).reduce((s, i) => s + i.total_in, 0)
   const totalOut = items.filter(i => i.stock_tracked).reduce((s, i) => s + i.total_out, 0)

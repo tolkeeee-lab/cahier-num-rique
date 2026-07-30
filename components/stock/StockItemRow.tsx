@@ -6,7 +6,7 @@ import {
   Plus, Edit3, Trash2,
 } from 'lucide-react'
 import { StockItem } from './types'
-import { getStockStatus, getStatusColors, getBarWidth, formatPrice } from './stockUtils'
+import { getStockStatus, getStatusColors, getBarWidth, formatPrice, getItemPurchaseValue } from './stockUtils'
 import { canViewFinancialMargins } from '@/lib/roleUtils'
 
 interface StockItemRowProps {
@@ -67,7 +67,7 @@ export function StockItemRow({
                   ? '📝 Ventes seules (Cahier)'
                   : item.current_stock <= 0
                   ? '⚠️ RUPTURE'
-                  : `${item.current_stock} ${item.unit} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'lots'})` : ''}`}
+                  : `${item.current_stock} ${item.multiplier && item.multiplier > 1 ? (item.unit === 'carton' || item.unit === 'sac' || item.unit === 'colis' ? 'unités' : (item.unit || 'unités')) : (item.unit || 'unités')} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'cartons'})` : ''}`}
               </span>
               {!item.stock_tracked && (
                 <button
@@ -222,7 +222,7 @@ export function StockItemRow({
             {item.current_stock > 0 && (
               <>
                 {item.unit_cost > 0 && (
-                  <span className="text-emerald-700">Valeur Achat: <strong>{formatPrice(Math.max(0, item.current_stock) * item.unit_cost)}</strong></span>
+                  <span className="text-emerald-700">Valeur Achat: <strong>{formatPrice(getItemPurchaseValue(item))}</strong></span>
                 )}
                 {item.unit_price > 0 && (
                   <span className="text-indigo-700">Valeur Vente: <strong>{formatPrice(Math.max(0, item.current_stock) * item.unit_price)}</strong></span>
