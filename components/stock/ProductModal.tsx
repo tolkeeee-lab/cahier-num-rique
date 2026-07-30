@@ -30,8 +30,20 @@ export function ProductModal({
   deductPastSales,
   setDeductPastSales,
 }: ProductModalProps) {
-  if (!isOpen) return null
+  const [rawWholesaleInput, setRawWholesaleInput] = React.useState<string>(() => {
+    if (formData.unit_cost > 0 && formData.multiplier > 1) {
+      return (formData.unit_cost * formData.multiplier).toString()
+    }
+    return ''
+  })
 
+  React.useEffect(() => {
+    if (formData.unit_cost > 0 && formData.multiplier > 1 && !rawWholesaleInput) {
+      setRawWholesaleInput((formData.unit_cost * formData.multiplier).toString())
+    }
+  }, [editingItem, formData.unit_cost, formData.multiplier])
+
+  if (!isOpen) return null
   const isPrestation = formData.category.includes('Prestations')
 
   return (
@@ -287,9 +299,11 @@ export function ProductModal({
                       type="number"
                       min="0"
                       placeholder="Ex: 12000 F"
-                      value={formData.unit_cost > 0 && formData.multiplier > 1 ? formData.unit_cost * formData.multiplier : (formData.multiplier > 1 ? '' : (formData.unit_cost ? formData.unit_cost : ''))}
+                      value={rawWholesaleInput}
                       onChange={e => {
-                        const wholesaleVal = parseFloat(e.target.value) || 0
+                        const rawVal = e.target.value
+                        setRawWholesaleInput(rawVal)
+                        const wholesaleVal = parseFloat(rawVal) || 0
                         const mult = formData.multiplier > 1 ? formData.multiplier : 1
                         const calculatedUnitCost = wholesaleVal > 0 && mult > 0
                           ? Math.round(wholesaleVal / mult)
@@ -311,7 +325,7 @@ export function ProductModal({
                       value={formData.multiplier > 1 ? formData.multiplier : ''}
                       onChange={e => {
                         const newMult = Math.max(1, parseInt(e.target.value) || 1)
-                        const currentWholesale = formData.unit_cost * (formData.multiplier > 1 ? formData.multiplier : 1)
+                        const currentWholesale = parseFloat(rawWholesaleInput) || (formData.unit_cost * (formData.multiplier > 1 ? formData.multiplier : 1))
                         const newUnitCost = currentWholesale > 0 && newMult > 0 ? Math.round(currentWholesale / newMult) : formData.unit_cost
                         const currentCartons = formData.initial_stock > 0 ? Math.max(1, Math.round(formData.initial_stock / (formData.multiplier || 1))) : 1
                         setFormData(p => ({
@@ -348,10 +362,10 @@ export function ProductModal({
                   </div>
                 </div>
 
-                {formData.multiplier > 1 && formData.unit_cost > 0 && (
+                {formData.multiplier > 1 && (formData.unit_cost > 0 || parseFloat(rawWholesaleInput) > 0) && (
                   <div className="bg-amber-100/90 border border-amber-300 p-2 rounded-xl text-[10px] text-amber-950 font-mono flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
                     <span>
-                      💡 <strong>{(formData.unit_cost * formData.multiplier).toLocaleString('fr-FR')} F</strong> ÷ <strong>{formData.multiplier} pcs</strong> = <strong>{formData.unit_cost} F/unité</strong>
+                      💡 <strong>{(parseFloat(rawWholesaleInput) || (formData.unit_cost * formData.multiplier)).toLocaleString('fr-FR')} F</strong> ÷ <strong>{formData.multiplier} pcs</strong> = <strong>{formData.unit_cost} F/unité</strong>
                     </span>
                     {formData.initial_stock > 0 && (
                       <span className="font-bold bg-white px-2 py-0.5 rounded-lg border border-amber-300 text-amber-900">
