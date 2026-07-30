@@ -271,17 +271,17 @@ export function ProductModal({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-amber-950 font-bold text-xs">
                     <span>📦</span>
-                    <span>Prix d'Achat en Gros (Carton / Sac)</span>
+                    <span>Prix d'Achat en Gros & Nombre de Cartons</span>
                   </div>
                   <span className="text-[9px] font-mono text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
                     Calcul unitaire auto
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
                     <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
-                      Prix d'achat du carton / sac (FCFA)
+                      Prix d'un carton / sac (FCFA)
                     </label>
                     <input
                       type="number"
@@ -296,13 +296,13 @@ export function ProductModal({
                           : 0
                         setFormData(p => ({ ...p, unit_cost: calculatedUnitCost }))
                       }}
-                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                      className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
                     />
                   </div>
 
                   <div>
                     <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
-                      Pièces / unités dans ce carton
+                      Pièces / unités par carton
                     </label>
                     <input
                       type="number"
@@ -313,26 +313,51 @@ export function ProductModal({
                         const newMult = Math.max(1, parseInt(e.target.value) || 1)
                         const currentWholesale = formData.unit_cost * (formData.multiplier > 1 ? formData.multiplier : 1)
                         const newUnitCost = currentWholesale > 0 && newMult > 0 ? Math.round(currentWholesale / newMult) : formData.unit_cost
+                        const currentCartons = formData.initial_stock > 0 ? Math.max(1, Math.round(formData.initial_stock / (formData.multiplier || 1))) : 1
                         setFormData(p => ({
                           ...p,
                           multiplier: newMult,
                           unit_cost: newUnitCost,
+                          initial_stock: currentCartons * newMult,
                           packaging_name: p.packaging_name || 'carton'
                         }))
                       }}
-                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                      className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
+                      Cartons / sacs achetés
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Ex: 5 cartons"
+                      value={formData.multiplier > 1 && formData.initial_stock > 0 ? Math.round(formData.initial_stock / formData.multiplier) : (formData.initial_stock > 0 ? formData.initial_stock : '')}
+                      onChange={e => {
+                        const cartons = parseInt(e.target.value) || 0
+                        const mult = formData.multiplier > 1 ? formData.multiplier : 1
+                        setFormData(p => ({
+                          ...p,
+                          initial_stock: cartons * mult
+                        }))
+                      }}
+                      className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
                     />
                   </div>
                 </div>
 
                 {formData.multiplier > 1 && formData.unit_cost > 0 && (
-                  <div className="bg-amber-100/90 border border-amber-300 p-2 rounded-xl text-[10px] text-amber-950 font-mono flex items-center justify-between">
+                  <div className="bg-amber-100/90 border border-amber-300 p-2 rounded-xl text-[10px] text-amber-950 font-mono flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
                     <span>
-                      💡 <strong>{(formData.unit_cost * formData.multiplier).toLocaleString('fr-FR')} F</strong> ÷ <strong>{formData.multiplier} pcs</strong>
+                      💡 <strong>{(formData.unit_cost * formData.multiplier).toLocaleString('fr-FR')} F</strong> ÷ <strong>{formData.multiplier} pcs</strong> = <strong>{formData.unit_cost} F/unité</strong>
                     </span>
-                    <span className="font-bold bg-white px-2 py-0.5 rounded-lg border border-amber-300 text-amber-900">
-                      ➔ Coût unitaire = {formData.unit_cost} F / {formData.unit || 'pièce'}
-                    </span>
+                    {formData.initial_stock > 0 && (
+                      <span className="font-bold bg-white px-2 py-0.5 rounded-lg border border-amber-300 text-amber-900">
+                        📦 Total en stock = {formData.initial_stock} {formData.unit || 'unités'} ({Math.round(formData.initial_stock / formData.multiplier)} cartons)
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

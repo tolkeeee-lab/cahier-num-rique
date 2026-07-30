@@ -102,25 +102,26 @@ export function ExpressAdjustmentModal({
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 <div>
-                  <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">Prix du carton (FCFA)</label>
+                  <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">Prix d'un carton</label>
                   <input
                     type="number"
                     min="0"
                     placeholder="Ex: 12000 F"
                     onChange={e => {
                       const wholesale = parseFloat(e.target.value) || 0
-                      const mult = expressItem.multiplier && expressItem.multiplier > 1 ? expressItem.multiplier : 1
+                      const multInput = e.target.parentElement?.parentElement?.querySelectorAll<HTMLInputElement>('input[type="number"]')[1]
+                      const mult = parseInt(multInput?.value || '0') || (expressItem.multiplier && expressItem.multiplier > 1 ? expressItem.multiplier : 1)
                       if (wholesale > 0 && mult > 0) {
                         setExpressUnitCost(Math.round(wholesale / mult).toString())
                       }
                     }}
-                    className="w-full px-2.5 py-1.5 border border-amber-300 rounded-lg font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
+                    className="w-full px-2 py-1.5 border border-amber-300 rounded-lg font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">Pièces par carton</label>
+                  <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">Pcs par carton</label>
                   <input
                     type="number"
                     min="1"
@@ -128,13 +129,35 @@ export function ExpressAdjustmentModal({
                     defaultValue={expressItem.multiplier && expressItem.multiplier > 1 ? expressItem.multiplier : ''}
                     onChange={e => {
                       const mult = parseInt(e.target.value) || 1
-                      const inputPriceEl = e.target.parentElement?.parentElement?.querySelector<HTMLInputElement>('input[type="number"]')
-                      const wholesale = parseFloat(inputPriceEl?.value || '0') || 0
+                      const priceInput = e.target.parentElement?.parentElement?.querySelectorAll<HTMLInputElement>('input[type="number"]')[0]
+                      const cartonsInput = e.target.parentElement?.parentElement?.querySelectorAll<HTMLInputElement>('input[type="number"]')[2]
+                      const wholesale = parseFloat(priceInput?.value || '0') || 0
+                      const cartons = parseInt(cartonsInput?.value || '0') || 0
                       if (wholesale > 0 && mult > 0) {
                         setExpressUnitCost(Math.round(wholesale / mult).toString())
                       }
+                      if (cartons > 0 && mult > 0) {
+                        setExpressQty(cartons * mult)
+                      }
                     }}
-                    className="w-full px-2.5 py-1.5 border border-amber-300 rounded-lg font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
+                    className="w-full px-2 py-1.5 border border-amber-300 rounded-lg font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">Cartons pris</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Ex: 3"
+                    onChange={e => {
+                      const cartons = parseInt(e.target.value) || 0
+                      const multInput = e.target.parentElement?.parentElement?.querySelectorAll<HTMLInputElement>('input[type="number"]')[1]
+                      const mult = parseInt(multInput?.value || '0') || (expressItem.multiplier && expressItem.multiplier > 1 ? expressItem.multiplier : 1)
+                      if (cartons > 0 && mult > 0) {
+                        setExpressQty(cartons * mult)
+                      }
+                    }}
+                    className="w-full px-2 py-1.5 border border-amber-300 rounded-lg font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
                   />
                 </div>
               </div>
