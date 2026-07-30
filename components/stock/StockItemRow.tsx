@@ -157,7 +157,7 @@ export function StockItemRow({
                 { label: 'Initial', value: item.initial_stock, color: 'text-gray-700' },
                 { label: 'Entrées', value: `+${item.total_in}`, color: 'text-emerald-700' },
                 { label: 'Sorties', value: `-${item.total_out}`, color: 'text-red-600' },
-                { label: 'Actuel', value: `${item.current_stock} ${item.unit}`, color: colors.text },
+                { label: 'Actuel', value: `${item.current_stock} ${item.multiplier && item.multiplier > 1 ? (item.unit === 'carton' || item.unit === 'sac' || item.unit === 'colis' ? 'unités' : item.unit) : item.unit}`, color: colors.text },
               ].map(s => (
                 <div key={s.label} className="text-center">
                   <div className="text-[8px] uppercase font-bold text-gray-400">{s.label}</div>
@@ -210,7 +210,7 @@ export function StockItemRow({
             {item.multiplier && item.multiplier > 1 && (
               <>
                 <span className="bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
-                  📦 1 {item.packaging_name || 'lot'} = {item.multiplier} {item.unit}s
+                  📦 1 {item.packaging_name || 'carton'} = {item.multiplier} {!item.unit || item.unit === 'carton' || item.unit === (item.packaging_name || 'carton') ? 'unités' : `${item.unit}s`}
                 </span>
                 {item.unit_cost > 0 && (
                   <span className="text-amber-800 font-bold">

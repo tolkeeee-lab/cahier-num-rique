@@ -248,14 +248,19 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Si un prix par défaut a été appliqué, recalculer le total
+          // Si un prix par défaut a été appliqué, s'assurer que total_facture est exact
           if (hasPriceUpdated) {
-            let total = 0
-            for (const a of parsedData.articles) {
-              total += (a.quantite || 1) * (a.prix_unitaire || 0)
+            if (!parsedData.total_facture || parsedData.total_facture === 0) {
+              let total = 0
+              for (const a of parsedData.articles) {
+                total += (a.quantite || 1) * (a.prix_unitaire || 0)
+              }
+              parsedData.total_facture = Math.round(total)
+            } else {
+              parsedData.total_facture = Math.round(parsedData.total_facture)
             }
-            parsedData.total_facture = total
 
+            const total = parsedData.total_facture
             const isCredit = ['purchase_credit', 'sale_credit'].includes(type)
             if (isCredit) {
               parsedData.montant_paye = 0
@@ -437,7 +442,9 @@ export async function POST(request: NextRequest) {
               product_name_canonical: canonicalName,
               quantity: article.quantite,
               unit_price: article.prix_unitaire,
-              subtotal: article.quantite * article.prix_unitaire,
+              subtotal: parsedData.articles.length === 1 && parsedData.total_facture > 0
+                ? Math.round(parsedData.total_facture)
+                : Math.round((article.quantite || 1) * (article.prix_unitaire || 0)),
               category: article.categorie || 'Divers',
               created_at: now.toISOString(),
             })
