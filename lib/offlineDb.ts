@@ -13,7 +13,7 @@ import {
   idbGetProducts, idbSaveProduct, idbReplaceProducts, idbDeleteProduct,
   migrateLocalStorageToIndexedDB
 } from './indexedDb'
-import { normalizeProductName } from './productUtils'
+import { normalizeProductName, sanitizeProductData } from './productUtils'
 
 export interface OfflineSale {
   id: string
@@ -398,30 +398,33 @@ export function getOfflineProducts(shopId: string): OfflineProduct[] {
   if (typeof window !== 'undefined') {
     migrateLocalStorageToIndexedDB(shopId).catch(() => {})
   }
-  return readJson<OfflineProduct[]>(productsKey(shopId), [])
+  const raw = readJson<OfflineProduct[]>(productsKey(shopId), [])
+  return raw.map(p => sanitizeProductData(p as any))
 }
 
 export async function getOfflineProductsAsync(shopId: string): Promise<OfflineProduct[]> {
   const products = await idbGetProducts(shopId)
-  if (products && products.length > 0) return products
+  if (products && products.length > 0) return products.map(p => sanitizeProductData(p as any))
   return getOfflineProducts(shopId)
 }
 
 export function replaceOfflineProducts(shopId: string, products: OfflineProduct[]): void {
-  writeJson(productsKey(shopId), products)
-  idbReplaceProducts(shopId, products).catch(() => {})
+  const clean = products.map(p => sanitizeProductData(p as any))
+  writeJson(productsKey(shopId), clean)
+  idbReplaceProducts(shopId, clean).catch(() => {})
 }
 
 export function saveOfflineProduct(shopId: string, product: OfflineProduct): void {
+  const cleanProduct = sanitizeProductData(product as any)
   const products = getOfflineProducts(shopId)
-  const idx = products.findIndex((p) => p.id === product.id)
+  const idx = products.findIndex((p) => p.id === cleanProduct.id)
   if (idx !== -1) {
-    products[idx] = product
+    products[idx] = cleanProduct
   } else {
-    products.push(product)
+    products.push(cleanProduct)
   }
   writeJson(productsKey(shopId), products)
-  idbSaveProduct(product).catch(() => {})
+  idbSaveProduct(cleanProduct).catch(() => {})
 }
 
 export function deleteOfflineProduct(shopId: string, productId: string): void {

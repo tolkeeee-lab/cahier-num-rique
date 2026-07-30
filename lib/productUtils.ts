@@ -159,3 +159,79 @@ export function findDuplicateCandidates(
 
   return duplicates
 }
+
+export interface CleanableProduct {
+  id?: string
+  name: string
+  category?: string
+  unit?: string
+  initial_stock?: number
+  unit_cost?: number
+  unit_price?: number
+  multiplier?: number
+  packaging_name?: string
+  lot_quantity?: number
+  lot_price?: number
+  [key: string]: any
+}
+
+/**
+ * Assainit et normalise automatiquement les données d'un produit (catalogue & stock).
+ * Résout les 5 anomalies classiques :
+ * 1. unit_cost enregistré avec le prix du carton au lieu du prix unitaire.
+ * 2. unit marquée 'carton'/'sac' au lieu de 'unité' quand multiplier > 1.
+ * 3. Prix et seuils négatifs ou décimaux bizarres.
+ * 4. lot_price invalide ou supérieur au prix normal.
+ * 5. Multiplicateurs invalides (< 1).
+ */
+export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
+  if (!product) return product
+
+  const copy = { ...product }
+
+  if (copy.name) {
+    copy.name = normalizeProductName(copy.name)
+  }
+
+  const mult = Math.max(1, Math.round(Number(copy.multiplier) || 1))
+  copy.multiplier = mult
+
+  let price = Math.max(0, Math.round(Number(copy.unit_price) || 0))
+  let cost = Math.max(0, Math.round(Number(copy.unit_cost) || 0))
+
+  if (mult > 1 && price > 0 && cost > price) {
+    cost = Math.round(cost / mult)
+  }
+
+  const isFakeCost = cost === Math.round(price * 0.6) || cost === Math.round(price * 0.7)
+  if (isFakeCost && (!copy.total_in || copy.total_in === 0)) {
+    cost = 0
+  }
+
+  copy.unit_price = price
+  copy.unit_cost = cost
+
+  let unitName = (copy.unit || 'unité').trim().toLowerCase()
+  const pkgName = (copy.packaging_name || 'carton').trim().toLowerCase()
+  if (mult > 1 && (unitName === 'carton' || unitName === 'sac' || unitName === 'colis' || unitName === pkgName)) {
+    unitName = 'unité'
+  }
+  copy.unit = unitName
+
+  let lotQty = Math.max(0, Math.round(Number(copy.lot_quantity) || 0))
+  let lotPr = Math.max(0, Math.round(Number(copy.lot_price) || 0))
+  if (lotQty > 1 && lotPr > 0) {
+    const normalLotValue = price * lotQty
+    if (normalLotValue > 0 && lotPr >= normalLotValue) {
+      lotQty = 0
+      lotPr = 0
+    }
+  } else {
+    lotQty = 0
+    lotPr = 0
+  }
+  copy.lot_quantity = lotQty
+  copy.lot_price = lotPr
+
+  return copy
+}

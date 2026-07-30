@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { normalizeProductName } from '@/lib/productUtils'
+import { normalizeProductName, sanitizeProductData } from '@/lib/productUtils'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -136,7 +136,7 @@ export async function GET(request: Request) {
         cleanUnitCost = 0
       }
 
-      return {
+      return sanitizeProductData({
         ...product,
         name: cleanName,
         unit_cost: cleanUnitCost,
@@ -148,7 +148,7 @@ export async function GET(request: Request) {
         movements: data.movements
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
           .slice(0, 20),
-      }
+      })
     })
 
     // 5. Articles hors-catalogue (présents dans les écritures mais pas dans le catalogue)
@@ -197,7 +197,7 @@ export async function POST(request: Request) {
 
     const canonicalName = normalizeProductName(name)
 
-    const insertData: Record<string, any> = {
+    const insertData: Record<string, any> = sanitizeProductData({
       shop_id: shopId,
       name: canonicalName,
       category: category || 'Général',
@@ -211,7 +211,7 @@ export async function POST(request: Request) {
       is_service: is_service ?? false,
       lot_quantity: lot_quantity ?? 0,
       lot_price: lot_price ?? 0,
-    }
+    })
 
     if (created_at) {
       insertData.created_at = created_at
@@ -248,7 +248,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
     }
 
-    const updates: Record<string, any> = {}
+    let updates: Record<string, any> = {}
     if (name !== undefined) updates.name = name.trim()
     if (category !== undefined) updates.category = category
     if (unit !== undefined) updates.unit = unit
@@ -273,6 +273,8 @@ export async function PATCH(request: Request) {
     if (is_service !== undefined) updates.is_service = is_service
     if (lot_quantity !== undefined) updates.lot_quantity = lot_quantity
     if (lot_price !== undefined) updates.lot_price = lot_price
+
+    updates = sanitizeProductData(updates as any)
 
     const { data, error } = await supabase
       .from('products')
