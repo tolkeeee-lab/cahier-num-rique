@@ -230,6 +230,47 @@ function buildAdminStats(users: any[], sales: any[]) {
 
   const shopsList = Object.values(shopMap).sort((a, b) => b.transactions_count - a.transactions_count)
 
+  // 3. Calculer le nombre de boutiques distinctes par client (regroupées par e-mail)
+  const emailShopsMap: Record<string, Set<string>> = {}
+
+  // A. Récolter depuis la liste des utilisateurs auth/employees
+  users.forEach(u => {
+    const email = (u.email || '').toLowerCase().trim()
+    const sid = u.shop_id || 'default-shop'
+    if (email) {
+      if (!emailShopsMap[email]) emailShopsMap[email] = new Set()
+      emailShopsMap[email].add(sid)
+    }
+  })
+
+  // B. Récolter depuis les propriétaires enregistrés sur les boutiques
+  shopsList.forEach(s => {
+    const email = (s.owner_email || '').toLowerCase().trim()
+    if (email) {
+      if (!emailShopsMap[email]) emailShopsMap[email] = new Set()
+      emailShopsMap[email].add(s.shop_id)
+    }
+  })
+
+  // Formater les utilisateurs avec le nombre de boutiques distinctes et leurs noms
+  const formattedUsers = users.map(u => {
+    const email = (u.email || '').toLowerCase().trim()
+    const ownedSet = emailShopsMap[email] || new Set([u.shop_id || 'default-shop'])
+    const distinctShopsCount = ownedSet.size
+    const ownedShopNames = Array.from(ownedSet).map(sid => shopMap[sid]?.name || formatShopName(sid))
+
+    return {
+      id: u.id,
+      shop_id: u.shop_id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      distinct_shops_count: distinctShopsCount,
+      owned_shops: ownedShopNames,
+      created_at: u.created_at
+    }
+  })
+
   // Indicateurs globaux
   const totalBoutiques = shopsList.length
   const totalUsers = Math.max(users.length, totalBoutiques)
@@ -265,14 +306,7 @@ function buildAdminStats(users: any[], sales: any[]) {
       globalVolumeSales
     },
     shops: shopsList,
-    users: users.map(u => ({
-      id: u.id,
-      shop_id: u.shop_id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      created_at: u.created_at
-    })),
+    users: formattedUsers,
     allSales: formattedSales
   }
 }

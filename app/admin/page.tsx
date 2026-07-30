@@ -43,6 +43,8 @@ interface AdminUser {
   name: string
   email: string
   role: 'owner' | 'employee'
+  distinct_shops_count?: number
+  owned_shops?: string[]
   created_at: string
 }
 
@@ -184,9 +186,11 @@ export default function SuperAdminPage() {
         csvContent += `"${s.shop_id}","${s.name}","${s.owner_email}",${s.transactions_count},${s.total_sales},${s.cash_balance},${s.employees_count},"${s.created_at.slice(0, 10)}"\n`
       })
     } else if (type === 'users') {
-      csvContent += "ID Utilisateur,ID Boutique,Nom,Email,Role,Date Inscription\n"
+      csvContent += "ID Utilisateur,Email,Nom,Role,Boutiques Distinctes (Nombre),Noms des Boutiques,Liaison Principale (Shop ID),Date Inscription\n"
       users.forEach(u => {
-        csvContent += `"${u.id}","${u.shop_id}","${u.name}","${u.email}","${u.role}","${u.created_at.slice(0, 10)}"\n`
+        const count = u.distinct_shops_count || 1
+        const listStr = (u.owned_shops || [u.shop_id]).join(' | ')
+        csvContent += `"${u.id}","${u.email}","${u.name}","${u.role}",${count},"${listStr.replace(/"/g, '""')}","${u.shop_id}","${u.created_at.slice(0, 10)}"\n`
       })
     } else if (type === 'raw_data') {
       csvContent += "ID Transaction,ID Boutique,Date,Heure,Texte Brut Saisi (Notes),Client,Total FCFA,Payé,Reste Dette,Statut,Type,Couleur Stylo,Articles Détaillés\n"
@@ -552,7 +556,8 @@ export default function SuperAdminPage() {
                     <th className="px-5 py-3.5 text-left bg-gray-50">Nom Utilisateur</th>
                     <th className="px-5 py-3.5 text-left bg-gray-50">Email</th>
                     <th className="px-5 py-3.5 text-left bg-gray-50">Rôle</th>
-                    <th className="px-5 py-3.5 text-left bg-gray-50">Liaison Boutique (Shop ID)</th>
+                    <th className="px-5 py-3.5 text-center bg-gray-50">Boutiques / Foyer Possédés</th>
+                    <th className="px-5 py-3.5 text-left bg-gray-50">Liaison Principale (Shop ID)</th>
                     <th className="px-5 py-3.5 text-center bg-gray-50">Date Inscription</th>
                   </tr>
                 </thead>
@@ -560,7 +565,7 @@ export default function SuperAdminPage() {
                   {filteredUsers.map((user, idx) => (
                     <tr key={idx} className="hover:bg-gray-50 hover:bg-opacity-40 transition-colors">
                       <td className="px-5 py-3 font-bold text-gray-800">{user.name}</td>
-                      <td className="px-5 py-3">{user.email}</td>
+                      <td className="px-5 py-3 font-medium text-gray-900">{user.email}</td>
                       <td className="px-5 py-3">
                         <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold ${
                           user.role === 'owner' ? 'bg-amber-100 text-amber-800 border border-amber-250' : 'bg-teal-150 text-teal-800 border border-teal-200'
@@ -568,13 +573,25 @@ export default function SuperAdminPage() {
                           {user.role === 'owner' ? 'Propriétaire' : 'Employé'}
                         </span>
                       </td>
+                      <td className="px-5 py-3 text-center">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="px-2.5 py-1 bg-amber-50 text-amber-900 border border-amber-250 rounded-xl text-[11px] font-extrabold shadow-xs inline-flex items-center gap-1">
+                            🏢 {user.distinct_shops_count || 1} boutique{(user.distinct_shops_count || 1) > 1 ? 's' : ''}
+                          </span>
+                          {user.owned_shops && user.owned_shops.length > 0 && (
+                            <span className="text-[10px] text-gray-500 max-w-[180px] truncate" title={user.owned_shops.join(', ')}>
+                              {user.owned_shops.join(' • ')}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-5 py-3 font-mono text-[10px] text-gray-400">{user.shop_id}</td>
                       <td className="px-5 py-3 text-center">{user.created_at.slice(0, 10)}</td>
                     </tr>
                   ))}
                   {filteredUsers.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-gray-400 font-handwritten text-lg font-bold">
+                      <td colSpan={6} className="px-5 py-8 text-center text-gray-400 font-handwritten text-lg font-bold">
                         Aucun utilisateur trouvé.
                       </td>
                     </tr>
