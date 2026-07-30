@@ -50,34 +50,51 @@ export function HouseholdBudgetWidget({ sales, period, onPeriodChange, shopName 
     sales.forEach(s => {
       if (s.status === 'crossed_out') return
 
-      if (s.pen_color === 'green') {
-        totalEntrees += s.total
+      const isIncome = s.pen_color === 'green' || s.type === 'cash_in'
+      if (isIncome) {
+        totalEntrees += (s.paid || s.total || 0)
       } else {
-        totalSorties += s.paid
-        totalArrieres += s.debt
+        const paidVal = s.paid ?? s.total ?? 0
+        const debtVal = s.debt ?? 0
+        totalSorties += paidVal
+        totalArrieres += debtVal
 
-        // Catégorisation des dépenses
+        // Catégorisation des dépenses de la maison
         if (s.articles && s.articles.length > 0) {
           s.articles.forEach(art => {
             const nameLower = art.name.toLowerCase()
             const cost = art.unit_price * art.quantity
 
-            if (nameLower.includes('riz') || nameLower.includes('huile') || nameLower.includes('pain') || nameLower.includes('viande') || nameLower.includes('poisson') || nameLower.includes('légume') || nameLower.includes('marché') || nameLower.includes('lait')) {
+            if (nameLower.includes('riz') || nameLower.includes('huile') || nameLower.includes('pain') || nameLower.includes('viande') || nameLower.includes('poisson') || nameLower.includes('légume') || nameLower.includes('marché') || nameLower.includes('lait') || nameLower.includes('nourriture') || nameLower.includes('repas')) {
               categoryMap['Alimentation & Marché'] += cost
-            } else if (nameLower.includes('loyer') || nameLower.includes('gaz') || nameLower.includes('courant') || nameLower.includes('eau') || nameLower.includes('cie') || nameLower.includes('sodeci') || nameLower.includes('recharge')) {
+            } else if (nameLower.includes('loyer') || nameLower.includes('gaz') || nameLower.includes('courant') || nameLower.includes('eau') || nameLower.includes('cie') || nameLower.includes('sodeci') || nameLower.includes('recharge') || nameLower.includes('maison')) {
               categoryMap['Loyer, Gaz & Maison'] += cost
-            } else if (nameLower.includes('école') || nameLower.includes('scolarité') || nameLower.includes('cahier') || nameLower.includes('tenue') || nameLower.includes('livre')) {
+            } else if (nameLower.includes('école') || nameLower.includes('ecole') || nameLower.includes('scolarité') || nameLower.includes('scolarite') || nameLower.includes('cahier') || nameLower.includes('tenue') || nameLower.includes('livre')) {
               categoryMap['Scolarité & Enfants'] += cost
-            } else if (nameLower.includes('pharmacie') || nameLower.includes('médicament') || nameLower.includes('savon') || nameLower.includes('couche') || nameLower.includes('soin')) {
+            } else if (nameLower.includes('pharmacie') || nameLower.includes('médicament') || nameLower.includes('medicament') || nameLower.includes('savon') || nameLower.includes('couche') || nameLower.includes('soin')) {
               categoryMap['Santé & Hygiène'] += cost
-            } else if (nameLower.includes('essence') || nameLower.includes('carburant') || nameLower.includes('taxi') || nameLower.includes('pass') || nameLower.includes('forfait') || nameLower.includes('pass')) {
+            } else if (nameLower.includes('essence') || nameLower.includes('carburant') || nameLower.includes('taxi') || nameLower.includes('transport') || nameLower.includes('deplacement') || nameLower.includes('pass')) {
               categoryMap['Transport & Communication'] += cost
             } else {
               categoryMap['Divers & Autres'] += cost
             }
           })
         } else {
-          categoryMap['Divers & Autres'] += s.total
+          const notesLower = (s.notes || '').toLowerCase()
+          const cost = paidVal || s.total || 0
+          if (notesLower.includes('riz') || notesLower.includes('huile') || notesLower.includes('pain') || notesLower.includes('viande') || notesLower.includes('poisson') || notesLower.includes('marché') || notesLower.includes('lait') || notesLower.includes('nourriture') || notesLower.includes('repas')) {
+            categoryMap['Alimentation & Marché'] += cost
+          } else if (notesLower.includes('loyer') || notesLower.includes('gaz') || notesLower.includes('courant') || notesLower.includes('eau') || notesLower.includes('cie') || notesLower.includes('sodeci') || notesLower.includes('recharge') || notesLower.includes('maison')) {
+            categoryMap['Loyer, Gaz & Maison'] += cost
+          } else if (notesLower.includes('école') || notesLower.includes('ecole') || notesLower.includes('scolarité') || notesLower.includes('scolarite') || notesLower.includes('cahier') || notesLower.includes('tenue') || notesLower.includes('livre')) {
+            categoryMap['Scolarité & Enfants'] += cost
+          } else if (notesLower.includes('pharmacie') || notesLower.includes('médicament') || notesLower.includes('medicament') || notesLower.includes('savon') || notesLower.includes('couche') || notesLower.includes('soin')) {
+            categoryMap['Santé & Hygiène'] += cost
+          } else if (notesLower.includes('essence') || notesLower.includes('carburant') || notesLower.includes('taxi') || notesLower.includes('transport') || notesLower.includes('deplacement') || notesLower.includes('pass')) {
+            categoryMap['Transport & Communication'] += cost
+          } else {
+            categoryMap['Divers & Autres'] += cost
+          }
         }
       }
     })

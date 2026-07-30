@@ -37,7 +37,7 @@ export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity 
 
   // Filtrer les ventes selon la période choisie
   const filteredSales = useMemo(() => {
-    const validSales = sales.filter(s => s.status !== 'crossed_out' && (s.type === 'cash_in' || s.type === 'sale_credit'))
+    const validSales = sales.filter(s => s.status !== 'crossed_out')
     if (period === 'all') return validSales
 
     const now = new Date()

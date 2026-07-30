@@ -4209,6 +4209,7 @@ export default function JournalPage() {
                   <option value="boutique">🏬 Boutique / Alimentation Générale / Magasin</option>
                   <option value="resto">🍲 Restaurant / Cafétéria / Maquis / Bar</option>
                   <option value="prestations">✂️ Prestations de Services / Coiffure / Artisanat</option>
+                  <option value="particulier">🏠 Particulier / Foyer & Budget Personnel</option>
                 </select>
               </div>
             </div>
