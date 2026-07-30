@@ -15,7 +15,7 @@ import { SettingsManager } from '@/components/SettingsManager'
 import { CashClosingModal } from '@/components/CashClosingModal'
 import { SyncManager } from '@/components/SyncManager'
 import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
-import { normalizeProductName } from '@/lib/productUtils'
+import { normalizeProductName, adjustLotRoundingArtifact } from '@/lib/productUtils'
 import {
   generateOfflineId,
   getOfflineSales,
@@ -1360,7 +1360,8 @@ export default function JournalPage() {
           if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
             const hasPourOrLot = /(?:^|\s)(?:pour|lot)(?:\s|$)/i.test(cleanedText)
             const isLotPrice = hasPourOrLot
-            const lotTotal = isLotPrice ? givenPrice : (qty * givenPrice)
+            let lotTotal = isLotPrice ? givenPrice : (qty * givenPrice)
+            lotTotal = adjustLotRoundingArtifact(qty, givenPrice, lotTotal)
             const unitPrice = isLotPrice ? Math.round(givenPrice / qty) : givenPrice
 
             articles.push({
@@ -1447,7 +1448,8 @@ export default function JournalPage() {
             quantite_par_boite: quantiteParBoite,
             prix_vente_unitaire: prixVenteUnitaire
           })
-          totalFacture += isLotSale ? price : (qty * price)
+          const segmentTotal = isLotSale ? price : (qty * price)
+          totalFacture += adjustLotRoundingArtifact(finalQty, finalUnitPrice, segmentTotal)
         }
       }
     }

@@ -98,7 +98,27 @@ export function calculateSimilarity(str1: string, str2: string): number {
   if (maxLen === 0) return 1
 
   const distance = levenshteinDistance(s1, s2)
-  return 1 - distance / maxLen
+  return (maxLen - distance) / maxLen
+}
+
+/**
+ * Corrige les artefacts d'arrondi à 1 FCFA sur les ventes par lot.
+ * Exemple: 3 Kopiko à 17 F (17 = 50 / 3 arrondi). 3 x 17 = 51 F -> Doit valoir 50 F !
+ * Exemple: 3 Oeufs à 92 F (92 = 275 / 3 arrondi). 3 x 92 = 276 F -> Doit valoir 275 F !
+ * Exemple: 3 Biscuits à 33 F (33 = 100 / 3 arrondi). 3 x 33 = 99 F -> Doit valoir 100 F !
+ */
+export function adjustLotRoundingArtifact(qty: number, givenUnitPrice: number, currentTotal: number): number {
+  if (qty > 1 && givenUnitPrice > 0) {
+    const rawTotal = currentTotal || (qty * givenUnitPrice)
+    const lotTargets = [50, 100, 150, 200, 250, 275, 300, 500, 1000]
+    for (const target of lotTargets) {
+      const roundedUnit = Math.round(target / qty)
+      if (givenUnitPrice === roundedUnit && Math.abs(rawTotal - target) <= 2) {
+        return target
+      }
+    }
+  }
+  return currentTotal
 }
 
 export interface DuplicatePair {

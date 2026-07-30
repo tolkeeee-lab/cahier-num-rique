@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import OpenAI from 'openai'
 import { randomUUID } from 'crypto'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
-import { normalizeProductName } from '@/lib/productUtils'
+import { normalizeProductName, adjustLotRoundingArtifact } from '@/lib/productUtils'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'mock-key-for-build',
@@ -1080,7 +1080,8 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
         if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
           const hasPourOrLot = /(?:^|\s)(?:pour|lot)(?:\s|$)/i.test(cleanedText)
           const isLotPrice = hasPourOrLot
-          const lotTotal = isLotPrice ? givenPrice : (qty * givenPrice)
+          let lotTotal = isLotPrice ? givenPrice : (qty * givenPrice)
+          lotTotal = adjustLotRoundingArtifact(qty, givenPrice, lotTotal)
           const unitPrice = isLotPrice ? Math.round(givenPrice / qty) : givenPrice
 
           articles.push({
@@ -1167,7 +1168,8 @@ function parseTextLocally(text: string, penColor: string): ParsedSale {
           quantite_par_boite: quantiteParBoite,
           prix_vente_unitaire: prixVenteUnitaire
         })
-        totalFacture += isLotSale ? price : (qty * price)
+        const segmentTotal = isLotSale ? price : (qty * price)
+        totalFacture += adjustLotRoundingArtifact(finalQty, finalUnitPrice, segmentTotal)
       }
     }
   }
