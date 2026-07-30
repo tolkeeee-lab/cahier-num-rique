@@ -26,9 +26,11 @@ interface AnalyticsDashboardProps {
   sales: Sale[]
   userShops?: Array<{ id: string; name: string; activity: string }>
   currentShopActivity?: string
+  shopId?: string
+  onRefreshData?: () => void
 }
 
-export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity }: AnalyticsDashboardProps) {
+export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity, shopId, onRefreshData }: AnalyticsDashboardProps) {
   const [period, setPeriod] = useState<'today' | '7days' | 'month' | 'all'>('all')
 
   const activeActivity = useMemo(() => {
@@ -60,7 +62,9 @@ export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity 
     return validSales
   }, [sales, period])
 
-  const shopName = userShops.find(s => s.activity === activeActivity)?.name || userShops[0]?.name || 'Cahier'
+  const currentShopObj = userShops.find(s => s.id === shopId) || userShops.find(s => s.activity === activeActivity)
+  const shopName = currentShopObj?.name || userShops[0]?.name || 'Cahier'
+  const activeShopId = shopId || currentShopObj?.id || 'default-shop'
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fbf9f4] font-sans p-4 md:p-6">
@@ -70,6 +74,8 @@ export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity 
           period={period}
           onPeriodChange={setPeriod}
           shopName={shopName}
+          shopId={activeShopId}
+          onRefreshData={onRefreshData}
         />
       )}
 

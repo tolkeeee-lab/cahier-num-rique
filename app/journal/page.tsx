@@ -14,6 +14,7 @@ import { StockManager } from '@/components/StockManager'
 import { SettingsManager } from '@/components/SettingsManager'
 import { CashClosingModal } from '@/components/CashClosingModal'
 import { SyncManager } from '@/components/SyncManager'
+import { ParticulierDashboard } from '@/components/ParticulierDashboard'
 import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
 import { normalizeProductName, adjustLotRoundingArtifact } from '@/lib/productUtils'
 import {
@@ -2705,6 +2706,51 @@ export default function JournalPage() {
     />
   }
 
+  // ── Branchement conditionnel : dashboard dédié pour les particuliers ──────
+  if (shopActivity === 'particulier') {
+    return (
+      <ParticulierDashboard
+        mappedUser={mappedUser}
+        shopId={shopId}
+        userShops={userShops}
+        currentShop={currentShop}
+        selectedShopId={selectedShopId}
+        setSelectedShopId={setSelectedShopId}
+        setShowNewShopModal={setShowNewShopModal}
+        sales={sales}
+        allSales={allSales}
+        tiroirCaisse={tiroirCaisse}
+        argentDehors={argentDehors}
+        nosDettes={nosDettes}
+        soldeDuJour={soldeDuJour}
+        isOnline={isOnline}
+        pendingCount={pendingCount}
+        syncStatus={syncStatus}
+        currentTime={currentTime}
+        handleSubmit={handleSubmit}
+        handleLogout={handleLogout}
+        handleSaleCrossedOut={handleSaleCrossedOut}
+        handleAddArticle={handleAddArticle}
+        handleUpdateSale={handleUpdateSale}
+        handleUpdateCategory={handleUpdateCategory}
+        handleError={handleError}
+        loadFinancialData={loadFinancialData}
+        syncOfflineData={syncOfflineData}
+        handleConvertToStockPurchase={handleConvertToStockPurchase}
+        setUserShops={setUserShops}
+        input={input}
+        setInput={setInput}
+        selectedPen={selectedPen}
+        setSelectedPen={setSelectedPen}
+        loading={loading}
+        postItWarning={postItWarning}
+        setPostItWarning={setPostItWarning}
+        showCashClosing={showCashClosing}
+        setShowCashClosing={setShowCashClosing}
+      />
+    )
+  }
+
   return (
     <main className="min-h-dvh md:min-h-screen md:py-8 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative overflow-x-hidden">
 
@@ -3762,7 +3808,7 @@ export default function JournalPage() {
 
               {activeTab === 'analytics' && mappedUser?.role !== 'employee' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
-                  <AnalyticsDashboard sales={allSales} userShops={userShops} />
+                  <AnalyticsDashboard sales={allSales} userShops={userShops} shopId={shopId} onRefreshData={loadFinancialData} />
                 </div>
               )}
 
