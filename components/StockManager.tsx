@@ -187,11 +187,17 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
       const hasInitial = (p.initial_stock || 0) > 0
       const hasPurchases = totalIn > 0
       const stockTracked = p.stock_tracked === true || (p.stock_tracked !== false && (hasInitial || hasPurchases))
-      const currentStock = stockTracked ? Math.max(0, ((p.initial_stock || 0) * mult) + totalIn - totalOut) : 0
+      const currentStock = stockTracked ? Math.max(0, (p.initial_stock || 0) + totalIn - totalOut) : 0
+
+      let cleanUnitCost = p.unit_cost || 0
+      if (mult > 1 && cleanUnitCost > (p.unit_price || 0) && (p.unit_price || 0) > 0) {
+        cleanUnitCost = Math.round(cleanUnitCost / mult)
+      }
 
       return { 
         ...p, 
         name: cleanName,
+        unit_cost: cleanUnitCost,
         total_in: totalIn, 
         total_out: totalOut, 
         stock_tracked: stockTracked,

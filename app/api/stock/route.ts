@@ -118,7 +118,7 @@ export async function GET(request: Request) {
       const mult = product.multiplier || 1
       const isUnlimited = product.is_service || product.category === 'Cuisine'
       
-      const rawStock = (((product.initial_stock || 0) * mult) + totalIn - totalOut)
+      const rawStock = ((product.initial_stock || 0) + totalIn - totalOut)
       
       const currentStock = isUnlimited 
         ? 999999 
@@ -126,8 +126,11 @@ export async function GET(request: Request) {
           ? Math.max(0, rawStock)
           : 0
 
-      // Annuler les fausses valeurs unit_cost imaginaires (ex: 240 F pour 400 F) créées en arrière-plan
+      // Auto-correction : Si unit_cost a été accidentellement enregistré avec le prix du carton complet (ex: 10000 F au lieu de 333 F)
       let cleanUnitCost = product.unit_cost || 0
+      if (mult > 1 && cleanUnitCost > (product.unit_price || 0) && (product.unit_price || 0) > 0) {
+        cleanUnitCost = Math.round(cleanUnitCost / mult)
+      }
       const isFakeCost = cleanUnitCost === Math.round((product.unit_price || 0) * 0.6) || cleanUnitCost === Math.round((product.unit_price || 0) * 0.7)
       if (!stockTracked || (isFakeCost && !hasPurchases)) {
         cleanUnitCost = 0
