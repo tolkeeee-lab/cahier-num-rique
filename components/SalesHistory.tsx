@@ -80,13 +80,13 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
   const [editingSale, setEditingSale] = useState<Sale | null>(null)
   const [editingCategorySaleId, setEditingCategorySaleId] = useState<string | null>(null)
   const [activeMobileActionsSaleId, setActiveMobileActionsSaleId] = useState<string | null>(null)
-  const [stockConfigForm, setStockConfigForm] = useState<{ [saleId: string]: { unitPrice: string; lotQty: string; lotPrice: string; saving?: boolean; saved?: boolean } }>({})
+  const [stockConfigForm, setStockConfigForm] = useState<{ [saleId: string]: { unitCost?: string; unitPrice?: string; lotQty?: string; lotPrice?: string; saving?: boolean; saved?: boolean } }>({})
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const addInputRef = useRef<HTMLInputElement>(null)
 
   const handleSaveStockProductPricing = async (sale: Sale) => {
     const form = stockConfigForm[sale.id]
-    if (!form || !form.unitPrice) return
+    if (!form || (!form.unitPrice && !form.unitCost)) return
 
     setStockConfigForm(prev => ({
       ...prev,
@@ -94,9 +94,11 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
     }))
 
     const sId = shopId || 'default-shop'
-    const unitPrice = parseFloat(form.unitPrice) || 0
-    const lotQty = parseInt(form.lotQty) || 0
-    const lotPrice = parseFloat(form.lotPrice) || 0
+    const defaultCost = sale.articles?.[0]?.unit_price || (sale.articles?.length ? Math.round(sale.total / (sale.articles[0].quantity || 1)) : sale.total)
+    const unitCost = form.unitCost !== undefined && form.unitCost !== '' ? parseFloat(form.unitCost) : defaultCost
+    const unitPrice = parseFloat(form.unitPrice || '0') || 0
+    const lotQty = parseInt(form.lotQty || '0') || 0
+    const lotPrice = parseFloat(form.lotPrice || '0') || 0
 
     try {
       const res = await fetch('/api/stock', { headers: { 'x-shop-id': sId } })
@@ -114,6 +116,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
             headers: { 'Content-Type': 'application/json', 'x-shop-id': sId },
             body: JSON.stringify({
               id: matched.id,
+              unit_cost: unitCost,
               unit_price: unitPrice,
               lot_quantity: lotQty,
               lot_price: lotPrice
@@ -662,10 +665,10 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                       <div className="flex items-center justify-between border-b border-amber-200 pb-2">
                         <div className="flex items-center gap-1.5 font-bold text-amber-950">
                           <span>💡</span>
-                          <span>Fixer le prix de vente public : <strong>{sale.articles?.[0]?.name || sale.notes}</strong></span>
+                          <span>Fixer les tarifs en stock : <strong>{sale.articles?.[0]?.name || sale.notes}</strong></span>
                         </div>
                         <span className="text-[9.5px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full">
-                          Prix d'achat : {sale.articles?.[0]?.unit_price || (sale.articles?.length ? Math.round(sale.total / (sale.articles[0].quantity || 1)) : sale.total)} F / unité
+                          Calculé : {sale.articles?.[0]?.unit_price || (sale.articles?.length ? Math.round(sale.total / (sale.articles[0].quantity || 1)) : sale.total)} F / unité
                         </span>
                       </div>
 
@@ -681,7 +684,29 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                         </div>
                       ) : (
                         <div className="space-y-2.5">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            {/* 1. Coût / Prix d'Achat Unitaire Ajustable */}
+                            <div>
+                              <label className="text-[9px] uppercase font-bold text-amber-900 tracking-wider block mb-1">
+                                Coût Achat Unitaire (FCFA)
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder={`Ex: ${sale.articles?.[0]?.unit_price || Math.round(sale.total / (sale.articles?.[0]?.quantity || 1))} F`}
+                                value={stockConfigForm[sale.id]?.unitCost ?? (sale.articles?.[0]?.unit_price || Math.round(sale.total / (sale.articles?.[0]?.quantity || 1)))}
+                                onChange={e => setStockConfigForm(prev => ({
+                                  ...prev,
+                                  [sale.id]: { ...prev[sale.id], unitCost: e.target.value }
+                                }))}
+                                className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                              />
+                              <span className="text-[8px] text-amber-800 font-mono block mt-0.5">
+                                💡 Corriger si division non exacte (ex: 17 F ➔ 20 F)
+                              </span>
+                            </div>
+
+                            {/* 2. Prix de Vente Unitaire Public */}
                             <div>
                               <label className="text-[9px] uppercase font-bold text-amber-900 tracking-wider block mb-1">
                                 Prix de Vente Unitaire (FCFA) *
@@ -689,48 +714,49 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                               <input
                                 type="number"
                                 min="0"
-                                placeholder="Ex: 500 F"
+                                placeholder="Ex: 25 F"
                                 value={stockConfigForm[sale.id]?.unitPrice || ''}
                                 onChange={e => setStockConfigForm(prev => ({
                                   ...prev,
                                   [sale.id]: { ...prev[sale.id], unitPrice: e.target.value }
                                 }))}
-                                className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                                className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
                               />
-                              {Number(stockConfigForm[sale.id]?.unitPrice || 0) > (sale.articles?.[0]?.unit_price || 0) && (
-                                <span className="text-[9px] text-emerald-700 font-mono font-bold block mt-0.5">
-                                  💰 Marge net : +{Number(stockConfigForm[sale.id]?.unitPrice) - (sale.articles?.[0]?.unit_price || 0)} F / unité
+                              {Number(stockConfigForm[sale.id]?.unitPrice || 0) > Number(stockConfigForm[sale.id]?.unitCost ?? (sale.articles?.[0]?.unit_price || 0)) && (
+                                <span className="text-[8.5px] text-emerald-700 font-mono font-bold block mt-0.5">
+                                  💰 Marge net : +{Number(stockConfigForm[sale.id]?.unitPrice) - Number(stockConfigForm[sale.id]?.unitCost ?? (sale.articles?.[0]?.unit_price || 0))} F / unit
                                 </span>
                               )}
                             </div>
 
+                            {/* 3. Vendre par lot ? */}
                             <div>
                               <label className="text-[9px] uppercase font-bold text-amber-900 tracking-wider block mb-1">
                                 Vendre par lot ? (Optionnel)
                               </label>
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1">
                                 <input
                                   type="number"
                                   min="2"
-                                  placeholder="Ex: 3"
+                                  placeholder="3"
                                   value={stockConfigForm[sale.id]?.lotQty || ''}
                                   onChange={e => setStockConfigForm(prev => ({
                                     ...prev,
                                     [sale.id]: { ...prev[sale.id], lotQty: e.target.value }
                                   }))}
-                                  className="w-14 px-2 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-center outline-none"
+                                  className="w-12 px-1.5 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-center outline-none"
                                 />
-                                <span className="text-[10px] text-amber-900 font-mono">pcs pour</span>
+                                <span className="text-[9px] text-amber-900 font-mono">pcs pour</span>
                                 <input
                                   type="number"
                                   min="0"
-                                  placeholder="Ex: 1300 F"
+                                  placeholder="50 F"
                                   value={stockConfigForm[sale.id]?.lotPrice || ''}
                                   onChange={e => setStockConfigForm(prev => ({
                                     ...prev,
                                     [sale.id]: { ...prev[sale.id], lotPrice: e.target.value }
                                   }))}
-                                  className="w-24 px-2 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none"
+                                  className="w-20 px-1.5 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none"
                                 />
                               </div>
                             </div>
@@ -739,7 +765,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                           <div className="flex justify-end pt-1 border-t border-amber-200">
                             <button
                               type="button"
-                              disabled={stockConfigForm[sale.id]?.saving || !stockConfigForm[sale.id]?.unitPrice}
+                              disabled={stockConfigForm[sale.id]?.saving || (!stockConfigForm[sale.id]?.unitPrice && !stockConfigForm[sale.id]?.unitCost)}
                               onClick={() => handleSaveStockProductPricing(sale)}
                               className="px-4 py-1.5 bg-amber-800 hover:bg-amber-900 disabled:opacity-40 text-white font-bold text-xs rounded-xl shadow transition-all flex items-center gap-1.5 cursor-pointer"
                             >
