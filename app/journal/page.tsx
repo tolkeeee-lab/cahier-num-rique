@@ -175,7 +175,7 @@ function formatPrice(price: number): string {
   }).format(price) + ' FCFA'
 }
 
-export function getPens(activity?: string) {
+function getPens(activity?: string) {
   const act = activity || 'boutique'
   if (act === 'particulier') {
     return [
@@ -394,7 +394,7 @@ export function getPens(activity?: string) {
 
 type FilterId = 'all' | 'blue' | 'red' | 'green' | 'purple' | 'yellow'
 
-export function getFilters(activity?: string): { id: FilterId; label: string }[] {
+function getFilters(activity?: string): { id: FilterId; label: string }[] {
   const pens = getPens(activity)
   return [
     { id: 'all', label: 'TOUT' },
@@ -402,8 +402,7 @@ export function getFilters(activity?: string): { id: FilterId; label: string }[]
   ]
 }
 
-const PENS = getPens('boutique')
-const FILTERS = getFilters('boutique')
+
 
 export default function JournalPage() {
   const isConfigured = isSupabaseClientConfigured()
