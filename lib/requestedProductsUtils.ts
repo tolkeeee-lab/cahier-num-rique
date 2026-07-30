@@ -18,14 +18,16 @@ export interface RequestedProduct {
  */
 export const DEMANDE_KEYWORDS = [
   'demande client',
-  'demande',
   'client demande',
+  'produit demandé',
+  'produit demande',
+  'article demandé',
+  'article demande',
   'manque client',
-  'manque',
   'besoin client',
-  'besoin',
-  'réclamation',
-  'reclamation'
+  'réclamation client',
+  'reclamation client',
+  'demande:'
 ]
 
 /**
