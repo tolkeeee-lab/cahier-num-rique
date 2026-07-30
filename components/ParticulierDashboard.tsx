@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Notebook, BarChart3, Send, Loader, AlertTriangle,
   FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package,
   Settings, ShoppingCart, ChevronUp, ChevronDown,
-  ClipboardList, Home, TrendingDown, TrendingUp, PiggyBank, HandCoins, X
+  ClipboardList, Home, TrendingDown, TrendingUp, PiggyBank, HandCoins, X,
+  Share2, Download, FileText, Target, PieChart
 } from 'lucide-react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
@@ -15,7 +16,9 @@ import { StockManager } from '@/components/StockManager'
 import { SettingsManager } from '@/components/SettingsManager'
 import { CashClosingModal } from '@/components/CashClosingModal'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
+import { exportSalesToCSV, exportSalesToPDF, generateWhatsAppHouseholdReport } from '@/lib/exportUtils'
 import type { Sale } from '@/app/journal/page'
+
 
 // ── Postes de budget rapides pour particuliers (au lieu des raccourcis produits)
 const BUDGET_POSTES = [
@@ -189,7 +192,24 @@ export function ParticulierDashboard({
   const [showBilanMensuel, setShowBilanMensuel] = useState(false)
   const [addingToSaleId, setAddingToSaleId] = useState<string | null>(null)
   const [addArticleInput, setAddArticleInput] = useState('')
+  const [targetBudget, setTargetBudget] = useState<number>(200000)
+  const [editingTargetBudget, setEditingTargetBudget] = useState(false)
+  const [tempTargetInput, setTempTargetInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`cahier_target_budget_${shopId}`)
+    if (saved) {
+      setTargetBudget(Number(saved) || 200000)
+    }
+  }, [shopId])
+
+  const saveTargetBudget = (val: number) => {
+    const clean = Math.max(0, val)
+    setTargetBudget(clean)
+    localStorage.setItem(`cahier_target_budget_${shopId}`, clean.toString())
+    setEditingTargetBudget(false)
+  }
 
   const currentPen = PENS_PARTICULIER.find(p => p.id === selectedPen) || PENS_PARTICULIER[0]
 
@@ -205,7 +225,92 @@ export function ParticulierDashboard({
   const revenueMonth = monthSales.filter(s => s.pen_color === 'blue').reduce((sum, s) => sum + (s.total || 0), 0)
   const depenseMonth = monthSales.filter(s => s.pen_color === 'red').reduce((sum, s) => sum + (s.total || 0), 0)
   const reserveMonth = monthSales.filter(s => s.pen_color === 'green').reduce((sum, s) => sum + (s.total || 0), 0)
+  const totalDepensesPlusReserve = depenseMonth + reserveMonth
   const bilanMois = revenueMonth - depenseMonth - reserveMonth
+
+  // Ventilation des dépenses du foyer par catégorie
+  const categoriesBreakdown = React.useMemo(() => {
+    const cats: Record<string, { id: string; label: string; emoji: string; amount: number; color: string }> = {
+      marche: { id: 'marche', label: 'Marché & Nourriture', emoji: '🛒', amount: 0, color: 'bg-rose-500' },
+      loyer: { id: 'loyer', label: 'Logement & Loyer', emoji: '🏠', amount: 0, color: 'bg-blue-500' },
+      energie: { id: 'energie', label: 'Électricité & Eau (CIE/SODECI)', emoji: '💡', amount: 0, color: 'bg-amber-500' },
+      ecole: { id: 'ecole', label: 'École & Scolarité', emoji: '📚', amount: 0, color: 'bg-purple-500' },
+      sante: { id: 'sante', label: 'Santé & Médicaments', emoji: '🏥', amount: 0, color: 'bg-emerald-500' },
+      transport: { id: 'transport', label: 'Transport & Carburant', emoji: '⛽', amount: 0, color: 'bg-indigo-500' },
+      tontine: { id: 'tontine', label: 'Tontine & Épargne', emoji: '🤝', amount: 0, color: 'bg-teal-500' },
+      autre: { id: 'autre', label: 'Divers & Autres', emoji: '🏷️', amount: 0, color: 'bg-gray-400' }
+    }
+
+    monthSales.forEach(s => {
+      if (s.pen_color === 'red' || s.pen_color === 'green' || s.type === 'expense' || s.type === 'stock_purchase') {
+        const text = (s.client || '') + ' ' + (s.articles?.map(a => a.name).join(' ') || '') + ' ' + (s.notes || '')
+        const lower = text.toLowerCase()
+        const amt = s.total || 0
+
+        if (/loyer|loi|maison/i.test(lower)) cats.loyer.amount += amt
+        else if (/cie|électricité|electricite|sodeci|eau|courant|facture/i.test(lower)) cats.energie.amount += amt
+        else if (/marché|marche|nourriture|viande|poisson|riz|huile|pain|manger|piment|sachet|sardine|lait/i.test(lower)) cats.marche.amount += amt
+        else if (/école|ecole|scolarité|scolarite|fourniture|livre|tenue|cahier/i.test(lower)) cats.ecole.amount += amt
+        else if (/santé|sante|pharma|médicament|medicament|docteur|hopital|soin|dentifrice/i.test(lower)) cats.sante.amount += amt
+        else if (/carburant|essence|transport|taxi|gbaka|woro/i.test(lower)) cats.transport.amount += amt
+        else if (/tontine|épargne|epargne|cotisation/i.test(lower)) cats.tontine.amount += amt
+        else cats.autre.amount += amt
+      }
+    })
+
+    return Object.values(cats).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount)
+  }, [monthSales])
+
+  // Handlers pour exports
+  const handleExportCSV = () => {
+    exportSalesToCSV(allSales.map(s => ({
+      id: s.id,
+      date: s.date,
+      time: s.time,
+      client: s.client,
+      total: s.total,
+      paid: s.paid,
+      debt: s.debt,
+      status: s.status,
+      type: s.type,
+      notes: s.notes,
+      articles: s.articles
+    })), `Bilan_Foyer_${currentMonth}`, currentShop?.name || 'Mon_Foyer')
+  }
+
+  const handleExportPDF = () => {
+    exportSalesToPDF(monthSales.map(s => ({
+      id: s.id,
+      date: s.date,
+      time: s.time,
+      client: s.client,
+      total: s.total,
+      paid: s.paid,
+      debt: s.debt,
+      status: s.status,
+      type: s.type,
+      notes: s.notes,
+      articles: s.articles
+    })), `Bilan_Mois_${currentMonth}`, currentShop?.name || 'Mon Foyer')
+  }
+
+  const handleShareWhatsApp = () => {
+    const url = generateWhatsAppHouseholdReport(monthSales.map(s => ({
+      id: s.id,
+      date: s.date,
+      time: s.time,
+      client: s.client,
+      total: s.total,
+      paid: s.paid,
+      debt: s.debt,
+      status: s.status,
+      type: s.type,
+      notes: s.notes,
+      articles: s.articles
+    })), currentMonth, currentShop?.name || 'Mon Foyer')
+    window.open(url, '_blank')
+  }
+
 
   // ── Raccourcis postes de budget ────────────────────────────────────────
   const handlePosteRapide = (poste: typeof BUDGET_POSTES[0]) => {
@@ -619,14 +724,49 @@ export function ParticulierDashboard({
 
               {/* ════════════ ONGLET ANALYSE BUDGET ════════════ */}
               {activeTab === 'analyses' && (
-                <div className="flex-grow p-3 md:p-6 overflow-y-auto flex flex-col h-full pb-16 md:pb-0">
-                  <div className="border-b border-dashed border-indigo-300 border-opacity-40 pb-4 mb-6">
-                    <h2 className="text-3xl font-bold text-gray-900 font-handwritten">📈 Analyse Budget Foyer</h2>
-                    <p className="text-xs text-gray-400 mt-1 font-mono uppercase tracking-wider">SUIVI DES DÉPENSES ET DU BUDGET DU MÉNAGE</p>
+                <div className="flex-grow p-3 md:p-6 overflow-y-auto flex flex-col h-full pb-16 md:pb-0 space-y-6">
+                  <div className="border-b border-dashed border-indigo-300 border-opacity-40 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-900 font-handwritten">📈 Analyse Budget Foyer</h2>
+                      <p className="text-xs text-gray-400 mt-1 font-mono uppercase tracking-wider">SUIVI DES DÉPENSES ET DU BUDGET DU MÉNAGE</p>
+                    </div>
+
+                    {/* Boutons d'exportation rapide */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleShareWhatsApp}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                        title="Partager le bilan sur WhatsApp"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>WhatsApp</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleExportPDF}
+                        className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                        title="Imprimer / Télécharger le PDF"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Rapport PDF</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleExportCSV}
+                        className="px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                        title="Télécharger les données CSV"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Export CSV</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Bilan mensuel inline */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex flex-col">
                       <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider">💰 Revenus du mois</span>
                       <span className="font-mono text-xl font-bold text-blue-900 mt-1">{formatPrice(revenueMonth)}</span>
@@ -647,6 +787,138 @@ export function ParticulierDashboard({
                         {bilanMois >= 0 ? '+' : ''}{formatPrice(bilanMois)}
                       </span>
                     </div>
+                  </div>
+
+                  {/* ── Suivi du Plafond / Objectif de Budget Mensuel ── */}
+                  <div className="bg-[#fffdf9] border border-indigo-200 rounded-2xl p-5 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-indigo-700" />
+                        <div>
+                          <h3 className="font-bold text-gray-900 text-sm">Plafond de Budget du Foyer</h3>
+                          <p className="text-[10px] text-gray-400 font-mono">Limite maximale de dépenses recommandée pour ce mois</p>
+                        </div>
+                      </div>
+
+                      {editingTargetBudget ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={tempTargetInput}
+                            onChange={(e) => setTempTargetInput(e.target.value)}
+                            placeholder="ex: 250000"
+                            className="w-28 px-2 py-1 text-xs border border-indigo-300 rounded-lg outline-none font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => saveTargetBudget(Number(tempTargetInput))}
+                            className="px-2.5 py-1 bg-indigo-700 text-white text-xs font-bold rounded-lg"
+                          >
+                            OK
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingTargetBudget(false)}
+                            className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-lg"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { setTempTargetInput(targetBudget.toString()); setEditingTargetBudget(true) }}
+                          className="text-xs text-indigo-700 hover:text-indigo-900 font-bold underline cursor-pointer"
+                        >
+                          Changer la limite ({formatPrice(targetBudget)})
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Barre de progression */}
+                    {(() => {
+                      const pct = Math.min(100, Math.round((totalDepensesPlusReserve / (targetBudget || 1)) * 100))
+                      const isOver = totalDepensesPlusReserve > targetBudget
+                      const isWarning = pct >= 80 && !isOver
+
+                      return (
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center text-xs font-mono">
+                            <span className="text-gray-600">
+                              Engagé : <strong>{formatPrice(totalDepensesPlusReserve)}</strong> / {formatPrice(targetBudget)}
+                            </span>
+                            <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${
+                              isOver ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                              isWarning ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                              'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            }`}>
+                              {pct}% consommé
+                            </span>
+                          </div>
+
+                          <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden flex">
+                            <div
+                              className={`h-full transition-all duration-500 ${
+                                isOver ? 'bg-rose-600' : isWarning ? 'bg-amber-500' : 'bg-emerald-600'
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+
+                          {isOver && (
+                            <p className="text-[11px] text-rose-700 font-bold flex items-center gap-1 pt-1">
+                              ⚠️ Dépassement de {formatPrice(totalDepensesPlusReserve - targetBudget)} sur votre limite mensuelle !
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+
+                  {/* ── Ventilation des Dépenses par Catégorie ── */}
+                  <div className="bg-[#fffdf9] border border-indigo-200 rounded-2xl p-5 shadow-sm space-y-4">
+                    <div className="flex items-center gap-2 border-b border-indigo-100 pb-3">
+                      <PieChart className="w-5 h-5 text-indigo-700" />
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-sm">Ventilation par Poste de Dépense</h3>
+                        <p className="text-[10px] text-gray-400 font-mono">Répartition de vos achats et charges ce mois-ci</p>
+                      </div>
+                    </div>
+
+                    {categoriesBreakdown.length > 0 ? (
+                      <div className="space-y-3">
+                        {categoriesBreakdown.map(cat => {
+                          const pctCat = totalDepensesPlusReserve > 0
+                            ? Math.round((cat.amount / totalDepensesPlusReserve) * 100)
+                            : 0
+
+                          return (
+                            <div key={cat.id} className="space-y-1">
+                              <div className="flex justify-between items-center text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base">{cat.emoji}</span>
+                                  <span className="font-bold text-gray-800">{cat.label}</span>
+                                </div>
+                                <div className="flex items-center gap-2 font-mono">
+                                  <span className="font-bold text-gray-900">{formatPrice(cat.amount)}</span>
+                                  <span className="text-[10px] text-gray-500 font-sans">({pctCat}%)</span>
+                                </div>
+                              </div>
+                              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full ${cat.color} transition-all duration-500`}
+                                  style={{ width: `${pctCat}%` }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic text-center py-4 font-mono">
+                        Aucune dépense enregistrée pour le moment ce mois-ci.
+                      </p>
+                    )}
                   </div>
 
                   {/* Analyse IA globale */}
@@ -862,15 +1134,47 @@ export function ParticulierDashboard({
               )}
             </div>
 
-            <button
-              onClick={() => setShowBilanMensuel(false)}
-              className="w-full py-2.5 bg-indigo-800 hover:bg-indigo-900 text-white text-sm font-bold uppercase rounded-2xl transition-all"
-            >
-              Fermer
-            </button>
+            {/* Boutons d'exportation / partage */}
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleShareWhatsApp}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Partager le Bilan sur WhatsApp</span>
+              </button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportPDF}
+                  className="py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-900 border border-indigo-300 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Imprimer PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  className="py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export CSV</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowBilanMensuel(false)}
+                className="w-full py-2.5 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold uppercase rounded-2xl transition-all mt-1"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
         </div>
       )}
+
 
       {/* Clôture (conservée pour compat, mais non exposée dans les KPIs particulier) */}
       <CashClosingModal

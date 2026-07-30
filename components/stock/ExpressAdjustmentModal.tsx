@@ -92,22 +92,70 @@ export function ExpressAdjustmentModal({
           </div>
 
           {expressType === 'in' && expressReason === 'purchase' && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
-              <label className="block text-[10px] font-bold text-amber-900 uppercase">
-                Prix d'Achat unitaire (FCFA) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                min="0"
-                required
-                placeholder="Ex: 450"
-                value={expressUnitCost}
-                onChange={e => setExpressUnitCost(e.target.value)}
-                className="w-full px-3 py-1.5 border border-amber-300 rounded-xl font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
-              />
-              <p className="text-[9px] font-mono text-amber-800">
-                Saisissez le prix exact payé au grossiste pour 1 unité.
-              </p>
+            <div className="p-3 bg-amber-50 border border-amber-250 rounded-xl space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] font-bold text-amber-950 uppercase">
+                  📦 Achat en Gros (Carton / Sac) ?
+                </label>
+                <span className="text-[9px] font-mono text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
+                  Calcul auto
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">Prix du carton (FCFA)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Ex: 12000 F"
+                    onChange={e => {
+                      const wholesale = parseFloat(e.target.value) || 0
+                      const mult = expressItem.multiplier && expressItem.multiplier > 1 ? expressItem.multiplier : 1
+                      if (wholesale > 0 && mult > 0) {
+                        setExpressUnitCost(Math.round(wholesale / mult).toString())
+                      }
+                    }}
+                    className="w-full px-2.5 py-1.5 border border-amber-300 rounded-lg font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">Pièces par carton</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder={`Ex: ${expressItem.multiplier || 24}`}
+                    defaultValue={expressItem.multiplier && expressItem.multiplier > 1 ? expressItem.multiplier : ''}
+                    onChange={e => {
+                      const mult = parseInt(e.target.value) || 1
+                      const inputPriceEl = e.target.parentElement?.parentElement?.querySelector<HTMLInputElement>('input[type="number"]')
+                      const wholesale = parseFloat(inputPriceEl?.value || '0') || 0
+                      if (wholesale > 0 && mult > 0) {
+                        setExpressUnitCost(Math.round(wholesale / mult).toString())
+                      }
+                    }}
+                    className="w-full px-2.5 py-1.5 border border-amber-300 rounded-lg font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-500 bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <label className="block text-[10px] font-bold text-amber-900 uppercase mb-1">
+                  Coût d'Achat unitaire retenu (FCFA) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  placeholder="Ex: 500 F"
+                  value={expressUnitCost}
+                  onChange={e => setExpressUnitCost(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-amber-400 rounded-xl font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-600 bg-white"
+                />
+                <p className="text-[9px] font-mono text-amber-800 mt-0.5">
+                  Prix exact payé au grossiste pour 1 unité.
+                </p>
+              </div>
             </div>
           )}
 

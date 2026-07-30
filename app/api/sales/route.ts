@@ -379,15 +379,25 @@ export async function POST(request: NextRequest) {
               })
             }
 
+            const isPurchaseOp = ['purchase_cash', 'purchase_credit'].includes(type)
+
             if (matchedProd) {
               productId = matchedProd.id
               canonicalName = matchedProd.name
+              // Mettre à jour le coût d'achat unitaire si c'est une opération d'achat
+              if (isPurchaseOp && article.prix_unitaire > 0) {
+                await supabase
+                  .from('products')
+                  .update({ unit_cost: article.prix_unitaire })
+                  .eq('id', matchedProd.id)
+              }
             } else {
               // 3. Si c'est une boutique et que c'est une opération d'achat/stockage, on l'ajoute au catalogue products
-              const isPurchaseOp = ['purchase_cash', 'purchase_credit'].includes(type)
               if (shopActivity === 'boutique' && isPurchaseOp) {
                 const newProdId = randomUUID()
                 const dbCategory = article.categorie || 'Divers'
+                const unitCostVal = article.prix_unitaire || 0
+                const unitPriceVal = article.prix_vente_unitaire || 0
                 const { error: insertProdErr } = await supabase
                   .from('products')
                   .insert([
@@ -395,8 +405,8 @@ export async function POST(request: NextRequest) {
                       id: newProdId,
                       shop_id: shopId,
                       name: cleanName,
-                      unit_price: article.prix_unitaire || 0,
-                      unit_cost: 0, // Ne pas inventer de prix d'achat imaginaire
+                      unit_price: unitPriceVal,
+                      unit_cost: unitCostVal,
                       initial_stock: 0,
                       alert_threshold: 5,
                       category: dbCategory,
@@ -410,7 +420,8 @@ export async function POST(request: NextRequest) {
                     id: newProdId,
                     shop_id: shopId,
                     name: cleanName,
-                    unit_price: article.prix_unitaire || 0,
+                    unit_price: unitPriceVal,
+                    unit_cost: unitCostVal,
                     category: dbCategory
                   } as any)
                 }

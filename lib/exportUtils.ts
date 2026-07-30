@@ -270,3 +270,37 @@ export function exportSalesToPDF(
   printWindow.document.close()
 }
 
+/**
+ * Génère un rapport de budget du foyer pour WhatsApp.
+ */
+export function generateWhatsAppHouseholdReport(
+  sales: SaleExportItem[],
+  monthLabel: string = 'Ce Mois',
+  foyerName: string = 'Mon Foyer'
+): string {
+  const validSales = sales.filter(s => s.status !== 'crossed_out')
+  const revenueMonth = validSales.filter(s => s.type === 'cash_in' || s.notes?.includes('blue') || s.notes?.includes('revenu')).reduce((sum, s) => sum + (s.total || 0), 0)
+  const depenseMonth = validSales.filter(s => s.type === 'expense' || s.notes?.includes('red') || s.notes?.includes('dépense')).reduce((sum, s) => sum + (s.total || 0), 0)
+  const reserveMonth = validSales.filter(s => s.type === 'stock_purchase' || s.notes?.includes('green') || s.notes?.includes('réserve')).reduce((sum, s) => sum + (s.total || 0), 0)
+  const bilan = revenueMonth - depenseMonth - reserveMonth
+
+  const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(p) + ' F'
+
+  let msg = `🏡 *BILAN BUDGET DU FOYER (${monthLabel.toUpperCase()})*\n`
+  msg += `🏠 *Foyer* : ${foyerName}\n`
+  msg += `📅 *Date* : ${new Date().toLocaleDateString('fr-FR')}\n`
+  msg += `═════════════════════════\n`
+  msg += `💰 *Revenus Totaux*    : +${formatPrice(revenueMonth)}\n`
+  msg += `🔴 *Dépenses du Foyer*  : -${formatPrice(depenseMonth)}\n`
+  msg += `🟢 *Réserves Alimentaires* : -${formatPrice(reserveMonth)}\n`
+  msg += `═════════════════════════\n`
+  msg += bilan >= 0 
+    ? `✅ *SOLDE POSITIF* : +${formatPrice(bilan)}\n` 
+    : `⚠️ *DÉFICIT DU MOIS* : ${formatPrice(bilan)}\n`
+  msg += `═════════════════════════\n`
+  msg += `✨ _Généré avec Cahier Numérique du Foyer_`
+
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`
+}
+
+

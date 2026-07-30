@@ -80,10 +80,59 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
   const [editingSale, setEditingSale] = useState<Sale | null>(null)
   const [editingCategorySaleId, setEditingCategorySaleId] = useState<string | null>(null)
   const [activeMobileActionsSaleId, setActiveMobileActionsSaleId] = useState<string | null>(null)
+  const [stockConfigForm, setStockConfigForm] = useState<{ [saleId: string]: { unitPrice: string; lotQty: string; lotPrice: string; saving?: boolean; saved?: boolean } }>({})
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const addInputRef = useRef<HTMLInputElement>(null)
 
+  const handleSaveStockProductPricing = async (sale: Sale) => {
+    const form = stockConfigForm[sale.id]
+    if (!form || !form.unitPrice) return
+
+    setStockConfigForm(prev => ({
+      ...prev,
+      [sale.id]: { ...prev[sale.id], saving: true }
+    }))
+
+    const sId = shopId || 'default-shop'
+    const unitPrice = parseFloat(form.unitPrice) || 0
+    const lotQty = parseInt(form.lotQty) || 0
+    const lotPrice = parseFloat(form.lotPrice) || 0
+
+    try {
+      const res = await fetch('/api/stock', { headers: { 'x-shop-id': sId } })
+      if (res.ok) {
+        const data = await res.json()
+        const articleName = sale.articles?.[0]?.name || sale.notes
+        const matched = (data.products || []).find((p: any) => 
+          p.name.toLowerCase().trim().includes(articleName.toLowerCase().trim()) ||
+          articleName.toLowerCase().trim().includes(p.name.toLowerCase().trim())
+        )
+
+        if (matched) {
+          await fetch('/api/stock', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'x-shop-id': sId },
+            body: JSON.stringify({
+              id: matched.id,
+              unit_price: unitPrice,
+              lot_quantity: lotQty,
+              lot_price: lotPrice
+            })
+          })
+        }
+      }
+    } catch (err) {
+      console.error('Erreur enregistrement tarif produit:', err)
+    } finally {
+      setStockConfigForm(prev => ({
+        ...prev,
+        [sale.id]: { ...prev[sale.id], saving: false, saved: true }
+      }))
+    }
+  }
+
   // Valeurs effectives : externes si fournies, sinon internes
+
   const addingToId = externalAddingToId !== undefined ? externalAddingToId : internalAddingToId
   const addInput = externalAddInput !== undefined ? externalAddInput : internalAddInput
   const setAddInput = onExternalAddInputChange ?? setInternalAddInput
@@ -606,6 +655,101 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                       )}
                     </div>
                   </div>
+
+                  {/* 💡 Carte Post-it d'Ajustement du Prix de Vente & Offre par Lot (Pour Achats de Stock) */}
+                  {['purchase_cash', 'purchase_credit'].includes(sale.type) && !isCrossed && !isEmployee && (
+                    <div className="mt-2 ml-2 md:ml-6 mr-2 bg-[#fefcf6] border-2 border-amber-400/90 rounded-2xl p-3.5 shadow-md text-xs font-sans space-y-2.5 relative z-30 select-none">
+                      <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                          <span>💡</span>
+                          <span>Fixer le prix de vente public : <strong>{sale.articles?.[0]?.name || sale.notes}</strong></span>
+                        </div>
+                        <span className="text-[9.5px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full">
+                          Prix d'achat : {sale.articles?.[0]?.unit_price || (sale.articles?.length ? Math.round(sale.total / (sale.articles[0].quantity || 1)) : sale.total)} F / unité
+                        </span>
+                      </div>
+
+                      {stockConfigForm[sale.id]?.saved ? (
+                        <div className="p-2 bg-emerald-100 border border-emerald-300 rounded-xl text-emerald-900 text-xs font-bold flex items-center justify-between">
+                          <span>✅ Fiche produit enregistrée au catalogue avec succès !</span>
+                          <button
+                            onClick={() => setStockConfigForm(prev => ({ ...prev, [sale.id]: { ...prev[sale.id], saved: false } }))}
+                            className="text-[10px] text-emerald-800 underline font-mono cursor-pointer"
+                          >
+                            Modifier
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[9px] uppercase font-bold text-amber-900 tracking-wider block mb-1">
+                                Prix de Vente Unitaire (FCFA) *
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                placeholder="Ex: 500 F"
+                                value={stockConfigForm[sale.id]?.unitPrice || ''}
+                                onChange={e => setStockConfigForm(prev => ({
+                                  ...prev,
+                                  [sale.id]: { ...prev[sale.id], unitPrice: e.target.value }
+                                }))}
+                                className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                              />
+                              {Number(stockConfigForm[sale.id]?.unitPrice || 0) > (sale.articles?.[0]?.unit_price || 0) && (
+                                <span className="text-[9px] text-emerald-700 font-mono font-bold block mt-0.5">
+                                  💰 Marge net : +{Number(stockConfigForm[sale.id]?.unitPrice) - (sale.articles?.[0]?.unit_price || 0)} F / unité
+                                </span>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="text-[9px] uppercase font-bold text-amber-900 tracking-wider block mb-1">
+                                Vendre par lot ? (Optionnel)
+                              </label>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min="2"
+                                  placeholder="Ex: 3"
+                                  value={stockConfigForm[sale.id]?.lotQty || ''}
+                                  onChange={e => setStockConfigForm(prev => ({
+                                    ...prev,
+                                    [sale.id]: { ...prev[sale.id], lotQty: e.target.value }
+                                  }))}
+                                  className="w-14 px-2 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-center outline-none"
+                                />
+                                <span className="text-[10px] text-amber-900 font-mono">pcs pour</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="Ex: 1300 F"
+                                  value={stockConfigForm[sale.id]?.lotPrice || ''}
+                                  onChange={e => setStockConfigForm(prev => ({
+                                    ...prev,
+                                    [sale.id]: { ...prev[sale.id], lotPrice: e.target.value }
+                                  }))}
+                                  className="w-24 px-2 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end pt-1 border-t border-amber-200">
+                            <button
+                              type="button"
+                              disabled={stockConfigForm[sale.id]?.saving || !stockConfigForm[sale.id]?.unitPrice}
+                              onClick={() => handleSaveStockProductPricing(sale)}
+                              className="px-4 py-1.5 bg-amber-800 hover:bg-amber-900 disabled:opacity-40 text-white font-bold text-xs rounded-xl shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <span>{stockConfigForm[sale.id]?.saving ? 'Sauvegarde...' : '💾 Enregistrer au catalogue'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Champ d'ajout inline — saisie libre + suggestions en dessous si on tape */}
                   {isAddingHere && (() => {
