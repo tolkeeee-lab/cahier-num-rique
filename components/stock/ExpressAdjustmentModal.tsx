@@ -144,7 +144,7 @@ export function ExpressAdjustmentModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">Cartons pris</label>
+                  <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">{expressItem?.packaging_name || 'Cartons'} pris</label>
                   <input
                     type="number"
                     min="1"

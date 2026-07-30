@@ -213,7 +213,8 @@ export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
 
   let unitName = (copy.unit || 'unité').trim().toLowerCase()
   const pkgName = (copy.packaging_name || 'carton').trim().toLowerCase()
-  if (mult > 1 && (unitName === 'carton' || unitName === 'sac' || unitName === 'colis' || unitName === pkgName)) {
+  const isDetailUnit = ['kg', 'g', 'litre', 'cl', 'bouteille', 'pièce', 'sachet', 'mètre', 'verre', 'portion'].includes(unitName)
+  if (mult > 1 && !isDetailUnit && (unitName === 'carton' || unitName === 'sac' || unitName === 'colis' || unitName === pkgName)) {
     unitName = 'unité'
   }
   copy.unit = unitName

@@ -56,4 +56,18 @@ const valAchat4 = getItemPurchaseValue(item4 as any)
 console.assert(valAchat4 === 40666, `Test 4 ECHEC: Valeur achat est ${valAchat4}, attendu 40666`)
 console.log("✅ Test 4 Reussi: Valeur achat avec reste = 40 666 F")
 
+// Test 5: Sac de Riz de 50kg acheté à 22 000 F et vendu au kg (unit_cost: 440 F/kg, unit: kg, packaging_name: sac)
+const rawItem5 = {
+  name: 'Riz Perfumé 50kg',
+  unit_price: 500,
+  unit_cost: 22000,
+  multiplier: 50,
+  unit: 'kg',
+  packaging_name: 'sac'
+}
+const cleanItem5 = sanitizeProductData(rawItem5)
+console.assert(cleanItem5.unit_cost === 440, `Test 5 ECHEC: unit_cost est ${cleanItem5.unit_cost}, attendu 440`)
+console.assert(cleanItem5.unit === 'kg', `Test 5 ECHEC: unit est ${cleanItem5.unit}, attendu kg`)
+console.log("✅ Test 5 Reussi: Sac de riz 50kg ramené à 440 F/kg et unité 'kg' conservée")
+
 console.log("=== TOUS LES TESTS D'AUDIT SONT VALIDES AVEC SUCCES ! ===")

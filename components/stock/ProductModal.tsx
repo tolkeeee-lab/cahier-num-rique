@@ -278,27 +278,69 @@ export function ProductModal({
                 </div>
               </div>
 
-              {/* 📦 Calculateur d'Achat en Gros / Carton / Sac (Nouveau & Mis en Avant) */}
+              {/* 📦 Calculateur d'Achat en Gros (Sac / Carton / Bidon / Caisse) */}
               <div className="bg-[#fcf8ee] border border-amber-300 rounded-2xl p-3.5 space-y-2.5 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-amber-950 font-bold text-xs">
                     <span>📦</span>
-                    <span>Prix d'Achat en Gros & Nombre de Cartons</span>
+                    <span>Prix d'Achat en Gros ({formData.packaging_name || 'Carton / Sac'})</span>
                   </div>
                   <span className="text-[9px] font-mono text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
                     Calcul unitaire auto
                   </span>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-1">
+                  <div>
+                    <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
+                      Format de Gros / Conteneur
+                    </label>
+                    <select
+                      value={formData.packaging_name || 'carton'}
+                      onChange={e => setFormData(p => ({ ...p, packaging_name: e.target.value }))}
+                      className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                    >
+                      <option value="sac">🌾 Sac (ex: Riz 50kg, Sucre)</option>
+                      <option value="carton">📦 Carton (ex: Biscuits, Huile, Savon)</option>
+                      <option value="bidon">🛢️ Bidon (ex: Huile 25L)</option>
+                      <option value="caisse">🍾 Caisse (ex: Bières 24btl)</option>
+                      <option value="colis">📦 Colis / Pack (ex: Eau, Jus)</option>
+                      <option value="pack">📦 Pack (ex: Pack de 6)</option>
+                      <option value="boîte">🥫 Boîte / Caisse</option>
+                      <option value="fût">🛢️ Fût / Baril</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
+                      Unité de Vente au Détail
+                    </label>
+                    <select
+                      value={formData.unit || 'unité'}
+                      onChange={e => setFormData(p => ({ ...p, unit: e.target.value }))}
+                      className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-amber-950 outline-none focus:border-amber-500"
+                    >
+                      <option value="kg">kg (Kilogrammes)</option>
+                      <option value="g">g (Grammes)</option>
+                      <option value="litre">Litre (Litres)</option>
+                      <option value="cl">cl (Centilitres)</option>
+                      <option value="pièce">pièce</option>
+                      <option value="bouteille">bouteille</option>
+                      <option value="sachet">sachet</option>
+                      <option value="unité">unité</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
                     <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
-                      Prix d'un carton / sac (FCFA)
+                      Prix d'un {formData.packaging_name || 'carton'} (FCFA)
                     </label>
                     <input
                       type="number"
                       min="0"
-                      placeholder="Ex: 12000 F"
+                      placeholder={`Ex: ${formData.packaging_name === 'sac' ? '22000' : '12000'} F`}
                       value={rawWholesaleInput}
                       onChange={e => {
                         const rawVal = e.target.value
@@ -316,12 +358,12 @@ export function ProductModal({
 
                   <div>
                     <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
-                      Pièces / unités par carton
+                      {formData.unit || 'unités'} par {formData.packaging_name || 'carton'}
                     </label>
                     <input
                       type="number"
                       min="1"
-                      placeholder="Ex: 24 pièces"
+                      placeholder={`Ex: ${formData.unit === 'kg' ? '50 kg' : '24 pcs'}`}
                       value={formData.multiplier > 1 ? formData.multiplier : ''}
                       onChange={e => {
                         const newMult = Math.max(1, parseInt(e.target.value) || 1)
@@ -342,12 +384,12 @@ export function ProductModal({
 
                   <div>
                     <label className="text-[8px] uppercase font-bold text-amber-900 tracking-wider font-sans block mb-1">
-                      Cartons / sacs achetés
+                      {formData.packaging_name || 'cartons'} achetés
                     </label>
                     <input
                       type="number"
                       min="0"
-                      placeholder="Ex: 5 cartons"
+                      placeholder={`Ex: 5 ${formData.packaging_name || 'cartons'}`}
                       value={formData.multiplier > 1 && formData.initial_stock > 0 ? Math.round(formData.initial_stock / formData.multiplier) : (formData.initial_stock > 0 ? formData.initial_stock : '')}
                       onChange={e => {
                         const cartons = parseInt(e.target.value) || 0
@@ -365,11 +407,11 @@ export function ProductModal({
                 {formData.multiplier > 1 && (formData.unit_cost > 0 || parseFloat(rawWholesaleInput) > 0) && (
                   <div className="bg-amber-100/90 border border-amber-300 p-2 rounded-xl text-[10px] text-amber-950 font-mono flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
                     <span>
-                      💡 <strong>{(parseFloat(rawWholesaleInput) || (formData.unit_cost * formData.multiplier)).toLocaleString('fr-FR')} F</strong> ÷ <strong>{formData.multiplier} pcs</strong> = <strong>{formData.unit_cost} F/unité</strong>
+                      💡 <strong>{(parseFloat(rawWholesaleInput) || (formData.unit_cost * formData.multiplier)).toLocaleString('fr-FR')} F</strong> ÷ <strong>{formData.multiplier} {formData.unit || 'pcs'}</strong> = <strong>{formData.unit_cost} F/{formData.unit || 'unité'}</strong>
                     </span>
                     {formData.initial_stock > 0 && (
                       <span className="font-bold bg-white px-2 py-0.5 rounded-lg border border-amber-300 text-amber-900">
-                        📦 Total en stock = {formData.initial_stock} {formData.unit || 'unités'} ({Math.round(formData.initial_stock / formData.multiplier)} cartons)
+                        📦 Total en stock = {formData.initial_stock} {formData.unit || 'unités'} ({Math.round(formData.initial_stock / formData.multiplier)} {formData.packaging_name || 'cartons'})
                       </span>
                     )}
                   </div>
