@@ -347,20 +347,26 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
             {isSignUp && (
               <div>
                 <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">
-                  Nom Complet / Boutique
+                  {role === 'owner' ? '🏬 Nom de votre Boutique' : '👤 Votre Prénom et Nom'}
                 </label>
                 <div className="relative mt-1">
                   <input
                     type="text"
                     required
-                    placeholder={role === 'owner' ? "Boutique Chantal et Fils" : "Ex: Mamadou Sylla"}
+                    placeholder={role === 'owner' ? "Ex: Boutique Chantal et Fils" : "Ex: Mamadou Sylla"}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-3 pr-4 py-2.5 text-sm bg-[#fdfbf7] border border-[#dcd6c9] rounded-xl focus:border-gray-600 text-gray-800 transition-all font-medium placeholder-gray-300"
                   />
                 </div>
+                {role === 'employee' && (
+                  <p className="text-[8px] text-gray-400 font-mono mt-1">
+                    Votre nom tel qu'il apparaîtra dans le cahier de votre gérant.
+                  </p>
+                )}
               </div>
             )}
+
 
             {isSignUp && role === 'owner' && (
               <div className="space-y-1">
@@ -424,25 +430,27 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
             )}
 
             {isSignUp && role === 'employee' && (
-              <div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                 <label className="text-[9px] font-bold text-amber-700 uppercase tracking-widest pl-1 flex items-center gap-1">
-                  🔑 Code Boutique du Propriétaire
+                  🔑 Code Boutique — <span className="text-amber-900">OBLIGATOIRE</span>
                 </label>
                 <div className="relative mt-1">
                   <input
                     type="text"
                     required
-                    placeholder="Ex: BTQ-58C54"
+                    placeholder="Ex: SHOP-348291"
                     value={shopCode}
-                    onChange={(e) => setShopCode(e.target.value)}
-                    className="w-full pl-3 pr-4 py-2.5 text-sm bg-[#fffbeb] border border-amber-300 rounded-xl focus:border-amber-500 text-amber-950 font-bold tracking-wider placeholder-amber-200"
+                    onChange={(e) => setShopCode(e.target.value.toUpperCase())}
+                    className="w-full pl-3 pr-4 py-2.5 text-sm bg-white border-2 border-amber-400 rounded-xl focus:border-amber-600 text-amber-950 font-bold tracking-wider placeholder-amber-200"
                   />
                 </div>
-                <p className="text-[8px] text-amber-600 font-mono mt-1 leading-normal">
-                  Demandez ce code à votre propriétaire pour lier votre travail à son cahier.
+                <p className="text-[8px] text-amber-700 font-mono mt-1.5 leading-normal">
+                  📋 Ce code vous est donné par votre gérant depuis ses Paramètres. Sans ce code, vous ne pouvez pas rejoindre la boutique.
                 </p>
               </div>
             )}
+
+
 
             <div>
               <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">
