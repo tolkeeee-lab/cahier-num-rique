@@ -174,11 +174,13 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
     setSuccessMsg(null)
 
     try {
+      const shopName = currentShop?.name || shopId
       const response = await fetch('/api/employees', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-shop-id': shopId
+          'x-shop-id': assignedShopId || shopId,
+          'x-shop-name': shopName
         },
         body: JSON.stringify({
           name: name.trim(),
@@ -190,9 +192,19 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Erreur lors de la création')
 
+      const savedEmail = email.trim().toLowerCase()
       setName('')
       setEmail('')
-      setSuccessMsg('✓ Employé associé avec succès !')
+
+      if (data.inviteSent) {
+        setSuccessMsg(`📧 Invitation envoyée à ${savedEmail} ! L'employé recevra un e-mail pour créer son mot de passe.`)
+      } else if (data.inviteError) {
+        // Associé en base mais pas d'invitation (clé manquante ou déjà inscrit)
+        setSuccessMsg(`✓ Employé associé. Note : ${data.inviteError} L'employé devra s'inscrire manuellement avec le Code Boutique.`)
+      } else {
+        setSuccessMsg('✓ Employé associé avec succès !')
+      }
+
       await loadEmployees()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -623,8 +635,13 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
               disabled={saving || isOffline}
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-900 hover:bg-black text-white text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all disabled:opacity-50"
             >
-              {saving ? 'Association...' : 'Associer l\'employé'}
+              {saving ? 'Envoi de l\'invitation...' : '📧 Associer & Inviter par e-mail'}
             </button>
+            {isOffline && (
+              <p className="text-[10px] text-amber-600 font-mono text-center">
+                ⚠️ Hors-ligne — l\'invitation sera uniquement enregistrée en local, sans e-mail.
+              </p>
+            )}
           </form>
         </div>
 

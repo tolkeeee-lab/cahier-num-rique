@@ -37,10 +37,11 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/employees
-// Ajoute un employé à la boutique
+// Ajoute un employé à la boutique et lui envoie une invitation par e-mail
 export async function POST(request: NextRequest) {
   try {
     const shopId = request.headers.get('x-shop-id') || 'default-shop'
+    const shopName = request.headers.get('x-shop-name') || ''
     const { name, email, role } = await request.json()
 
     if (!name?.trim() || !email?.trim()) {
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (isSupabaseConfigured()) {
+      // 1. Insérer la fiche employé dans la table `employees`
       const { data, error } = await supabase
         .from('employees')
         .insert([
@@ -76,10 +78,53 @@ export async function POST(request: NextRequest) {
         throw error
       }
 
-      return NextResponse.json({ employee: data }, { status: 201 })
+      // 2. Envoyer une invitation par e-mail via Supabase Auth Admin
+      // Cela génère un lien sécurisé que l'employé clique pour définir son mot de passe.
+      // Nécessite SUPABASE_SERVICE_ROLE_KEY (pas la clé anon).
+      let inviteSent = false
+      let inviteError: string | null = null
+
+      const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
+        !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')
+
+      if (hasServiceRoleKey) {
+        try {
+          const { error: invErr } = await supabase.auth.admin.inviteUserByEmail(
+            email.trim().toLowerCase(),
+            {
+              data: {
+                full_name: name.trim(),
+                role: role || 'employee',
+                shop_id: shopId,
+                shop_name: shopName,
+                shop_activity: 'boutique',
+              },
+              // L'employé sera redirigé ici après avoir défini son mot de passe
+              redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || ''}/auth/callback`,
+            }
+          )
+          if (invErr) {
+            // L'utilisateur a peut-être déjà un compte — ce n'est pas bloquant
+            inviteError = invErr.message
+            console.warn('[Invite] Erreur non bloquante:', invErr.message)
+          } else {
+            inviteSent = true
+          }
+        } catch (inviteEx: any) {
+          inviteError = inviteEx?.message || 'Erreur lors de l\'envoi de l\'invitation'
+          console.warn('[Invite] Exception non bloquante:', inviteEx)
+        }
+      } else {
+        inviteError = 'SUPABASE_SERVICE_ROLE_KEY manquante — invitation e-mail désactivée.'
+      }
+
+      return NextResponse.json(
+        { employee: data, inviteSent, inviteError },
+        { status: 201 }
+      )
     }
 
-    // Fallback local en mémoire
+    // Fallback local en mémoire (mode démo / hors-ligne)
     const mockEmployee = {
       id: randomUUID(),
       shop_id: shopId,
@@ -88,7 +133,10 @@ export async function POST(request: NextRequest) {
       role: role || 'employee',
       created_at: new Date().toISOString()
     }
-    return NextResponse.json({ employee: mockEmployee }, { status: 201 })
+    return NextResponse.json(
+      { employee: mockEmployee, inviteSent: false, inviteError: 'Mode hors-ligne — aucune invitation envoyée.' },
+      { status: 201 }
+    )
   } catch (err) {
     console.error('Erreur POST /api/employees:', err)
     return NextResponse.json(
@@ -97,6 +145,7 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
 
 // DELETE /api/employees?id=UUID
 // Dissocie un employé de la boutique

@@ -1,15 +1,40 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Calculator, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react'
+import { ArrowRight, BookOpen, Calculator, Sparkles, CheckCircle2, ShieldCheck, AlertTriangle } from 'lucide-react'
 
 export default function LandingPage() {
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const err = params.get('auth_error')
+    if (err) setAuthError(decodeURIComponent(err))
+  }, [])
+
   return (
     <div className="min-h-screen bg-[#141210] text-[#fefdfa] font-sans antialiased overflow-x-hidden relative">
       
       {/* Decorative desktop lamp highlight blur */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-amber-500 opacity-[0.03] rounded-full blur-[160px] pointer-events-none z-0"></div>
+
+      {/* Bandeau d'erreur d'invitation — visible si ?auth_error= est présent dans l'URL */}
+      {authError && (
+        <div className="relative z-20 bg-red-900/80 border-b border-red-700/60 px-6 py-4">
+          <div className="max-w-3xl mx-auto flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-red-200">Lien d'invitation invalide ou expiré</p>
+              <p className="text-xs text-red-300 mt-1">
+                {authError.includes('expired') || authError.includes('invalid')
+                  ? 'Ce lien d\'invitation a expiré ou est invalide. Demandez à votre gérant de vous en renvoyer un nouveau depuis les Paramètres de la boutique.'
+                  : `Détail : ${authError}. Contactez votre gérant pour un nouveau lien.`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between border-b border-gray-800/40 relative z-10">
