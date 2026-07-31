@@ -1361,6 +1361,8 @@ Règles STRICTES:
      * "quantite_par_boite" doit contenir le multiplicateur (ex: 12, 20).
      * "prix_vente_unitaire" doit être extrait si mentionné (ex: "prix de vente a l'unite 600" ou "vente à 600" -> 600).
    - S'il n'y a pas de conditionnement multiple ou de sous-unité mentionné, conserve la quantité et le prix unitaire d'origine, et mets "unite_vente" = "unité".
+   - Si la vente mentionne des quantités fractionnées ou des poids/volumes partiels (ex: "250g de riz", "500g", "0.5L", "demi litre d'huile", "quart d'huile") :
+     * Convertis "quantite" en décimal par rapport à l'unité principale (ex: "250g" -> quantite=0.25, unite_vente="kg" | "500g" -> quantite=0.5, unite_vente="kg" | "demi litre" -> quantite=0.5, unite_vente="litre" | "quart" -> quantite=0.25, unite_vente="litre").
 
 3. RÈGLE IMPÉRATIVE PRIX SANS QUANTITÉ ET VENTES PAR LOT :
    - Si la quantité n'est pas écrite explicitement (ex: "super mint 50F", "super mint à 50", "super mint 50", "eau fifa 100f") :
