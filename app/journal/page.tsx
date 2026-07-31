@@ -15,6 +15,7 @@ import { SettingsManager } from '@/components/SettingsManager'
 import { CashClosingModal } from '@/components/CashClosingModal'
 import { SyncManager } from '@/components/SyncManager'
 import { ParticulierDashboard } from '@/components/ParticulierDashboard'
+import BoutiqueAssistantModal from '@/components/BoutiqueAssistantModal'
 import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
 import { normalizeProductName, adjustLotRoundingArtifact } from '@/lib/productUtils'
 import {
@@ -516,6 +517,7 @@ export default function JournalPage() {
 
 
   const [showCashClosing, setShowCashClosing] = useState(false)
+  const [showAssistantModal, setShowAssistantModal] = useState(false)
   const [showChangeCalc, setShowChangeCalc] = useState(false)
   const [changeTotal, setChangeTotal] = useState('')
   const [changeReceived, setChangeReceived] = useState('')
@@ -2888,6 +2890,15 @@ export default function JournalPage() {
                   )}
 
                   <button
+                    onClick={() => setShowAssistantModal(true)}
+                    title="Poser une question à l'assistant bilan"
+                    className="flex items-center gap-1 text-[10px] text-amber-900 bg-amber-100 hover:bg-amber-200 font-bold uppercase tracking-wider border border-amber-300 rounded-full px-2.5 py-1 transition-all hover:scale-105 flex-shrink-0 shadow-xs"
+                  >
+                    <span>🤖</span>
+                    <span>Assistant</span>
+                  </button>
+
+                  <button
                     onClick={handleLogout}
                     title="Déconnexion"
                     className="flex items-center gap-1 text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-wider border border-red-200 rounded-full px-2 py-1 transition-colors flex-shrink-0"
@@ -4581,6 +4592,14 @@ export default function JournalPage() {
         onClose={() => setShowCashClosing(false)}
         sales={sales}
         shopName={currentShop?.name || 'Mon Point de Vente'}
+      />
+
+      {/* Modale Assistant Bilan & Stock (0 FCFA) */}
+      <BoutiqueAssistantModal
+        isOpen={showAssistantModal}
+        onClose={() => setShowAssistantModal(false)}
+        sales={allSales}
+        products={getOfflineProducts(shopId) || []}
       />
 
     </main>
