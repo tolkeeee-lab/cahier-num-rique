@@ -108,17 +108,40 @@ export function calculateSimilarity(str1: string, str2: string): number {
  * Exemple: 3 Biscuits à 33 F (33 = 100 / 3 arrondi). 3 x 33 = 99 F -> Doit valoir 100 F !
  */
 export function adjustLotRoundingArtifact(qty: number, givenUnitPrice: number, currentTotal: number): number {
-  if (qty > 1 && givenUnitPrice > 0) {
-    const rawTotal = currentTotal || (qty * givenUnitPrice)
-
-    // Chercher s'il existe un prix de lot exact T (ex: 50, 100, 275, 350, 1000, 2500...)
-    // dont la division entière arrondie a produit le prix unitaire donné (ex: 50/3 = 17)
+  if (qty > 1 && givenUnitPrice > 0 && currentTotal > 0) {
+    // Chercher parmi les voisins ±2 si un candidat correspond au même prix unitaire arrondi
+    const candidates: number[] = []
     for (let diff = -2; diff <= 2; diff++) {
       if (diff === 0) continue
-      const candidateTarget = rawTotal + diff
+      const candidateTarget = currentTotal + diff
       if (candidateTarget > 0 && Math.round(candidateTarget / qty) === givenUnitPrice) {
-        return candidateTarget
+        candidates.push(candidateTarget)
       }
+    }
+
+    if (candidates.length > 0) {
+      // Parmi les candidats valides, préférer un multiple de 5 (vrai lot FCFA)
+      const roundCandidates = candidates.filter(c => c % 5 === 0)
+
+      if (roundCandidates.length > 0) {
+        // Si currentTotal est déjà multiple de 5, garder le plus proche multiple de 5
+        // Sinon, passer au candidat multiple de 5 le plus proche
+        const bestRound = roundCandidates.reduce((best, c) =>
+          Math.abs(c - currentTotal) < Math.abs(best - currentTotal) ? c : best
+        )
+        // Préférer le candidat round SAUF si currentTotal est lui-même déjà multiple de 5
+        // et que la différence avec le meilleur candidat est > 1 (cas exotique)
+        if (currentTotal % 5 !== 0 || Math.abs(bestRound - currentTotal) <= 2) {
+          return bestRound
+        }
+      }
+      // Aucun candidat multiple de 5 : si currentTotal est déjà exact et rond, le garder
+      if (currentTotal % 5 === 0) {
+        return currentTotal
+      }
+    } else {
+      // Aucun candidat trouvé : rien à corriger
+      return currentTotal
     }
   }
   return currentTotal
