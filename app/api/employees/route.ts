@@ -15,10 +15,16 @@ export async function GET(request: NextRequest) {
     const shopId = request.headers.get('x-shop-id') || 'default-shop'
 
     if (isSupabaseConfigured()) {
+      const altShopId = shopId.startsWith('SHOP-')
+        ? shopId.replace(/^SHOP-/i, 'BTQ-')
+        : shopId.startsWith('BTQ-')
+          ? shopId.replace(/^BTQ-/i, 'SHOP-')
+          : shopId
+
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .eq('shop_id', shopId)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
         .order('created_at', { ascending: false })
 
       if (error) throw error
