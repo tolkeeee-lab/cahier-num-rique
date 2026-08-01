@@ -981,62 +981,8 @@ export default function JournalPage() {
     }
   }
 
-  // 🚀 Initialisation en 1-Click de la Carte Modèle dans le Stock Officiel (si catalogue vide)
+  // Initialisation du catalogue (vide par défaut)
   const handleSeedDefaultCatalog = async () => {
-    const currentShop = userShops.find(s => s.id === shopId)
-    const activity = currentShop?.activity || 'boutique'
-
-    const defaultItems = [
-      { name: 'Atassi Viande / Poulet', price: 1500, category: 'Cuisine', cost: 900 },
-      { name: 'Riz au Gras Poisson', price: 1500, category: 'Cuisine', cost: 900 },
-      { name: 'Spaghetti Omelette', price: 1000, category: 'Cuisine', cost: 600 },
-      { name: 'Igname Pilée Sauce', price: 2500, category: 'Cuisine', cost: 1500 },
-      { name: 'Poulet Braisé / Frit', price: 2000, category: 'Cuisine', cost: 1200 },
-      { name: 'Café au Lait', price: 500, category: 'Cafétéria', cost: 250 },
-      { name: 'Pain Omelette Avocat', price: 800, category: 'Cafétéria', cost: 450 },
-      { name: 'Bouillie de Millet', price: 300, category: 'Cafétéria', cost: 150 },
-      { name: 'Sandwich Viande Hachée', price: 1200, category: 'Cafétéria', cost: 700 },
-      { name: 'Jus de Bissap Maison', price: 300, category: 'Boissons', cost: 150 },
-      { name: 'Bière Beaufort / Sobebra', price: 800, category: 'Boissons', cost: 550 },
-      { name: 'Eau Possotomè 1.5L', price: 400, category: 'Boissons', cost: 250 },
-      { name: 'Coca-Cola / Sucrerie', price: 500, category: 'Boissons', cost: 350 },
-      { name: 'Jus de Gingembre (Gnamakoudji)', price: 400, category: 'Boissons', cost: 200 },
-    ]
-
-    for (const item of defaultItems) {
-      try {
-        await fetch('/api/stock', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-            'x-shop-activity': activity
-          },
-          body: JSON.stringify({
-            name: item.name,
-            unit_price: item.price,
-            unit_cost: item.cost,
-            initial_stock: 0,
-            alert_threshold: 5,
-            category: item.category
-          })
-        })
-      } catch (err) {
-        saveOfflineProduct(shopId, {
-          id: generateOfflineId(),
-          shop_id: shopId,
-          name: item.name,
-          unit_price: item.price,
-          unit_cost: item.cost,
-          initial_stock: 0,
-          alert_threshold: 5,
-          category: item.category,
-          unit: 'unité',
-          created_at: new Date().toISOString()
-        })
-      }
-    }
-
     setRefreshMenuTrigger(prev => prev + 1)
   }
 

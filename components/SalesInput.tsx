@@ -52,7 +52,7 @@ const PENS = [
     bg: 'bg-blue-700', 
     border: 'border-blue-700', 
     textClass: 'ink-blue', 
-    placeholder: 'Stylo Bleu : Cliquez sur les plats du menu ou tapez une vente cash (ex: 2 Atassi Poulet à 1500)' 
+    placeholder: 'Stylo Bleu : Cliquez sur les produits du menu ou tapez une vente cash (ex: 2 sacs de riz à 22000)' 
   },
   { 
     id: 'red', 
@@ -88,31 +88,8 @@ const PENS = [
     bg: 'bg-amber-600', 
     border: 'border-amber-600', 
     textClass: 'ink-yellow', 
-    placeholder: 'Stylo Jaune : Écrivez un crédit accordé à un client... (ex: Koffi prend 2 repas crédit 3000)' 
+    placeholder: 'Stylo Jaune : Écrivez un crédit accordé à un client... (ex: Koffi prend 2 articles crédit 3000)' 
   },
-]
-
-// Menu modèle par défaut pour Resto & Cafétéria au Bénin
-const DEFAULT_MENU_ITEMS: MenuItem[] = [
-  // Plats Cuisinés
-  { id: 'm1', name: 'Atassi Viande / Poulet', price: 1500, category: 'cuisine', emoji: '🍲' },
-  { id: 'm2', name: 'Riz au Gras Poisson', price: 1500, category: 'cuisine', emoji: '🍛' },
-  { id: 'm3', name: 'Spaghetti Omelette', price: 1000, category: 'cuisine', emoji: '🍝' },
-  { id: 'm4', name: 'Igname Pilée Sauce', price: 2500, category: 'cuisine', emoji: '🍠' },
-  { id: 'm5', name: 'Poulet Braisé / Frit', price: 2000, category: 'cuisine', emoji: '🍗' },
-
-  // Cafétéria & Petit-Déjeuner
-  { id: 'm6', name: 'Café au Lait', price: 500, category: 'cafeteria', emoji: '☕' },
-  { id: 'm7', name: 'Pain Omelette Avocat', price: 800, category: 'cafeteria', emoji: '🥖' },
-  { id: 'm8', name: 'Bouillie de Millet', price: 300, category: 'cafeteria', emoji: '🥣' },
-  { id: 'm9', name: 'Sandwich Viande Hachée', price: 1200, category: 'cafeteria', emoji: '🥪' },
-
-  // Boissons & Rafraîchissements
-  { id: 'm10', name: 'Jus de Bissap Maison', price: 300, category: 'boisson', emoji: '🥤' },
-  { id: 'm11', name: 'Bière Beaufort / Sobebra', price: 800, category: 'boisson', emoji: '🍺' },
-  { id: 'm12', name: 'Eau Possotomè 1.5L', price: 400, category: 'boisson', emoji: '💧' },
-  { id: 'm13', name: 'Coca-Cola / Sucrerie', price: 500, category: 'boisson', emoji: '🥤' },
-  { id: 'm14', name: 'Jus de Gingembre (Gnamakoudji)', price: 400, category: 'boisson', emoji: '🍹' },
 ]
 
 function formatPrice(price: number): string {
@@ -167,10 +144,10 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
     }
   }, [isListening])
   
-  // États Menu Tactile
+  // États Menu Tactile (Uniquement alimenté par les produits réels en base)
   const [showMenuGrid, setShowMenuGrid] = useState(true)
   const [menuFilter, setMenuFilter] = useState<'all' | 'cuisine' | 'cafeteria' | 'boisson'>('all')
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(DEFAULT_MENU_ITEMS)
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
 
   // Formulaire d'ajout rapide d'un plat au menu carte
   const [showAddMenuForm, setShowAddMenuForm] = useState(false)
@@ -211,10 +188,14 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
             isUnlimited: p.is_unlimited
           }))
           setMenuItems(loadedMenu)
+        } else {
+          setMasterCatalog([])
+          setMenuItems([])
         }
       }
     } catch (e) {
-      console.warn('Fallback au menu modèle démo:', e)
+      console.warn('Erreur chargement menu stock:', e)
+      setMenuItems([])
     }
   }, [shopId])
 
