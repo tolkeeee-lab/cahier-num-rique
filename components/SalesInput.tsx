@@ -39,6 +39,9 @@ interface MenuItem {
   price: number
   category: 'cuisine' | 'cafeteria' | 'boisson' | 'autre'
   emoji: string
+  stock?: number
+  stockTracked?: boolean
+  isUnlimited?: boolean
 }
 
 const PENS = [
@@ -202,7 +205,10 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
             name: p.name,
             price: p.unit_price || 1000,
             category: p.category === 'Boisson' || p.category === 'Boissons' ? 'boisson' : p.category === 'Cuisine' || p.category === 'Plats' ? 'cuisine' : 'cafeteria',
-            emoji: p.category === 'Boissons' ? '🥤' : p.category === 'Cuisine' ? '🍲' : '🍽️'
+            emoji: p.category === 'Boissons' ? '🥤' : p.category === 'Cuisine' ? '🍲' : '🍽️',
+            stock: p.current_stock,
+            stockTracked: p.stock_tracked,
+            isUnlimited: p.is_unlimited
           }))
           setMenuItems(loadedMenu)
         }
@@ -264,6 +270,13 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
 
   // Fonction Tactile "1-Tap" : Ajouter ou incrémenter un plat du menu dans la commande
   const handleTapMenuItem = (item: MenuItem) => {
+    // Bloquer et notifier si le produit est en stock et épuisé (0 en stock)
+    const isOutOfStock = item.stockTracked && !item.isUnlimited && typeof item.stock === 'number' && item.stock <= 0
+    if (isOutOfStock) {
+      setPostItWarning(`Opération bloquée : Le produit "${item.name}" est en rupture de stock (0 disponible). Réapprovisionnez le stock avant de valider la vente.`)
+      return
+    }
+
     // Si un autre stylo était sélectionné, rebasculer sur le Stylo Bleu (Vente Cash)
     if (selectedPen !== 'blue') {
       setSelectedPen('blue')
@@ -300,6 +313,14 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
 
     if (!input.trim()) {
       onError('Veuillez entrer une transaction')
+      return
+    }
+
+    // Détecter si l'assistant signale une rupture de stock bloquante sur la saisie courante
+    if (liveAssistant && liveAssistant.transactionKind === 'sale' && (liveAssistant.isOutOfStock || liveAssistant.stockBefore <= 0 || liveAssistant.stockAfter < 0)) {
+      const prodName = liveAssistant.matchedProduct?.name || 'sélectionné'
+      const availStock = Math.max(0, liveAssistant.stockBefore)
+      setPostItWarning(`Opération bloquée : Le produit "${prodName}" est en rupture de stock (Stock disponible : ${availStock}, Quantité demandée : ${liveAssistant.calculatedItemsCount}). Veuillez réapprovisionner le stock.`)
       return
     }
 
@@ -514,6 +535,24 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
                     </span>
                   </div>
                 </div>
+
+                {/* Alerte Rupture de Stock Bloquante */}
+                {liveAssistant.transactionKind === 'sale' && (liveAssistant.isOutOfStock || liveAssistant.stockBefore <= 0 || liveAssistant.stockAfter < 0) && (
+                  <div className="flex items-center justify-between gap-2 bg-rose-50 p-2.5 border-2 border-rose-300 rounded-xl text-rose-950 animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+                      <div>
+                        <span className="font-bold text-xs block text-rose-900">🚨 RUPTURE DE STOCK : Produit Épuisé</span>
+                        <span className="text-[10px] text-rose-800">
+                          Stock disponible : <strong>{Math.max(0, liveAssistant.stockBefore)}</strong> | Demandé : <strong>{liveAssistant.calculatedItemsCount}</strong>. La vente est bloquée !
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2 py-1 bg-rose-700 text-white rounded-lg font-bold text-[9px] uppercase tracking-wider whitespace-nowrap shadow-xs">
+                      Vente Bloquée
+                    </span>
+                  </div>
+                )}
 
                 {/* Alerte Anomalie de Prix (Zéro Manquant / Zéro en trop) */}
                 {liveAssistant.suspectPriceAnomaly && liveAssistant.suggestedCorrectPrice && (
@@ -788,28 +827,52 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
 
           {/* Grille des Touches Tactiles (Buttons) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 pt-1">
-            {filteredMenuItems.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleTapMenuItem(item)}
-                className="p-3 bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-400 rounded-2xl shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group active:scale-95 border-b-2 hover:border-b-amber-500"
-              >
-                <div className="flex items-start justify-between gap-1 mb-1">
-                  <span className="text-base group-hover:scale-125 transition-transform">{item.emoji}</span>
-                  <span className="text-[10px] font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-lg border border-amber-250">
-                    {formatPrice(item.price)}
-                  </span>
-                </div>
-                <div className="font-sans text-xs font-bold text-gray-800 line-clamp-1 group-hover:text-amber-950">
-                  {item.name}
-                </div>
-                <div className="text-[8px] font-mono text-gray-400 mt-1 flex items-center gap-1">
-                  <Plus className="w-2.5 h-2.5 text-amber-600" />
-                  <span>Ajouter au cahier</span>
-                </div>
-              </button>
-            ))}
+            {filteredMenuItems.map((item) => {
+              const isOutOfStock = item.stockTracked && !item.isUnlimited && typeof item.stock === 'number' && item.stock <= 0
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleTapMenuItem(item)}
+                  className={`p-3 border rounded-2xl shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group active:scale-95 border-b-2 ${
+                    isOutOfStock 
+                      ? 'bg-rose-50/60 border-rose-200 hover:border-rose-400 hover:bg-rose-100/70' 
+                      : 'bg-white hover:bg-amber-50 border-gray-200 hover:border-amber-400 hover:border-b-amber-500'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-1 mb-1">
+                    <span className="text-base group-hover:scale-125 transition-transform">{item.emoji}</span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[10px] font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-lg border border-amber-250">
+                        {formatPrice(item.price)}
+                      </span>
+                      {item.stockTracked && !item.isUnlimited && typeof item.stock === 'number' && (
+                        <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                          isOutOfStock 
+                            ? 'bg-rose-100 text-rose-800 border-rose-300' 
+                            : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                        }`}>
+                          {isOutOfStock ? '🔴 ÉPUISÉ (0)' : `Stock: ${item.stock}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className={`font-sans text-xs font-bold line-clamp-1 ${isOutOfStock ? 'text-rose-900' : 'text-gray-800 group-hover:text-amber-950'}`}>
+                    {item.name}
+                  </div>
+                  <div className="text-[8px] font-mono text-gray-400 mt-1 flex items-center gap-1">
+                    {isOutOfStock ? (
+                      <span className="text-rose-600 font-bold">⚠️ Vente bloquée</span>
+                    ) : (
+                      <>
+                        <Plus className="w-2.5 h-2.5 text-amber-600" />
+                        <span>Ajouter au cahier</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}

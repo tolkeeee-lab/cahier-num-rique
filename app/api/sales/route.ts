@@ -291,6 +291,82 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 3.b Vérification du stock disponible (Anti-vente en rupture de stock)
+    const isSaleOp = type === 'cash_in' || type === 'sale_credit'
+    if (isSaleOp && parsedData && parsedData.articles && parsedData.articles.length > 0) {
+      if (isSupabaseConfigured()) {
+        try {
+          const { data: dbProducts } = await supabase
+            .from('products')
+            .select('*')
+            .eq('shop_id', shopId)
+
+          if (dbProducts && dbProducts.length > 0) {
+            const { data: salesData } = await supabase
+              .from('sales')
+              .select(`
+                id, type, status,
+                sold_articles ( product_name, quantity )
+              `)
+              .eq('shop_id', shopId)
+
+            const stockMap: Record<string, { total_in: number; total_out: number }> = {}
+            for (const sale of salesData || []) {
+              if (sale.status === 'crossed_out') continue
+              const isIn = ['purchase_cash', 'purchase_credit'].includes(sale.type)
+              const isOut = ['cash_in', 'sale_credit'].includes(sale.type)
+              if (!isIn && !isOut) continue
+
+              for (const art of (sale.sold_articles as any[] | null) || []) {
+                const rawName = (art.product_name as string) || ''
+                if (!rawName.trim()) continue
+                const cleanNameKey = normalizeProductName(rawName).toLowerCase().trim()
+                if (!stockMap[cleanNameKey]) stockMap[cleanNameKey] = { total_in: 0, total_out: 0 }
+                if (isIn) stockMap[cleanNameKey].total_in += art.quantity
+                else stockMap[cleanNameKey].total_out += art.quantity
+              }
+            }
+
+            for (const article of parsedData.articles) {
+              const cleanArtName = normalizeProductName(article.nom)
+              const key = cleanArtName.toLowerCase().trim()
+
+              const matchedProd = dbProducts.find(
+                p => normalizeProductName(p.name).toLowerCase().trim() === key ||
+                     p.name.toLowerCase().trim().includes(key) ||
+                     key.includes(p.name.toLowerCase().trim())
+              )
+
+              if (matchedProd) {
+                const hasInitialStock = (matchedProd.initial_stock || 0) > 0
+                const hasPurchases = (stockMap[key]?.total_in || 0) > 0
+                const stockTracked = matchedProd.stock_tracked ?? (hasInitialStock || hasPurchases)
+                const isUnlimited = matchedProd.is_service || matchedProd.category === 'Cuisine'
+
+                if (stockTracked && !isUnlimited) {
+                  const data = stockMap[key] || { total_in: 0, total_out: 0 }
+                  const currentStock = (matchedProd.initial_stock || 0) + data.total_in - data.total_out
+                  const requestedQty = article.quantite || 1
+
+                  if (currentStock <= 0 || currentStock < requestedQty) {
+                    return NextResponse.json(
+                      {
+                        error: `Opération bloquée : Le produit "${matchedProd.name}" est en rupture de stock (Stock disponible : ${Math.max(0, currentStock)}, Quantité demandée : ${requestedQty}). Veuillez réapprovisionner le stock avant d'effectuer cette vente.`,
+                        isSafeguardTriggered: true
+                      },
+                      { status: 400 }
+                    )
+                  }
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Erreur lors de la vérification du stock Supabase:', err)
+        }
+      }
+    }
+
     // 4. Préparer l'objet transaction
     const saleId = randomUUID()
     const now = new Date()

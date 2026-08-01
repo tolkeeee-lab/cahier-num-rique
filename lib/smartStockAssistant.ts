@@ -11,6 +11,9 @@ export interface StockProductCard {
   unit_price: number       // Prix de revente au détail (ex: 500 FCFA)
   unit_cost?: number       // Prix d'achat grossiste (ex: 400 FCFA)
   initial_stock: number    // Stock actuel
+  current_stock?: number   // Stock courant réel après mouvements
+  stock_tracked?: boolean  // Vrai si le suivi du stock est actif
+  is_unlimited?: boolean   // Vrai pour les services ou plats cuisinés
   alert_threshold: number
   unit: string             // Unité (ex: bouteille, sac, unité)
   multiplier?: number      // Contenance par conditionnement (ex: 24 bouteilles par carton, 50kg par sac)
@@ -33,6 +36,7 @@ export interface AssistantAnalysisResult {
   stockBefore: number          // Stock avant opération
   stockAfter: number           // Stock après opération (déduction ou ajout)
   isStockAlert: boolean        // Vente supérieure au stock disponible ou alerte de rupture
+  isOutOfStock?: boolean       // Rupture de stock bloquante
   confidence: number           // Score de confiance % (0 à 100)
   alternativeVariants: StockProductCard[] // Variantes similaires en cas d'ambiguïté
 }
@@ -174,15 +178,26 @@ export function analyzeNotebookInputWithMasterCatalog(
   }
 
   const calculatedItemsCount = qty * multiplier
-  const stockBefore = bestMatch.initial_stock || 0
+  const stockBefore = typeof bestMatch.current_stock === 'number'
+    ? bestMatch.current_stock
+    : (bestMatch.initial_stock || 0)
+
+  const isUnlimited = bestMatch.is_unlimited ?? (bestMatch.category === 'Cuisine' || bestMatch.category === 'Service')
+  const stockTracked = bestMatch.stock_tracked ?? ((bestMatch.initial_stock || 0) > 0 || typeof bestMatch.current_stock === 'number')
 
   let stockAfter = stockBefore
   let isStockAlert = false
+  let isOutOfStock = false
 
   if (kind === 'sale') {
     stockAfter = stockBefore - calculatedItemsCount
-    if (stockAfter < 0 || stockAfter <= bestMatch.alert_threshold) {
-      isStockAlert = true
+    if (stockTracked && !isUnlimited) {
+      if (stockBefore <= 0 || stockAfter < 0) {
+        isStockAlert = true
+        isOutOfStock = true
+      } else if (stockAfter <= bestMatch.alert_threshold) {
+        isStockAlert = true
+      }
     }
   } else if (kind === 'stock_addition') {
     stockAfter = stockBefore + calculatedItemsCount
@@ -233,6 +248,7 @@ export function analyzeNotebookInputWithMasterCatalog(
     stockBefore,
     stockAfter,
     isStockAlert,
+    isOutOfStock,
     confidence,
     alternativeVariants
   }
