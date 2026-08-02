@@ -106,14 +106,6 @@ export function CategoryCashboxWidget({
             ? 'bg-emerald-50/50 border-emerald-200 text-emerald-950'
             : 'bg-purple-50/50 border-purple-200 text-purple-950'
 
-          const badgeClass = isBoisson
-            ? 'bg-blue-100 text-blue-900 border-blue-300'
-            : isDivers
-            ? 'bg-amber-100 text-amber-900 border-amber-300'
-            : isResto
-            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-            : 'bg-purple-100 text-purple-900 border-purple-300'
-
           return (
             <div key={group.key} className={`border rounded-2xl p-4 space-y-3.5 shadow-xs ${themeClass}`}>
               
