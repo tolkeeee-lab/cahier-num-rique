@@ -1230,6 +1230,11 @@ export default function JournalPage() {
         const total = item.total ?? 0
         if (type === 'cash_in' || type === 'payment_client') cashInstant += paid
         else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') cashInstant -= total
+        else if (type === 'cash_adjustment') {
+          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
+          if (isPos) cashInstant += (paid || total)
+          else cashInstant -= (paid || total)
+        }
       }
 
       let cashTodayInstant = 0
@@ -1240,6 +1245,11 @@ export default function JournalPage() {
         const total = item.total ?? 0
         if (type === 'cash_in' || type === 'payment_client') cashTodayInstant += paid
         else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') cashTodayInstant -= total
+        else if (type === 'cash_adjustment') {
+          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
+          if (isPos) cashTodayInstant += (paid || total)
+          else cashTodayInstant -= (paid || total)
+        }
       }
 
       setTiroirCaisse(cashInstant)
@@ -1304,6 +1314,10 @@ export default function JournalPage() {
           cash += paid
         } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
           cash -= total
+        } else if (type === 'cash_adjustment') {
+          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
+          if (isPos) cash += (paid || total)
+          else cash -= (paid || total)
         }
       }
 
@@ -1328,6 +1342,10 @@ export default function JournalPage() {
           cashToday += paid
         } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
           cashToday -= total
+        } else if (type === 'cash_adjustment') {
+          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
+          if (isPos) cashToday += (paid || total)
+          else cashToday -= (paid || total)
         }
       }
       setSoldeDuJour(cashToday)
@@ -1351,6 +1369,10 @@ export default function JournalPage() {
           cash += paid
         } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
           cash -= total
+        } else if (type === 'cash_adjustment') {
+          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
+          if (isPos) cash += (paid || total)
+          else cash -= (paid || total)
         }
       }
 
@@ -1371,6 +1393,10 @@ export default function JournalPage() {
           cashTodayFallback += paid
         } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
           cashTodayFallback -= total
+        } else if (type === 'cash_adjustment') {
+          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
+          if (isPos) cashTodayFallback += (paid || total)
+          else cashTodayFallback -= (paid || total)
         }
       }
       setSoldeDuJour(cashTodayFallback)
@@ -1871,7 +1897,6 @@ export default function JournalPage() {
 
       setActionLoading(true)
       try {
-        const type = flowDirection === 'in' ? 'cash_in' : 'cash_out'
         const penColor = flowDirection === 'in' ? 'blue' : 'red'
         const desc = flowDirection === 'in' ? 'Apport caisse' : 'Retrait caisse'
         const noteText = adjustmentNote.trim() ? ` - ${adjustmentNote.trim()}` : ''
@@ -1886,7 +1911,7 @@ export default function JournalPage() {
             paid_amount: amtVal,
             debt_amount: 0,
             client_name: 'Propriétaire',
-            type,
+            type: 'cash_adjustment',
             pen_color: penColor
           }
         })
@@ -1912,7 +1937,6 @@ export default function JournalPage() {
 
       setActionLoading(true)
       try {
-        const type = diff > 0 ? 'cash_in' : 'cash_out'
         const penColor = diff > 0 ? 'blue' : 'red'
         const text = `Ajustement caisse: Physique ${cashVal} F (Calculé: ${tiroirCaisse} F, Écart: ${diff > 0 ? '+' : ''}${diff} F)${adjustmentNote.trim() ? ` - ${adjustmentNote.trim()}` : ''}`
 
@@ -1925,7 +1949,7 @@ export default function JournalPage() {
             paid_amount: Math.abs(diff),
             debt_amount: 0,
             client_name: 'Propriétaire',
-            type,
+            type: 'cash_adjustment',
             pen_color: penColor
           }
         })

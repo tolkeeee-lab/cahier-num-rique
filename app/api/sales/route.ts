@@ -69,6 +69,10 @@ function calculateCash(list: any[]): number {
       cash += paid
     } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
       cash -= total
+    } else if (type === 'cash_adjustment') {
+      const isPositive = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
+      if (isPositive) cash += paid || total
+      else cash -= paid || total
     }
   }
   return cash

@@ -302,6 +302,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
       case 'payment_client': return 'PAIEMENT CLIENT'
       case 'payment_supplier': return 'PAIEMENT GROSSISTE'
       case 'client_request': return '📋 DEMANDE CLIENT'
+      case 'cash_adjustment': return '🏧 AJUSTEMENT TIROIR'
       default: return 'VENTE'
     }
   }
@@ -310,6 +311,8 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
     switch (type) {
       case 'client_request':
         return 'bg-amber-100 text-amber-900 border-amber-300'
+      case 'cash_adjustment':
+        return 'bg-purple-100 text-purple-900 border-purple-300'
       case 'cash_in':
       case 'payment_client':
         return 'bg-blue-100 text-blue-800 border-blue-200'
@@ -330,6 +333,8 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
   const getAmountBadgeStyle = (type: string, isCrossed: boolean) => {
     if (isCrossed) return 'border-gray-200 text-gray-400 opacity-40 bg-gray-50'
     switch (type) {
+      case 'cash_adjustment':
+        return 'border-purple-300 text-purple-800 bg-purple-50'
       case 'cash_in':
       case 'payment_client':
         return 'border-emerald-300 text-emerald-700 bg-emerald-50'
