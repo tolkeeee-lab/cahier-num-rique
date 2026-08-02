@@ -193,3 +193,200 @@ export function answerBoutiqueQuestion(
     type: 'general'
   }
 }
+
+export interface CategoryCashboxGroup {
+  name: string
+  key: 'boissons' | 'divers' | 'resto' | 'services'
+  icon: string
+  revenue: number
+  paidCash: number
+  debt: number
+  expenses: number
+  stockValueCost: number
+  stockValueSale: number
+  itemCount: number
+  outOfStockCount: number
+}
+
+export interface MultiCashboxBreakdown {
+  boissons: CategoryCashboxGroup
+  divers: CategoryCashboxGroup
+  resto: CategoryCashboxGroup
+  services: CategoryCashboxGroup
+  totalCa: number
+  totalCash: number
+}
+
+export function isBoissonCategory(nameOrCat: string): boolean {
+  const text = (nameOrCat || '').toLowerCase().trim()
+  return /boisson|jus|biere|bière|eau|soda|coca|fanta|sprite|vin|whisky|canette|bouteille|casier|bar|champagne|liqueur/i.test(text)
+}
+
+export function isPrestationCategory(nameOrCat: string): boolean {
+  const text = (nameOrCat || '').toLowerCase().trim()
+  return /prestation|service|coiffure|couture|réparation|reparation|main d'oeuvre|lavage|atelier/i.test(text)
+}
+
+export function isRestoCategory(nameOrCat: string): boolean {
+  const text = (nameOrCat || '').toLowerCase().trim()
+  return /cuisiné|plat|cafétéria|cafeteria|menu|repas|restaurant|nourriture/i.test(text)
+}
+
+/**
+ * Calcule la ventilation des caisses et du capital par catégorie de produits (Boissons vs Divers vs Resto vs Services).
+ */
+export function calculateCategoryCashboxBreakdown(
+  sales: any[],
+  products: any[] = []
+): MultiCashboxBreakdown {
+  const breakdown: MultiCashboxBreakdown = {
+    boissons: {
+      name: 'Caisse Boissons & Dépôt',
+      key: 'boissons',
+      icon: '🥤',
+      revenue: 0,
+      paidCash: 0,
+      debt: 0,
+      expenses: 0,
+      stockValueCost: 0,
+      stockValueSale: 0,
+      itemCount: 0,
+      outOfStockCount: 0,
+    },
+    divers: {
+      name: 'Caisse Divers & Alimentation',
+      key: 'divers',
+      icon: '📦',
+      revenue: 0,
+      paidCash: 0,
+      debt: 0,
+      expenses: 0,
+      stockValueCost: 0,
+      stockValueSale: 0,
+      itemCount: 0,
+      outOfStockCount: 0,
+    },
+    resto: {
+      name: 'Caisse Plats & Carte',
+      key: 'resto',
+      icon: '🍽️',
+      revenue: 0,
+      paidCash: 0,
+      debt: 0,
+      expenses: 0,
+      stockValueCost: 0,
+      stockValueSale: 0,
+      itemCount: 0,
+      outOfStockCount: 0,
+    },
+    services: {
+      name: 'Caisse Prestations & Services',
+      key: 'services',
+      icon: '✂️',
+      revenue: 0,
+      paidCash: 0,
+      debt: 0,
+      expenses: 0,
+      stockValueCost: 0,
+      stockValueSale: 0,
+      itemCount: 0,
+      outOfStockCount: 0,
+    },
+    totalCa: 0,
+    totalCash: 0,
+  }
+
+  // 1. Ventilation des Ventes & Encaissements
+  sales.forEach(sale => {
+    if (sale.status === 'crossed_out') return
+
+    const type = sale.type || 'cash_in'
+    const total = sale.total_amount ?? sale.total ?? 0
+    const paid = sale.paid_amount ?? sale.paid ?? 0
+    const debt = sale.debt_amount ?? sale.debt ?? 0
+
+    if (type === 'cash_out') {
+      const catText = `${sale.category || ''} ${sale.notes || ''}`
+      if (isBoissonCategory(catText)) breakdown.boissons.expenses += total
+      else if (isPrestationCategory(catText)) breakdown.services.expenses += total
+      else if (isRestoCategory(catText)) breakdown.resto.expenses += total
+      else breakdown.divers.expenses += total
+      return
+    }
+
+    // Vente ou Vente à crédit
+    if (type === 'cash_in' || type === 'sale_credit') {
+      breakdown.totalCa += total
+      breakdown.totalCash += paid
+
+      if (sale.articles && sale.articles.length > 0) {
+        sale.articles.forEach((art: any) => {
+          const artName = art.name || ''
+          const artCat = art.category || ''
+          const artTotal = (art.quantity || 1) * (art.unit_price || 0)
+          const ratio = total > 0 ? artTotal / total : 1 / sale.articles.length
+          const artPaid = Math.round(paid * ratio)
+          const artDebt = Math.round(debt * ratio)
+
+          if (isBoissonCategory(artCat) || isBoissonCategory(artName)) {
+            breakdown.boissons.revenue += artTotal
+            breakdown.boissons.paidCash += artPaid
+            breakdown.boissons.debt += artDebt
+          } else if (isPrestationCategory(artCat) || isPrestationCategory(artName)) {
+            breakdown.services.revenue += artTotal
+            breakdown.services.paidCash += artPaid
+            breakdown.services.debt += artDebt
+          } else if (isRestoCategory(artCat) || isRestoCategory(artName)) {
+            breakdown.resto.revenue += artTotal
+            breakdown.resto.paidCash += artPaid
+            breakdown.resto.debt += artDebt
+          } else {
+            breakdown.divers.revenue += artTotal
+            breakdown.divers.paidCash += artPaid
+            breakdown.divers.debt += artDebt
+          }
+        })
+      } else {
+        const text = `${sale.category || ''} ${sale.notes || ''}`
+        if (isBoissonCategory(text)) {
+          breakdown.boissons.revenue += total
+          breakdown.boissons.paidCash += paid
+          breakdown.boissons.debt += debt
+        } else if (isPrestationCategory(text)) {
+          breakdown.services.revenue += total
+          breakdown.services.paidCash += paid
+          breakdown.services.debt += debt
+        } else if (isRestoCategory(text)) {
+          breakdown.resto.revenue += total
+          breakdown.resto.paidCash += paid
+          breakdown.resto.debt += debt
+        } else {
+          breakdown.divers.revenue += total
+          breakdown.divers.paidCash += paid
+          breakdown.divers.debt += debt
+        }
+      }
+    }
+  })
+
+  // 2. Ventilation du Stock & Capital Immobilisé
+  products.forEach(p => {
+    const text = `${p.category || ''} ${p.name || ''}`
+    const stockQty = Math.max(0, p.current_stock ?? p.initial_stock ?? 0)
+    const cost = p.unit_cost || 0
+    const price = p.unit_price || 0
+    const isOut = stockQty <= (p.alert_threshold || 0)
+
+    let targetGroup: CategoryCashboxGroup = breakdown.divers
+    if (isBoissonCategory(text)) targetGroup = breakdown.boissons
+    else if (isPrestationCategory(text)) targetGroup = breakdown.services
+    else if (isRestoCategory(text)) targetGroup = breakdown.resto
+
+    targetGroup.itemCount += 1
+    if (isOut) targetGroup.outOfStockCount += 1
+    targetGroup.stockValueCost += stockQty * cost
+    targetGroup.stockValueSale += stockQty * price
+  })
+
+  return breakdown
+}

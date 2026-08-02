@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react'
 import { TrendingUp, Package, ShoppingBag, Award, Share2, Download, FileText, Layers } from 'lucide-react'
 import { exportSalesToCSV, exportSalesToPDF, generateWhatsAppPerformanceReport } from '@/lib/exportUtils'
+import { CategoryCashboxWidget } from '@/components/analytics/CategoryCashboxWidget'
 
 interface Article {
   name: string
@@ -238,6 +239,9 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
           </div>
         </div>
       </div>
+
+      {/* Widget Séparation des Caisses par Catégorie (Boissons vs Divers) */}
+      <CategoryCashboxWidget sales={sales} />
 
       {/* 📊 Répartition par Catégorie de Produit */}
       {retailStats.categoryStats.length > 0 && (
