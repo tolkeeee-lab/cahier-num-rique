@@ -297,10 +297,64 @@ export function generateWhatsAppHouseholdReport(
   msg += bilan >= 0 
     ? `✅ *SOLDE POSITIF* : +${formatPrice(bilan)}\n` 
     : `⚠️ *DÉFICIT DU MOIS* : ${formatPrice(bilan)}\n`
-  msg += `═════════════════════════\n`
   msg += `✨ _Généré avec Cahier Numérique du Foyer_`
 
   return `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`
 }
+
+/**
+ * Exporte le Journal Comptable au format SYSCOHADA (OHADA SMT) en fichier CSV compatible Excel/Sage.
+ */
+export function exportSyscohadaJournalCSV(
+  sales: any[],
+  periodLabel: string = 'Toutes_les_ventes',
+  shopName: string = 'Cahier_Numerique'
+) {
+  const { generateSyscohadaJournal } = require('./syscohadaEngine')
+  const journal = generateSyscohadaJournal(sales)
+
+  if (journal.length === 0) {
+    alert("Aucune écriture comptable à exporter pour cette période.")
+    return
+  }
+
+  const headers = [
+    "N° Piece",
+    "Date",
+    "Heure",
+    "Libelle Ecriture",
+    "Compte Debit",
+    "Libelle Compte Debit",
+    "Compte Credit",
+    "Libelle Compte Credit",
+    "Montant (F)"
+  ]
+
+  const rows = journal.map((j: any) => [
+    `"${j.pieceRef}"`,
+    `"${j.date}"`,
+    `"${j.time || ''}"`,
+    `"${(j.description || '').replace(/"/g, '""')}"`,
+    `"${j.debitAccountCode}"`,
+    `"${j.debitAccountLabel.replace(/"/g, '""')}"`,
+    `"${j.creditAccountCode}"`,
+    `"${j.creditAccountLabel.replace(/"/g, '""')}"`,
+    j.amount || 0
+  ])
+
+  const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((e: any) => e.join(","))].join("\n")
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  const cleanShopName = shopName.replace(/[^a-zA-Z0-9_-]/g, '_')
+  const dateStr = getTodayDateString()
+
+  link.setAttribute("href", url)
+  link.setAttribute("download", `Journal_SYSCOHADA_OHADA_${cleanShopName}_${periodLabel}_${dateStr}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
 
 

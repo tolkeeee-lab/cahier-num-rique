@@ -5,6 +5,8 @@ import { HouseholdBudgetWidget } from '@/components/analytics/HouseholdBudgetWid
 import { RestaurantAnalyticsWidget } from '@/components/analytics/RestaurantAnalyticsWidget'
 import { ServicesAnalyticsWidget } from '@/components/analytics/ServicesAnalyticsWidget'
 import { RetailAnalyticsWidget } from '@/components/analytics/RetailAnalyticsWidget'
+import { SyscohadaModal } from '@/components/SyscohadaModal'
+import { Landmark } from 'lucide-react'
 
 interface Sale {
   id: string
@@ -32,6 +34,7 @@ interface AnalyticsDashboardProps {
 
 export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity, shopId, onRefreshData }: AnalyticsDashboardProps) {
   const [period, setPeriod] = useState<'today' | '7days' | 'month' | 'all'>('all')
+  const [showSyscohada, setShowSyscohada] = useState(false)
 
   const activeActivity = useMemo(() => {
     return currentShopActivity || (userShops.find(s => s.activity)?.activity) || 'boutique'
@@ -67,7 +70,28 @@ export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity,
   const activeShopId = shopId || currentShopObj?.id || 'default-shop'
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fbf9f4] font-sans p-4 md:p-6">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fbf9f4] font-sans p-4 md:p-6 space-y-4">
+      {/* Banner Comptabilité SYSCOHADA */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#f4ebd9] border border-amber-250 rounded-2xl px-4 py-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-amber-900 text-amber-100 flex items-center justify-center font-bold">
+            <Landmark className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-amber-950">Comptabilité Référentiel SYSCOHADA (OHADA)</h4>
+            <p className="text-[10.5px] text-amber-800">Système Minimal de Trésorerie (SMT), Comptes 701, 601, 571, 411, 401 & Export CSV</p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowSyscohada(true)}
+          className="px-3.5 py-1.5 bg-amber-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 self-end sm:self-auto"
+        >
+          <Landmark className="w-3.5 h-3.5" />
+          <span>Bilan & Export SYSCOHADA</span>
+        </button>
+      </div>
+
       {activeActivity === 'particulier' && (
         <HouseholdBudgetWidget
           sales={filteredSales}
@@ -105,6 +129,15 @@ export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity,
           shopName={shopName}
         />
       )}
+
+      <SyscohadaModal
+        isOpen={showSyscohada}
+        onClose={() => setShowSyscohada(false)}
+        sales={sales}
+        periodLabel={period}
+        shopName={shopName}
+      />
     </div>
   )
 }
+
