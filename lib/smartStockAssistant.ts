@@ -18,6 +18,8 @@ export interface StockProductCard {
   unit: string             // Unité (ex: bouteille, sac, unité)
   multiplier?: number      // Contenance par conditionnement (ex: 24 bouteilles par carton, 50kg par sac)
   packaging_name?: string  // Nom du lot/conditionnement (ex: carton, sac, pack)
+  lot_quantity?: number    // Quantité du lot dégressif (ex: 3)
+  lot_price?: number       // Prix global du lot dégressif (ex: 275 FCFA)
 }
 
 export interface AssistantAnalysisResult {
@@ -230,7 +232,15 @@ export function analyzeNotebookInputWithMasterCatalog(
     }
   }
 
-  const totalAmount = calculatedItemsCount * finalUnitPrice
+  let totalAmount = calculatedItemsCount * finalUnitPrice
+
+  if (kind === 'sale' && bestMatch.lot_quantity && bestMatch.lot_quantity > 1 && bestMatch.lot_price && bestMatch.lot_price > 0 && calculatedItemsCount >= bestMatch.lot_quantity) {
+    const numLots = Math.floor(calculatedItemsCount / bestMatch.lot_quantity)
+    const remainder = calculatedItemsCount % bestMatch.lot_quantity
+    totalAmount = (numLots * bestMatch.lot_price) + (remainder * (bestMatch.unit_price || finalUnitPrice))
+    finalUnitPrice = bestMatch.unit_price || finalUnitPrice
+  }
+
   const confidence = bestScore === 0 ? 98 : 88
 
   return {

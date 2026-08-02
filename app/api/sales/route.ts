@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
                   const numLots = Math.floor(qty / prod.lot_quantity)
                   const remainder = qty % prod.lot_quantity
                   calculatedTotal = (numLots * prod.lot_price) + (remainder * (prod.unit_price || 0))
-                  price = Math.round(calculatedTotal / qty)
+                  price = prod.unit_price || Math.round(calculatedTotal / qty)
                 } else if (price) {
                   calculatedTotal = qty * price
                 }
@@ -618,22 +618,26 @@ export async function POST(request: NextRequest) {
             const isSale = ['cash_in', 'sale_credit'].includes(type)
             
             const unitCost = isPurchase ? article.prix_unitaire : undefined
-            const unitPrice = article.prix_vente_unitaire || (isSale ? article.prix_unitaire : undefined)
+            const unitPrice = article.prix_vente_unitaire || (isSale && (!existingProd.unit_price || existingProd.unit_price === 0) ? article.prix_unitaire : undefined)
 
             if (existingProd) {
               const updates: Record<string, any> = {
                 updated_at: new Date().toISOString()
               }
               if (unitCost !== undefined && unitCost > 0) updates.unit_cost = unitCost
-              if (unitPrice !== undefined && unitPrice > 0) updates.unit_price = unitPrice
-              if (article.unite_vente) updates.unit = article.unite_vente
+              if (unitPrice !== undefined && unitPrice > 0 && (article.prix_vente_unitaire || !existingProd.unit_price)) {
+                updates.unit_price = unitPrice
+              }
+              if (article.unite_vente && !existingProd.unit) updates.unit = article.unite_vente
               if (article.seuil_alerte !== undefined) updates.alert_threshold = article.seuil_alerte
 
-              await supabase
-                .from('products')
-                .update(updates)
-                .eq('id', existingProd.id)
-                .eq('shop_id', shopId)
+              if (Object.keys(updates).length > 1) {
+                await supabase
+                  .from('products')
+                  .update(updates)
+                  .eq('id', existingProd.id)
+                  .eq('shop_id', shopId)
+              }
             }
           }
         }
