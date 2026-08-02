@@ -29,6 +29,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('TOUT')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [modalInitialMode, setModalInitialMode] = useState<'fast' | 'advanced'>('fast')
   const [editingItem, setEditingItem] = useState<StockItem | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showOrphans, setShowOrphans] = useState(false)
@@ -265,7 +266,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
-  const openAddModal = (prefill?: Partial<typeof EMPTY_FORM>) => {
+  const openAddModal = (prefill?: Partial<typeof EMPTY_FORM>, mode: 'fast' | 'advanced' = 'advanced') => {
     const name = prefill?.name || ''
     const matchedOrphan = orphans.find(o => o.name.toLowerCase().trim() === name.toLowerCase().trim())
     if (matchedOrphan && matchedOrphan.total_out > 0) {
@@ -278,7 +279,12 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
 
     setFormData({ ...EMPTY_FORM, ...(prefill || {}) })
     setEditingItem(null)
+    setModalInitialMode(mode)
     setShowAddModal(true)
+  }
+
+  const openFastAddModal = () => {
+    openAddModal(undefined, 'fast')
   }
 
   const openEditModal = (item: StockItem) => {
@@ -290,10 +296,11 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
       lot_quantity: item.lot_quantity || 0, lot_price: item.lot_price || 0,
     })
     setEditingItem(item)
+    setModalInitialMode('advanced')
     setShowAddModal(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = async (keepOpen = false) => {
     if (!formData.name.trim()) return
     setSaving(true)
 
@@ -327,7 +334,12 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
         }
       }
 
-      setShowAddModal(false)
+      if (keepOpen) {
+        setFormData(EMPTY_FORM)
+        setEditingItem(null)
+      } else {
+        setShowAddModal(false)
+      }
       await loadStock()
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -427,6 +439,14 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
           )}
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full flex-nowrap">
+          <button
+            onClick={() => openFastAddModal()}
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-amber-900 hover:bg-black text-amber-100 rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            title="Saisir rapidement les produits avec uniquement le nom et le prix de vente"
+          >
+            <Plus className="w-3 h-3" />
+            <span>⚡ Catalogue Rapide (Nom & Prix)</span>
+          </button>
           <button
             onClick={() => openAddModal()}
             className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-gray-900 hover:bg-black text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
@@ -599,7 +619,9 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
         formData={formData}
         setFormData={setFormData}
         saving={saving}
-        onSave={handleSave}
+        onSave={() => handleSave(false)}
+        onSaveAndContinue={() => handleSave(true)}
+        initialMode={modalInitialMode}
         orphanPastSales={orphanPastSales}
         deductPastSales={deductPastSales}
         setDeductPastSales={setDeductPastSales}

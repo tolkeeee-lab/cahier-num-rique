@@ -13,9 +13,11 @@ interface ProductModalProps {
   setFormData: React.Dispatch<React.SetStateAction<StockFormState>>
   saving: boolean
   onSave: () => void
+  onSaveAndContinue?: () => void
   orphanPastSales: number
   deductPastSales: boolean
   setDeductPastSales: (val: boolean) => void
+  initialMode?: 'fast' | 'advanced'
 }
 
 export function ProductModal({
@@ -26,10 +28,22 @@ export function ProductModal({
   setFormData,
   saving,
   onSave,
+  onSaveAndContinue,
   orphanPastSales,
   deductPastSales,
   setDeductPastSales,
+  initialMode = 'fast',
 }: ProductModalProps) {
+  const [formMode, setFormMode] = React.useState<'fast' | 'advanced'>(initialMode)
+
+  React.useEffect(() => {
+    if (editingItem) {
+      setFormMode('advanced')
+    } else {
+      setFormMode(initialMode)
+    }
+  }, [isOpen, editingItem, initialMode])
+
   const [rawWholesaleInput, setRawWholesaleInput] = React.useState<string>(() => {
     if (formData.unit_cost > 0 && formData.multiplier > 1) {
       return (formData.unit_cost * formData.multiplier).toString()
@@ -47,21 +61,49 @@ export function ProductModal({
   const isPrestation = formData.category.includes('Prestations')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4 font-sans">
       <div className="w-full max-w-sm bg-[#fdfaf2] border border-gray-300 shadow-2xl rounded-2xl overflow-hidden">
 
-        <div className={`flex items-center justify-between px-5 py-4 border-b ${
+        <div className={`flex items-center justify-between px-5 py-3 border-b ${
           isPrestation ? 'bg-purple-100 border-purple-200 text-purple-950' : 'bg-[#f5f1e8] border-gray-200 text-gray-800'
         }`}>
           <h3 className="font-handwritten text-xl font-bold">
             {editingItem
               ? (isPrestation ? '✂️ Modifier la prestation' : 'Modifier le produit')
-              : (isPrestation ? '✂️ Nouvelle Prestation / Service' : 'Nouveau produit')}
+              : (isPrestation ? '✂️ Nouvelle Prestation' : formMode === 'fast' ? '⚡ Saisie Rapide Produit' : 'Nouveau produit')}
           </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors p-1">
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Sélecteur de Mode : Saisie Rapide vs Mode Avancé */}
+        {!editingItem && !isPrestation && (
+          <div className="flex items-center bg-[#eae1cd]/80 p-1 border-b border-amber-200 text-xs font-bold select-none">
+            <button
+              type="button"
+              onClick={() => setFormMode('fast')}
+              className={`flex-1 py-1.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+                formMode === 'fast'
+                  ? 'bg-amber-900 text-white shadow-xs'
+                  : 'text-amber-900 hover:bg-amber-200/50'
+              }`}
+            >
+              <span>⚡ Saisie Rapide (Prix & Stock)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormMode('advanced')}
+              className={`flex-1 py-1.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+                formMode === 'advanced'
+                  ? 'bg-amber-900 text-white shadow-xs'
+                  : 'text-amber-900 hover:bg-amber-200/50'
+              }`}
+            >
+              <span>⚙️ Mode Avancé</span>
+            </button>
+          </div>
+        )}
 
         <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
 
@@ -178,6 +220,62 @@ export function ProductModal({
                     placeholder="Ex: 2000"
                     className="w-full px-3 py-2 bg-white border border-purple-300 rounded-xl text-sm font-mono font-bold text-purple-950 outline-none"
                   />
+                </div>
+              </div>
+            </div>
+          ) : formMode === 'fast' ? (
+            <div className="bg-[#fefcf6] border-2 border-amber-300 rounded-2xl p-4 space-y-4 shadow-xs">
+              <div className="flex items-center gap-2 text-amber-950">
+                <span className="text-base">⚡</span>
+                <div>
+                  <h4 className="font-bold text-xs">Catalogue & Stock Simplifié</h4>
+                  <p className="text-[10px] text-amber-800">
+                    Saisissez le prix de vente et le stock disponible pour vendre immédiatement et suivre les ruptures.
+                  </p>
+                </div>
+              </div>
+
+              {/* Prix de Vente Unitaire (FCFA) */}
+              <div>
+                <label className="text-[9.5px] uppercase font-bold text-amber-950 tracking-wider font-sans block mb-1">
+                  Prix de Vente (FCFA) *
+                </label>
+                <input
+                  type="number" min="0" required
+                  value={formData.unit_price || ''}
+                  onChange={e => setFormData(p => ({ ...p, unit_price: parseInt(e.target.value) || 0 }))}
+                  placeholder="Ex: 500 F, 2500 F..."
+                  className="w-full px-3.5 py-2.5 bg-white border-2 border-amber-400 rounded-xl text-base font-mono font-bold text-amber-950 outline-none focus:border-amber-600 shadow-xs"
+                />
+              </div>
+
+              {/* Stock Actuel en boutique + Catégorie */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[9.5px] uppercase font-bold text-gray-700 tracking-wider font-sans block mb-1">
+                    Stock en Magasin *
+                  </label>
+                  <input
+                    type="number" min="0"
+                    value={formData.initial_stock}
+                    onChange={e => setFormData(p => ({ ...p, initial_stock: parseInt(e.target.value) || 0 }))}
+                    placeholder="Ex: 24 (0 si épuisé)"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-mono font-bold text-gray-900 outline-none focus:border-amber-500"
+                  />
+                  <p className="text-[8px] text-gray-500 mt-0.5">Alerte si stock = 0</p>
+                </div>
+
+                <div>
+                  <label className="text-[9.5px] uppercase font-bold text-gray-700 tracking-wider font-sans block mb-1">
+                    Catégorie
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs font-bold text-gray-800 outline-none"
+                  >
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
               </div>
             </div>
@@ -516,19 +614,33 @@ export function ProductModal({
           )}
         </div>
 
-        <div className="flex gap-3 px-5 py-4 border-t border-gray-200 bg-[#f5f1e8]">
+        <div className="flex flex-col sm:flex-row gap-2 px-5 py-4 border-t border-gray-200 bg-[#f5f1e8]">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all"
+            className="px-4 py-2 border border-gray-300 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all text-center"
           >
             Annuler
           </button>
+
+          {onSaveAndContinue && !editingItem && (
+            <button
+              type="button"
+              onClick={onSaveAndContinue}
+              disabled={!formData.name.trim() || saving}
+              className="flex-1 px-3.5 py-2 bg-amber-800 hover:bg-amber-900 text-amber-100 rounded-full text-xs font-bold disabled:opacity-40 transition-all shadow-xs flex items-center justify-center gap-1 hover:scale-105 active:scale-95"
+            >
+              <span>⚡ Enregistrer & Autre</span>
+            </button>
+          )}
+
           <button
+            type="button"
             onClick={onSave}
             disabled={!formData.name.trim() || saving}
-            className="flex-1 px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-full text-xs font-bold disabled:opacity-40 transition-all hover:scale-105 active:scale-95"
+            className="flex-1 px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-full text-xs font-bold disabled:opacity-40 transition-all hover:scale-105 active:scale-95 text-center shadow-xs"
           >
-            {saving ? 'Sauvegarde...' : editingItem ? 'Modifier' : 'Ajouter'}
+            {saving ? 'Sauvegarde...' : editingItem ? 'Modifier' : 'Enregistrer'}
           </button>
         </div>
       </div>
