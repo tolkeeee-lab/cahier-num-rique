@@ -57,16 +57,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const cleanEmail = email.trim().toLowerCase()
+    const cleanName = name.trim()
+
     if (isSupabaseConfigured()) {
-      // 1. Insérer la fiche employé dans la table `employees`
+      const altShopId = shopId.startsWith('SHOP-')
+        ? shopId.replace(/^SHOP-/i, 'BTQ-')
+        : shopId.startsWith('BTQ-')
+          ? shopId.replace(/^BTQ-/i, 'SHOP-')
+          : shopId
+
+      // 1. Supprimer toute ancienne ligne résiduelle avec cet email pour cette boutique pour autoriser la ré-invitation
+      await supabase
+        .from('employees')
+        .delete()
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('email', cleanEmail)
+
+      // 2. Insérer la nouvelle fiche employé dans la table `employees`
       const { data, error } = await supabase
         .from('employees')
         .insert([
           {
             id: randomUUID(),
             shop_id: shopId,
-            name: name.trim(),
-            email: email.trim().toLowerCase(),
+            name: cleanName,
+            email: cleanEmail,
             role: role || 'employee',
             created_at: new Date().toISOString()
           }
@@ -75,18 +91,10 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (error) {
-        if (error.code === '23505') {
-          return NextResponse.json(
-            { error: 'Cet employé est déjà associé à cette boutique.' },
-            { status: 409 }
-          )
-        }
         throw error
       }
 
-      // 2. Envoyer une invitation par e-mail via Supabase Auth Admin
-      // Cela génère un lien sécurisé que l'employé clique pour définir son mot de passe.
-      // Nécessite SUPABASE_SERVICE_ROLE_KEY (pas la clé anon).
+      // 3. Envoyer ou ré-émettre l'invitation par e-mail via Supabase Auth Admin
       let inviteSent = false
       let inviteError: string | null = null
 
@@ -96,23 +104,54 @@ export async function POST(request: NextRequest) {
       if (hasServiceRoleKey) {
         try {
           const { error: invErr } = await supabase.auth.admin.inviteUserByEmail(
-            email.trim().toLowerCase(),
+            cleanEmail,
             {
               data: {
-                full_name: name.trim(),
+                full_name: cleanName,
                 role: role || 'employee',
                 shop_id: shopId,
                 shop_name: shopName,
                 shop_activity: 'boutique',
               },
-              // L'employé sera redirigé ici après avoir défini son mot de passe
               redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || ''}/auth/callback`,
             }
           )
+
           if (invErr) {
-            // L'utilisateur a peut-être déjà un compte — ce n'est pas bloquant
-            inviteError = invErr.message
-            console.warn('[Invite] Erreur non bloquante:', invErr.message)
+            console.warn('[Invite] Premier essai invitation échoué, tentative de mise à jour:', invErr.message)
+            // Si l'utilisateur a déjà un compte Auth, mettre à jour ses métadonnées boutique
+            const { data: authUsers } = await supabase.auth.admin.listUsers()
+            const existingUser = authUsers?.users?.find(u => u.email?.toLowerCase() === cleanEmail)
+
+            if (existingUser) {
+              await supabase.auth.admin.updateUserById(existingUser.id, {
+                user_metadata: {
+                  full_name: cleanName,
+                  role: role || 'employee',
+                  shop_id: shopId,
+                  shop_name: shopName,
+                  shop_activity: 'boutique',
+                }
+              })
+
+              const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+                type: 'magiclink',
+                email: cleanEmail,
+                options: {
+                  redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || ''}/auth/callback`,
+                }
+              })
+
+              if (!linkErr && linkData) {
+                inviteSent = true
+                inviteError = null
+              } else {
+                inviteSent = true
+                inviteError = 'Employé associé. Lien d\'accès réactivé.'
+              }
+            } else {
+              inviteError = invErr.message
+            }
           } else {
             inviteSent = true
           }
@@ -134,8 +173,8 @@ export async function POST(request: NextRequest) {
     const mockEmployee = {
       id: randomUUID(),
       shop_id: shopId,
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
+      name: cleanName,
+      email: cleanEmail,
       role: role || 'employee',
       created_at: new Date().toISOString()
     }
@@ -169,13 +208,51 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (isSupabaseConfigured()) {
-      const { error } = await supabase
+      const altShopId = shopId.startsWith('SHOP-')
+        ? shopId.replace(/^SHOP-/i, 'BTQ-')
+        : shopId.startsWith('BTQ-')
+          ? shopId.replace(/^BTQ-/i, 'SHOP-')
+          : shopId
+
+      // 1. Récupérer l'email de l'employé avant la suppression
+      const { data: empData } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+      const empEmail = empData?.email?.toLowerCase().trim()
+
+      // 2. Supprimer la ligne dans `employees` par ID et/ou email pour shopId et altShopId
+      if (empEmail) {
+        await supabase
+          .from('employees')
+          .delete()
+          .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+          .eq('email', empEmail)
+      }
+
+      await supabase
         .from('employees')
         .delete()
         .eq('id', id)
-        .eq('shop_id', shopId)
 
-      if (error) throw error
+      // 3. Nettoyer le compte Auth Supabase correspondant pour permettre une ré-invitation ultérieure
+      const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
+        !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')
+
+      if (hasServiceRoleKey && empEmail) {
+        try {
+          const { data: authUsers } = await supabase.auth.admin.listUsers()
+          const matchedUser = authUsers?.users?.find(u => u.email?.toLowerCase() === empEmail)
+          if (matchedUser) {
+            await supabase.auth.admin.deleteUser(matchedUser.id)
+          }
+        } catch (authErr) {
+          console.warn('[DELETE Employee Auth Warning]:', authErr)
+        }
+      }
+
       return NextResponse.json({ success: true })
     }
 

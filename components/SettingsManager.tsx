@@ -227,6 +227,14 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
         throw new Error(data.error || 'Erreur lors de la suppression')
       }
 
+      setEmployees(prev => {
+        const updated = prev.filter(e => e.id !== id && e.name !== empName)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`cahier_offline_employees_${shopId}`, JSON.stringify(updated))
+        }
+        return updated
+      })
+
       await loadEmployees()
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Erreur lors de la suppression')
