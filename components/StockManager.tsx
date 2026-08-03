@@ -442,10 +442,10 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
           <button
             onClick={() => openFastAddModal()}
             className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-amber-900 hover:bg-black text-amber-100 rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
-            title="Saisir rapidement les produits avec uniquement le nom et le prix de vente"
+            title="Saisir rapidement les produits avec uniquement le nom, le prix de vente et la quantité en stock"
           >
             <Plus className="w-3 h-3" />
-            <span>⚡ Catalogue Rapide (Nom & Prix)</span>
+            <span>⚡ Catalogue Rapide (Nom, Prix & Stock)</span>
           </button>
           <button
             onClick={() => openAddModal()}
