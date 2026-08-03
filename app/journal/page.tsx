@@ -1220,8 +1220,47 @@ export default function JournalPage() {
 
       const isAdjustmentOrApportItem = (item: any) => {
         if (item.type === 'cash_adjustment') return true
-        const notes = (item.notes || '').toLowerCase()
-        return notes.includes('apport') || notes.includes('fond de caisse') || notes.includes('retrait caisse') || notes.includes('ajustement')
+        const textSources: string[] = []
+        if (item.notes) textSources.push(item.notes)
+        if (item.client) textSources.push(item.client)
+        if (item.articles && Array.isArray(item.articles)) {
+          item.articles.forEach((a: any) => {
+            if (a.name) textSources.push(a.name)
+            if (a.nom) textSources.push(a.nom)
+          })
+        }
+        const combined = textSources.join(' ').toLowerCase()
+        return (
+          combined.includes('apport') ||
+          combined.includes('fond de caisse') ||
+          combined.includes('retrait') ||
+          combined.includes('sortie caisse') ||
+          combined.includes('ajustement') ||
+          combined.includes('reglage') ||
+          combined.includes('réglage') ||
+          combined.includes('depot') ||
+          combined.includes('dépôt')
+        )
+      }
+
+      const isPositiveAdjustment = (item: any) => {
+        const textSources: string[] = []
+        if (item.notes) textSources.push(item.notes)
+        if (item.client) textSources.push(item.client)
+        if (item.articles && Array.isArray(item.articles)) {
+          item.articles.forEach((a: any) => {
+            if (a.name) textSources.push(a.name)
+            if (a.nom) textSources.push(a.nom)
+          })
+        }
+        const combined = textSources.join(' ').toLowerCase()
+
+        const isRetrait = combined.includes('retrait') || combined.includes('sortie') || combined.includes('ecart: -') || combined.includes('écart: -')
+        const isApport = combined.includes('apport') || combined.includes('fond de caisse') || combined.includes('depot') || combined.includes('dépôt') || combined.includes('ecart: +') || combined.includes('écart: +')
+
+        if (isRetrait) return false
+        if (isApport) return true
+        return item.pen_color !== 'red'
       }
 
       const todaysLocal = localSales.filter((s: any) => s.date === todayStr)
@@ -1236,8 +1275,7 @@ export default function JournalPage() {
         const total = item.total ?? 0
 
         if (isAdjustmentOrApportItem(item)) {
-          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.toLowerCase().includes('apport') || item.notes.toLowerCase().includes('fond de caisse') || item.notes.toLowerCase().includes('écart: +')))
-          if (isPos) cashInstant += (paid || total)
+          if (isPositiveAdjustment(item)) cashInstant += (paid || total)
           else cashInstant -= (paid || total)
         } else if (type === 'cash_in' || type === 'payment_client') {
           cashInstant += paid
@@ -1310,8 +1348,47 @@ export default function JournalPage() {
 
       const isAdjustmentOrApportItem = (item: any) => {
         if (item.type === 'cash_adjustment') return true
-        const notes = (item.notes || '').toLowerCase()
-        return notes.includes('apport') || notes.includes('fond de caisse') || notes.includes('retrait caisse') || notes.includes('ajustement')
+        const textSources: string[] = []
+        if (item.notes) textSources.push(item.notes)
+        if (item.client) textSources.push(item.client)
+        if (item.articles && Array.isArray(item.articles)) {
+          item.articles.forEach((a: any) => {
+            if (a.name) textSources.push(a.name)
+            if (a.nom) textSources.push(a.nom)
+          })
+        }
+        const combined = textSources.join(' ').toLowerCase()
+        return (
+          combined.includes('apport') ||
+          combined.includes('fond de caisse') ||
+          combined.includes('retrait') ||
+          combined.includes('sortie caisse') ||
+          combined.includes('ajustement') ||
+          combined.includes('reglage') ||
+          combined.includes('réglage') ||
+          combined.includes('depot') ||
+          combined.includes('dépôt')
+        )
+      }
+
+      const isPositiveAdjustment = (item: any) => {
+        const textSources: string[] = []
+        if (item.notes) textSources.push(item.notes)
+        if (item.client) textSources.push(item.client)
+        if (item.articles && Array.isArray(item.articles)) {
+          item.articles.forEach((a: any) => {
+            if (a.name) textSources.push(a.name)
+            if (a.nom) textSources.push(a.nom)
+          })
+        }
+        const combined = textSources.join(' ').toLowerCase()
+
+        const isRetrait = combined.includes('retrait') || combined.includes('sortie') || combined.includes('ecart: -') || combined.includes('écart: -')
+        const isApport = combined.includes('apport') || combined.includes('fond de caisse') || combined.includes('depot') || combined.includes('dépôt') || combined.includes('ecart: +') || combined.includes('écart: +')
+
+        if (isRetrait) return false
+        if (isApport) return true
+        return item.pen_color !== 'red'
       }
 
       // Calculer le tiroir caisse
@@ -1323,8 +1400,7 @@ export default function JournalPage() {
         const total = item.total ?? 0
 
         if (isAdjustmentOrApportItem(item)) {
-          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.toLowerCase().includes('apport') || item.notes.toLowerCase().includes('fond de caisse') || item.notes.toLowerCase().includes('écart: +')))
-          if (isPos) cash += (paid || total)
+          if (isPositiveAdjustment(item)) cash += (paid || total)
           else cash -= (paid || total)
         } else if (type === 'cash_in' || type === 'payment_client') {
           cash += paid
@@ -1371,8 +1447,47 @@ export default function JournalPage() {
 
       const isAdjustmentOrApportItem = (item: any) => {
         if (item.type === 'cash_adjustment') return true
-        const notes = (item.notes || '').toLowerCase()
-        return notes.includes('apport') || notes.includes('fond de caisse') || notes.includes('retrait caisse') || notes.includes('ajustement')
+        const textSources: string[] = []
+        if (item.notes) textSources.push(item.notes)
+        if (item.client) textSources.push(item.client)
+        if (item.articles && Array.isArray(item.articles)) {
+          item.articles.forEach((a: any) => {
+            if (a.name) textSources.push(a.name)
+            if (a.nom) textSources.push(a.nom)
+          })
+        }
+        const combined = textSources.join(' ').toLowerCase()
+        return (
+          combined.includes('apport') ||
+          combined.includes('fond de caisse') ||
+          combined.includes('retrait') ||
+          combined.includes('sortie caisse') ||
+          combined.includes('ajustement') ||
+          combined.includes('reglage') ||
+          combined.includes('réglage') ||
+          combined.includes('depot') ||
+          combined.includes('dépôt')
+        )
+      }
+
+      const isPositiveAdjustment = (item: any) => {
+        const textSources: string[] = []
+        if (item.notes) textSources.push(item.notes)
+        if (item.client) textSources.push(item.client)
+        if (item.articles && Array.isArray(item.articles)) {
+          item.articles.forEach((a: any) => {
+            if (a.name) textSources.push(a.name)
+            if (a.nom) textSources.push(a.nom)
+          })
+        }
+        const combined = textSources.join(' ').toLowerCase()
+
+        const isRetrait = combined.includes('retrait') || combined.includes('sortie') || combined.includes('ecart: -') || combined.includes('écart: -')
+        const isApport = combined.includes('apport') || combined.includes('fond de caisse') || combined.includes('depot') || combined.includes('dépôt') || combined.includes('ecart: +') || combined.includes('écart: +')
+
+        if (isRetrait) return false
+        if (isApport) return true
+        return item.pen_color !== 'red'
       }
 
       let cash = 0
@@ -1383,8 +1498,7 @@ export default function JournalPage() {
         const total = item.total ?? 0
 
         if (isAdjustmentOrApportItem(item)) {
-          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.toLowerCase().includes('apport') || item.notes.toLowerCase().includes('fond de caisse') || item.notes.toLowerCase().includes('écart: +')))
-          if (isPos) cash += (paid || total)
+          if (isPositiveAdjustment(item)) cash += (paid || total)
           else cash -= (paid || total)
         } else if (type === 'cash_in' || type === 'payment_client') {
           cash += paid

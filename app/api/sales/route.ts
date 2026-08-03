@@ -70,9 +70,27 @@ function calculateCash(list: any[]): number {
     } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
       cash -= total
     } else if (type === 'cash_adjustment') {
-      const isPositive = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
-      if (isPositive) cash += paid || total
-      else cash -= paid || total
+      const textSources: string[] = []
+      if (item.notes) textSources.push(item.notes)
+      if (item.client) textSources.push(item.client)
+      if (item.articles && Array.isArray(item.articles)) {
+        item.articles.forEach((a: any) => {
+          if (a.name) textSources.push(a.name)
+          if (a.nom) textSources.push(a.nom)
+        })
+      }
+      const combinedText = textSources.join(' ').toLowerCase()
+
+      const isRetrait = combinedText.includes('retrait') || combinedText.includes('sortie') || combinedText.includes('ecart: -') || combinedText.includes('écart: -')
+      const isApport = combinedText.includes('apport') || combinedText.includes('fond de caisse') || combinedText.includes('depot') || combinedText.includes('dépôt') || combinedText.includes('ecart: +') || combinedText.includes('écart: +')
+
+      let isPositive = true
+      if (isRetrait) isPositive = false
+      else if (isApport) isPositive = true
+      else isPositive = item.pen_color !== 'red'
+
+      if (isPositive) cash += (paid || total)
+      else cash -= (paid || total)
     }
   }
   return cash
