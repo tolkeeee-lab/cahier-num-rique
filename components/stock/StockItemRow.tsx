@@ -127,18 +127,16 @@ export function StockItemRow({
               </div>
             </div>
           )}
-          {!item.is_orphan && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete(item)
-              }}
-              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title={`Supprimer « ${item.name} »`}
-            >
-              <Trash2 className="w-4 h-4 text-red-500 hover:text-red-700" />
-            </button>
-          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(item)
+            }}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title={`Supprimer « ${item.name} »`}
+          >
+            <Trash2 className="w-4 h-4 text-red-500 hover:text-red-700" />
+          </button>
 
           {isExpanded
             ? <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -186,7 +184,7 @@ export function StockItemRow({
               <span className="text-amber-800">
                 💰 Marge Unitaire: <strong>{formatPrice(item.unit_price - item.unit_cost)}</strong> ({Math.round(((item.unit_price - item.unit_cost) / item.unit_cost) * 100)}%)
               </span>
-              {item.current_stock > 0 && (
+              {item.current_stock > 0 && item.current_stock < 999900 && (
                 <span className="text-amber-900 font-bold">
                   Profit Potentiel: {formatPrice((item.unit_price - item.unit_cost) * item.current_stock)}
                 </span>
@@ -210,7 +208,7 @@ export function StockItemRow({
             {item.multiplier && item.multiplier > 1 && (
               <>
                 <span className="bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
-                  📦 1 {item.packaging_name || 'carton'} = {item.multiplier} {!item.unit || item.unit === 'carton' || item.unit === (item.packaging_name || 'carton') ? 'unités' : `${item.unit}s`}
+                  📦 1 {item.packaging_name || 'carton'} = {item.multiplier} {!item.unit || item.unit === 'carton' || item.unit === (item.packaging_name || 'carton') ? 'unitités' : `${item.unit}s`}
                 </span>
                 {item.unit_cost > 0 && (
                   <span className="text-amber-800 font-bold">
@@ -219,7 +217,7 @@ export function StockItemRow({
                 )}
               </>
             )}
-            {item.current_stock > 0 && (
+            {item.stock_tracked && !item.is_unlimited && item.current_stock > 0 && item.current_stock < 999900 && (
               <>
                 {item.unit_cost > 0 && (
                   <span className="text-emerald-700">Valeur Achat: <strong>{formatPrice(getItemPurchaseValue(item))}</strong></span>

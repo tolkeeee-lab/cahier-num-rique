@@ -349,20 +349,25 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
   }
 
   const handleDelete = async (item: StockItem) => {
-    if (!confirm(`Supprimer « ${item.name} » du catalogue ?`)) return
+    if (!confirm(`Supprimer « ${item.name} » ?`)) return
 
     const online = typeof window !== 'undefined' ? window.navigator.onLine : true
 
     try {
+      if (item.is_orphan) {
+        setOrphans(prev => prev.filter(o => o.id !== item.id))
+        setItems(prev => prev.filter(i => i.id !== item.id))
+        deleteOfflineProduct(shopId, item.id)
+        return
+      }
       if (online) {
         const response = await fetch(`/api/stock?id=${item.id}&shopId=${shopId}`, {
           method: 'DELETE',
           headers: { 'x-shop-id': shopId },
         })
         if (!response.ok) throw new Error('Erreur lors de la suppression')
-      } else {
-        deleteOfflineProduct(shopId, item.id)
       }
+      deleteOfflineProduct(shopId, item.id)
       await loadStock()
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Erreur inconnue')
@@ -371,7 +376,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
 
   // ── Données dérivées ─────────────────────────────────────────────────────────
 
-  const [trackModeFilter, setTrackModeFilter] = useState<'ALL' | 'TRACKED' | 'UNTRACKED'>('ALL')
+  const [trackModeFilter, setTrackModeFilter] = useState<'ALL' | 'TRACKED' | 'UNTRACKED'>('TRACKED')
 
   const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', '✂️ Prestations & Services']
   const existingCategories = Array.from(new Set(items.map(i => i.category).filter(Boolean)))

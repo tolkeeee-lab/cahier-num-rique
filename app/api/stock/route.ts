@@ -121,7 +121,7 @@ export async function GET(request: Request) {
       const rawStock = ((product.initial_stock || 0) + totalIn - totalOut)
       
       const currentStock = isUnlimited 
-        ? 999999 
+        ? 0 
         : stockTracked
           ? Math.max(0, rawStock)
           : 0
