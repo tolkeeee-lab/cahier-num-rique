@@ -463,7 +463,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                     {/* Main text */}
                     <div className="flex-grow pl-1 md:pl-2 pr-1 min-w-0">
                       <div className="flex items-start md:items-center gap-1.5 flex-col md:flex-row md:flex-wrap w-full">
-                        {sale.articles && sale.articles.length > 0 ? (
+                        {sale.articles && sale.articles.length > 0 && !(sale.type === 'cash_adjustment' || (sale.notes && (sale.notes.toLowerCase().includes('apport') || sale.notes.toLowerCase().includes('retrait') || sale.notes.toLowerCase().includes('fond de caisse') || sale.notes.toLowerCase().includes('ajustement')))) ? (
                           <>
                             {/* Mobile vertical list */}
                             <div className="flex flex-col gap-0.5 md:hidden">
