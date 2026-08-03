@@ -61,11 +61,14 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
     try {
       localStorage.removeItem(`cahier_offline_sales_${shopId}`)
       localStorage.removeItem(`cahier_offline_products_${shopId}`)
+      localStorage.removeItem(`cahier_offline_clients_${shopId}`)
+      localStorage.removeItem(`cahier_offline_suppliers_${shopId}`)
       localStorage.removeItem(`cahier_offline_debts_${shopId}`)
       localStorage.removeItem(`cahier_offline_cash_closing_${shopId}`)
       localStorage.removeItem(`cahier_requested_products_${shopId}`)
       localStorage.removeItem(`cahier_offline_supplier_debts_${shopId}`)
       localStorage.removeItem(`cahier_offline_supplier_transactions_${shopId}`)
+      localStorage.removeItem(`cahier_deleted_menu_items_${shopId}`)
 
       if (typeof window !== 'undefined' && window.navigator.onLine) {
         await fetch('/api/shop/reset', {
