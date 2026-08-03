@@ -5,6 +5,7 @@ import { Send, Loader, AlertTriangle, Utensils, Plus, Sparkles, ChevronDown, Che
 import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
 import { parseRequestedProductFromNotebookText, recordRequestedProductInStorage } from '@/lib/requestedProductsUtils'
 import { analyzeNotebookInputWithMasterCatalog, StockProductCard } from '@/lib/smartStockAssistant'
+import { deleteOfflineProduct } from '@/lib/offlineDb'
 
 interface Sale {
   id: string
@@ -399,6 +400,26 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
       }
     } catch (err) {
       console.warn('Suppression backend non bloquante:', err)
+    }
+  }
+
+  const handleDeleteMenuItem = async (item: MenuItem, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm(`Supprimer « ${item.name} » du menu raccourcis et du catalogue ?`)) return
+
+    setMenuItems(prev => prev.filter(m => m.id !== item.id))
+
+    try {
+      const online = typeof window !== 'undefined' ? window.navigator.onLine : true
+      if (online && item.id && !item.id.startsWith('menu_custom_')) {
+        await fetch(`/api/stock?id=${item.id}&shopId=${shopId}`, {
+          method: 'DELETE',
+          headers: { 'x-shop-id': shopId }
+        })
+      }
+      deleteOfflineProduct(shopId, item.id)
+    } catch (err) {
+      console.warn('Suppression menu non bloquante:', err)
     }
   }
 
@@ -815,12 +836,22 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
                   key={item.id}
                   type="button"
                   onClick={() => handleTapMenuItem(item)}
-                  className={`p-3 border rounded-2xl shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group active:scale-95 border-b-2 ${
+                  className={`relative p-3 border rounded-2xl shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group active:scale-95 border-b-2 ${
                     isOutOfStock 
                       ? 'bg-rose-50/60 border-rose-200 hover:border-rose-400 hover:bg-rose-100/70' 
                       : 'bg-white hover:bg-amber-50 border-gray-200 hover:border-amber-400 hover:border-b-amber-500'
                   }`}
                 >
+                  {/* Bouton de suppression directe du menu (Bouton Rouge X) */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteMenuItem(item, e)}
+                    title={`Supprimer « ${item.name} » du menu raccourcis`}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow-md transition-all opacity-90 group-hover:opacity-100 z-10"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <span className="text-base group-hover:scale-125 transition-transform">{item.emoji}</span>
                     <div className="flex flex-col items-end gap-0.5">
