@@ -292,7 +292,14 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
     }
   }
 
-  const getTransactionTypeText = (type: string) => {
+  const getTransactionTypeText = (type: string, notes?: string) => {
+    const lower = (notes || '').toLowerCase()
+    if (type === 'cash_adjustment' || lower.includes('apport') || lower.includes('fond de caisse') || lower.includes('retrait caisse') || lower.includes('ajustement')) {
+      if (lower.includes('apport') || lower.includes('fond de caisse')) return '🏧 APPORT CAISSE'
+      if (lower.includes('retrait')) return '🏧 RETRAIT CAISSE'
+      return '🏧 AJUSTEMENT TIROIR'
+    }
+
     switch (type) {
       case 'cash_in': return 'VENTE'
       case 'cash_out': return 'DÉPENSE'
@@ -302,17 +309,18 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
       case 'payment_client': return 'PAIEMENT CLIENT'
       case 'payment_supplier': return 'PAIEMENT GROSSISTE'
       case 'client_request': return '📋 DEMANDE CLIENT'
-      case 'cash_adjustment': return '🏧 AJUSTEMENT TIROIR'
       default: return 'VENTE'
     }
   }
 
-  const getTypeBadgeStyle = (type: string) => {
+  const getTypeBadgeStyle = (type: string, notes?: string) => {
+    const lower = (notes || '').toLowerCase()
+    if (type === 'cash_adjustment' || lower.includes('apport') || lower.includes('fond de caisse') || lower.includes('retrait caisse') || lower.includes('ajustement')) {
+      return 'bg-purple-100 text-purple-900 border-purple-300'
+    }
     switch (type) {
       case 'client_request':
         return 'bg-amber-100 text-amber-900 border-amber-300'
-      case 'cash_adjustment':
-        return 'bg-purple-100 text-purple-900 border-purple-300'
       case 'cash_in':
       case 'payment_client':
         return 'bg-blue-100 text-blue-800 border-blue-200'
@@ -422,8 +430,8 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
             {salesList.map((sale) => {
               const isCrossed = sale.status === 'crossed_out'
               const penClass = getPenClass(sale.pen_color, sale.status)
-              const typeText = getTransactionTypeText(sale.type)
-              const typeBadge = getTypeBadgeStyle(sale.type)
+              const typeText = getTransactionTypeText(sale.type, sale.notes)
+              const typeBadge = getTypeBadgeStyle(sale.type, sale.notes)
               const amountBadge = getAmountBadgeStyle(sale.type, isCrossed)
               const isAddingHere = addingToId === sale.id
               const isSavingHere = savingId === sale.id

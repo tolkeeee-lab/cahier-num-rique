@@ -1714,15 +1714,26 @@ export default function JournalPage() {
     }
 
     // Déterminer le type
-    let type = 'cash_in'
-    if (color === 'red') type = 'cash_out'
-    else if (color === 'green') type = 'purchase_cash'
-    else if (color === 'purple') type = 'purchase_credit'
-    else if (color === 'yellow') type = 'sale_credit'
+    let type = bodyData.overrideData?.type || 'cash_in'
+    if (!bodyData.overrideData?.type) {
+      if (color === 'red') type = 'cash_out'
+      else if (color === 'green') type = 'purchase_cash'
+      else if (color === 'purple') type = 'purchase_credit'
+      else if (color === 'yellow') type = 'sale_credit'
+    }
 
-    // Forcer en Achat Stock (purchase_cash / purchase_credit) si le texte commence par "stock" ou "achat"
     const lowercaseText = text.trim().toLowerCase()
-    if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
+
+    // Détection automatique d'un Apport / Retrait / Fond de caisse écrit au stylo dans le cahier
+    if (
+      lowercaseText.includes('apport') ||
+      lowercaseText.includes('fond de caisse') ||
+      lowercaseText.includes('ajustement') ||
+      lowercaseText.includes('retrait caisse') ||
+      lowercaseText.includes('reglage caisse')
+    ) {
+      type = 'cash_adjustment'
+    } else if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
       if (type === 'cash_in' || type === 'sale_credit') {
         type = 'purchase_cash'
       }
