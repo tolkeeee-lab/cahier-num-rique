@@ -1218,6 +1218,12 @@ export default function JournalPage() {
       const localClients = getOfflineClients(sid)
       const localSuppliers = getOfflineSuppliers(sid)
 
+      const isAdjustmentOrApportItem = (item: any) => {
+        if (item.type === 'cash_adjustment') return true
+        const notes = (item.notes || '').toLowerCase()
+        return notes.includes('apport') || notes.includes('fond de caisse') || notes.includes('retrait caisse') || notes.includes('ajustement')
+      }
+
       const todaysLocal = localSales.filter((s: any) => s.date === todayStr)
       setSales(todaysLocal.reverse())
       setAllSales(localSales)
@@ -1228,28 +1234,28 @@ export default function JournalPage() {
         const type = item.type
         const paid = item.paid ?? 0
         const total = item.total ?? 0
-        if (type === 'cash_in' || type === 'payment_client') cashInstant += paid
-        else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') cashInstant -= total
-        else if (type === 'cash_adjustment') {
-          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
+
+        if (isAdjustmentOrApportItem(item)) {
+          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.toLowerCase().includes('apport') || item.notes.toLowerCase().includes('fond de caisse') || item.notes.toLowerCase().includes('écart: +')))
           if (isPos) cashInstant += (paid || total)
           else cashInstant -= (paid || total)
+        } else if (type === 'cash_in' || type === 'payment_client') {
+          cashInstant += paid
+        } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
+          cashInstant -= total
         }
       }
 
       let cashTodayInstant = 0
       for (const item of todaysLocal) {
         if (item.status === 'crossed_out') continue
+        if (isAdjustmentOrApportItem(item)) continue // EXCLUSION DU SOLDE DU JOUR
+
         const type = item.type
         const paid = item.paid ?? 0
         const total = item.total ?? 0
         if (type === 'cash_in' || type === 'payment_client') cashTodayInstant += paid
         else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') cashTodayInstant -= total
-        else if (type === 'cash_adjustment') {
-          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
-          if (isPos) cashTodayInstant += (paid || total)
-          else cashTodayInstant -= (paid || total)
-        }
       }
 
       setTiroirCaisse(cashInstant)
@@ -1302,6 +1308,12 @@ export default function JournalPage() {
         suppliersList = getOfflineSuppliers(sid)
       }
 
+      const isAdjustmentOrApportItem = (item: any) => {
+        if (item.type === 'cash_adjustment') return true
+        const notes = (item.notes || '').toLowerCase()
+        return notes.includes('apport') || notes.includes('fond de caisse') || notes.includes('retrait caisse') || notes.includes('ajustement')
+      }
+
       // Calculer le tiroir caisse
       let cash = 0
       for (const item of salesList) {
@@ -1310,14 +1322,14 @@ export default function JournalPage() {
         const paid = item.paid ?? 0
         const total = item.total ?? 0
 
-        if (type === 'cash_in' || type === 'payment_client') {
+        if (isAdjustmentOrApportItem(item)) {
+          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.toLowerCase().includes('apport') || item.notes.toLowerCase().includes('fond de caisse') || item.notes.toLowerCase().includes('écart: +')))
+          if (isPos) cash += (paid || total)
+          else cash -= (paid || total)
+        } else if (type === 'cash_in' || type === 'payment_client') {
           cash += paid
         } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
           cash -= total
-        } else if (type === 'cash_adjustment') {
-          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
-          if (isPos) cash += (paid || total)
-          else cash -= (paid || total)
         }
       }
 
@@ -1331,10 +1343,12 @@ export default function JournalPage() {
       // Filtrer les ventes pour afficher seulement celles d'aujourd'hui dans le journal (format YYYY-MM-DD local)
       const todaysSales = salesList.filter((s: any) => s.date === todayStr)
 
-      // Solde du jour (uniquement les transactions d'aujourd'hui)
+      // Solde du jour (uniquement les VENTES d'aujourd'hui, exclusion des apports/retraits)
       let cashToday = 0
       for (const item of todaysSales) {
         if (item.status === 'crossed_out') continue
+        if (isAdjustmentOrApportItem(item)) continue // EXCLUSION DU SOLDE DU JOUR
+
         const type = item.type
         const paid = item.paid ?? 0
         const total = item.total ?? 0
@@ -1342,10 +1356,6 @@ export default function JournalPage() {
           cashToday += paid
         } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
           cashToday -= total
-        } else if (type === 'cash_adjustment') {
-          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
-          if (isPos) cashToday += (paid || total)
-          else cashToday -= (paid || total)
         }
       }
       setSoldeDuJour(cashToday)
@@ -1359,20 +1369,27 @@ export default function JournalPage() {
       const fallbackClients = getOfflineClients(sid)
       const fallbackSuppliers = getOfflineSuppliers(sid)
 
+      const isAdjustmentOrApportItem = (item: any) => {
+        if (item.type === 'cash_adjustment') return true
+        const notes = (item.notes || '').toLowerCase()
+        return notes.includes('apport') || notes.includes('fond de caisse') || notes.includes('retrait caisse') || notes.includes('ajustement')
+      }
+
       let cash = 0
       for (const item of fallbackSales) {
         if (item.status === 'crossed_out') continue
         const type = item.type
         const paid = item.paid ?? 0
         const total = item.total ?? 0
-        if (type === 'cash_in' || type === 'payment_client') {
+
+        if (isAdjustmentOrApportItem(item)) {
+          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.toLowerCase().includes('apport') || item.notes.toLowerCase().includes('fond de caisse') || item.notes.toLowerCase().includes('écart: +')))
+          if (isPos) cash += (paid || total)
+          else cash -= (paid || total)
+        } else if (type === 'cash_in' || type === 'payment_client') {
           cash += paid
         } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
           cash -= total
-        } else if (type === 'cash_adjustment') {
-          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
-          if (isPos) cash += (paid || total)
-          else cash -= (paid || total)
         }
       }
 
@@ -1382,10 +1399,12 @@ export default function JournalPage() {
 
       const todayFallback = fallbackSales.filter((s: any) => s.date === todayStr)
 
-      // Solde du jour — fallback hors-ligne
+      // Solde du jour — fallback hors-ligne (uniquement les VENTES, exclusion des apports)
       let cashTodayFallback = 0
       for (const item of todayFallback) {
         if (item.status === 'crossed_out') continue
+        if (isAdjustmentOrApportItem(item)) continue // EXCLUSION DU SOLDE DU JOUR
+
         const type = item.type
         const paid = item.paid ?? 0
         const total = item.total ?? 0
@@ -1393,10 +1412,6 @@ export default function JournalPage() {
           cashTodayFallback += paid
         } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
           cashTodayFallback -= total
-        } else if (type === 'cash_adjustment') {
-          const isPos = item.pen_color === 'blue' || (item.notes && (item.notes.includes('Apport') || item.notes.includes('Écart: +')))
-          if (isPos) cashTodayFallback += (paid || total)
-          else cashTodayFallback -= (paid || total)
         }
       }
       setSoldeDuJour(cashTodayFallback)
@@ -1406,15 +1421,20 @@ export default function JournalPage() {
     }
   }
 
-
+  const isAdjustmentOrApport = (s: any) => {
+    if (s.type === 'cash_adjustment') return true
+    const notes = (s.notes || '').toLowerCase()
+    return notes.includes('apport') || notes.includes('fond de caisse') || notes.includes('retrait caisse') || notes.includes('ajustement')
+  }
 
   const getCategoryTotals = () => {
-    let alimentation = allSales.filter(s => s.type === 'cash_in' || s.type === 'payment_client').reduce((sum, s) => sum + s.total, 0)
-    let stockMarchandise = allSales.filter(s => s.type === 'purchase_cash').reduce((sum, s) => sum + s.total, 0)
-    let stockCredit = allSales.filter(s => s.type === 'purchase_credit').reduce((sum, s) => sum + s.total, 0)
-    let remboursement = allSales.filter(s => s.type === 'payment_client' || s.type === 'payment_supplier').reduce((sum, s) => sum + s.total, 0)
-    let grossiste = allSales.filter(s => s.type === 'payment_supplier').reduce((sum, s) => sum + s.total, 0)
-    let energie = allSales.filter(s => s.type === 'cash_out' && (s.notes.toLowerCase().includes('sbee') || s.notes.toLowerCase().includes('courant') || s.notes.toLowerCase().includes('elec') || s.notes.toLowerCase().includes('ampoule') || s.notes.toLowerCase().includes('transport'))).reduce((sum, s) => sum + s.total, 0)
+    const validSales = allSales.filter(s => !isAdjustmentOrApport(s))
+    let alimentation = validSales.filter(s => s.type === 'cash_in' || s.type === 'payment_client').reduce((sum, s) => sum + s.total, 0)
+    let stockMarchandise = validSales.filter(s => s.type === 'purchase_cash').reduce((sum, s) => sum + s.total, 0)
+    let stockCredit = validSales.filter(s => s.type === 'purchase_credit').reduce((sum, s) => sum + s.total, 0)
+    let remboursement = validSales.filter(s => s.type === 'payment_client' || s.type === 'payment_supplier').reduce((sum, s) => sum + s.total, 0)
+    let grossiste = validSales.filter(s => s.type === 'payment_supplier').reduce((sum, s) => sum + s.total, 0)
+    let energie = validSales.filter(s => s.type === 'cash_out' && (s.notes.toLowerCase().includes('sbee') || s.notes.toLowerCase().includes('courant') || s.notes.toLowerCase().includes('elec') || s.notes.toLowerCase().includes('ampoule') || s.notes.toLowerCase().includes('transport'))).reduce((sum, s) => sum + s.total, 0)
 
     const total = alimentation + stockMarchandise + stockCredit + remboursement + grossiste + energie
 
