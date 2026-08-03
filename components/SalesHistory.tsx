@@ -294,9 +294,13 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
 
   const getTransactionTypeText = (type: string, notes?: string) => {
     const lower = (notes || '').toLowerCase()
-    if (type === 'cash_adjustment' || lower.includes('apport') || lower.includes('fond de caisse') || lower.includes('retrait caisse') || lower.includes('ajustement')) {
-      if (lower.includes('apport') || lower.includes('fond de caisse')) return '🏧 APPORT CAISSE'
-      if (lower.includes('retrait')) return '🏧 RETRAIT CAISSE'
+    const isRetrait = lower.includes('retrait') || lower.includes('sortie caisse') || lower.includes('écart: -') || lower.includes('ecart: -')
+    const isApport = lower.includes('apport') || lower.includes('fond de caisse') || lower.includes('depot caisse') || lower.includes('dépôt caisse') || lower.includes('écart: +') || lower.includes('ecart: +')
+    const isAdjust = type === 'cash_adjustment' || lower.includes('ajustement') || lower.includes('reglage') || lower.includes('réglage')
+
+    if (isAdjust || isRetrait || isApport) {
+      if (isRetrait) return '🏧 RETRAIT CAISSE'
+      if (isApport) return '🏧 APPORT CAISSE'
       return '🏧 AJUSTEMENT TIROIR'
     }
 
@@ -315,7 +319,11 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
 
   const getTypeBadgeStyle = (type: string, notes?: string) => {
     const lower = (notes || '').toLowerCase()
-    if (type === 'cash_adjustment' || lower.includes('apport') || lower.includes('fond de caisse') || lower.includes('retrait caisse') || lower.includes('ajustement')) {
+    const isRetrait = lower.includes('retrait') || lower.includes('sortie caisse') || lower.includes('écart: -') || lower.includes('ecart: -')
+    const isApport = lower.includes('apport') || lower.includes('fond de caisse') || lower.includes('depot caisse') || lower.includes('dépôt caisse') || lower.includes('écart: +') || lower.includes('ecart: +')
+    const isAdjust = type === 'cash_adjustment' || lower.includes('ajustement') || lower.includes('reglage') || lower.includes('réglage')
+
+    if (isAdjust || isRetrait || isApport) {
       return 'bg-purple-100 text-purple-900 border-purple-300'
     }
     switch (type) {
@@ -338,8 +346,12 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
     }
   }
 
-  const getAmountBadgeStyle = (type: string, isCrossed: boolean) => {
+  const getAmountBadgeStyle = (type: string, isCrossed: boolean, notes?: string) => {
     if (isCrossed) return 'border-gray-200 text-gray-400 opacity-40 bg-gray-50'
+    const lower = (notes || '').toLowerCase()
+    if (lower.includes('retrait') || lower.includes('sortie caisse') || lower.includes('écart: -') || lower.includes('ecart: -')) {
+      return 'border-red-300 text-red-700 bg-red-50'
+    }
     switch (type) {
       case 'cash_adjustment':
         return 'border-purple-300 text-purple-800 bg-purple-50'
@@ -431,8 +443,8 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
               const isCrossed = sale.status === 'crossed_out'
               const penClass = getPenClass(sale.pen_color, sale.status)
               const typeText = getTransactionTypeText(sale.type, sale.notes)
-              const typeBadge = getTypeBadgeStyle(sale.type, sale.notes)
-              const amountBadge = getAmountBadgeStyle(sale.type, isCrossed)
+              const amountBadge = getAmountBadgeStyle(sale.type, isCrossed, sale.notes)
+              const isNegative = sale.type === 'cash_out' || sale.type === 'purchase_cash' || sale.type === 'payment_supplier' || (sale.notes && (sale.notes.toLowerCase().includes('retrait') || sale.notes.toLowerCase().includes('sortie caisse') || sale.notes.toLowerCase().includes('écart: -') || sale.notes.toLowerCase().includes('ecart: -')))
               const isAddingHere = addingToId === sale.id
               const isSavingHere = savingId === sale.id
 
@@ -456,15 +468,21 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                             {/* Mobile vertical list */}
                             <div className="flex flex-col gap-0.5 md:hidden">
                               {sale.articles.map((art, idx) => (
-                                <span key={idx} className={`font-semibold leading-tight text-[11px] sm:text-xs block ${penClass}`}>
-                                  • {art.quantity} × {art.name} {art.unit_price > 0 ? `à ${formatPrice(art.unit_price)}` : ''}
+                                <span key={idx} className={`font-semibold leading-tight text-xs sm:text-sm ${penClass}`}>
+                                  {art.quantity} {art.name} {art.unit_price ? `(${art.unit_price}F)` : ''}
                                 </span>
                               ))}
                             </div>
-                            {/* Desktop inline notes */}
-                            <span className={`hidden md:inline font-semibold leading-tight text-base md:text-lg ${penClass}`}>
-                              {sale.notes}
-                            </span>
+
+                            {/* Desktop inline list */}
+                            <div className="hidden md:flex md:flex-wrap md:items-center md:gap-1.5">
+                              {sale.articles.map((art, idx) => (
+                                <span key={idx} className={`font-semibold text-lg ${penClass}`}>
+                                  {art.quantity} {art.name} {art.unit_price ? `(${art.unit_price}F)` : ''}
+                                  {idx < sale.articles.length - 1 ? ',' : ''}
+                                </span>
+                              ))}
+                            </div>
                           </>
                         ) : (
                           <span className={`font-semibold leading-tight text-xs sm:text-sm md:text-lg ${penClass}`}>
@@ -472,7 +490,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                           </span>
                         )}
 
-                        <span className={`text-[7.5px] md:text-[8px] font-bold border px-1 py-0.2 rounded-md font-sans tracking-wide ${typeBadge} no-underline flex-shrink-0`}>
+                        <span className={`text-[7.5px] md:text-[8px] font-bold border px-1 py-0.2 rounded-md font-sans tracking-wide ${getTypeBadgeStyle(sale.type, sale.notes)} no-underline flex-shrink-0`}>
                           {typeText}
                         </span>
 
@@ -530,7 +548,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
                     {/* Amount + action buttons */}
                     <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5 relative z-20">
                       <div className={`font-mono text-xs font-bold border rounded-lg px-2.5 py-1 ${amountBadge}`}>
-                        {sale.type === 'cash_out' || sale.type === 'purchase_cash' || sale.type === 'payment_supplier' ? '-' : '+'}
+                        {isNegative ? '-' : '+'}
                         {formatPrice(sale.total)}
                       </div>
 

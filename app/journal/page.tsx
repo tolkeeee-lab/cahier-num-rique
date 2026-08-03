@@ -1749,8 +1749,10 @@ export default function JournalPage() {
       lowercaseText.includes('apport') ||
       lowercaseText.includes('fond de caisse') ||
       lowercaseText.includes('ajustement') ||
-      lowercaseText.includes('retrait caisse') ||
-      lowercaseText.includes('reglage caisse')
+      lowercaseText.includes('retrait') ||
+      lowercaseText.includes('sortie caisse') ||
+      lowercaseText.includes('reglage') ||
+      lowercaseText.includes('réglage')
     ) {
       type = 'cash_adjustment'
     } else if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
