@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, X, GitMerge } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 
 interface StockFilterBarProps {
   searchQuery: string
@@ -11,9 +11,6 @@ interface StockFilterBarProps {
   trackModeFilter: 'ALL' | 'TRACKED' | 'UNTRACKED'
   setTrackModeFilter: (mode: 'ALL' | 'TRACKED' | 'UNTRACKED') => void
   allCategories: string[]
-  duplicatePairsCount: number
-  firstDuplicatePairNames?: { name1: string; name2: string }
-  onOpenMergeModal: () => void
   trackedCount: number
   untrackedCount: number
   totalCount: number
@@ -27,34 +24,12 @@ export function StockFilterBar({
   trackModeFilter,
   setTrackModeFilter,
   allCategories,
-  duplicatePairsCount,
-  firstDuplicatePairNames,
-  onOpenMergeModal,
   trackedCount,
   untrackedCount,
   totalCount,
 }: StockFilterBarProps) {
   return (
     <>
-      {/* ── Bannière d'alerte doublons ── */}
-      {duplicatePairsCount > 0 && firstDuplicatePairNames && (
-        <div className="mx-4 my-2 p-2.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-xs text-amber-900 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <GitMerge className="w-4 h-4 text-amber-600 flex-shrink-0" />
-            <span>
-              <strong>{duplicatePairsCount} doublon(s) potentiel(s)</strong> détecté(s) (ex: « {firstDuplicatePairNames.name1} » & « {firstDuplicatePairNames.name2} »)
-            </span>
-          </div>
-          <button
-            onClick={onOpenMergeModal}
-            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center gap-1 flex-shrink-0 shadow-sm"
-          >
-            <GitMerge className="w-3 h-3" />
-            <span>Fusionner</span>
-          </button>
-        </div>
-      )}
-
       {/* ── Search + Mode de Suivi + Category filter ── */}
       <div className="px-4 py-2.5 border-b border-gray-100 flex flex-col gap-2 bg-[#faf7f0] flex-shrink-0">
         <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">

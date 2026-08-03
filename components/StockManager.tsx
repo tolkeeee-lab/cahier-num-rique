@@ -120,10 +120,11 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
     return `${baseUrl}?text=${encodeURIComponent(text)}`
   }
 
-  // Recalculer les doublons dès que les items changent
+  // Recalculer les doublons uniquement sur les produits officiels suivis
   useEffect(() => {
-    if (items.length > 0) {
-      const candidates = findDuplicateCandidates(items, 0.75)
+    const trackedItems = items.filter(i => i.stock_tracked && !i.is_orphan)
+    if (trackedItems.length > 0) {
+      const candidates = findDuplicateCandidates(trackedItems, 0.85)
       setDuplicatePairs(candidates)
     } else {
       setDuplicatePairs([])
@@ -511,7 +512,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
         totalOut={totalOut}
       />
 
-      {/* ── Search + Mode de Suivi + Category filter + Duplicate alert ── */}
+      {/* ── Search + Mode de Suivi + Category filter ── */}
       <StockFilterBar
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -520,16 +521,6 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
         trackModeFilter={trackModeFilter}
         setTrackModeFilter={setTrackModeFilter}
         allCategories={allCategories}
-        duplicatePairsCount={duplicatePairs.length}
-        firstDuplicatePairNames={
-          duplicatePairs.length > 0
-            ? { name1: duplicatePairs[0].item1.name, name2: duplicatePairs[0].item2.name }
-            : undefined
-        }
-        onOpenMergeModal={() => {
-          setActivePairIndex(0)
-          setShowMergeModal(true)
-        }}
         trackedCount={trackedCount}
         untrackedCount={untrackedCount}
         totalCount={items.length}
