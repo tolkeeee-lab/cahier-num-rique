@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { 
   Store, 
   Users, 
@@ -55,6 +56,7 @@ function formatPrice(price: number): string {
 }
 
 export default function SuperAdminPage() {
+  const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminEmail, setAdminEmail] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
@@ -149,6 +151,7 @@ export default function SuperAdminPage() {
     setKpis(null)
     setShops([])
     setUsers([])
+    router.push('/')
   }
 
   // Charger le journal d'une boutique en lecture seule

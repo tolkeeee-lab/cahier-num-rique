@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
 import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X, ClipboardList } from 'lucide-react'
@@ -407,6 +408,7 @@ function getFilters(activity?: string): { id: FilterId; label: string }[] {
 
 
 export default function JournalPage() {
+  const router = useRouter()
   const isConfigured = isSupabaseClientConfigured()
   const [user, setUser] = useState<any>(() => {
     if (typeof window !== 'undefined') {
@@ -1113,6 +1115,7 @@ export default function JournalPage() {
       } catch { }
       setUser(null)
     }
+    router.push('/')
   }
 
   // Faire défiler vers le bas lors de la mise à jour des ventes ou de l'ouverture du calcul de monnaie

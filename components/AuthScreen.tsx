@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
-import { Loader, AlertTriangle, Eye, EyeOff, Lock, ArrowRight, UserPlus, LogIn } from 'lucide-react'
+import { Loader, AlertTriangle, Eye, EyeOff, Lock, ArrowRight, UserPlus, LogIn, ArrowLeft } from 'lucide-react'
 
 interface AuthScreenProps {
   onBypass: (role: 'owner' | 'employee') => void
@@ -223,10 +224,21 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4 relative overflow-hidden select-none">
+    <div className="min-h-screen bg-[#141210] flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
       
       {/* Lamp bureau radial light highlight overlay */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-amber-500 opacity-[0.04] rounded-full blur-[140px] pointer-events-none z-0"></div>
+
+      {/* Bouton Retour Accueil */}
+      <div className="relative z-20 w-full max-w-md mb-4 flex items-center justify-start">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-[#1e1a18] hover:bg-[#2a2421] border border-amber-900/40 hover:border-amber-600/60 rounded-xl text-xs font-semibold text-[#f59e0b] transition-all shadow-md group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span>Retour à l'accueil</span>
+        </Link>
+      </div>
 
       {/* Closed Notebook Book Cover Chassis */}
       <div className="relative w-full max-w-md bg-gradient-to-br from-[#064e3b] to-[#012b1c] rounded-[36px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),_inset_0_2px_4px_rgba(255,255,255,0.15),_inset_-10px_0_20px_rgba(0,0,0,0.8)] border border-[#02311f] p-8 z-10 flex flex-col items-center">
