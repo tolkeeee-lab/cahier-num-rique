@@ -652,11 +652,12 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
             <button
               type="button"
               onClick={() => setShowMenuGrid(!showMenuGrid)}
-              className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold rounded-xl border border-amber-300 transition-all flex items-center gap-1.5"
+              className="w-9 h-9 sm:w-auto sm:h-auto rounded-full sm:rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold border border-amber-300 transition-all flex items-center justify-center sm:px-3 sm:py-1.5 gap-1.5 shadow-xs"
+              title="Afficher / Masquer Menu Carte & Touches Rapides"
             >
-              <Utensils className="w-3.5 h-3.5 text-amber-700" />
-              <span>{showMenuGrid ? 'Masquer le Menu Carte' : '🍽️ Afficher Menu Carte & Touches Rapides'}</span>
-              {showMenuGrid ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              <Utensils className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-amber-700" />
+              <span className="hidden sm:inline">{showMenuGrid ? 'Masquer le Menu' : '🍽️ Touches Rapides (1-Tap)'}</span>
+              {showMenuGrid ? <ChevronUp className="w-3.5 h-3.5 hidden sm:inline" /> : <ChevronDown className="w-3.5 h-3.5 hidden sm:inline" />}
             </button>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">

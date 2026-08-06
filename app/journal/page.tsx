@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, ChevronDown, Sparkles, Plus, X, ClipboardList } from 'lucide-react'
+import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, Sparkles, Plus, X, ClipboardList } from 'lucide-react'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
 import { RequestedProductsManager } from '@/components/RequestedProductsManager'
@@ -3266,197 +3266,7 @@ export default function JournalPage() {
                     )}
                   </div>
 
-                  {/* ── 🏬 Barre / Grille Tactile du Menu Dynamique & Touches Rapides ── */}
-                  <div className="bg-[#f5f1e8] border-t border-gray-200 p-2 px-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 select-none flex-shrink-0">
-                    <div className="flex items-center justify-between gap-2 w-full sm:w-auto">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowJournalMenuGrid(!showJournalMenuGrid)
-                          setJournalMenuFilter('all')
-                        }}
-                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap flex-shrink-0"
-                      >
-                        <Utensils className="w-3.5 h-3.5" />
-                        <span>{showJournalMenuGrid ? 'Masquer le Menu' : '🏬 Raccourcis Menu (1-Tap)'}</span>
-                        {showJournalMenuGrid ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                      </button>
-
-                      {showJournalMenuGrid && (
-                        <button
-                          type="button"
-                          onClick={() => setShowQuickAddMenuForm(!showQuickAddMenuForm)}
-                          className="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold uppercase rounded-lg flex items-center gap-1 transition-all whitespace-nowrap sm:hidden"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>{showQuickAddMenuForm ? 'Fermer' : '➕ Produit'}</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {showJournalMenuGrid && (
-                      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide whitespace-nowrap w-full sm:w-auto pb-0.5 sm:pb-0">
-                        {theme.filters.map(f => (
-                          <button
-                            key={f.id}
-                            type="button"
-                            onClick={() => setJournalMenuFilter(f.id)}
-                            className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all flex-shrink-0 ${
-                              journalMenuFilter === f.id ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200'
-                            }`}
-                          >
-                            {f.emoji} {f.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Panneau Dépliable de la Ligne Tactile Continue du Menu */}
-                  {showJournalMenuGrid && (
-                    <div className="bg-[#fffdf9] border-t border-b border-amber-250 p-3 shadow-inner space-y-2 select-none flex-shrink-0 animate-fade-in relative z-20">
-                      <div className="hidden sm:flex items-center justify-between gap-2 border-b border-amber-200 border-dashed pb-1.5">
-                        <span className="text-xs font-bold text-amber-900 font-handwritten flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Faites glisser et cliquez pour ajouter instantanément au cahier :</span>
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() => setShowQuickAddMenuForm(!showQuickAddMenuForm)}
-                          className="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold uppercase rounded-lg flex items-center gap-1 transition-all"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>{showQuickAddMenuForm ? 'Fermer' : '➕ Ajouter un Produit au Menu'}</span>
-                        </button>
-                      </div>
-
-                      {/* Mini-formulaire rapide d'ajout au menu */}
-                      {showQuickAddMenuForm && (
-                        <form onSubmit={handleAddQuickMenuItemInJournal} className="p-2.5 bg-amber-100 bg-opacity-70 border border-amber-300 rounded-xl flex flex-wrap items-end gap-2 text-xs font-sans">
-                          <div className="flex-1 min-w-[120px]">
-                            <label className="block text-[8px] uppercase font-bold text-amber-950 mb-0.5 font-mono">
-                              Nom du Produit
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="Ex: Cahier, Stylo..."
-                              value={quickPlatName}
-                              onChange={e => setQuickPlatName(e.target.value)}
-                              className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded-lg text-xs font-semibold outline-none"
-                            />
-                          </div>
-
-                          <div className="w-24">
-                            <label className="block text-[8px] uppercase font-bold text-amber-950 mb-0.5 font-mono">
-                              Prix Vente (F)
-                            </label>
-                            <input
-                              type="number"
-                              required
-                              min="0"
-                              placeholder="500"
-                              value={quickPlatPrice}
-                              onChange={e => setQuickPlatPrice(e.target.value)}
-                              className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-amber-950 outline-none"
-                            />
-                          </div>
-
-                          <div className="w-32">
-                            <label className="block text-[8px] uppercase font-bold text-amber-950 mb-0.5 font-mono">
-                              Catégorie
-                            </label>
-                            <select
-                              value={quickPlatCat || theme.filters.filter(f => f.id !== 'all')[0]?.id || ''}
-                              onChange={(e: any) => setQuickPlatCat(e.target.value)}
-                              className="w-full px-1.5 py-1 bg-white border border-amber-300 rounded-lg text-xs font-bold text-gray-800 outline-none"
-                            >
-                              {theme.filters.filter(f => f.id !== 'all').map(f => (
-                                <option key={f.id} value={f.id}>{f.emoji} {f.label}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <button
-                            type="submit"
-                            className="px-3 py-1 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1 shadow-sm"
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>Enregistrer</span>
-                          </button>
-                        </form>
-                      )}
-
-                      {/* Bandeau mode "Ajout article" — s'affiche quand une vente est en cours d'édition */}
-                      {addingToSaleId && (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-300 rounded-xl text-[10px] font-bold text-emerald-800 mb-1">
-                          <span>✏️</span>
-                          <span>Mode ajout : cliquer sur un article ci-dessous pour l'ajouter à la vente</span>
-                          <button
-                            type="button"
-                            onClick={() => { setAddingToSaleId(null); setAddArticleInput('') }}
-                            className="ml-auto text-emerald-600 hover:text-red-500 transition-colors"
-                          >
-                            ✕ Annuler
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Touches Tactiles de Plats/Boissons sur une SEULE LIGNE CONTINUE DÉFILANTE */}
-                      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-0.5 select-none w-full">
-                        {journalMenuItems.filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter).length === 0 ? (
-                          <div className="text-center py-2 text-gray-500 font-sans text-xs w-full flex flex-col items-center gap-1.5">
-                            <span>Aucun produit dans cet onglet du Stock.</span>
-                            <button
-                              type="button"
-                              onClick={handleSeedDefaultCatalog}
-                              className="px-3 py-1 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all flex items-center gap-1"
-                            >
-                              <Sparkles className="w-3 h-3" />
-                              <span>🚀 Initialiser la carte modèle dans le stock (14 produits)</span>
-                            </button>
-                          </div>
-                        ) : (
-                          journalMenuItems
-                            .filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter)
-                            .map((item) => (
-                              <div key={item.id} className="relative group flex-shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleTapMenuItemInJournal(item)}
-                                  className={`px-3 py-2 border rounded-2xl shadow-sm hover:shadow transition-all text-left flex items-center gap-2 active:scale-95 border-b-2 max-w-[200px] ${!item.id.startsWith('m') ? 'pr-6' : ''
-                                    } ${addingToSaleId
-                                      ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 hover:border-emerald-500 hover:border-b-emerald-600'
-                                      : 'bg-white hover:bg-amber-100 border-amber-250 hover:border-amber-400 hover:border-b-amber-500'
-                                    }`}
-                                  title={item.name}
-                                >
-                                  <span className="text-base flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="font-sans text-xs font-bold text-gray-800 truncate">
-                                      {item.name}
-                                    </span>
-                                    <span className="text-[9px] font-mono font-bold text-amber-900">
-                                      {formatPrice(item.price)}
-                                    </span>
-                                  </div>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleDeleteMenuItem(item.id, e)}
-                                  className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center shadow transition-all scale-100 sm:scale-0 sm:group-hover:scale-100"
-                                  title="Supprimer ce produit"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ))
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  {/* Fin de la zone d'écritures du journal */}
 
                   {/* Sticky writing input bar pinned to the bottom of the page */}
                   <form
@@ -3535,6 +3345,169 @@ export default function JournalPage() {
                         <Send className="w-4 h-4" />
                       )}
                     </button>
+
+                    {/* 🏬 Bouton & Popover flottant "Raccourcis Menu 1-Tap" (Réduit comme la monnaie sur mobile) */}
+                    <div className="absolute right-14 md:right-44 bottom-full mb-2 z-30 select-none">
+                      {!showJournalMenuGrid ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowJournalMenuGrid(true)
+                            setJournalMenuFilter('all')
+                          }}
+                          className="w-10 h-10 md:w-auto md:h-auto rounded-full md:rounded-xl bg-amber-700 hover:bg-amber-800 text-white border border-amber-800 shadow-md p-0 md:px-3 md:py-1.5 cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95 text-xs font-bold"
+                          title="Raccourcis Menu & Touches Rapides (1-Tap)"
+                        >
+                          <Utensils className="w-4 h-4 md:w-3.5 md:h-3.5" />
+                          <span className="hidden md:inline font-sans">🏬 Raccourcis Menu (1-Tap)</span>
+                          <ChevronUp className="w-3.5 h-3.5 hidden md:inline text-amber-200" />
+                        </button>
+                      ) : (
+                        <div className="bg-[#fffdfa] border-2 border-amber-400 shadow-2xl rounded-2xl p-3 w-[92vw] sm:w-[480px] max-w-[95vw] animate-in fade-in slide-in-from-bottom-2 duration-200 relative right-0 origin-bottom-right">
+                          {/* En-tête du Popover Menu */}
+                          <div className="flex items-center justify-between gap-2 border-b border-amber-200/80 pb-2 mb-2">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950 font-handwritten">
+                              <Utensils className="w-4 h-4 text-amber-600" />
+                              <span>Touches Rapides (1-Tap)</span>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setShowQuickAddMenuForm(!showQuickAddMenuForm)}
+                                className="px-2 py-0.5 bg-amber-700 hover:bg-amber-800 text-white text-[9px] font-bold uppercase rounded-lg flex items-center gap-1 transition-all"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>{showQuickAddMenuForm ? 'Fermer' : '➕ Produit'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowJournalMenuGrid(false)}
+                                className="w-6 h-6 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-900 font-mono font-bold text-xs flex items-center justify-center transition-colors ml-1"
+                                title="Fermer le menu"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Barre de filtres catégories */}
+                          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide whitespace-nowrap pb-2 mb-2 border-b border-amber-100">
+                            {theme.filters.map(f => (
+                              <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setJournalMenuFilter(f.id)}
+                                className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all flex-shrink-0 ${
+                                  journalMenuFilter === f.id ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 text-gray-700 hover:bg-amber-100 border border-amber-200'
+                                }`}
+                              >
+                                {f.emoji} {f.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Formulaire d'ajout rapide si ouvert */}
+                          {showQuickAddMenuForm && (
+                            <form onSubmit={handleAddQuickMenuItemInJournal} className="p-2 bg-amber-100/70 border border-amber-300 rounded-xl flex flex-wrap items-end gap-2 text-xs font-sans mb-2">
+                              <div className="flex-1 min-w-[100px]">
+                                <label className="block text-[8px] uppercase font-bold text-amber-950 mb-0.5 font-mono">Produit</label>
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="Ex: Cahier, Stylo..."
+                                  value={quickPlatName}
+                                  onChange={e => setQuickPlatName(e.target.value)}
+                                  className="w-full px-2 py-0.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold outline-none"
+                                />
+                              </div>
+                              <div className="w-20">
+                                <label className="block text-[8px] uppercase font-bold text-amber-950 mb-0.5 font-mono">Prix (F)</label>
+                                <input
+                                  type="number"
+                                  required
+                                  min="0"
+                                  placeholder="500"
+                                  value={quickPlatPrice}
+                                  onChange={e => setQuickPlatPrice(e.target.value)}
+                                  className="w-full px-2 py-0.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-amber-950 outline-none"
+                                />
+                              </div>
+                              <button type="submit" className="px-2.5 py-1 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-xs font-bold uppercase">
+                                <Plus className="w-3 h-3 inline mr-1" />Ajouter
+                              </button>
+                            </form>
+                          )}
+
+                          {/* Mode "Ajout article à la vente" */}
+                          {addingToSaleId && (
+                            <div className="flex items-center gap-2 px-2.5 py-1 bg-emerald-50 border border-emerald-300 rounded-xl text-[10px] font-bold text-emerald-800 mb-2">
+                              <span>✏️ Mode ajout en cours...</span>
+                              <button
+                                type="button"
+                                onClick={() => { setAddingToSaleId(null); setAddArticleInput('') }}
+                                className="ml-auto text-emerald-600 hover:text-red-500 font-mono"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Touches Tactiles de Plats/Boissons sur une SEULE LIGNE CONTINUE DÉFILANTE */}
+                          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-0.5 select-none w-full max-h-48">
+                            {journalMenuItems.filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter).length === 0 ? (
+                              <div className="text-center py-2 text-gray-500 font-sans text-xs w-full flex flex-col items-center gap-1.5">
+                                <span>Aucun produit dans cet onglet du Stock.</span>
+                                <button
+                                  type="button"
+                                  onClick={handleSeedDefaultCatalog}
+                                  className="px-3 py-1 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition-all flex items-center gap-1"
+                                >
+                                  <Sparkles className="w-3 h-3" />
+                                  <span>🚀 Initialiser la carte modèle (14 produits)</span>
+                                </button>
+                              </div>
+                            ) : (
+                              journalMenuItems
+                                .filter(item => journalMenuFilter === 'all' || item.category === journalMenuFilter)
+                                .map((item) => (
+                                  <div key={item.id} className="relative group flex-shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTapMenuItemInJournal(item)}
+                                      className={`px-3 py-1.5 border rounded-2xl shadow-xs hover:shadow transition-all text-left flex items-center gap-2 active:scale-95 border-b-2 max-w-[180px] ${!item.id.startsWith('m') ? 'pr-6' : ''
+                                        } ${addingToSaleId
+                                          ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 hover:border-emerald-500 hover:border-b-emerald-600'
+                                          : 'bg-white hover:bg-amber-100 border-amber-250 hover:border-amber-400 hover:border-b-amber-500'
+                                        }`}
+                                      title={item.name}
+                                    >
+                                      <span className="text-base flex-shrink-0 group-hover:scale-110 transition-transform">{item.emoji}</span>
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="font-sans text-xs font-bold text-gray-800 truncate">
+                                          {item.name}
+                                        </span>
+                                        <span className="text-[9px] font-mono font-bold text-amber-900">
+                                          {formatPrice(item.price)}
+                                        </span>
+                                      </div>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleDeleteMenuItem(item.id, e)}
+                                      className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center shadow transition-all scale-100 sm:scale-0 sm:group-hover:scale-100"
+                                      title="Supprimer ce produit"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Post-it calculette de monnaie — INSIDE the form, s'ouvre vers le haut */}
                     <div className={`absolute right-2 md:right-4 ${showJournalMenuGrid ? 'bottom-full mb-1 z-10 scale-90 sm:scale-100 origin-bottom-right' : 'bottom-full mb-2 z-30'} transition-all duration-300 ${showChangeCalc
