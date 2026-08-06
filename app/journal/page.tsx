@@ -3799,13 +3799,29 @@ export default function JournalPage() {
                     </button>
                   </div>
 
-                  <div className="border-b border-dashed border-sky-300 border-opacity-40 pb-4 mb-6">
-                    <h2 className="text-3xl font-bold text-gray-900 font-handwritten">
-                      📖 Archives Générales du Cahier
-                    </h2>
-                    <p className="text-xs text-gray-400 mt-1 font-mono uppercase tracking-wider">
-                      HISTORIQUE DE TOUTES LES PAGES ÉCRITES
-                    </p>
+                  <div className="border-b border-dashed border-sky-300 border-opacity-40 pb-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-3xl font-bold text-gray-900 font-handwritten flex items-center gap-2">
+                        <span>📁 Placard d'Archives & CA Journalier</span>
+                      </h2>
+                      <p className="text-xs text-gray-500 mt-1 font-mono uppercase tracking-wider">
+                        HISTORIQUE COMPLET ÉCRITURE PAR ÉCRITURE AVEC CHIFFRE D'AFFAIRES DU JOUR
+                      </p>
+                    </div>
+
+                    {allSales.length > 0 && (
+                      <div className="bg-[#fffdf5] border-2 border-emerald-500/30 px-4 py-2.5 rounded-2xl shadow-sm flex items-center gap-3 self-start md:self-auto">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg font-bold shadow-xs">
+                          💰
+                        </div>
+                        <div>
+                          <span className="text-[9.5px] uppercase font-bold text-gray-400 font-mono block leading-tight">CA Global Archivé</span>
+                          <span className="text-lg font-extrabold font-mono text-emerald-800 leading-tight">
+                            {formatPrice(allSales.filter(s => s.status !== 'crossed_out' && (s.type === 'cash_in' || s.type === 'sale_credit' || s.pen_color === 'blue' || s.pen_color === 'yellow')).reduce((acc, curr) => acc + (curr.total || 0), 0))}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* ── Barre de filtre archives ── */}

@@ -429,17 +429,54 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
       )}
 
       <div className="lined-text-container space-y-0 text-lg">
-        {Object.entries(groupedSales).map(([dateStr, salesList]) => (
-          <div key={dateStr} className="space-y-0">
+        {Object.entries(groupedSales).map(([dateStr, salesList]) => {
+          const validSales = salesList.filter(s => s.status !== 'crossed_out')
+          
+          // CA du jour = Ventes Cash + Ventes Crédit (non raturées)
+          const dayCa = validSales
+            .filter(s => s.type === 'cash_in' || s.type === 'sale_credit' || s.pen_color === 'blue' || s.pen_color === 'yellow')
+            .reduce((acc, curr) => acc + (curr.total || 0), 0)
 
-            {/* Date badge */}
-            <div className="lined-item justify-center my-2" style={{ minHeight: '54px' }}>
-              <span className="bg-[#fffbeb] border border-amber-200 text-gray-700 font-handwritten text-sm px-4 py-1 rounded-2xl shadow-sm select-none z-10 no-underline">
-                📅 {dateStr}
-              </span>
-            </div>
+          // Dépenses du jour (non raturées)
+          const dayExpenses = validSales
+            .filter(s => s.type === 'cash_out' || s.type === 'purchase_cash' || s.pen_color === 'red' || s.pen_color === 'green')
+            .reduce((acc, curr) => acc + (curr.total || 0), 0)
 
-            {salesList.map((sale) => {
+          // Crédits clients accordés ce jour
+          const dayCredits = validSales
+            .filter(s => s.type === 'sale_credit' || s.pen_color === 'yellow')
+            .reduce((acc, curr) => acc + (curr.total || 0), 0)
+
+          return (
+            <div key={dateStr} className="space-y-0">
+
+              {/* En-tête de date avec CA du Jour mis en valeur */}
+              <div className="lined-item justify-center my-3" style={{ minHeight: '54px' }}>
+                <div className="flex flex-wrap items-center justify-center gap-2 bg-[#fffdf5] border-2 border-amber-300/80 px-4 py-2 rounded-2xl shadow-sm hover:shadow transition-all select-none z-10 no-underline">
+                  <span className="font-handwritten text-base font-bold text-amber-950 flex items-center gap-1.5">
+                    📅 {dateStr}
+                  </span>
+                  <span className="text-gray-300 font-mono text-xs hidden sm:inline">•</span>
+                  <span className="bg-emerald-100 border border-emerald-300 text-emerald-900 font-mono text-xs font-extrabold px-3 py-1 rounded-xl shadow-xs flex items-center gap-1.5">
+                    <span>💰 CA du jour :</span>
+                    <span className="text-sm font-black">{formatPrice(dayCa)}</span>
+                  </span>
+                  {dayExpenses > 0 && (
+                    <span className="bg-rose-50 border border-rose-200 text-rose-800 font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+                      <span>🔴 Dépenses :</span>
+                      <span>{formatPrice(dayExpenses)}</span>
+                    </span>
+                  )}
+                  {dayCredits > 0 && (
+                    <span className="bg-amber-50 border border-amber-200 text-amber-800 font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1">
+                      <span>🟡 Crédits :</span>
+                      <span>{formatPrice(dayCredits)}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {salesList.map((sale) => {
               const isCrossed = sale.status === 'crossed_out'
               const penClass = getPenClass(sale.pen_color, sale.status)
               const typeText = getTransactionTypeText(sale.type, sale.notes)
@@ -881,7 +918,8 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
             })}
 
           </div>
-        ))}
+        )
+      })}
       </div>
 
       {activeReceiptSale && (

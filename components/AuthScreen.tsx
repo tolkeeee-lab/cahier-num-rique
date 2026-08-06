@@ -216,8 +216,13 @@ export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
           setSuccess('✓ Connexion locale réussie !')
         }
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue.')
+    } catch (err: any) {
+      const msg = err?.message || ''
+      if (/email rate limit|rate limit|over_email_send_rate_limit/i.test(msg)) {
+        setError("Limite d'envois d'e-mails atteinte par Supabase. Désactivez la confirmation d'e-mail dans le Dashboard Supabase (Authentication > Providers > Email > Confirm email) ou réessayez plus tard.")
+      } else {
+        setError(err instanceof Error ? err.message : 'Une erreur est survenue.')
+      }
     } finally {
       setLoading(false)
     }

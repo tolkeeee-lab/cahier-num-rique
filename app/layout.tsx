@@ -32,6 +32,15 @@ export const viewport = {
 export const metadata: Metadata = {
   title: 'Cahier Numérique - Gestion de Boutique',
   description: 'Gérez votre boutique simplement, comme un cahier physique.',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Cahier Caisse',
+  },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icon.svg',
+  },
 }
 
 export default function RootLayout({
