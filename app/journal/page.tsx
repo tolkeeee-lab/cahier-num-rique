@@ -3031,17 +3031,6 @@ export default function JournalPage() {
 
               {/* KPIs — horizontal scroll on mobile */}
               <div className="flex gap-2 mt-2 overflow-x-auto pb-1 scrollbar-hide">
-                {/* Solde du jour */}
-                <div className={`border rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0 ${soldeDuJour >= 0
-                    ? 'bg-[#f0f9ff] border-sky-300'
-                    : 'bg-[#fff5f5] border-rose-300'
-                  }`}>
-                  <span className="text-[8px] font-bold text-sky-700 uppercase tracking-wide whitespace-nowrap">{activityLabels.soldeJour}</span>
-                  <span className={`font-mono text-sm font-bold mt-0.5 whitespace-nowrap ${soldeDuJour >= 0 ? 'text-sky-900' : 'text-rose-700'
-                    }`}>
-                    {soldeDuJour >= 0 ? '+' : ''}{formatPrice(soldeDuJour)}
-                  </span>
-                </div>
                 {/* Tiroir cash global */}
                 <div className="bg-[#fffdf9] border border-emerald-200 rounded-xl px-3 py-1.5 flex flex-col shadow-sm flex-shrink-0">
                   <div className="flex items-center justify-between gap-2">
