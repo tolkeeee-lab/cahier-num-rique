@@ -3,12 +3,15 @@
 import React, { useState, useMemo } from 'react'
 import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp } from 'lucide-react'
 import { calculateCategoryCashboxBreakdown, CategoryCashboxGroup } from '@/lib/boutiqueAnalyticsEngine'
+import { generateOfflineId, saveOfflineSale } from '@/lib/offlineDb'
 
 interface CategoryCashboxWidgetProps {
   sales: any[]
   products?: any[]
   activeCashboxFilter?: string
   onSelectCashboxFilter?: (filter: string) => void
+  onRefreshData?: () => void
+  shopId?: string
 }
 
 function formatPrice(amount: number): string {
@@ -20,10 +23,117 @@ export function CategoryCashboxWidget({
   products = [],
   activeCashboxFilter = 'ALL',
   onSelectCashboxFilter,
+  onRefreshData,
+  shopId
 }: CategoryCashboxWidgetProps) {
   // Mode Caisse : 'unified' (Caisse Unique Commune) vs 'separated' (Multi-Caisses par Rayon)
   const [cashboxMode, setCashboxMode] = useState<'unified' | 'separated'>('unified')
   const [showDetailInUnified, setShowDetailInUnified] = useState(false)
+
+  // Modale d'Ajustement physique d'une Caisse
+  const [adjustingGroup, setAdjustingGroup] = useState<CategoryCashboxGroup | null>(null)
+  const [actualCashInput, setActualCashInput] = useState<string>('')
+  const [adjustMode, setAdjustMode] = useState<'real' | 'add' | 'sub'>('real')
+  const [adjustNote, setAdjustNote] = useState<string>('')
+  const [savingAdjust, setSavingAdjust] = useState<boolean>(false)
+
+  const openAdjustModal = (group: CategoryCashboxGroup) => {
+    setAdjustingGroup(group)
+    setActualCashInput(group.paidCash.toString())
+    setAdjustMode('real')
+    setAdjustNote('')
+  }
+
+  const handleSaveAdjustment = async () => {
+    if (!adjustingGroup) return
+    setSavingAdjust(true)
+
+    const sId = shopId || 'default-shop'
+    const currentCash = adjustingGroup.paidCash
+    let delta = 0
+    let noteText = ''
+
+    if (adjustMode === 'real') {
+      const target = parseInt(actualCashInput) || 0
+      delta = target - currentCash
+      if (delta === 0) {
+        setAdjustingGroup(null)
+        setSavingAdjust(false)
+        return
+      }
+      const sign = delta > 0 ? '+' : '-'
+      noteText = `Ajustement Caisse (${adjustingGroup.name}) : Écart ${sign}${Math.abs(delta)} F ${adjustNote ? `(${adjustNote})` : ''}`
+    } else if (adjustMode === 'add') {
+      const val = parseInt(actualCashInput) || 0
+      if (val <= 0) return
+      delta = val
+      noteText = `Apport Fond de Caisse (${adjustingGroup.name}) : +${val} F ${adjustNote ? `(${adjustNote})` : ''}`
+    } else if (adjustMode === 'sub') {
+      const val = parseInt(actualCashInput) || 0
+      if (val <= 0) return
+      delta = -val
+      noteText = `Retrait Caisse (${adjustingGroup.name}) : -${val} F ${adjustNote ? `(${adjustNote})` : ''}`
+    }
+
+    const absAmount = Math.abs(delta)
+    const isPositive = delta > 0
+    const dateStr = new Date().toISOString().split('T')[0]
+    const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+
+    const localSale = {
+      id: generateOfflineId(),
+      shop_id: sId,
+      date: dateStr,
+      time: timeStr,
+      client: `Caisse ${adjustingGroup.name}`,
+      total: absAmount,
+      paid: absAmount,
+      debt: 0,
+      status: 'paid' as const,
+      type: 'cash_adjustment',
+      pen_color: isPositive ? 'purple' : 'red',
+      notes: noteText,
+      category: adjustingGroup.name,
+      articles: [{ name: noteText, quantity: 1, unit_price: absAmount }],
+      created_at: new Date().toISOString(),
+      is_synced: false
+    }
+    saveOfflineSale(sId, localSale)
+
+    try {
+      await fetch('/api/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-shop-id': sId,
+        },
+        body: JSON.stringify({
+          shop_id: sId,
+          pen_color: isPositive ? 'purple' : 'red',
+          raw_text: noteText,
+          parsed: {
+            articles: [{ nom: noteText, quantite: 1, prix_unitaire: absAmount }],
+            total_facture: absAmount,
+            montant_paye: absAmount,
+            montant_dette: 0,
+            nom_client: `Caisse ${adjustingGroup.name}`,
+            type: 'cash_adjustment'
+          }
+        })
+      })
+    } catch (err) {
+      console.warn('Sauvegarde réseau échouée, conservé en local:', err)
+    } finally {
+      setSavingAdjust(false)
+      setAdjustingGroup(null)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cahier_sales_updated'))
+      }
+      if (onRefreshData) {
+        onRefreshData()
+      }
+    }
+  }
 
   const breakdown = useMemo(
     () => calculateCategoryCashboxBreakdown(sales, products),
@@ -131,12 +241,34 @@ export function CategoryCashboxWidget({
                 </div>
               </div>
 
-              {unifiedTotals.outOfStockCount > 0 && (
-                <span className="px-2.5 py-1 bg-red-900/80 text-red-100 border border-red-700 text-[10px] font-bold rounded-full flex items-center gap-1">
-                  <ShieldAlert className="w-3 h-3" />
-                  {unifiedTotals.outOfStockCount} en rupture
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openAdjustModal({
+                    name: 'Commune Centrale',
+                    key: 'commune',
+                    icon: '🏛️',
+                    revenue: unifiedTotals.revenue,
+                    paidCash: unifiedTotals.paidCash,
+                    debt: unifiedTotals.debt,
+                    expenses: unifiedTotals.expenses,
+                    stockValueCost: unifiedTotals.stockValueCost,
+                    stockValueSale: unifiedTotals.stockValueSale,
+                    itemCount: unifiedTotals.itemCount,
+                    outOfStockCount: unifiedTotals.outOfStockCount
+                  })}
+                  className="px-2.5 py-1 bg-amber-700 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg transition-all shadow-xs flex items-center gap-1 font-mono uppercase border border-amber-500"
+                >
+                  <span>✏️ Ajuster</span>
+                </button>
+
+                {unifiedTotals.outOfStockCount > 0 && (
+                  <span className="px-2.5 py-1 bg-red-900/80 text-red-100 border border-red-700 text-[10px] font-bold rounded-full flex items-center gap-1">
+                    <ShieldAlert className="w-3 h-3" />
+                    {unifiedTotals.outOfStockCount} en rupture
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono">
@@ -186,7 +318,16 @@ export function CategoryCashboxWidget({
                     <span className="flex items-center gap-1.5">
                       <span>{group.icon}</span> {group.name}
                     </span>
-                    <span>{formatPrice(group.revenue)}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openAdjustModal(group)}
+                        className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-[9px] font-bold rounded-lg transition-all"
+                      >
+                        ✏️ Ajuster
+                      </button>
+                      <span>{formatPrice(group.revenue)}</span>
+                    </div>
                   </div>
                   <div className="flex justify-between text-[11px] text-gray-600">
                     <span>Cash : +{formatPrice(group.paidCash)}</span>
@@ -251,7 +392,7 @@ export function CategoryCashboxWidget({
 
               return (
                 <div key={group.key} className={`border rounded-2xl p-4 space-y-3.5 shadow-xs ${themeClass}`}>
-                  {/* Entête Caisse */}
+                  {/* Entête Caisse avec bouton Ajuster */}
                   <div className="flex items-center justify-between border-b border-black/5 pb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{group.icon}</span>
@@ -263,12 +404,23 @@ export function CategoryCashboxWidget({
                       </div>
                     </div>
 
-                    {group.outOfStockCount > 0 && (
-                      <span className="px-2 py-0.5 bg-red-100 text-red-800 border border-red-200 text-[10px] font-bold rounded-full flex items-center gap-1">
-                        <ShieldAlert className="w-3 h-3" />
-                        {group.outOfStockCount} épuisé(s)
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openAdjustModal(group)}
+                        className="px-2.5 py-1 bg-amber-800 hover:bg-amber-900 text-white border border-amber-900 text-[10px] font-bold rounded-lg transition-all shadow-xs flex items-center gap-1 font-mono uppercase"
+                        title={`Ajuster ce tiroir cash (${group.name})`}
+                      >
+                        <span>✏️ Ajuster</span>
+                      </button>
+
+                      {group.outOfStockCount > 0 && (
+                        <span className="px-2 py-0.5 bg-red-100 text-red-800 border border-red-200 text-[10px] font-bold rounded-full flex items-center gap-1">
+                          <ShieldAlert className="w-3 h-3" />
+                          {group.outOfStockCount}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Chiffres Clés de la Caisse */}
@@ -280,8 +432,8 @@ export function CategoryCashboxWidget({
                       <span className="text-base font-bold text-gray-900 block">
                         {formatPrice(group.revenue)}
                       </span>
-                      <span className="text-[9px] text-emerald-700 font-medium">
-                        Cash : +{formatPrice(group.paidCash)}
+                      <span className="text-[9px] text-emerald-700 font-bold block">
+                        Cash actuel : {formatPrice(group.paidCash)}
                       </span>
                     </div>
 
@@ -314,6 +466,145 @@ export function CategoryCashboxWidget({
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal d'Ajustement Physique de Caisse ── */}
+      {adjustingGroup && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-[#fffdf8] border-2 border-amber-400 rounded-3xl p-5 max-w-md w-full shadow-2xl space-y-4 font-sans animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{adjustingGroup.icon}</span>
+                <div>
+                  <h4 className="font-bold text-base text-amber-950 font-handwritten text-lg">
+                    Ajuster : {adjustingGroup.name}
+                  </h4>
+                  <span className="text-[10px] text-amber-800 font-mono">
+                    Ajustement du tiroir cash et du fond de roulement
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setAdjustingGroup(null)}
+                className="w-7 h-7 rounded-full bg-amber-100 text-amber-900 font-bold flex items-center justify-center text-xs hover:bg-amber-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-amber-100/60 border border-amber-300 rounded-2xl p-3 text-xs font-mono space-y-1">
+              <div className="flex justify-between text-gray-700">
+                <span>Cash Théorique Calculé :</span>
+                <strong className="text-amber-950 font-bold">{formatPrice(adjustingGroup.paidCash)}</strong>
+              </div>
+            </div>
+
+            {/* Mode d'Ajustement */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase font-bold text-gray-600 tracking-wider block font-mono">
+                Type d'opération :
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 text-[11px] font-bold font-mono">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdjustMode('real')
+                    setActualCashInput(adjustingGroup.paidCash.toString())
+                  }}
+                  className={`p-2 rounded-xl border text-center transition-all ${
+                    adjustMode === 'real' ? 'bg-amber-900 text-white border-amber-950 shadow-xs' : 'bg-white border-gray-300 text-gray-700'
+                  }`}
+                >
+                  🔢 Comptage Réel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdjustMode('add')
+                    setActualCashInput('')
+                  }}
+                  className={`p-2 rounded-xl border text-center transition-all ${
+                    adjustMode === 'add' ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs' : 'bg-white border-gray-300 text-gray-700'
+                  }`}
+                >
+                  📥 Apport (+)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdjustMode('sub')
+                    setActualCashInput('')
+                  }}
+                  className={`p-2 rounded-xl border text-center transition-all ${
+                    adjustMode === 'sub' ? 'bg-rose-700 text-white border-rose-800 shadow-xs' : 'bg-white border-gray-300 text-gray-700'
+                  }`}
+                >
+                  📤 Retrait (-)
+                </button>
+              </div>
+            </div>
+
+            {/* Saisie Montant */}
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-gray-600 tracking-wider block font-mono">
+                {adjustMode === 'real' ? 'Montant Physique en Caisse (FCFA) :' : adjustMode === 'add' ? 'Montant de l\'Apport (FCFA) :' : 'Montant du Retrait (FCFA) :'}
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={actualCashInput}
+                onChange={e => setActualCashInput(e.target.value)}
+                placeholder="Ex: 5000"
+                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-base font-mono font-bold text-amber-950 outline-none focus:border-amber-600"
+                autoFocus
+              />
+              {adjustMode === 'real' && (
+                <div className="text-[10px] font-mono pt-1">
+                  {(() => {
+                    const target = parseInt(actualCashInput) || 0
+                    const diff = target - adjustingGroup.paidCash
+                    if (diff === 0) return <span className="text-emerald-700 font-bold">✅ Compte exact, aucun écart.</span>
+                    if (diff > 0) return <span className="text-emerald-700 font-bold">📈 Excédent détecté : +{formatPrice(diff)}</span>
+                    return <span className="text-rose-700 font-bold">⚠️ Manquant détecté : {formatPrice(diff)}</span>
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {/* Note / Motif */}
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-gray-600 tracking-wider block font-mono">
+                Motif / Remarque (Optionnel) :
+              </label>
+              <input
+                type="text"
+                value={adjustNote}
+                onChange={e => setAdjustNote(e.target.value)}
+                placeholder="Ex: Fond de caisse matin, appoint monnaie..."
+                className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-xl text-xs font-semibold outline-none focus:border-amber-500"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAdjustingGroup(null)}
+                className="flex-1 py-2 px-3 border border-gray-300 rounded-xl text-xs font-bold uppercase text-gray-700 hover:bg-gray-100"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={savingAdjust || !actualCashInput}
+                onClick={handleSaveAdjustment}
+                className="flex-1 py-2 px-3 bg-amber-900 hover:bg-amber-950 text-white rounded-xl text-xs font-bold uppercase shadow-sm disabled:opacity-40"
+              >
+                {savingAdjust ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
           </div>
         </div>
       )}

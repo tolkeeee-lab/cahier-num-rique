@@ -34,6 +34,8 @@ interface RetailAnalyticsWidgetProps {
   onPeriodChange: (p: 'today' | '7days' | 'month' | 'all') => void
   userShops?: Array<{ id: string; name: string; activity: string }>
   shopName?: string
+  shopId?: string
+  onRefreshData?: () => void
 }
 
 const PRODUCT_CATEGORY_INFOS: Record<string, { label: string; emoji: string; bg: string; text: string }> = {
@@ -49,7 +51,7 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(price) + ' F'
 }
 
-export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName = 'Boutique' }: RetailAnalyticsWidgetProps) {
+export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName = 'Boutique', shopId, onRefreshData }: RetailAnalyticsWidgetProps) {
   const [sortBy, setSortBy] = React.useState<'revenue' | 'quantity' | 'frequency'>('revenue')
 
   const retailStats = useMemo(() => {
@@ -241,7 +243,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
       </div>
 
       {/* Widget Séparation des Caisses par Catégorie (Boissons vs Divers) */}
-      <CategoryCashboxWidget sales={sales} />
+      <CategoryCashboxWidget sales={sales} shopId={shopId} onRefreshData={onRefreshData} />
 
       {/* 📊 Répartition par Catégorie de Produit */}
       {retailStats.categoryStats.length > 0 && (

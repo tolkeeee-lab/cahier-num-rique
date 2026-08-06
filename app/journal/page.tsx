@@ -3869,14 +3869,14 @@ export default function JournalPage() {
 
               {activeTab === 'stock' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
-                  <StockManager shopId={mappedUser?.shop_id} userRole={mappedUser?.role} onError={handleError} />
+                  <StockManager shopId={shopId} userRole={mappedUser?.role} onError={handleError} />
                 </div>
               )}
 
               {activeTab === 'shopping' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
                   <ShoppingListManager
-                    shopId={mappedUser?.shop_id}
+                    shopId={shopId}
                     onConvertToStockPurchase={handleConvertToStockPurchase}
                     onError={handleError}
                   />
@@ -3886,7 +3886,7 @@ export default function JournalPage() {
               {activeTab === 'demandes' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
                   <RequestedProductsManager
-                    shopId={mappedUser?.shop_id || 'default-shop'}
+                    shopId={shopId}
                     userRole={mappedUser?.role}
                   />
                 </div>
@@ -3895,7 +3895,7 @@ export default function JournalPage() {
               {activeTab === 'settings' && mappedUser?.role !== 'employee' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
                   <SettingsManager 
-                    shopId={mappedUser?.shop_id} 
+                    shopId={shopId} 
                     userEmail={mappedUser?.email} 
                     userShops={userShops} 
                     onError={handleError} 

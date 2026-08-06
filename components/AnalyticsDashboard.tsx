@@ -127,6 +127,8 @@ export function AnalyticsDashboard({ sales, userShops = [], currentShopActivity,
           period={period}
           onPeriodChange={setPeriod}
           shopName={shopName}
+          shopId={shopId}
+          onRefreshData={onRefreshData}
         />
       )}
 

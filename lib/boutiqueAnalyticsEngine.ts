@@ -196,7 +196,7 @@ export function answerBoutiqueQuestion(
 
 export interface CategoryCashboxGroup {
   name: string
-  key: 'boissons' | 'divers' | 'resto' | 'services'
+  key: 'boissons' | 'divers' | 'resto' | 'services' | 'commune'
   icon: string
   revenue: number
   paidCash: number
@@ -311,6 +311,25 @@ export function calculateCategoryCashboxBreakdown(
       else if (isPrestationCategory(catText)) breakdown.services.expenses += total
       else if (isRestoCategory(catText)) breakdown.resto.expenses += total
       else breakdown.divers.expenses += total
+      return
+    }
+
+    if (type === 'cash_adjustment') {
+      const catText = `${sale.category || ''} ${sale.notes || ''}`.toLowerCase()
+      const isRetrait = catText.includes('retrait') || catText.includes('sortie') || catText.includes('ecart: -') || catText.includes('écart: -')
+      const isApport = catText.includes('apport') || catText.includes('fond de caisse') || catText.includes('depot') || catText.includes('dépôt') || catText.includes('ecart: +') || catText.includes('écart: +')
+      
+      let delta = paid || total
+      if (isRetrait) delta = -Math.abs(delta)
+      else if (isApport) delta = Math.abs(delta)
+      else delta = (sale.pen_color === 'red') ? -Math.abs(delta) : Math.abs(delta)
+
+      breakdown.totalCash += delta
+
+      if (isBoissonCategory(catText)) breakdown.boissons.paidCash += delta
+      else if (isPrestationCategory(catText)) breakdown.services.paidCash += delta
+      else if (isRestoCategory(catText)) breakdown.resto.paidCash += delta
+      else breakdown.divers.paidCash += delta
       return
     }
 
