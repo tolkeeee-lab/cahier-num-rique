@@ -125,8 +125,8 @@ export function analyzeNotebookInputWithMasterCatalog(
     for (const prod of catalog) {
       const prodLower = prod.name.toLowerCase().trim()
       
-      // Correspondance exacte ou partielle
-      if (prodLower === cleanText || prodLower.includes(cleanText) || cleanText.includes(prodLower)) {
+      // Correspondance exacte
+      if (prodLower === cleanText) {
         bestMatch = prod
         bestScore = 0
         break

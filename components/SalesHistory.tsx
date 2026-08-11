@@ -106,8 +106,7 @@ export function SalesHistory({ sales, onSaleCrossedOut, onAddArticle, onUpdateSa
         const data = await res.json()
         const articleName = sale.articles?.[0]?.name || sale.notes
         const matched = (data.products || []).find((p: any) => 
-          p.name.toLowerCase().trim().includes(articleName.toLowerCase().trim()) ||
-          articleName.toLowerCase().trim().includes(p.name.toLowerCase().trim())
+          p.name.toLowerCase().trim() === articleName.toLowerCase().trim()
         )
 
         if (matched) {

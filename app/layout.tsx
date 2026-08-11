@@ -43,6 +43,8 @@ export const metadata: Metadata = {
   },
 }
 
+import { FeatureProvider } from '@/context/FeatureContext'
+
 export default function RootLayout({
   children,
 }: {
@@ -51,7 +53,9 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${inter.variable} ${itim.variable} ${jetbrains.variable}`}>
       <body className="font-sans antialiased bg-[#141210] text-gray-900 min-h-screen">
-        {children}
+        <FeatureProvider>
+          {children}
+        </FeatureProvider>
         
         {/* Enregistrement du Service Worker pour le support PWA */}
         <Script id="register-sw" strategy="afterInteractive">

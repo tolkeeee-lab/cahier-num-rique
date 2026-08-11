@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Copy, Check, UserPlus, Trash2, Shield, Users, Database, AlertCircle, CheckCircle2, RefreshCw, Coins, Store, RotateCcw, AlertTriangle } from 'lucide-react'
+import { Copy, Check, UserPlus, Trash2, Shield, Users, Database, AlertCircle, CheckCircle2, RefreshCw, Coins, Store, RotateCcw, AlertTriangle, Sparkles } from 'lucide-react'
 import { testSupabaseConnection } from '@/lib/supabaseClient'
 import { SUPPORTED_CURRENCIES, getShopCurrency, setShopCurrency } from '@/lib/currencyUtils'
 import { formatShortShopCode } from '@/lib/shopCodeUtils'
+import { useFeatures, FeatureFlags } from '@/context/FeatureContext'
 
 interface Employee {
   id: string
@@ -25,6 +26,7 @@ interface SettingsManagerProps {
 }
 
 export function SettingsManager({ shopId = 'default-shop', userEmail, userShops = [], onUpdateShopActivity, onResetShopData, onError }: SettingsManagerProps) {
+  const { features, toggleFeature, resetFeatures } = useFeatures()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -367,6 +369,87 @@ export function SettingsManager({ shopId = 'default-shop', userEmail, userShops 
                   <div className="text-xs font-bold text-gray-900">{curr.symbol}</div>
                   <div className="text-[10px] text-gray-500 truncate">{curr.name}</div>
                 </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Personnalisation des Fonctionnalités (Mode Simple vs Mode Avancé) */}
+        <div className="bg-white border border-emerald-200 rounded-[24px] p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-700" />
+              <h3 className="font-bold text-sm text-gray-900">Personnalisation du Cahier & Modules</h3>
+            </div>
+            <button
+              type="button"
+              onClick={resetFeatures}
+              className="text-[11px] font-mono text-gray-500 hover:text-emerald-700 underline"
+            >
+              Reinitialiser par défaut
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 font-mono leading-relaxed">
+            Activez ou désactivez les fonctionnalités avancées selon vos besoins pour garder une interface ultra-simple ou complète.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {[
+              {
+                key: 'enableStockManagement' as keyof FeatureFlags,
+                title: 'Gestion de Stock Produits',
+                desc: 'Suivi des quantités et réapprovisionnements',
+              },
+              {
+                key: 'enableAnalytics' as keyof FeatureFlags,
+                title: 'Statistiques & Rapports',
+                desc: 'Graphiques de ventes et analyse d\'activité',
+              },
+              {
+                key: 'enableSyscohada' as keyof FeatureFlags,
+                title: 'Comptabilité SYSCOHADA',
+                desc: 'Classification comptable selon les normes OHADA',
+              },
+              {
+                key: 'enableBarcodeScanner' as keyof FeatureFlags,
+                title: 'Scanner de Code-Barres',
+                desc: 'Lecture rapide par caméra ou douchette',
+              },
+              {
+                key: 'enableReceiptPrinter' as keyof FeatureFlags,
+                title: 'Impression de Tickets',
+                desc: 'Génération et impression de reçus de caisse',
+              },
+              {
+                key: 'enableCashClosing' as keyof FeatureFlags,
+                title: 'Clôture de Caisse',
+                desc: 'Réconciliation journalière du tiroir-caisse',
+              },
+              {
+                key: 'enableParticulierMode' as keyof FeatureFlags,
+                title: 'Mode Budget Foyer / Particulier',
+                desc: 'Gestion des dépenses personnelles et du ménage',
+              },
+            ].map(item => {
+              const isEnabled = features[item.key]
+              return (
+                <div
+                  key={item.key}
+                  onClick={() => toggleFeature(item.key)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-start justify-between gap-3 ${
+                    isEnabled
+                      ? 'border-emerald-500 bg-emerald-50/50 shadow-sm'
+                      : 'border-gray-200 bg-gray-50/50 opacity-75'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-gray-900">{item.title}</div>
+                    <div className="text-[10px] text-gray-500 font-mono">{item.desc}</div>
+                  </div>
+                  <div className={`w-8 h-4 rounded-full transition-colors relative flex-shrink-0 mt-0.5 ${isEnabled ? 'bg-emerald-600' : 'bg-gray-300'}`}>
+                    <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${isEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                  </div>
+                </div>
               )
             })}
           </div>

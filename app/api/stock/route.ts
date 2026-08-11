@@ -294,28 +294,76 @@ export async function PATCH(request: Request) {
 }
 
 // ─── DELETE /api/stock ────────────────────────────────────────────────────────
-// Supprime un produit du catalogue
+// Supprime un produit du catalogue ou de l'historique des articles orphelins
 export async function DELETE(request: Request) {
   const url = new URL(request.url)
   const id = url.searchParams.get('id')
+  const productName = url.searchParams.get('name')
   const shopId = request.headers.get('x-shop-id') || url.searchParams.get('shopId') || 'default-shop'
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
   }
 
-  if (!id) {
-    return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
+  if (!id && !productName) {
+    return NextResponse.json({ error: 'ID ou Nom manquant' }, { status: 400 })
   }
 
   try {
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id)
-      .eq('shop_id', shopId)
+    const targetName = productName || (id && (id.startsWith('orphan_') || id.startsWith('stk_')) ? id.replace(/^(orphan_|stk_)/, '') : null)
 
-    if (error) throw error
+    // 1. Traitement des articles orphelins (qui n'existent que dans l'historique des ventes)
+    if (targetName) {
+      const { data: shopSales } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('shop_id', shopId)
+
+      const saleIds = (shopSales || []).map(s => s.id)
+      if (saleIds.length > 0) {
+        await supabase
+          .from('sold_articles')
+          .delete()
+          .in('sale_id', saleIds)
+          .ilike('product_name', targetName)
+      }
+      return NextResponse.json({ success: true })
+    }
+
+    // 2. Traitement des produits enregistrés en table products
+    if (id) {
+      const { data: prod } = await supabase
+        .from('products')
+        .select('name')
+        .eq('id', id)
+        .single()
+
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+        .eq('shop_id', shopId)
+
+      if (error) throw error
+
+      const nameToPurge = prod?.name
+      if (nameToPurge) {
+        const { data: shopSales } = await supabase
+          .from('sales')
+          .select('id')
+          .eq('shop_id', shopId)
+
+        const saleIds = (shopSales || []).map(s => s.id)
+        if (saleIds.length > 0) {
+          await supabase
+            .from('sold_articles')
+            .delete()
+            .in('sale_id', saleIds)
+            .ilike('product_name', nameToPurge)
+        }
+      }
+    }
+
     return NextResponse.json({ success: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erreur inconnue'

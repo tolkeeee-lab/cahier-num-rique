@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import OpenAI from 'openai'
 import { randomUUID } from 'crypto'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
-import { normalizeProductName, adjustLotRoundingArtifact } from '@/lib/productUtils'
+import { normalizeProductName, adjustLotRoundingArtifact, calculateSimilarity } from '@/lib/productUtils'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'mock-key-for-build',
@@ -353,11 +353,11 @@ export async function POST(request: NextRequest) {
               const cleanArtName = normalizeProductName(article.nom)
               const key = cleanArtName.toLowerCase().trim()
 
-              const matchedProd = dbProducts.find(
-                p => normalizeProductName(p.name).toLowerCase().trim() === key ||
-                     p.name.toLowerCase().trim().includes(key) ||
-                     key.includes(p.name.toLowerCase().trim())
-              )
+              const matchedProd = dbProducts.find(p => {
+                const pNorm = normalizeProductName(p.name).toLowerCase().trim()
+                if (pNorm === key || p.name.toLowerCase().trim() === key) return true
+                return calculateSimilarity(pNorm, key) >= 0.85
+              })
 
               if (matchedProd) {
                 const hasInitialStock = (matchedProd.initial_stock || 0) > 0
@@ -470,23 +470,34 @@ export async function POST(request: NextRequest) {
 
             // 1. Recherche de correspondance exacte (insensible à la casse)
             let matchedProd = productsList.find(
-              p => p.name.toLowerCase().trim() === cleanName.toLowerCase().trim()
+              p => p.name.toLowerCase().trim() === cleanName.toLowerCase().trim() ||
+                   normalizeProductName(p.name).toLowerCase().trim() === canonicalName.toLowerCase().trim()
             )
 
-            // 2. Recherche par fuzzy matching ou synonymes
+            // 2. Recherche par similarité tolérante (score Levenshtein >= 0.85)
             if (!matchedProd) {
-              matchedProd = productsList.find(p => {
+              let bestScore = 0
+              for (const p of productsList) {
                 const prodNameLower = p.name.toLowerCase().trim()
                 const cleanLower = cleanName.toLowerCase().trim()
-                return prodNameLower.includes(cleanLower) || cleanLower.includes(prodNameLower)
-              })
+                const sim = calculateSimilarity(prodNameLower, cleanLower)
+                if (sim >= 0.85 && sim > bestScore) {
+                  bestScore = sim
+                  matchedProd = p
+                }
+              }
             }
 
             const isPurchaseOp = ['purchase_cash', 'purchase_credit'].includes(type)
 
             if (matchedProd) {
               productId = matchedProd.id
-              canonicalName = matchedProd.name
+              // Ne remplacer le nom par celui du catalogue que si c'est un match quasi-exact (ex: "coca" -> "Coca-Cola")
+              const isCloseMatch = matchedProd.name.toLowerCase().trim() === cleanName.toLowerCase().trim() ||
+                                   calculateSimilarity(matchedProd.name.toLowerCase().trim(), cleanName.toLowerCase().trim()) >= 0.85
+              if (isCloseMatch) {
+                canonicalName = matchedProd.name
+              }
               // Mettre à jour le coût d'achat unitaire si c'est une opération d'achat
               if (isPurchaseOp && article.prix_unitaire > 0) {
                 await supabase

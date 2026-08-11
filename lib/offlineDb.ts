@@ -427,10 +427,28 @@ export function saveOfflineProduct(shopId: string, product: OfflineProduct): voi
   idbSaveProduct(cleanProduct).catch(() => {})
 }
 
-export function deleteOfflineProduct(shopId: string, productId: string): void {
+export function deleteOfflineProduct(shopId: string, productId: string, productName?: string): void {
   const products = getOfflineProducts(shopId).filter((p) => p.id !== productId)
   writeJson(productsKey(shopId), products)
   idbDeleteProduct(productId).catch(() => {})
+
+  const targetName = productName || (productId.startsWith('orphan_') || productId.startsWith('stk_') ? productId.replace(/^(orphan_|stk_)/, '') : null)
+  if (targetName) {
+    const targetKey = targetName.toLowerCase().trim()
+    const sales = getOfflineSales(shopId)
+    let modified = false
+    sales.forEach(s => {
+      if (s.articles && s.articles.length > 0) {
+        const origLen = s.articles.length
+        s.articles = s.articles.filter(a => normalizeProductName(a.name).toLowerCase().trim() !== targetKey)
+        if (s.articles.length !== origLen) modified = true
+      }
+    })
+    if (modified) {
+      writeJson(salesKey(shopId), sales)
+      idbReplaceSales(shopId, sales).catch(() => {})
+    }
+  }
 }
 
 // ─── Calcul du stock offline ──────────────────────────────────────────────────

@@ -355,20 +355,18 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
     const online = typeof window !== 'undefined' ? window.navigator.onLine : true
 
     try {
-      if (item.is_orphan) {
-        setOrphans(prev => prev.filter(o => o.id !== item.id))
-        setItems(prev => prev.filter(i => i.id !== item.id))
-        deleteOfflineProduct(shopId, item.id)
-        return
-      }
       if (online) {
-        const response = await fetch(`/api/stock?id=${item.id}&shopId=${shopId}`, {
+        const response = await fetch(`/api/stock?id=${encodeURIComponent(item.id)}&name=${encodeURIComponent(item.name)}&shopId=${shopId}`, {
           method: 'DELETE',
           headers: { 'x-shop-id': shopId },
         })
         if (!response.ok) throw new Error('Erreur lors de la suppression')
       }
-      deleteOfflineProduct(shopId, item.id)
+      if (item.is_orphan) {
+        setOrphans(prev => prev.filter(o => o.id !== item.id))
+      }
+      setItems(prev => prev.filter(i => i.id !== item.id))
+      deleteOfflineProduct(shopId, item.id, item.name)
       await loadStock()
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Erreur inconnue')

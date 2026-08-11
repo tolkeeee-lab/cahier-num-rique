@@ -412,12 +412,12 @@ export function SalesInput({ onSaleRecorded, onError, shopId = 'default-shop', s
     try {
       const online = typeof window !== 'undefined' ? window.navigator.onLine : true
       if (online && item.id && !item.id.startsWith('menu_custom_')) {
-        await fetch(`/api/stock?id=${item.id}&shopId=${shopId}`, {
+        await fetch(`/api/stock?id=${encodeURIComponent(item.id)}&name=${encodeURIComponent(item.name)}&shopId=${shopId}`, {
           method: 'DELETE',
           headers: { 'x-shop-id': shopId }
         })
       }
-      deleteOfflineProduct(shopId, item.id)
+      deleteOfflineProduct(shopId, item.id, item.name)
     } catch (err) {
       console.warn('Suppression menu non bloquante:', err)
     }

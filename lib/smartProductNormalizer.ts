@@ -137,7 +137,7 @@ export function resolveCanonicalProductMatch(
   if (unitPrice && unitPrice > 0) {
     const exactNameAndPrice = catalogProducts.find(p => {
       const pLower = p.name.toLowerCase().trim()
-      const isNameMatch = pLower === canonicalLower || pLower.includes(rawLower) || rawLower.includes(pLower)
+      const isNameMatch = pLower === canonicalLower || pLower === rawLower || calculateSimilarity(pLower, rawLower) >= 0.85
       return isNameMatch && p.unit_price === unitPrice
     })
 

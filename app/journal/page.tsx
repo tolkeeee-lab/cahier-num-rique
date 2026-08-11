@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { SalesHistory } from '@/components/SalesHistory'
 import { DebtsBook } from '@/components/DebtsBook'
-import { Notebook, BookText, BarChart3, Send, Loader, AlertTriangle, FolderArchive, Wifi, WifiOff, RefreshCw, CheckCircle, Package, Settings, ShoppingCart, Utensils, ChevronUp, Sparkles, Plus, X, ClipboardList } from 'lucide-react'
+import { Send, Loader, AlertTriangle, Wifi, WifiOff, RefreshCw, CheckCircle, Utensils, ChevronUp, Sparkles, Plus, X } from 'lucide-react'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
 import { RequestedProductsManager } from '@/components/RequestedProductsManager'
@@ -17,6 +17,9 @@ import { CashClosingModal } from '@/components/CashClosingModal'
 import { SyncManager } from '@/components/SyncManager'
 import { ParticulierDashboard } from '@/components/ParticulierDashboard'
 import BoutiqueAssistantModal from '@/components/BoutiqueAssistantModal'
+import { JournalHeader } from '@/components/journal/JournalHeader'
+import { JournalTabs, JournalTab } from '@/components/journal/JournalTabs'
+import { formatPrice, getPens, getFilters, FilterId } from '@/lib/penUtils'
 import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
 import { normalizeProductName, adjustLotRoundingArtifact } from '@/lib/productUtils'
 import {
@@ -171,241 +174,6 @@ export interface Sale {
   notes: string
   category?: string
 }
-
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: 0,
-  }).format(price) + ' FCFA'
-}
-
-function getPens(activity?: string) {
-  const act = activity || 'boutique'
-  if (act === 'particulier') {
-    return [
-      {
-        id: 'blue',
-        name: 'REVENU / ENTRÉE',
-        color: '#1d4ed8',
-        bg: 'bg-blue-600',
-        border: 'border-blue-600',
-        textClass: 'ink-blue',
-        dotBg: 'bg-[#1d4ed8]',
-        placeholder: 'Stylo Bleu : Entrée d\'argent, Salaire, Tontine... (ex: Salaire mois 150000, Tontine 20000)'
-      },
-      {
-        id: 'red',
-        name: 'DÉPENSE FOYER',
-        color: '#e11d48',
-        bg: 'bg-rose-600',
-        border: 'border-rose-600',
-        textClass: 'ink-red',
-        dotBg: 'bg-[#e11d48]',
-        placeholder: 'Stylo Rouge : Dépense cash de la maison... (ex: Marché 5000, Loyer 35000, CIE 12000)'
-      },
-      {
-        id: 'green',
-        name: 'RÉSERVE FOYER',
-        color: '#047857',
-        bg: 'bg-emerald-700',
-        border: 'border-emerald-700',
-        textClass: 'ink-green',
-        dotBg: 'bg-[#047857]',
-        placeholder: 'Stylo Vert : Achat de réserve maison payé cash... (ex: 2 sacs de riz 50kg à 45000, Bidon d\'huile)'
-      },
-      {
-        id: 'purple',
-        name: 'CARNET BOUTIQUIER',
-        color: '#701a75',
-        bg: 'bg-fuchsia-800',
-        border: 'border-fuchsia-800',
-        textClass: 'ink-purple',
-        dotBg: 'bg-[#701a75]',
-        placeholder: 'Stylo Violet : Achat pris à crédit chez le boutiquier... (ex: Pris 2 pains et 1 lait chez Maman Rose)'
-      },
-      {
-        id: 'yellow',
-        name: 'PRÊT À UN PROCHE',
-        color: '#b45309',
-        bg: 'bg-amber-600',
-        border: 'border-amber-600',
-        textClass: 'ink-yellow',
-        dotBg: 'bg-[#b45309]',
-        placeholder: 'Stylo Jaune : Argent prêté à un ami ou proche... (ex: Prêté 10000 à Marc)'
-      },
-    ]
-  } else if (act === 'resto') {
-    return [
-      {
-        id: 'blue',
-        name: 'RECETTE RESTO',
-        color: '#1d4ed8',
-        bg: 'bg-blue-600',
-        border: 'border-blue-600',
-        textClass: 'ink-blue',
-        dotBg: 'bg-[#1d4ed8]',
-        placeholder: 'Stylo Bleu : Vente cash de plats ou boissons... (ex: 2 plats de riz poisson à 3000, 3 beaufort)'
-      },
-      {
-        id: 'red',
-        name: 'DÉPENSE CUISINE',
-        color: '#e11d48',
-        bg: 'bg-rose-600',
-        border: 'border-rose-600',
-        textClass: 'ink-red',
-        dotBg: 'bg-[#e11d48]',
-        placeholder: 'Stylo Rouge : Dépense ingrédients... (ex: Marché épices 4500, charbon 2000)'
-      },
-      {
-        id: 'green',
-        name: 'STOCK BAR/CUISINE',
-        color: '#047857',
-        bg: 'bg-emerald-700',
-        border: 'border-emerald-700',
-        textClass: 'ink-green',
-        dotBg: 'bg-[#047857]',
-        placeholder: 'Stylo Vert : Ravitaillement payé cash... (ex: 5 caisses de bière à 45000)'
-      },
-      {
-        id: 'purple',
-        name: 'CRÉDIT FOURNISSEUR',
-        color: '#701a75',
-        bg: 'bg-fuchsia-800',
-        border: 'border-fuchsia-800',
-        textClass: 'ink-purple',
-        dotBg: 'bg-[#701a75]',
-        placeholder: 'Stylo Violet : Commande de stock prise à crédit... (ex: Brasserie 10 casiers à crédit 85000)'
-      },
-      {
-        id: 'yellow',
-        name: 'ARRIÉRÉ CLIENT',
-        color: '#b45309',
-        bg: 'bg-amber-600',
-        border: 'border-amber-600',
-        textClass: 'ink-yellow',
-        dotBg: 'bg-[#b45309]',
-        placeholder: 'Stylo Jaune : Consommation client non réglée... (ex: Table 4 prend 3 repas crédit 7500)'
-      },
-    ]
-  } else if (act === 'prestations') {
-    return [
-      {
-        id: 'blue',
-        name: 'RECETTE SERVICE',
-        color: '#1d4ed8',
-        bg: 'bg-blue-600',
-        border: 'border-blue-600',
-        textClass: 'ink-blue',
-        dotBg: 'bg-[#1d4ed8]',
-        placeholder: 'Stylo Bleu : Prestation encaissée... (ex: Coiffure homme 2500, Manucure 3000)'
-      },
-      {
-        id: 'red',
-        name: 'DÉPENSE SALON',
-        color: '#e11d48',
-        bg: 'bg-rose-600',
-        border: 'border-rose-600',
-        textClass: 'ink-red',
-        dotBg: 'bg-[#e11d48]',
-        placeholder: 'Stylo Rouge : Dépense du salon... (ex: Loyer salon 20000, Électricité 5000)'
-      },
-      {
-        id: 'green',
-        name: 'ACHAT MATÉRIEL',
-        color: '#047857',
-        bg: 'bg-emerald-700',
-        border: 'border-emerald-700',
-        textClass: 'ink-green',
-        dotBg: 'bg-[#047857]',
-        placeholder: 'Stylo Vert : Produits & matériel payés cash... (ex: 3 gel coiffant à 6000)'
-      },
-      {
-        id: 'purple',
-        name: 'FOURNISSEUR CRÉDIT',
-        color: '#701a75',
-        bg: 'bg-fuchsia-800',
-        border: 'border-fuchsia-800',
-        textClass: 'ink-purple',
-        dotBg: 'bg-[#701a75]',
-        placeholder: 'Stylo Violet : Matériel pris à crédit... (ex: Fournisseur 2 tondeuses crédit 25000)'
-      },
-      {
-        id: 'yellow',
-        name: 'RESTE À PAYER',
-        color: '#b45309',
-        bg: 'bg-amber-600',
-        border: 'border-amber-600',
-        textClass: 'ink-yellow',
-        dotBg: 'bg-[#b45309]',
-        placeholder: 'Stylo Jaune : Client ayant un reste à payer... (ex: Dame Yemi tresse reste 5000)'
-      },
-    ]
-  } else {
-    return [
-      {
-        id: 'blue',
-        name: 'ENTRÉE',
-        color: '#1d4ed8',
-        bg: 'bg-blue-600',
-        border: 'border-blue-600',
-        textClass: 'ink-blue',
-        dotBg: 'bg-[#1d4ed8]',
-        placeholder: 'Stylo Bleu : Écrivez une vente cash... (ex: 2 sacs de riz à 22000)'
-      },
-      {
-        id: 'red',
-        name: 'DÉPENSE',
-        color: '#e11d48',
-        bg: 'bg-rose-600',
-        border: 'border-rose-600',
-        textClass: 'ink-red',
-        dotBg: 'bg-[#e11d48]',
-        placeholder: 'Stylo Rouge : Écrivez une dépense... (ex: achat emballages plastiques 2500)'
-      },
-      {
-        id: 'green',
-        name: 'STOCK CASH',
-        color: '#047857',
-        bg: 'bg-emerald-700',
-        border: 'border-emerald-700',
-        textClass: 'ink-green',
-        dotBg: 'bg-[#047857]',
-        placeholder: 'Stylo Vert : Écrivez un achat de stock payé cash... (ex: 5 cartons lait à 15000)'
-      },
-      {
-        id: 'purple',
-        name: 'STOCK CRÉDIT',
-        color: '#701a75',
-        bg: 'bg-fuchsia-800',
-        border: 'border-fuchsia-800',
-        textClass: 'ink-purple',
-        dotBg: 'bg-[#701a75]',
-        placeholder: 'Stylo Violet : Écrivez un achat à crédit fournisseur... (ex: Grossiste Chantal carton peak credit 35000)'
-      },
-      {
-        id: 'yellow',
-        name: 'CRÉDIT CLIENT',
-        color: '#b45309',
-        bg: 'bg-amber-600',
-        border: 'border-amber-600',
-        textClass: 'ink-yellow',
-        dotBg: 'bg-[#b45309]',
-        placeholder: 'Stylo Jaune : Écrivez un crédit donné à un client... (ex: Koffi prend 2 sacs de riz crédit 12000)'
-      },
-    ]
-  }
-}
-
-type FilterId = 'all' | 'blue' | 'red' | 'green' | 'purple' | 'yellow'
-
-function getFilters(activity?: string): { id: FilterId; label: string }[] {
-  const pens = getPens(activity)
-  return [
-    { id: 'all', label: 'TOUT' },
-    ...pens.map(p => ({ id: p.id as FilterId, label: p.name }))
-  ]
-}
-
-
 
 export default function JournalPage() {
   const router = useRouter()
@@ -2874,7 +2642,21 @@ export default function JournalPage() {
   }
 
   return (
-    <main className="min-h-dvh md:min-h-screen md:py-8 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative overflow-x-hidden">
+    <div className="min-h-dvh flex flex-col bg-[#141210]">
+      <JournalHeader
+        user={mappedUser}
+        currentShopName={currentShop?.name || 'Mon Point de Vente'}
+        activity={shopActivity}
+        isOnline={isOnline}
+        pendingSyncCount={pendingCount}
+        isSyncing={syncStatus === 'syncing'}
+        onSyncClick={() => syncOfflineData().then(() => loadFinancialData())}
+        onOpenSettings={() => setActiveTab('settings')}
+        onOpenCashClosing={() => setShowCashClosing(true)}
+        onOpenBoutiqueAssistant={() => setShowAssistantModal(true)}
+      />
+
+      <main className="min-h-dvh md:min-h-screen md:py-6 md:px-4 max-w-7xl mx-auto flex flex-col md:gap-6 relative overflow-x-hidden flex-grow w-full">
 
       {/* Lamp Highlight overlay for desk immersion */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-amber-500 opacity-[0.03] rounded-full blur-[120px] pointer-events-none z-0"></div>
@@ -3067,115 +2849,12 @@ export default function JournalPage() {
               </div>
             </div>
 
-            {/* In-page horizontal tab bar — scrollable, matches desktop look inside the page */}
-            <div className="flex overflow-x-auto border-b border-gray-200 bg-[#f7f3ea] select-none flex-shrink-0 px-1 py-0.5 space-x-1 scrollbar-hide">
-              <button
-                onClick={() => setActiveTab('cahier')}
-                className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'cahier'
-                    ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
-                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
-                  }`}
-              >
-                <Notebook className="w-3.5 h-3.5" />
-                {activityLabels.tabCahier}
-              </button>
-              {mappedUser?.role !== 'employee' && (
-                <button
-                  onClick={() => setActiveTab('dettes')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'dettes'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
-                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
-                    }`}
-                >
-                  <BookText className="w-3.5 h-3.5" />
-                  {activityLabels.tabDettes}
-                </button>
-              )}
-              {mappedUser?.role !== 'employee' && (
-                <button
-                  onClick={() => setActiveTab('trends')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'trends'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
-                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
-                    }`}
-                >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  {activityLabels.tabTrends}
-                </button>
-              )}
-              {mappedUser?.role !== 'employee' && (
-                <button
-                  onClick={() => setActiveTab('archives')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'archives'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
-                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
-                    }`}
-                >
-                  <FolderArchive className="w-3.5 h-3.5" />
-                  Placard d'Archive
-                </button>
-              )}
-              {mappedUser?.role !== 'employee' && (
-                <button
-                  onClick={() => setActiveTab('stock')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'stock'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
-                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
-                    }`}
-                >
-                  <Package className="w-3.5 h-3.5" />
-                  {activityLabels.tabStock}
-                </button>
-              )}
-              {mappedUser?.role !== 'employee' && (
-                <button
-                  onClick={() => setActiveTab('shopping')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'shopping'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
-                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
-                    }`}
-                >
-                  <ShoppingCart className="w-3.5 h-3.5" />
-                  {activityLabels.tabShopping}
-                </button>
-              )}
-              {mappedUser?.role !== 'employee' && (
-                <button
-                  onClick={() => setActiveTab('demandes')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'demandes'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
-                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
-                    }`}
-                >
-                  <ClipboardList className="w-3.5 h-3.5" />
-                  {activityLabels.tabDemandes}
-                </button>
-              )}
-              {mappedUser?.role !== 'employee' && (
-                <button
-                  onClick={() => setActiveTab('analytics')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'analytics'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
-                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
-                    }`}
-                >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  Analyses
-                </button>
-              )}
-              {mappedUser?.role !== 'employee' && (
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-4 py-2 sm:py-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === 'settings'
-                      ? 'border-gray-800 text-gray-900 bg-[#fdfaf2] rounded-t-lg'
-                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-[#f0ebe0]'
-                    }`}
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  Paramètres
-                </button>
-              )}
-            </div>
+            {/* In-page horizontal tab bar — modularized */}
+            <JournalTabs
+              activeTab={activeTab as JournalTab}
+              onTabChange={(tab) => setActiveTab(tab as any)}
+              activity={shopActivity}
+            />
 
             {/* Content view based on active tab */}
             <div className="flex-1 overflow-hidden flex flex-col">
@@ -4701,5 +4380,6 @@ export default function JournalPage() {
       />
 
     </main>
+    </div>
   )
 }
