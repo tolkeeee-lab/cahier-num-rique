@@ -3594,9 +3594,16 @@ export default function JournalPage() {
                 </div>
               )}
 
-              {activeTab === 'analytics' && mappedUser?.role !== 'employee' && (
+              {activeTab === 'analytics' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
-                  <AnalyticsDashboard sales={allSales} userShops={userShops} shopId={shopId} onRefreshData={loadFinancialData} />
+                  <AnalyticsDashboard
+                    sales={allSales}
+                    userShops={userShops}
+                    shopId={shopId}
+                    userRole={mappedUser?.role}
+                    currentShopActivity={shopActivity}
+                    onRefreshData={loadFinancialData}
+                  />
                 </div>
               )}
 

@@ -914,7 +914,14 @@ export function ParticulierDashboard({
                   </div>
 
                   {/* Analyse IA globale */}
-                  <AnalyticsDashboard sales={allSales} userShops={userShops} shopId={shopId} onRefreshData={loadFinancialData} />
+                  <AnalyticsDashboard
+                    sales={allSales}
+                    userShops={userShops}
+                    shopId={shopId}
+                    userRole="owner"
+                    currentShopActivity="particulier"
+                    onRefreshData={loadFinancialData}
+                  />
                 </div>
               )}
 
