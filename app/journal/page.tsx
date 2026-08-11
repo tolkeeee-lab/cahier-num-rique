@@ -2759,7 +2759,7 @@ export default function JournalPage() {
                       ? 'bg-blue-50 text-blue-700 border-blue-200'
                       : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
-                    {mappedUser?.role === 'employee' ? '🙋' : '👑'} {mappedUser?.name}
+                    {mappedUser?.role === 'employee' ? '🙋 Caissier' : `👑 ${mappedUser?.name && !mappedUser.name.toLowerCase().includes('compagnon') ? mappedUser.name : 'Gérant'}`}
                   </span>
                 </div>
 

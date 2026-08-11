@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Package, AlertTriangle, WifiOff, Download, RefreshCw, Plus, ChevronUp, ChevronDown
 } from 'lucide-react'
@@ -48,6 +48,7 @@ export function StockManager({ shopId = 'default-shop', shopActivity, userRole, 
   const [isOffline, setIsOffline] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('TOUT')
+  const [trackModeFilter, setTrackModeFilter] = useState<'ALL' | 'TRACKED' | 'UNTRACKED'>('TRACKED')
   const [showAddModal, setShowAddModal] = useState(false)
   const [modalInitialMode, setModalInitialMode] = useState<'fast' | 'advanced'>('fast')
   const [editingItem, setEditingItem] = useState<StockItem | null>(null)
@@ -399,9 +400,18 @@ export function StockManager({ shopId = 'default-shop', shopActivity, userRole, 
 
   // ── Données dérivées ─────────────────────────────────────────────────────────
 
-  const [trackModeFilter, setTrackModeFilter] = useState<'ALL' | 'TRACKED' | 'UNTRACKED'>('TRACKED')
+  const defaultCategories = useMemo(() => {
+    if (shopActivity === 'resto') {
+      return ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients']
+    } else if (shopActivity === 'prestations') {
+      return ['TOUT', 'Général', '✂️ Prestations & Services', '🧰 Matériel & Outillage', '📦 Consommables']
+    } else if (shopActivity === 'particulier') {
+      return ['TOUT', 'Général', 'Alimentation & Marché', 'Factures & Loyer', 'Divers Foyer']
+    } else {
+      return ['TOUT', 'Général', 'Alimentation', 'Boissons & Bar', 'Hygiène & Cosmétique', 'Électronique & Divers']
+    }
+  }, [shopActivity])
 
-  const defaultCategories = ['TOUT', 'Général', '🍲 Cuisiné / Plats', '☕ Cafétéria / Ptis-dej', '🥤 Boissons & Bar', '🥬 Matières Premières / Ingrédients', '✂️ Prestations & Services']
   const existingCategories = Array.from(new Set(items.map(i => i.category).filter(Boolean)))
   const allCategories = Array.from(new Set([...defaultCategories, ...existingCategories]))
 
@@ -482,28 +492,32 @@ export function StockManager({ shopId = 'default-shop', shopActivity, userRole, 
             <Plus className="w-3 h-3" />
             <span>📦 Carte Stock</span>
           </button>
-          <button
-            onClick={() => {
-              setFormData({ ...EMPTY_FORM, category: '🍲 Cuisiné / Plats' })
-              setEditingItem(null)
-              setShowAddModal(true)
-            }}
-            className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
-          >
-            <Plus className="w-3 h-3" />
-            <span>🍽️ Carte Menu</span>
-          </button>
-          <button
-            onClick={() => {
-              setFormData({ ...EMPTY_FORM, category: '✂️ Prestations & Services' })
-              setEditingItem(null)
-              setShowAddModal(true)
-            }}
-            className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
-          >
-            <Plus className="w-3 h-3" />
-            <span>✂️ Prestation</span>
-          </button>
+          {shopActivity === 'resto' && (
+            <button
+              onClick={() => {
+                setFormData({ ...EMPTY_FORM, category: '🍲 Cuisiné / Plats' })
+                setEditingItem(null)
+                setShowAddModal(true)
+              }}
+              className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            >
+              <Plus className="w-3 h-3" />
+              <span>🍽️ Carte Menu</span>
+            </button>
+          )}
+          {shopActivity === 'prestations' && (
+            <button
+              onClick={() => {
+                setFormData({ ...EMPTY_FORM, category: '✂️ Prestations & Services' })
+                setEditingItem(null)
+                setShowAddModal(true)
+              }}
+              className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
+            >
+              <Plus className="w-3 h-3" />
+              <span>✂️ Prestation</span>
+            </button>
+          )}
           <button
             onClick={() => setShowWhatsAppModal(true)}
             className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-[9px] font-bold uppercase tracking-wide transition-all hover:scale-105 active:scale-95 shadow-sm"
