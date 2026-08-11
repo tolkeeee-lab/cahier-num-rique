@@ -21,7 +21,27 @@ import { ExpressAdjustmentModal } from './stock/ExpressAdjustmentModal'
 import { WhatsAppPOModal } from './stock/WhatsAppPOModal'
 import { ProductMergeModal } from './stock/ProductMergeModal'
 
-export function StockManager({ shopId = 'default-shop', userRole, onError }: StockManagerProps) {
+const isRelevantForActivity = (prodCategory: string | undefined, prodName: string, act?: string) => {
+  if (!act) return true
+  const cat = (prodCategory || '').toLowerCase().trim()
+  const nameLower = prodName.toLowerCase().trim()
+
+  const isCookedDish = cat === 'cuisine' || cat === 'cafétéria' || cat === 'plats' ||
+                       /poulet|riz|spaghetti|sandwich|atassi|plat|repas|omelette|sauce/i.test(nameLower)
+  const isPrestation = cat === 'prestations' || cat === 'service' || cat.includes('✂️') ||
+                       /coiffure|tresse|vidange|réparation|lavage|soin/i.test(nameLower)
+
+  if (act === 'boutique') {
+    if (isCookedDish || isPrestation) return false
+  } else if (act === 'resto') {
+    if (isPrestation) return false
+  } else if (act === 'prestations') {
+    if (isCookedDish) return false
+  }
+  return true
+}
+
+export function StockManager({ shopId = 'default-shop', shopActivity, userRole, onError }: StockManagerProps) {
   const [items, setItems] = useState<StockItem[]>([])
   const [orphans, setOrphans] = useState<StockItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -221,9 +241,11 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
         }
       })
 
-    setItems(stockItems)
-    setOrphans(orphanItems)
-  }, [shopId])
+    const filteredItems = stockItems.filter(p => isRelevantForActivity(p.category, p.name, shopActivity))
+    const filteredOrphans = orphanItems.filter(p => isRelevantForActivity(p.category, p.name, shopActivity))
+    setItems(filteredItems)
+    setOrphans(filteredOrphans)
+  }, [shopId, shopActivity])
 
   const loadStock = useCallback(async () => {
     setLoading(true)
@@ -244,9 +266,11 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
       if (data.offline) {
         buildFromOffline()
       } else {
-        setItems(data.products || [])
-        setOrphans(data.orphans || [])
-        replaceOfflineProducts(shopId, (data.products || []).map((p: any) => ({
+        const prods = (data.products || []).filter((p: any) => isRelevantForActivity(p.category, p.name, shopActivity))
+        const orphs = (data.orphans || []).filter((p: any) => isRelevantForActivity(p.category, p.name, shopActivity))
+        setItems(prods)
+        setOrphans(orphs)
+        replaceOfflineProducts(shopId, prods.map((p: any) => ({
           id: p.id, shop_id: p.shop_id, name: p.name, category: p.category,
           unit: p.unit, alert_threshold: p.alert_threshold, initial_stock: p.initial_stock,
           unit_cost: p.unit_cost, unit_price: p.unit_price, created_at: p.created_at || '',
@@ -261,7 +285,7 @@ export function StockManager({ shopId = 'default-shop', userRole, onError }: Sto
     } finally {
       setLoading(false)
     }
-  }, [shopId, onError, buildFromOffline])
+  }, [shopId, shopActivity, onError, buildFromOffline])
 
   useEffect(() => { loadStock() }, [loadStock])
 

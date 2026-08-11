@@ -482,15 +482,24 @@ export default function JournalPage() {
               if (!rawName.trim()) return
 
               let cleanName = getCanonicalProductName(rawName)
-
-              // Si ce nom de produit normalisé est dans la liste d'exclusion, on ne l'affiche pas dans le menu tactile
               const cleanLower = cleanName.toLowerCase().trim()
-              if (excludedNames.some(name => name.toLowerCase().trim() === cleanLower)) {
-                return
-              }
+
+              // Filtre d'exclusion utilisateur
+              if (excludedNames.some(name => name.toLowerCase().trim() === cleanLower)) return
+
+              // Filtre strict par secteur d'activité (ne pas afficher de repas de resto ou de services dans une boutique)
+              const cat = (p.category || '').toLowerCase().trim()
+              const isCookedDish = cat === 'cuisine' || cat === 'cafétéria' || cat === 'plats' ||
+                                   /poulet|riz|spaghetti|sandwich|atassi|plat|repas|omelette|sauce/i.test(cleanLower)
+              const isPrestation = cat === 'prestations' || cat === 'service' || cat.includes('✂️') ||
+                                   /coiffure|tresse|vidange|réparation|lavage|soin/i.test(cleanLower)
+
+              if (shopActivity === 'boutique' && (isCookedDish || isPrestation)) return
+              if (shopActivity === 'resto' && isPrestation) return
+              if (shopActivity === 'prestations' && isCookedDish) return
 
               const priceVal = p.unit_price || p.price || 1000
-              const dedupeKey = `${cleanName.toLowerCase().trim()}_${priceVal}`
+              const dedupeKey = `${cleanLower}_${priceVal}`
               if (uniqueMap.has(dedupeKey)) return
 
               const { emoji, category } = getSmartEmojiAndCategory(cleanName, shopActivity as any)
@@ -525,11 +534,22 @@ export default function JournalPage() {
               const rawName = p.name || ''
               if (!rawName.trim()) return
               let cleanName = getCanonicalProductName(rawName)
+              const cleanLower = cleanName.toLowerCase().trim()
 
-              if (excludedNames.some(name => name.toLowerCase().trim() === cleanName.toLowerCase().trim())) return
+              if (excludedNames.some(name => name.toLowerCase().trim() === cleanLower)) return
+
+              const cat = (p.category || '').toLowerCase().trim()
+              const isCookedDish = cat === 'cuisine' || cat === 'cafétéria' || cat === 'plats' ||
+                                   /poulet|riz|spaghetti|sandwich|atassi|plat|repas|omelette|sauce/i.test(cleanLower)
+              const isPrestation = cat === 'prestations' || cat === 'service' || cat.includes('✂️') ||
+                                   /coiffure|tresse|vidange|réparation|lavage|soin/i.test(cleanLower)
+
+              if (shopActivity === 'boutique' && (isCookedDish || isPrestation)) return
+              if (shopActivity === 'resto' && isPrestation) return
+              if (shopActivity === 'prestations' && isCookedDish) return
 
               const priceVal = p.unit_price || p.price || 1000
-              const dedupeKey = `${cleanName.toLowerCase().trim()}_${priceVal}`
+              const dedupeKey = `${cleanLower}_${priceVal}`
               if (uniqueMap.has(dedupeKey)) return
 
               const { emoji, category } = getSmartEmojiAndCategory(cleanName, shopActivity as any)
@@ -3548,7 +3568,7 @@ export default function JournalPage() {
 
               {activeTab === 'stock' && (
                 <div className="flex-grow overflow-hidden flex flex-col h-full pb-16 md:pb-0">
-                  <StockManager shopId={shopId} userRole={mappedUser?.role} onError={handleError} />
+                  <StockManager shopId={shopId} shopActivity={shopActivity} userRole={mappedUser?.role} onError={handleError} />
                 </div>
               )}
 
