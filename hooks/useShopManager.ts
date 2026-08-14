@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
 export interface Shop {
   id: string
@@ -16,15 +17,48 @@ export function useShopManager(mappedUser: any) {
   const [newShopActivity, setNewShopActivity] = useState<'boutique' | 'resto' | 'prestations'>('boutique')
 
   useEffect(() => {
-    if (mappedUser?.id) {
-      const uId = mappedUser.id
-      const uShopId = mappedUser.shop_id || `${uId}-main`
+    let isMounted = true
 
+    async function initializeShops() {
+      if (!mappedUser?.id) return
+
+      const uId = mappedUser.id
+      const uEmail = (mappedUser.email || '').toLowerCase().trim()
+      const uShopId = mappedUser.shop_id || `${uId}-main`
+      const isOnline = isSupabaseClientConfigured()
+
+      // ── 1. Vérification si l'utilisateur est un Employé assigné à une Boutique Patron ──
+      if (isOnline && uEmail) {
+        try {
+          const { data: empData } = await supabaseClient
+            .from('employees')
+            .select('shop_id, name, role')
+            .eq('email', uEmail)
+            .maybeSingle()
+
+          if (empData?.shop_id && isMounted) {
+            const assignedShopId = empData.shop_id
+            const empShop: Shop = {
+              id: assignedShopId,
+              name: (mappedUser as any)?.shop_name || 'Boutique Assignée',
+              activity: (mappedUser as any)?.activity || 'boutique'
+            }
+            setUserShops([empShop])
+            setSelectedShopId(assignedShopId)
+            localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify([empShop]))
+            return
+          }
+        } catch (e) {
+          console.warn('Erreur vérification rôle employé:', e)
+        }
+      }
+
+      // ── 2. Pour le Propriétaire : Chargement des boutiques locales & distantes ──
       const stored = localStorage.getItem(`cahier_user_shops_${uId}`)
       if (stored) {
         try {
           const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
             if (JSON.stringify(userShops) !== JSON.stringify(parsed)) {
               setUserShops(parsed)
             }
@@ -40,15 +74,21 @@ export function useShopManager(mappedUser: any) {
       const defaultShops: Shop[] = [
         { id: uShopId, name: (mappedUser as any)?.shop_name || 'Mon Point de Vente', activity: userActivity }
       ]
-      if (JSON.stringify(userShops) !== JSON.stringify(defaultShops)) {
+      if (JSON.stringify(userShops) !== JSON.stringify(defaultShops) && isMounted) {
         setUserShops(defaultShops)
       }
       localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify(defaultShops))
-      if (!selectedShopId) {
+      if (!selectedShopId && isMounted) {
         setSelectedShopId(uShopId)
       }
     }
-  }, [mappedUser?.id, mappedUser?.shop_id, selectedShopId, userShops, mappedUser])
+
+    initializeShops()
+
+    return () => {
+      isMounted = false
+    }
+  }, [mappedUser?.id, mappedUser?.email, mappedUser?.shop_id, selectedShopId])
 
   const shopId = selectedShopId || mappedUser?.shop_id || 'default-shop'
   const currentShop = userShops.find(s => s.id === shopId)
