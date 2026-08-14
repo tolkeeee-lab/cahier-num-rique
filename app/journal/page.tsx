@@ -28,6 +28,7 @@ import { AddToExistingSaleBar } from '@/components/journal/AddToExistingSaleBar'
 import { StockWizardModal } from '@/components/journal/StockWizardModal'
 import { StockConfirmationModal } from '@/components/journal/StockConfirmationModal'
 import { PriceChangeDialog } from '@/components/journal/PriceChangeDialog'
+import { EditSaleModal } from '@/components/journal/EditSaleModal'
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 import { useShopManager } from '@/hooks/useShopManager'
@@ -101,6 +102,9 @@ export default function JournalPage() {
   const [priceChangeData, setPriceChangeData] = useState<PriceChangeData | null>(null)
   const [wizardPrefill, setWizardPrefill] = useState<WizardPrefill | null>(null)
   const [showStockWizard, setShowStockWizard] = useState(false)
+
+  // État de modification d'une vente
+  const [editingSale, setEditingSale] = useState<any | null>(null)
 
   // ── Hooks métier ───────────────────────────────────────────────────────────
   const shopManager = useShopManager(mappedUser)
@@ -332,6 +336,7 @@ export default function JournalPage() {
                       setAddingToSaleClient(clientName)
                       setAddArticleInput('')
                     }}
+                    onEditSale={(sale) => setEditingSale(sale)}
                     searchQuery={searchQuery}
                     currentDateStr={getTodayDateString()}
                   />
@@ -599,6 +604,17 @@ export default function JournalPage() {
           await saleCreation.submitText(text, 'green')
           setShowStockWizard(false)
           setWizardPrefill(null)
+        }}
+      />
+      <EditSaleModal
+        isOpen={!!editingSale}
+        sale={editingSale}
+        onClose={() => setEditingSale(null)}
+        onSave={async (saleId, articles, clientName) => {
+          await journalData.updateSale(saleId, articles, clientName)
+        }}
+        onDelete={async (saleId) => {
+          await journalData.crossOutSale(saleId)
         }}
       />
     </div>

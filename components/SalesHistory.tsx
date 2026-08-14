@@ -48,10 +48,13 @@ interface SalesHistoryProps {
   onExternalConfirmAdd?: (saleId: string) => Promise<void>
 }
 
+import { EditSaleModal } from '@/components/journal/EditSaleModal'
+
 export function SalesHistory({
   sales,
   onSaleCrossedOut,
   onAddArticle,
+  onUpdateSale,
   shopId = 'default-shop',
   isEmployee = false,
 }: SalesHistoryProps) {
@@ -62,6 +65,7 @@ export function SalesHistory({
   const [activeDetailSale, setActiveDetailSale] = useState<Sale | null>(null)
   const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null)
   const [activeRepaymentSale, setActiveRepaymentSale] = useState<Sale | null>(null)
+  const [editingSale, setEditingSale] = useState<Sale | null>(null)
 
   const filteredSales = sales.filter(s => {
     if (searchQuery.trim()) {
@@ -113,7 +117,7 @@ export function SalesHistory({
               sale={sale}
               onCrossOut={onSaleCrossedOut}
               onPrintReceipt={(s) => setActiveReceiptSale(s)}
-              onEdit={(s) => setActiveDetailSale(s)}
+              onEdit={(s) => setEditingSale(s)}
               isEmployee={isEmployee}
             />
           ))}
@@ -125,6 +129,22 @@ export function SalesHistory({
         onClose={() => setActiveDetailSale(null)}
         sale={activeDetailSale}
         onPrintReceipt={(s) => setActiveReceiptSale(s)}
+      />
+
+      <EditSaleModal
+        isOpen={!!editingSale}
+        sale={editingSale}
+        onClose={() => setEditingSale(null)}
+        onSave={async (saleId, updatedArticles, clientName) => {
+          if (onUpdateSale) {
+            await onUpdateSale(saleId, updatedArticles, clientName)
+          }
+        }}
+        onDelete={async (saleId) => {
+          if (onSaleCrossedOut) {
+            await onSaleCrossedOut(saleId)
+          }
+        }}
       />
 
       {activeReceiptSale && (

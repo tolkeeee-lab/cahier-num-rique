@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { AlertTriangle, Printer, Trash2, BookOpen, PlusCircle, Calculator, X } from 'lucide-react'
+import { AlertTriangle, Printer, Trash2, BookOpen, PlusCircle, Calculator, X, Edit3 } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -31,6 +31,7 @@ interface NotebookPageProps {
   onCrossOutSale: (saleId: string) => void
   onPrintReceipt?: (sale: SaleItem) => void
   onAddArticleToSale?: (saleId: string, clientName: string) => void
+  onEditSale?: (sale: SaleItem) => void
   searchQuery: string
   currentDateStr: string
 }
@@ -74,6 +75,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   onCrossOutSale,
   onPrintReceipt,
   onAddArticleToSale,
+  onEditSale,
   searchQuery,
   currentDateStr,
 }) => {
@@ -232,6 +234,18 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                               title="Ajouter un article à cette vente"
                             >
                               <PlusCircle className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* Bouton modifier la vente */}
+                          {onEditSale && (
+                            <button
+                              type="button"
+                              onClick={() => onEditSale(sale)}
+                              className="p-1.5 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-50 transition-colors"
+                              title="Modifier cette écriture"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
                             </button>
                           )}
 
