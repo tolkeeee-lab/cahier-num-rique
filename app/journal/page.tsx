@@ -44,7 +44,7 @@ import { isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
 import { getOfflineProducts } from '@/lib/offlineDb'
-import { Send, Loader } from 'lucide-react'
+import { Send, Loader, Zap } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -309,16 +309,12 @@ export default function JournalPage() {
             {activeTab === 'cahier' && (
               <div className="flex-1 min-h-0 flex flex-col space-y-2 overflow-hidden">
 
-                {/* Stylos Bic + Recherche + Raccourcis (FIXE) */}
+                {/* Stylos Bic 4-Couleurs (FIXE) */}
                 <div className="flex-shrink-0 z-10">
                   <NotebookToolbar
                     pens={pens}
                     selectedPen={selectedPen}
                     onSelectPen={setSelectedPen}
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    onOpenTactileMenu={() => setShowTactileMenuModal(true)}
-                    shortcutCount={tactileMenu.menuItems.length}
                   />
                 </div>
 
@@ -335,6 +331,7 @@ export default function JournalPage() {
                     }}
                     onEditSale={(sale) => setEditingSale(sale)}
                     searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
                     currentDateStr={getTodayDateString()}
                   />
                 </div>
@@ -360,6 +357,22 @@ export default function JournalPage() {
                       activeQty={activeQty}
                       onSelectSuggestion={handleAppendStockSuggestion}
                     />
+
+                    {/* Bouton Raccourcis ⚡ 1-Tap dédié à la saisie */}
+                    <button
+                      type="button"
+                      onClick={() => setShowTactileMenuModal(true)}
+                      className="px-2.5 py-2 bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 flex-shrink-0 cursor-pointer"
+                      title="Ouvrir le menu des raccourcis 1-tap"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-amber-600 text-amber-600" />
+                      <span className="hidden sm:inline font-mono text-xs">Raccourcis</span>
+                      {tactileMenu.menuItems.length > 0 && (
+                        <span className="bg-amber-900 text-amber-100 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                          {tactileMenu.menuItems.length}
+                        </span>
+                      )}
+                    </button>
 
                     <div className="font-mono text-xs font-bold text-gray-500 flex-shrink-0 min-w-[45px] text-center">
                       ⏰ {currentTime || '--:--'}

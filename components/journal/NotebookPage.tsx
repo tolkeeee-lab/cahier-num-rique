@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { AlertTriangle, Printer, Trash2, BookOpen, PlusCircle, Calculator, X, Edit3 } from 'lucide-react'
+import { AlertTriangle, Printer, Trash2, BookOpen, PlusCircle, Calculator, X, Edit3, Search } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -33,6 +33,7 @@ interface NotebookPageProps {
   onAddArticleToSale?: (saleId: string, clientName: string) => void
   onEditSale?: (sale: SaleItem) => void
   searchQuery: string
+  onSearchChange?: (query: string) => void
   currentDateStr: string
 }
 
@@ -77,6 +78,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   onAddArticleToSale,
   onEditSale,
   searchQuery,
+  onSearchChange,
   currentDateStr,
 }) => {
   // Auto-scroll vers le bas à chaque nouvelle vente
@@ -110,7 +112,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
       <div className="relative z-10 flex flex-col h-full space-y-3">
 
         {/* En-tête de page (FIXE) */}
-        <div className="flex items-center justify-between border-b-2 border-blue-200/60 pb-2.5 flex-shrink-0">
+        <div className="flex items-center justify-between border-b-2 border-blue-200/60 pb-2.5 flex-shrink-0 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <div className="brass-medallion w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
               <BookOpen className="w-3.5 h-3.5" />
@@ -120,8 +122,22 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
             </div>
           </div>
 
-          <div className="text-[11px] font-mono font-bold text-amber-900/80 uppercase tracking-widest bg-amber-100/80 px-3 py-1 rounded-full border border-amber-300/60 shadow-sm">
-            Cahier de Caisse Seyes
+          <div className="flex items-center gap-2">
+            {onSearchChange && (
+              <div className="relative min-w-[160px] sm:min-w-[200px]">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-amber-700" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="Rechercher sur la page..."
+                  className="w-full pl-8 pr-3 py-1 bg-amber-50/80 border border-amber-300/80 rounded-full text-xs text-gray-900 placeholder-amber-800/50 focus:outline-none focus:border-amber-500 font-mono shadow-inner"
+                />
+              </div>
+            )}
+            <div className="hidden sm:inline-block text-[11px] font-mono font-bold text-amber-900/80 uppercase tracking-widest bg-amber-100/80 px-3 py-1 rounded-full border border-amber-300/60 shadow-sm">
+              Cahier Seyes
+            </div>
           </div>
         </div>
 
