@@ -51,7 +51,6 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
   selectedShopId,
   onSelectShopId,
   onOpenNewShopModal,
-  soldeDuJour = 0,
   tiroirCaisse = 0,
   argentDehors = 0,
   nosDettes = 0,
@@ -226,56 +225,45 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
         </div>
       </div>
 
-      {/* Rangée 2 : Cartes KPI Financières (Aujourd'hui, Tiroir Cash, Crédits Dehors, Nos Dettes) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 font-mono">
-        {/* Aujourd'hui */}
-        <div className="bg-gradient-to-br from-blue-50/95 to-sky-100/70 border border-blue-300/70 rounded-2xl p-3 space-y-1 shadow-sm hover:shadow-md transition-all">
-          <div className="text-[10px] text-blue-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
-            <span>{labels.soldeJour}</span>
-            <span className="w-2 h-2 rounded-full bg-blue-500 shadow-xs" />
-          </div>
-          <div className="text-base sm:text-lg font-black text-blue-950">
-            {soldeDuJour >= 0 ? `+${formatPrice(soldeDuJour)}` : formatPrice(soldeDuJour)}
-          </div>
-        </div>
-
+      {/* Rangée 2 : Cartes KPI Financières (Tiroir Cash, Crédits Dehors, Nos Dettes) */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-1 font-mono">
         {/* Tiroir Cash */}
-        <div className="bg-gradient-to-br from-amber-50/95 to-amber-100/80 border border-amber-300/80 rounded-2xl p-3 space-y-1 shadow-sm hover:shadow-md transition-all relative">
+        <div className="bg-gradient-to-br from-amber-50/95 to-amber-100/80 border border-amber-300/80 rounded-2xl p-2.5 sm:p-3 space-y-1 shadow-xs hover:shadow-md transition-all relative">
           <div className="flex items-center justify-between text-[10px] text-amber-900 font-extrabold uppercase tracking-wider">
             <span>{labels.tiroirCash}</span>
             {onOpenCashAdjustment && (
               <button
                 type="button"
                 onClick={onOpenCashAdjustment}
-                className="text-[9px] underline text-amber-800 hover:text-amber-950 font-extrabold uppercase"
+                className="text-[9px] underline text-amber-800 hover:text-amber-950 font-extrabold uppercase cursor-pointer"
               >
                 AJUSTER
               </button>
             )}
           </div>
-          <div className="text-base sm:text-lg font-black text-amber-950">
+          <div className="text-sm sm:text-lg font-black text-amber-950">
             {formatPrice(tiroirCaisse)}
           </div>
         </div>
 
         {/* Crédits Dehors */}
-        <div className="bg-gradient-to-br from-rose-50/95 to-rose-100/70 border border-rose-300/70 rounded-2xl p-3 space-y-1 shadow-sm hover:shadow-md transition-all">
+        <div className="bg-gradient-to-br from-rose-50/95 to-rose-100/70 border border-rose-300/70 rounded-2xl p-2.5 sm:p-3 space-y-1 shadow-xs hover:shadow-md transition-all">
           <div className="text-[10px] text-rose-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
             <span>{labels.creditsDehors}</span>
             <span className="w-2 h-2 rounded-full bg-rose-500 shadow-xs" />
           </div>
-          <div className="text-base sm:text-lg font-black text-rose-950">
+          <div className="text-sm sm:text-lg font-black text-rose-950">
             {formatPrice(argentDehors)}
           </div>
         </div>
 
         {/* Nos Dettes */}
-        <div className="bg-gradient-to-br from-fuchsia-50/95 to-purple-100/70 border border-fuchsia-300/70 rounded-2xl p-3 space-y-1 shadow-sm hover:shadow-md transition-all">
+        <div className="bg-gradient-to-br from-fuchsia-50/95 to-purple-100/70 border border-fuchsia-300/70 rounded-2xl p-2.5 sm:p-3 space-y-1 shadow-xs hover:shadow-md transition-all">
           <div className="text-[10px] text-fuchsia-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
             <span>{labels.nosDettes}</span>
             <span className="w-2 h-2 rounded-full bg-fuchsia-500 shadow-xs" />
           </div>
-          <div className="text-base sm:text-lg font-black text-fuchsia-950">
+          <div className="text-sm sm:text-lg font-black text-fuchsia-950">
             {formatPrice(nosDettes)}
           </div>
         </div>
