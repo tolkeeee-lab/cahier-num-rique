@@ -3,6 +3,7 @@
 import React from 'react'
 import { 
   BookOpen, 
+  History,
   Package, 
   BookText, 
   ShoppingCart, 
@@ -12,10 +13,9 @@ import {
   Utensils 
 } from 'lucide-react'
 import { useFeatures } from '@/context/FeatureContext'
-
 import { getActivityLabels } from '@/lib/activityLabels'
 
-export type JournalTab = 'cahier' | 'stock' | 'dettes' | 'shopping' | 'demandes' | 'analytics' | 'particulier' | 'settings'
+export type JournalTab = 'cahier' | 'history' | 'stock' | 'dettes' | 'shopping' | 'demandes' | 'analytics' | 'particulier' | 'settings'
 
 interface JournalTabsProps {
   activeTab: JournalTab
@@ -40,6 +40,12 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
       id: 'cahier' as JournalTab,
       label: labels.tabCahier,
       icon: BookOpen,
+      show: true,
+    },
+    {
+      id: 'history' as JournalTab,
+      label: 'Historique Ventes',
+      icon: History,
       show: true,
     },
     {

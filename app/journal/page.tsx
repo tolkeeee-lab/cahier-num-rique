@@ -11,6 +11,7 @@ import { AuthScreen } from '@/components/AuthScreen'
 import { StockManager } from '@/components/StockManager'
 import { SettingsManager } from '@/components/SettingsManager'
 import { ParticulierDashboard } from '@/components/ParticulierDashboard'
+import { SalesHistory } from '@/components/SalesHistory'
 
 import { JournalHeader } from '@/components/journal/JournalHeader'
 import { JournalTabs, JournalTab } from '@/components/journal/JournalTabs'
@@ -405,6 +406,24 @@ export default function JournalPage() {
             )}
 
             {/* Autres onglets */}
+            {activeTab === 'history' && (
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <SalesHistory
+                  sales={journalData.allSales}
+                  shopId={shopManager.shopId}
+                  onSaleCrossedOut={journalData.crossOutSale}
+                  onUpdateSale={async (saleId: string, articles: any[], clientName?: string) => {
+                    await journalData.updateSale(saleId, articles, clientName)
+                  }}
+                  onAddArticle={async (saleId: string, text: string) => {
+                    await journalData.addArticleToSale(saleId, text, 'blue')
+                  }}
+                  onUpdateCategory={async (saleId: string, cat: string) => {
+                    await journalData.updateCategory(saleId, cat)
+                  }}
+                />
+              </div>
+            )}
             {activeTab === 'dettes' && (
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <DebtsBook shopId={shopManager.shopId} onRefreshTotals={journalData.reloadData} onError={setPostItMessage} />

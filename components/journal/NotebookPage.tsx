@@ -226,7 +226,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                               <span className="text-[11px] font-mono text-gray-400 font-bold flex-shrink-0">
                                 {sale.time}
                               </span>
-                              <span className={`text-xs sm:text-sm font-bold truncate ${inkClass}`}>
+                              <span className={`text-xs sm:text-sm font-bold break-words whitespace-normal leading-snug ${inkClass}`}>
                                 {sale.notes || sale.client}
                               </span>
                               <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono uppercase font-black border flex-shrink-0 ${badgeClass}`}>
