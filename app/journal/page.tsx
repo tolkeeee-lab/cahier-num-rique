@@ -25,6 +25,9 @@ import { AutoLearnModal } from '@/components/journal/AutoLearnModal'
 import { TactileMenuGrid } from '@/components/journal/TactileMenuGrid'
 import { ChangeCalculatorPostIt } from '@/components/journal/ChangeCalculatorPostIt'
 import { AddToExistingSaleBar } from '@/components/journal/AddToExistingSaleBar'
+import { StockWizardModal } from '@/components/journal/StockWizardModal'
+import { StockConfirmationModal } from '@/components/journal/StockConfirmationModal'
+import { PriceChangeDialog } from '@/components/journal/PriceChangeDialog'
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 import { useShopManager } from '@/hooks/useShopManager'
@@ -34,6 +37,8 @@ import { useSaleCreation } from '@/hooks/useSaleCreation'
 import { useTactileMenu } from '@/hooks/useTactileMenu'
 import { useChangeCalculator } from '@/hooks/useChangeCalculator'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
+import { useInputPipeline, StockConfirmationData, PriceChangeData, WizardPrefill } from '@/hooks/useInputPipeline'
+import { saveOfflineProduct } from '@/lib/offlineDb'
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 import { isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -91,6 +96,12 @@ export default function JournalPage() {
   const [showSyscohadaModal, setShowSyscohadaModal] = useState(false)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
 
+  // Pipeline interceptions
+  const [stockConfirmationData, setStockConfirmationData] = useState<StockConfirmationData | null>(null)
+  const [priceChangeData, setPriceChangeData] = useState<PriceChangeData | null>(null)
+  const [wizardPrefill, setWizardPrefill] = useState<WizardPrefill | null>(null)
+  const [showStockWizard, setShowStockWizard] = useState(false)
+
   // ── Hooks métier ───────────────────────────────────────────────────────────
   const shopManager = useShopManager(mappedUser)
   const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopManager.shopId)
@@ -122,6 +133,30 @@ export default function JournalPage() {
     input: saleCreation.input,
     setInput: saleCreation.setInput,
   })
+
+  // ── Pipeline de saisie intelligent ────────────────────────────────────────
+  const { processInput } = useInputPipeline({
+    shopId: shopManager.shopId,
+    selectedPen,
+    journalMenuItems: tactileMenu.menuItems,
+    onSubmit: async (text, penColor) => {
+      await saleCreation.submitText(text, penColor)
+    },
+    onShowStockConfirmation: (data) => setStockConfirmationData(data),
+    onShowStockWizard: (prefill) => {
+      setWizardPrefill(prefill)
+      setShowStockWizard(true)
+    },
+    onShowPriceChangeDialog: (data) => setPriceChangeData(data),
+    onWarning: (msg) => saleCreation.setPostItWarning(msg),
+  })
+
+  const handlePipelineSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!saleCreation.input.trim()) return
+    await processInput(saleCreation.input)
+    saleCreation.setInput('')
+  }
 
   // ── Suggestions prédictives (dernier fragment tapé) ────────────────────────
   const stockSuggestions = useMemo(() => {
@@ -351,7 +386,7 @@ export default function JournalPage() {
                 {/* Barre de saisie WhatsApp (FIXE EN BAS) */}
                 {!addingToSaleId && (
                 <div className="flex-shrink-0 pt-1 border-t border-dashed border-amber-300/60 relative z-20">
-                  <form onSubmit={saleCreation.handleCreateSale} className="relative flex items-center gap-2">
+                  <form onSubmit={handlePipelineSubmit} className="relative flex items-center gap-2">
                     <StockSuggestionsBubble
                       suggestions={stockSuggestions}
                       activeQty={activeQty}
@@ -479,6 +514,103 @@ export default function JournalPage() {
         onClose={() => setShowCashAdjustment(false)}
         currentCash={journalData.tiroirCaisse}
         onSaveAdjustment={journalData.reloadData}
+      />
+
+      {/* ── Pipeline Interception Modals ── */}
+
+      <StockConfirmationModal
+        isOpen={!!stockConfirmationData}
+        product={stockConfirmationData?.product || { name: '', unit: 'pièce', unit_cost: 0, unit_price: 0 }}
+        quantity={stockConfirmationData?.quantity || 1}
+        packaging={stockConfirmationData?.packaging || 'unité'}
+        multiplier={stockConfirmationData?.multiplier || 1}
+        unit={stockConfirmationData?.unit || 'pièce'}
+        onConfirm={async () => {
+          if (!stockConfirmationData) return
+          const { product, quantity, packaging, multiplier, unit } = stockConfirmationData
+          const lotPrice = product.unit_cost * multiplier
+          const salePrice = product.unit_price
+          const isUnit = packaging === 'unité' || !packaging
+          const text = isUnit
+            ? `stock de ${quantity} ${product.name} à ${lotPrice} prix de vente à l'unité ${salePrice}`
+            : `stock de ${quantity} ${packaging} de ${product.name} de ${multiplier} ${unit} à ${lotPrice} prix de vente à l'unité ${salePrice}`
+          await saleCreation.submitText(text, 'green')
+          setStockConfirmationData(null)
+        }}
+        onModify={() => {
+          if (!stockConfirmationData) return
+          setWizardPrefill({
+            productName: stockConfirmationData.product.name,
+            quantity: stockConfirmationData.quantity,
+            packaging: stockConfirmationData.packaging,
+            multiplier: String(stockConfirmationData.multiplier),
+            unit: stockConfirmationData.unit,
+          })
+          setStockConfirmationData(null)
+          setShowStockWizard(true)
+        }}
+        onCancel={() => setStockConfirmationData(null)}
+      />
+
+      <PriceChangeDialog
+        isOpen={!!priceChangeData}
+        productName={priceChangeData?.product?.name || ''}
+        oldLotPrice={priceChangeData?.oldLotPrice || 0}
+        newLotPrice={priceChangeData?.newLotPrice || 0}
+        packaging={priceChangeData?.product?.packaging_name || 'unité'}
+        onAcceptNewPrice={async () => {
+          if (!priceChangeData) return
+          // Enregistrer avec le nouveau prix
+          await saleCreation.submitText(
+            priceChangeData.rawText,
+            priceChangeData.penColor
+          )
+          // Mettre à jour le catalogue offline avec le nouveau prix
+          const product = priceChangeData.product
+          const newUnitCost = Math.round(priceChangeData.newLotPrice / (product.multiplier || 1))
+          saveOfflineProduct(shopManager.shopId, { ...product, unit_cost: newUnitCost })
+          // Si en ligne : synchro API
+          if (isOnline) {
+            fetch('/api/stock', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', 'x-shop-id': shopManager.shopId },
+              body: JSON.stringify({ id: product.id, unit_cost: newUnitCost }),
+            }).catch(console.error)
+          }
+          setPriceChangeData(null)
+        }}
+        onKeepOldPrice={async () => {
+          if (!priceChangeData) return
+          // Enregistre avec le texte original mais remet l'ancien prix en catalogue
+          const product = priceChangeData.product
+          const isUnit = !product.packaging_name || product.packaging_name === 'unité'
+          const safeText = isUnit
+            ? `stock de 1 ${product.name} à ${priceChangeData.oldLotPrice}`
+            : `stock de 1 ${product.packaging_name} de ${product.name} à ${priceChangeData.oldLotPrice}`
+          await saleCreation.submitText(
+            safeText,
+            priceChangeData.penColor
+          )
+          setPriceChangeData(null)
+        }}
+        onCancel={() => setPriceChangeData(null)}
+      />
+
+      <StockWizardModal
+        isOpen={showStockWizard}
+        shopActivity={shopManager.shopActivity}
+        prefillName={wizardPrefill?.productName || ''}
+        onClose={() => { setShowStockWizard(false); setWizardPrefill(null) }}
+        onComplete={async (product) => {
+          const qty = wizardPrefill?.quantity || 1
+          const isUnit = product.packaging === 'unité'
+          const text = isUnit
+            ? `stock de ${qty} ${product.name} à ${product.purchasePrice} prix de vente à l'unité ${product.salePrice}`
+            : `stock de ${qty} ${product.packaging} de ${product.name} de ${product.multiplier} ${product.unit} à ${product.purchasePrice} prix de vente à l'unité ${product.salePrice}`
+          await saleCreation.submitText(text, 'green')
+          setShowStockWizard(false)
+          setWizardPrefill(null)
+        }}
       />
     </div>
   )

@@ -35,7 +35,10 @@ export interface UseSaleCreationReturn {
   input: string
   setInput: Dispatch<SetStateAction<string>>
   isSubmitting: boolean
+  postItWarning: string | null
+  setPostItWarning: Dispatch<SetStateAction<string | null>>
   handleCreateSale: (e: FormEvent) => void
+  submitText: (text: string, penColor?: string) => Promise<void>
   autoLearnData: { name: string; price: number } | null
   showAutoLearnModal: boolean
   setShowAutoLearnModal: Dispatch<SetStateAction<boolean>>
@@ -53,19 +56,21 @@ export function useSaleCreation({
 }: UseSaleCreationOptions): UseSaleCreationReturn {
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [postItWarning, setPostItWarning] = useState<string | null>(null)
   const [autoLearnData, setAutoLearnData] = useState<{ name: string; price: number } | null>(null)
   const [showAutoLearnModal, setShowAutoLearnModal] = useState(false)
 
   // ── Construit et sauvegarde localement une vente à partir du texte libre ──
-  const buildLocalSale = (text: string): OfflineSale => {
-    const parsed = parseTextLocally(text, selectedPen)
+  const buildLocalSale = (text: string, penOverride?: string): OfflineSale => {
+    const activePen = penOverride || selectedPen
+    const parsed = parseTextLocally(text, activePen)
     const now = new Date()
 
     let type = 'cash_in'
-    if (selectedPen === 'red') type = 'cash_out'
-    else if (selectedPen === 'green') type = 'purchase_cash'
-    else if (selectedPen === 'purple') type = 'purchase_credit'
-    else if (selectedPen === 'yellow') type = 'sale_credit'
+    if (activePen === 'red') type = 'cash_out'
+    else if (activePen === 'green') type = 'purchase_cash'
+    else if (activePen === 'purple') type = 'purchase_credit'
+    else if (activePen === 'yellow') type = 'sale_credit'
 
     const sale: OfflineSale = {
       id: generateOfflineId(),
@@ -83,7 +88,7 @@ export function useSaleCreation({
       debt: parsed.montant_dette || 0,
       status: (parsed.montant_dette || 0) > 0 ? 'debt' : 'paid',
       type,
-      pen_color: selectedPen,
+      pen_color: activePen,
       notes: text,
       category: parsed.categorie || 'Général',
       created_at: now.toISOString(),
@@ -95,7 +100,8 @@ export function useSaleCreation({
   }
 
   // ── Tente une sync API en arrière-plan (non bloquant) ──
-  const syncWithApi = async (text: string, localSaleId: string) => {
+  const syncWithApi = async (text: string, localSaleId: string, penOverride?: string) => {
+    const activePen = penOverride || selectedPen
     try {
       const response = await fetch('/api/sales', {
         method: 'POST',
@@ -106,8 +112,8 @@ export function useSaleCreation({
         body: JSON.stringify({
           text,
           raw_text: text,
-          penColor: selectedPen,
-          pen_color: selectedPen,
+          penColor: activePen,
+          pen_color: activePen,
           shop_id: shopId,
         }),
       })
@@ -163,6 +169,17 @@ export function useSaleCreation({
       setAutoLearnData({ name: prodName, price: prodPrice })
       setShowAutoLearnModal(true)
     }
+  }
+
+  // ── submitText : pour le pipeline et les modales d'interception ──
+  const submitText = async (text: string, penOverride?: string): Promise<void> => {
+    if (!text.trim() || isSubmitting) return
+    setIsSubmitting(true)
+    const localSale = buildLocalSale(text, penOverride)
+    onSaleCreated()
+    if (onAfterSale && localSale.total > 0) onAfterSale(localSale.total)
+    syncWithApi(text, localSale.id, penOverride).finally(() => setIsSubmitting(false))
+    checkAutoLearn(text)
   }
 
   // ── Handler principal de création de vente ──
@@ -221,7 +238,10 @@ export function useSaleCreation({
     input,
     setInput,
     isSubmitting,
+    postItWarning,
+    setPostItWarning,
     handleCreateSale,
+    submitText,
     autoLearnData,
     showAutoLearnModal,
     setShowAutoLearnModal,
