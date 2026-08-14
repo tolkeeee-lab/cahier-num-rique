@@ -236,10 +236,10 @@ export default function JournalPage() {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen w-screen max-h-screen max-w-screen bg-[#141210] text-[#1e1a18] font-sans p-2 md:p-4 antialiased flex flex-col justify-between overflow-hidden select-none">
+    <div className="h-screen w-screen max-h-screen max-w-screen bg-[#141210] text-[#1e1a18] font-sans p-1 sm:p-2 md:p-2.5 lg:p-3 antialiased flex flex-col justify-between overflow-hidden select-none">
 
       {/* ── Chassis Principal du Cahier Ouvert ── */}
-      <div className="flex-1 min-h-0 bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-amber-950/20 shadow-2xl flex relative z-0 overflow-hidden w-full max-w-6xl mx-auto flex-row">
+      <div className="flex-1 min-h-0 bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-amber-950/20 shadow-2xl flex relative z-0 overflow-hidden w-full max-w-[1550px] mx-auto flex-row">
 
         {/* Reliure Cuir Émeraude (FIXE) */}
         <div className="hidden sm:flex w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-10 z-10 flex-shrink-0 select-none h-full">
