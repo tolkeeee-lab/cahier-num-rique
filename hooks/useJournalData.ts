@@ -109,10 +109,13 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
       if (isMounted) {
         const offlineSales = getOfflineSales(shopId)
-        setAllSales(offlineSales)
-        const todays = offlineSales.filter(s => s.date === today)
+        const sortedOffline = [...offlineSales].sort(
+          (a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
+        )
+        setAllSales(sortedOffline)
+        const todays = sortedOffline.filter(s => s.date === today)
         setSales(todays)
-        calculateSummary(offlineSales, todays)
+        calculateSummary(sortedOffline, todays)
         setIsLoading(false)
       }
     }
