@@ -54,11 +54,11 @@ export function getPens(activity?: string): Pen[] {
       {
         id: 'purple',
         name: 'CARNET BOUTIQUIER',
-        color: '#701a75',
-        bg: 'bg-fuchsia-800',
-        border: 'border-fuchsia-800',
+        color: '#7e22ce',
+        bg: 'bg-purple-700',
+        border: 'border-purple-700',
         textClass: 'ink-purple',
-        dotBg: 'bg-[#701a75]',
+        dotBg: 'bg-purple-700',
         placeholder: 'Stylo Violet : Achat pris à crédit chez le boutiquier... (ex: Pris 2 pains et 1 lait chez Maman Rose)'
       },
       {
@@ -107,11 +107,11 @@ export function getPens(activity?: string): Pen[] {
       {
         id: 'purple',
         name: 'CRÉDIT FOURNISSEUR',
-        color: '#701a75',
-        bg: 'bg-fuchsia-800',
-        border: 'border-fuchsia-800',
+        color: '#7e22ce',
+        bg: 'bg-purple-700',
+        border: 'border-purple-700',
         textClass: 'ink-purple',
-        dotBg: 'bg-[#701a75]',
+        dotBg: 'bg-purple-700',
         placeholder: 'Stylo Violet : Commande de stock prise à crédit... (ex: Brasserie 10 casiers à crédit 85000)'
       },
       {
@@ -160,11 +160,11 @@ export function getPens(activity?: string): Pen[] {
       {
         id: 'purple',
         name: 'FOURNISSEUR CRÉDIT',
-        color: '#701a75',
-        bg: 'bg-fuchsia-800',
-        border: 'border-fuchsia-800',
+        color: '#7e22ce',
+        bg: 'bg-purple-700',
+        border: 'border-purple-700',
         textClass: 'ink-purple',
-        dotBg: 'bg-[#701a75]',
+        dotBg: 'bg-purple-700',
         placeholder: 'Stylo Violet : Matériel pris à crédit... (ex: Fournisseur 2 tondeuses crédit 25000)'
       },
       {
@@ -213,11 +213,11 @@ export function getPens(activity?: string): Pen[] {
       {
         id: 'purple',
         name: 'STOCK CRÉDIT',
-        color: '#701a75',
-        bg: 'bg-fuchsia-800',
-        border: 'border-fuchsia-800',
+        color: '#7e22ce',
+        bg: 'bg-purple-700',
+        border: 'border-purple-700',
         textClass: 'ink-purple',
-        dotBg: 'bg-[#701a75]',
+        dotBg: 'bg-purple-700',
         placeholder: 'Stylo Violet : Écrivez un achat à crédit fournisseur... (ex: Grossiste Chantal carton peak credit 35000)'
       },
       {

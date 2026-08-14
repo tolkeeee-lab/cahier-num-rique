@@ -31,11 +31,19 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
             onClick={() => onSelectPen(pen.id)}
             className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-xs font-mono font-extrabold transition-all duration-150 flex-shrink-0 border cursor-pointer ${
               isSelected
-                ? `${pen.bg} text-white shadow-xs scale-102 ring-2 ring-amber-400/80 border-white/60`
+                ? 'text-white shadow-xs scale-102 ring-2 ring-amber-400/80 border-white/60'
                 : 'bg-white/85 text-gray-800 border-amber-300/80 hover:bg-amber-50'
             }`}
+            style={
+              isSelected
+                ? { backgroundColor: pen.color, borderColor: pen.color, color: '#ffffff' }
+                : {}
+            }
           >
-            <span className={`w-2.5 h-2.5 rounded-full ${pen.dotBg} shadow-xs border border-white/40 flex-shrink-0`} />
+            <span
+              className={`w-2.5 h-2.5 rounded-full shadow-xs border border-white/40 flex-shrink-0`}
+              style={{ backgroundColor: pen.color }}
+            />
             <span className="text-[11px] sm:text-xs">{pen.name}</span>
           </button>
         )
