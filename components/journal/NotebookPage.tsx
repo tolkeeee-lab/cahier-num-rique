@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { AlertTriangle, Printer, Trash2, BookOpen, PlusCircle } from 'lucide-react'
+import { AlertTriangle, Printer, Trash2, BookOpen, PlusCircle, Calculator, X } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -80,6 +80,10 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   // Auto-scroll vers le bas à chaque nouvelle vente
   const listRef = useRef<HTMLDivElement>(null)
 
+  // Calculateur de monnaie intégré par ligne de vente
+  const [activeChangeSaleId, setActiveChangeSaleId] = React.useState<string | null>(null)
+  const [changeReceivedMap, setChangeReceivedMap] = React.useState<Record<string, string>>({})
+
   useEffect(() => {
     if (listRef.current && sales.length > 0) {
       const el = listRef.current
@@ -138,6 +142,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
               const isCrossedOut = sale.status === 'crossed_out'
               // Seules les ventes cash (bleu) peuvent recevoir des ajouts d'articles
               const canAddArticle = !isCrossedOut && sale.pen_color === 'blue' && !!onAddArticleToSale
+              const isChangeActive = activeChangeSaleId === sale.id
 
               return (
                 <div
@@ -193,7 +198,31 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       </span>
 
                       {!isCrossedOut && (
-                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                          {/* Bouton Monnaie — activable par l'utilisateur */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isChangeActive) {
+                                setActiveChangeSaleId(null)
+                              } else {
+                                setActiveChangeSaleId(sale.id)
+                                if (changeReceivedMap[sale.id] === undefined) {
+                                  setChangeReceivedMap(prev => ({ ...prev, [sale.id]: '' }))
+                                }
+                              }
+                            }}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 border ${
+                              isChangeActive
+                                ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                                : 'text-amber-800 bg-amber-100/90 hover:bg-amber-200 border-amber-300'
+                            }`}
+                            title="Calculer la monnaie pour cette vente"
+                          >
+                            <Calculator className="w-3.5 h-3.5" />
+                            <span className="text-[10px] font-mono font-bold">Monnaie</span>
+                          </button>
+
                           {/* Bouton ajouter article — visible uniquement sur ventes bleues */}
                           {canAddArticle && (
                             <button
@@ -229,6 +258,81 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Calculateur de monnaie en ligne (activé par l'utilisateur) */}
+                  {isChangeActive && !isCrossedOut && (
+                    <div className="mt-2.5 pt-2.5 border-t border-dashed border-amber-300 bg-amber-50/90 rounded-xl p-3 space-y-2.5 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950 font-mono">
+                          <Calculator className="w-4 h-4 text-amber-700" />
+                          <span>Calculateur de Monnaie — Total Vente : {formatPrice(sale.total)}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveChangeSaleId(null)}
+                          className="text-gray-400 hover:text-gray-700 p-0.5"
+                          title="Masquer le calculateur"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-gray-700">Client a donné :</span>
+                          <input
+                            type="number"
+                            value={changeReceivedMap[sale.id] || ''}
+                            onChange={(e) => setChangeReceivedMap({ ...changeReceivedMap, [sale.id]: e.target.value })}
+                            placeholder="ex: 1000"
+                            className="w-28 px-2.5 py-1 text-xs font-mono font-bold bg-white border border-amber-300 rounded-lg text-gray-900 focus:outline-none focus:border-amber-500 shadow-inner"
+                            autoFocus
+                          />
+                          <span className="text-xs font-bold text-gray-500 font-mono">FCFA</span>
+                        </div>
+
+                        {/* Billets FCFA Rapides */}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {[500, 1000, 2000, 5000, 10000].map((bill) => (
+                            <button
+                              key={bill}
+                              type="button"
+                              onClick={() => setChangeReceivedMap({ ...changeReceivedMap, [sale.id]: String(bill) })}
+                              className="px-2 py-1 bg-white hover:bg-amber-100 text-amber-950 text-[10px] font-mono font-bold rounded-lg border border-amber-300 transition-all shadow-xs active:scale-95 cursor-pointer"
+                            >
+                              {bill.toLocaleString('fr-FR')} F
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Résultat Calcul Monnaie */}
+                      {changeReceivedMap[sale.id] !== undefined && changeReceivedMap[sale.id] !== '' && (
+                        <div className="pt-2 flex items-center justify-between border-t border-amber-200/80 text-xs font-mono">
+                          {(() => {
+                            const rec = parseFloat(changeReceivedMap[sale.id]) || 0
+                            const diff = rec - sale.total
+                            if (diff >= 0) {
+                              return (
+                                <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-sm">
+                                  <span>✅ Monnaie à rendre :</span>
+                                  <span className="bg-emerald-100 text-emerald-900 px-3 py-1 rounded-xl border border-emerald-300 shadow-xs">
+                                    {formatPrice(diff)}
+                                  </span>
+                                </div>
+                              )
+                            }
+                            return (
+                              <div className="text-rose-700 font-bold text-xs flex items-center gap-1">
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Montant insuffisant (manque {formatPrice(Math.abs(diff))})</span>
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
