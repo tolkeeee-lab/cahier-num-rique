@@ -181,6 +181,7 @@ export default function JournalPage() {
     if (!input.trim() || isSubmitting) return
 
     setIsSubmitting(true)
+    const textCreated = input.trim()
     try {
       const response = await fetch('/api/sales', {
         method: 'POST',
@@ -189,14 +190,15 @@ export default function JournalPage() {
           'x-shop-id': shopManager.shopId,
         },
         body: JSON.stringify({
-          raw_text: input.trim(),
+          text: textCreated,
+          raw_text: textCreated,
+          penColor: selectedPen,
           pen_color: selectedPen,
           shop_id: shopManager.shopId,
         }),
       })
 
       if (response.ok) {
-        const textCreated = input.trim()
         setInput('')
         journalData.reloadData()
 
@@ -214,7 +216,8 @@ export default function JournalPage() {
           }
         }
       } else {
-        setPostItMessage('Erreur lors de l\'enregistrement. Vérifiez votre connexion.')
+        const errJson = await response.json().catch(() => ({}))
+        setPostItMessage(errJson.error || 'Erreur lors de l\'enregistrement. Vérifiez vos données.')
       }
     } catch (err) {
       setPostItMessage('Mode hors-ligne : la vente sera synchronisée ultérieurement.')
