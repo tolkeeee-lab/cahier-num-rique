@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { DebtsBook } from '@/components/DebtsBook'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
@@ -21,11 +21,14 @@ import { NewShopModal } from '@/components/journal/NewShopModal'
 import { CashAdjustmentModal } from '@/components/journal/CashAdjustmentModal'
 import { JournalPostIt } from '@/components/journal/JournalPostIt'
 import { QuickProductBadges } from '@/components/sales/QuickProductBadges'
+import { StockSuggestionsBubble, StockSuggestionItem } from '@/components/journal/StockSuggestionsBubble'
+import { AutoLearnModal } from '@/components/journal/AutoLearnModal'
 
 import { useShopManager } from '@/hooks/useShopManager'
 import { useJournalData } from '@/hooks/useJournalData'
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
+import { getOfflineProducts, saveOfflineProduct, generateOfflineId } from '@/lib/offlineDb'
 import { Send, Loader } from 'lucide-react'
 
 export default function JournalPage() {
@@ -44,7 +47,7 @@ export default function JournalPage() {
     return null
   })
 
-  const mappedUser = React.useMemo(() => {
+  const mappedUser = useMemo(() => {
     if (!user) return null
     const meta = user.user_metadata || {}
     return {
@@ -69,6 +72,10 @@ export default function JournalPage() {
   const [postItMessage, setPostItMessage] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState('')
 
+  // Modale d'Auto-apprentissage
+  const [showAutoLearnModal, setShowAutoLearnModal] = useState(false)
+  const [autoLearnData, setAutoLearnData] = useState<{ name: string; price: number } | null>(null)
+
   // Modales d'action
   const [showCashAdjustment, setShowCashAdjustment] = useState(false)
   const [showCashClosing, setShowCashClosing] = useState(false)
@@ -80,15 +87,6 @@ export default function JournalPage() {
 
   const pens = getPens(shopManager.shopActivity)
 
-  const quickProducts = [
-    { name: 'Beaufort Canette 33cl', price: 600 },
-    { name: 'Boîte de Sardines', price: 500 },
-    { name: 'Boîte de Tomate', price: 200 },
-    { name: 'Dentifrice Colgate', price: 350 },
-    { name: 'Sac de Riz 50kg', price: 22000 },
-    { name: 'Huile Dinor 1L', price: 1200 },
-  ]
-
   useEffect(() => {
     const updateTime = () => {
       const now = new Date()
@@ -98,6 +96,54 @@ export default function JournalPage() {
     const interval = setInterval(updateTime, 30000)
     return () => clearInterval(interval)
   }, [])
+
+  // Suggestions prédictives du stock en temps réel
+  const stockSuggestions = useMemo(() => {
+    if (!input || !input.trim()) return []
+
+    const parts = input.split(/(?:,|\+|\bet\b)/i)
+    const lastPart = parts[parts.length - 1] || ''
+    const cleanTerm = lastPart.replace(/^\s*\d+\s*/, '').trim().toLowerCase()
+    if (cleanTerm.length < 1) return []
+
+    const localProds = getOfflineProducts(shopManager.shopId) || []
+    return localProds
+      .filter((p) => p.name.toLowerCase().includes(cleanTerm))
+      .slice(0, 5)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.unit_price || 0,
+        category: p.category,
+        stock: (p as any).current_stock ?? p.initial_stock,
+        emoji: '📦',
+      }))
+  }, [input, shopManager.shopId])
+
+  const activeQty = useMemo(() => {
+    if (!input) return 1
+    const parts = input.split(/(?:,|\+|\bet\b)/i)
+    const lastPart = parts[parts.length - 1] || ''
+    const qtyMatch = lastPart.match(/^\s*(\d+)\s*/)
+    return qtyMatch ? parseInt(qtyMatch[1], 10) : 1
+  }, [input])
+
+  const handleAppendStockSuggestion = (item: StockSuggestionItem) => {
+    const parts = input.split(/(?:,|\+|\bet\b)/i)
+    parts.pop() // Retirer la dernière frappe incomplète
+    const prefix = parts.join(', ').trim()
+    const newEntry = `${activeQty} ${item.name} à ${item.price}`
+    setInput(prefix ? `${prefix}, ${newEntry}` : newEntry)
+  }
+
+  const quickProducts = [
+    { name: 'Beaufort Canette 33cl', price: 600 },
+    { name: 'Boîte de Sardines', price: 500 },
+    { name: 'Boîte de Tomate', price: 200 },
+    { name: 'Dentifrice Colgate', price: 350 },
+    { name: 'Sac de Riz 50kg', price: 22000 },
+    { name: 'Huile Dinor 1L', price: 1200 },
+  ]
 
   const handleSelectQuickProduct = (prod: { name: string; price: number }) => {
     if (!input.trim()) {
@@ -110,6 +156,24 @@ export default function JournalPage() {
   const handlePrintReceipt = (sale: any) => {
     setReceiptSale(sale)
     setShowReceiptModal(true)
+  }
+
+  const handleConfirmAutoLearn = async (name: string, price: number) => {
+    const sid = shopManager.shopId
+    saveOfflineProduct(sid, {
+      id: generateOfflineId(),
+      shop_id: sid,
+      name,
+      category: 'Général',
+      unit: 'pièce',
+      alert_threshold: 5,
+      initial_stock: 0,
+      unit_cost: 0,
+      unit_price: price,
+      created_at: new Date().toISOString(),
+    })
+    setShowAutoLearnModal(false)
+    setAutoLearnData(null)
   }
 
   const handleCreateSale = async (e: React.FormEvent) => {
@@ -132,8 +196,23 @@ export default function JournalPage() {
       })
 
       if (response.ok) {
+        const textCreated = input.trim()
         setInput('')
         journalData.reloadData()
+
+        // Déclencher la modale d'auto-apprentissage si nouveau produit détecté
+        const matchSingle = textCreated.match(/^(\d+)?\s*([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@)\s*(\d+)/i)
+        if (matchSingle) {
+          const prodName = matchSingle[2].trim()
+          const prodPrice = parseInt(matchSingle[3], 10)
+          const existing = getOfflineProducts(shopManager.shopId)?.find(
+            (p) => p.name.toLowerCase().trim() === prodName.toLowerCase()
+          )
+          if (!existing && prodName.length >= 3) {
+            setAutoLearnData({ name: prodName, price: prodPrice })
+            setShowAutoLearnModal(true)
+          }
+        }
       } else {
         setPostItMessage('Erreur lors de l\'enregistrement. Vérifiez votre connexion.')
       }
@@ -234,7 +313,7 @@ export default function JournalPage() {
 
             {activeTab === 'cahier' && (
               <div className="flex-grow flex flex-col justify-between space-y-4">
-                {/* Barre de stylos Bic & Recherche (SANS filtres de catégorie) */}
+                {/* Barre de stylos Bic & Recherche */}
                 <NotebookToolbar
                   pens={pens}
                   selectedPen={selectedPen}
@@ -260,6 +339,14 @@ export default function JournalPage() {
 
                 {/* Barre de Saisie WhatsApp flottante tout en bas */}
                 <form onSubmit={handleCreateSale} className="relative flex items-center gap-2 pt-2 border-t border-dashed border-amber-300/60 mt-auto">
+                  
+                  {/* Bulle de Suggestions Prédictives du Stock */}
+                  <StockSuggestionsBubble
+                    suggestions={stockSuggestions}
+                    activeQty={activeQty}
+                    onSelectSuggestion={handleAppendStockSuggestion}
+                  />
+
                   {/* Horloge à gauche */}
                   <div className="font-mono text-xs font-bold text-gray-500 flex-shrink-0 min-w-[45px] text-center">
                     ⏰ {currentTime || '14:42'}
@@ -332,7 +419,7 @@ export default function JournalPage() {
         </div>
       </div>
 
-      {/* Modales */}
+      {/* Modales Principales */}
       <NotebookModals
         showAssistantModal={showAssistantModal}
         onCloseAssistantModal={() => setShowAssistantModal(false)}
@@ -347,6 +434,14 @@ export default function JournalPage() {
         sales={journalData.allSales}
         currentShopName={shopManager.currentShop?.name || 'Cahier Numérique'}
         receiptSale={receiptSale}
+      />
+
+      {/* Modale d'Auto-apprentissage du Stock */}
+      <AutoLearnModal
+        isOpen={showAutoLearnModal}
+        autoLearnData={autoLearnData}
+        onClose={() => setShowAutoLearnModal(false)}
+        onConfirmSave={handleConfirmAutoLearn}
       />
 
       {/* Modale de création d'une nouvelle boutique */}
