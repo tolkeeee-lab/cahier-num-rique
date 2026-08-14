@@ -90,9 +90,22 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             }))
 
             const localSales = getOfflineSales(shopId)
-            const unsyncedLocal = localSales.filter(ls => !ls.is_synced && !mappedSales.some(ms => ms.id === ls.id))
+            const salesMap = new Map<string, Sale>()
 
-            const combinedSales: Sale[] = [...unsyncedLocal, ...mappedSales].sort(
+            // 1. Conserver toutes les ventes locales (garantie anti-perte au rafraîchissement)
+            for (const ls of localSales) {
+              salesMap.set(ls.id, {
+                ...ls,
+                articles: ls.articles || [],
+              })
+            }
+
+            // 2. Mettre à jour / enrichir avec les données distantes Supabase
+            for (const ms of mappedSales) {
+              salesMap.set(ms.id, ms)
+            }
+
+            const combinedSales: Sale[] = Array.from(salesMap.values()).sort(
               (a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
             )
 
