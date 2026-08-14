@@ -17,7 +17,7 @@ import { SettingsManager } from '@/components/SettingsManager'
 import { CashClosingModal } from '@/components/CashClosingModal'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { exportSalesToCSV, exportSalesToPDF, generateWhatsAppHouseholdReport } from '@/lib/exportUtils'
-import type { Sale } from '@/app/journal/page'
+import type { Sale } from '@/hooks/useJournalData'
 
 
 // ── Postes de budget rapides pour particuliers (au lieu des raccourcis produits)
@@ -93,95 +93,95 @@ function formatPrice(price: number): string {
 }
 
 // ── Types de props ──────────────────────────────────────────────────────────
-interface ParticulierDashboardProps {
+export interface ParticulierDashboardProps {
   // User
-  mappedUser: { id: string; email: string; name: string; role: string; shop_id: string } | null
-  shopId: string
-  userShops: Array<{ id: string; name: string; activity: string }>
-  currentShop: { id: string; name: string; activity: string } | undefined
-  selectedShopId: string
-  setSelectedShopId: (id: string) => void
-  setShowNewShopModal: (v: boolean) => void
+  mappedUser?: { id: string; email: string; name: string; role: string; shop_id: string } | null
+  shopId?: string
+  userShops?: Array<{ id: string; name: string; activity: string }>
+  currentShop?: { id: string; name: string; activity: string } | undefined
+  selectedShopId?: string
+  setSelectedShopId?: (id: string) => void
+  setShowNewShopModal?: (v: boolean) => void
 
   // Data
-  sales: Sale[]
-  allSales: Sale[]
-  tiroirCaisse: number
-  argentDehors: number
-  nosDettes: number
-  soldeDuJour: number
+  sales?: Sale[]
+  allSales?: Sale[]
+  tiroirCaisse?: number
+  argentDehors?: number
+  nosDettes?: number
+  soldeDuJour?: number
 
   // Network
-  isOnline: boolean
-  pendingCount: number
-  syncStatus: string
-  currentTime: string
+  isOnline?: boolean
+  pendingCount?: number
+  syncStatus?: string
+  currentTime?: string
 
   // Handlers
-  handleSubmit: (e: React.FormEvent) => Promise<void>
-  handleLogout: () => void
-  handleSaleCrossedOut: () => void
-  handleAddArticle: (saleId: string, text: string) => Promise<void>
-  handleUpdateSale: (saleId: string, updatedArticles: Array<{ name: string; quantity: number; unit_price: number }>, clientName?: string) => Promise<void>
-  handleUpdateCategory: (saleId: string, category: string) => Promise<void>
-  handleError: (msg: string) => void
-  loadFinancialData: () => Promise<void>
-  syncOfflineData: () => Promise<void>
-  handleConvertToStockPurchase: (item: any) => Promise<void>
-  setUserShops: React.Dispatch<React.SetStateAction<Array<{ id: string; name: string; activity: string }>>>
+  handleSubmit?: (e: React.FormEvent) => Promise<void>
+  handleLogout?: () => void
+  handleSaleCrossedOut?: () => void
+  handleAddArticle?: (saleId: string, text: string) => Promise<void>
+  handleUpdateSale?: (saleId: string, updatedArticles: Array<{ name: string; quantity: number; unit_price: number }>, clientName?: string) => Promise<void>
+  handleUpdateCategory?: (saleId: string, category: string) => Promise<void>
+  handleError?: (msg: string) => void
+  loadFinancialData?: () => Promise<void>
+  syncOfflineData?: () => Promise<void>
+  handleConvertToStockPurchase?: (item: any) => Promise<void>
+  setUserShops?: React.Dispatch<React.SetStateAction<Array<{ id: string; name: string; activity: string }>>>
 
   // Input
-  input: string
-  setInput: (v: string) => void
-  selectedPen: string
-  setSelectedPen: (v: string) => void
-  loading: boolean
+  input?: string
+  setInput?: (v: string) => void
+  selectedPen?: string
+  setSelectedPen?: (v: string) => void
+  loading?: boolean
 
   // Modal states
-  postItWarning: string | null
-  setPostItWarning: (v: string | null) => void
-  showCashClosing: boolean
-  setShowCashClosing: (v: boolean) => void
+  postItWarning?: string | null
+  setPostItWarning?: (v: string | null) => void
+  showCashClosing?: boolean
+  setShowCashClosing?: (v: boolean) => void
 }
 
 // ── Composant ──────────────────────────────────────────────────────────────
 export function ParticulierDashboard({
-  mappedUser,
-  shopId,
-  userShops,
+  mappedUser = null,
+  shopId = 'default-shop',
+  userShops = [],
   currentShop,
-  setSelectedShopId,
-  setShowNewShopModal,
-  sales,
-  allSales,
-  tiroirCaisse,
-  argentDehors,
-  nosDettes,
-  soldeDuJour: _soldeDuJour,
-  isOnline,
-  pendingCount,
-  syncStatus,
-  currentTime,
-  handleSubmit,
-  handleLogout,
-  handleSaleCrossedOut,
-  handleAddArticle,
-  handleUpdateSale,
-  handleUpdateCategory,
-  handleError,
-  loadFinancialData,
-  syncOfflineData,
-  handleConvertToStockPurchase,
-  setUserShops,
-  input,
-  setInput,
-  selectedPen,
-  setSelectedPen,
-  loading,
-  postItWarning,
-  setPostItWarning,
-  showCashClosing,
-  setShowCashClosing,
+  setSelectedShopId = () => {},
+  setShowNewShopModal = () => {},
+  sales = [],
+  allSales = [],
+  tiroirCaisse = 0,
+  argentDehors = 0,
+  nosDettes = 0,
+  soldeDuJour: _soldeDuJour = 0,
+  isOnline = true,
+  pendingCount = 0,
+  syncStatus = 'synced',
+  currentTime = '',
+  handleSubmit = async () => {},
+  handleLogout = () => {},
+  handleSaleCrossedOut = () => {},
+  handleAddArticle = async () => {},
+  handleUpdateSale = async () => {},
+  handleUpdateCategory = async () => {},
+  handleError = () => {},
+  loadFinancialData = async () => {},
+  syncOfflineData = async () => {},
+  handleConvertToStockPurchase = async () => {},
+  setUserShops = () => {},
+  input = '',
+  setInput = () => {},
+  selectedPen = 'blue',
+  setSelectedPen = () => {},
+  loading = false,
+  postItWarning = null,
+  setPostItWarning = () => {},
+  showCashClosing = false,
+  setShowCashClosing = () => {},
 }: ParticulierDashboardProps) {
 
   type TabId = 'foyer' | 'prets' | 'analyses' | 'historique' | 'reserve' | 'marche' | 'souhaits' | 'compte'
