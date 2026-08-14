@@ -1,580 +1,74 @@
 'use client'
 
 import React, { useState } from 'react'
-import Link from 'next/link'
-import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
-import { Loader, AlertTriangle, Eye, EyeOff, Lock, ArrowRight, UserPlus, LogIn, ArrowLeft } from 'lucide-react'
+import { AuthHeader } from './auth/AuthHeader'
+import { AuthLoginForm } from './auth/AuthLoginForm'
+import { AuthSignupForm } from './auth/AuthSignupForm'
 
-interface AuthScreenProps {
-  onBypass: (role: 'owner' | 'employee') => void
-  onLoginSuccess?: (user: any) => void
+export interface AuthScreenProps {
+  onLogin?: (email: string, password?: string) => Promise<void>
+  onSignup?: (name: string, email: string, password?: string, shopName?: string) => Promise<void>
+  onMagicLink?: (email: string) => Promise<void>
+  onBypass?: (role?: any) => void
+  onLoginSuccess?: (usr?: any) => void
+  loading?: boolean
+  error?: string | null
 }
 
-export function AuthScreen({ onBypass, onLoginSuccess }: AuthScreenProps) {
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [role, setRole] = useState<'owner' | 'employee'>('owner')
-  const [activity, setActivity] = useState<'boutique' | 'resto' | 'prestations' | 'particulier'>('boutique')
-  const [shopCode, setShopCode] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-
-  const isConfigured = isSupabaseClientConfigured()
-
-  const [isOnline, setIsOnline] = useState(true)
-  const [lastActiveUser, setLastActiveUser] = useState<any>(null)
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return
-    setIsOnline(window.navigator.onLine)
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return
-    const cached = localStorage.getItem('cahier_last_active_user')
-    if (cached) {
-      try {
-        setLastActiveUser(JSON.parse(cached))
-      } catch (e) {
-        console.error(e)
-      }
-    }
-  }, [])
-
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email || !password) return
-
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const online = typeof window !== 'undefined' ? window.navigator.onLine : false
-      if (isConfigured && online) {
-        // --- AUTH SUPABASE ---
-        if (isSignUp) {
-          const generatedShopId = role === 'owner' 
-            ? `SHOP-${Math.floor(100000 + Math.random() * 900000)}` 
-            : shopCode.trim()
-
-          if (role === 'employee' && !shopCode.trim()) {
-            throw new Error('Le Code Boutique est obligatoire pour les employés.')
-          }
-
-           const { error: signUpError } = await supabaseClient.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                full_name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
-                role: role,
-                shop_id: generatedShopId,
-                shop_activity: activity
-              },
-            },
-          })
-          if (signUpError) throw signUpError
-
-          // Insérer également l'utilisateur dans la table publique employees pour qu'il soit gérable
-          try {
-            await supabaseClient
-              .from('employees')
-              .insert({
-                shop_id: generatedShopId,
-                email: email.trim().toLowerCase(),
-                name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
-                role: role
-              })
-          } catch (insertErr) {
-            console.error('Erreur non bloquante lors de la création de la fiche employe:', insertErr)
-          }
-
-          setSuccess(`✓ Compte créé ! ${role === 'owner' ? `Notez votre Code Boutique : ${generatedShopId} (à donner à vos employés).` : ''} Connectez-vous maintenant.`)
-          setIsSignUp(false)
-        } else {
-          try {
-            const { data, error: loginError } = await supabaseClient.auth.signInWithPassword({
-              email,
-              password,
-            })
-            if (loginError) throw loginError
-
-            if (data.user) {
-              const localUser = {
-                id: data.user.id,
-                email: data.user.email,
-                name: data.user.user_metadata?.full_name || 'Utilisateur',
-                role: data.user.user_metadata?.role || 'owner',
-                activity: data.user.user_metadata?.shop_activity || activity || 'boutique',
-                shop_id: data.user.user_metadata?.shop_id || data.user.id,
-                password_fallback: password
-              }
-              localStorage.setItem(`cahier_offline_credentials_${email.toLowerCase().trim()}`, JSON.stringify(localUser))
-              if (onLoginSuccess) {
-                onLoginSuccess({ ...data.user, activity: localUser.activity })
-              }
-            }
-            setSuccess('✓ Connexion réussie !')
-          } catch (supabaseErr: any) {
-            const isNetworkError = !window.navigator.onLine || 
-                                   /fetch|network|dns|timeout|enotfound/i.test(supabaseErr.message || '')
-
-            if (isNetworkError) {
-              console.warn('[Auth Fallback] Supabase injoignable, tentative de connexion locale de secours...')
-              const storedCreds = localStorage.getItem(`cahier_offline_credentials_${email.toLowerCase().trim()}`)
-              if (storedCreds) {
-                const creds = JSON.parse(storedCreds)
-                if (creds.password_fallback === password) {
-                  const syntheticUser = {
-                    id: creds.id,
-                    email: creds.email,
-                    activity: creds.activity || 'boutique',
-                    user_metadata: {
-                      full_name: creds.name,
-                      role: creds.role,
-                      shop_activity: creds.activity || 'boutique',
-                      shop_id: creds.shop_id
-                    }
-                  }
-                  localStorage.setItem('cahier_last_active_user', JSON.stringify(syntheticUser))
-                  if (onLoginSuccess) {
-                    onLoginSuccess(syntheticUser)
-                  }
-                  setSuccess('✓ Connexion hors-ligne réussie (mode de secours) !')
-                  return
-                }
-              }
-            }
-            throw supabaseErr
-          }
-        }
-      } else {
-        // --- AUTH LOCAL STORAGE FALLBACK ---
-        const storedUsers = JSON.parse(localStorage.getItem('cahier_mock_users') || '[]')
-        
-        if (isSignUp) {
-          // Inscription locale
-          const userExists = storedUsers.some((u: any) => u.email === email)
-          if (userExists) {
-            throw new Error('Cet e-mail est déjà utilisé localement.')
-          }
-          
-          let employeeShopId = shopCode.trim()
-          if (role === 'owner') {
-            employeeShopId = `SHOP-${Math.floor(100000 + Math.random() * 900000)}`
-          } else {
-            if (!shopCode.trim()) {
-              throw new Error('Le Code Boutique est obligatoire pour les employés.')
-            }
-            // Vérifier si la boutique existe
-            const shopExists = storedUsers.some((u: any) => u.role === 'owner' && u.shop_id === employeeShopId)
-            if (!shopExists) {
-              throw new Error('Ce Code Boutique n\'existe pas localement. Veuillez d\'abord inscrire le Propriétaire.')
-            }
-          }
-
-          const newUser = {
-            id: Math.random().toString(36).substring(2, 9),
-            email,
-            password,
-            full_name: name || (role === 'owner' ? 'Propriétaire' : 'Employé'),
-            role,
-            activity,
-            shop_id: employeeShopId
-          }
-          
-          storedUsers.push(newUser)
-          localStorage.setItem('cahier_mock_users', JSON.stringify(storedUsers))
-          setSuccess(`✓ Compte local créé ! ${role === 'owner' ? `Notez votre Code Boutique : ${employeeShopId} (à donner à vos employés).` : ''} Connectez-vous maintenant.`)
-          setIsSignUp(false)
-        } else {
-          // Connexion locale
-          const matchedUser = storedUsers.find((u: any) => u.email === email && u.password === password)
-          if (!matchedUser) {
-            throw new Error('Identifiants locaux incorrects. Veuillez créer un compte.')
-          }
-          
-          // Sauvegarder la session mock
-          localStorage.setItem('cahier_mock_session', JSON.stringify(matchedUser))
-          if (onLoginSuccess) {
-            onLoginSuccess(matchedUser)
-          }
-          setSuccess('✓ Connexion locale réussie !')
-        }
-      }
-    } catch (err: any) {
-      const msg = err?.message || ''
-      if (/email rate limit|rate limit|over_email_send_rate_limit/i.test(msg)) {
-        setError("Limite d'envois d'e-mails atteinte par Supabase. Désactivez la confirmation d'e-mail dans le Dashboard Supabase (Authentication > Providers > Email > Confirm email) ou réessayez plus tard.")
-      } else {
-        setError(err instanceof Error ? err.message : 'Une erreur est survenue.')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+export function AuthScreen({
+  onLogin = async () => {},
+  onSignup = async () => {},
+  onMagicLink,
+  loading = false,
+  error = null,
+}: AuthScreenProps) {
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
 
   return (
-    <div className="min-h-screen bg-[#141210] flex flex-col items-center justify-center p-4 relative overflow-hidden select-none">
-      
-      {/* Lamp bureau radial light highlight overlay */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-amber-500 opacity-[0.04] rounded-full blur-[140px] pointer-events-none z-0"></div>
-
-      {/* Bouton Retour Accueil */}
-      <div className="relative z-20 w-full max-w-md mb-4 flex items-center justify-start">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-3.5 py-2 bg-[#1e1a18] hover:bg-[#2a2421] border border-amber-900/40 hover:border-amber-600/60 rounded-xl text-xs font-semibold text-[#f59e0b] transition-all shadow-md group"
-        >
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          <span>Retour à l'accueil</span>
-        </Link>
-      </div>
-
-      {/* Closed Notebook Book Cover Chassis */}
-      <div className="relative w-full max-w-md bg-gradient-to-br from-[#064e3b] to-[#012b1c] rounded-[36px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),_inset_0_2px_4px_rgba(255,255,255,0.15),_inset_-10px_0_20px_rgba(0,0,0,0.8)] border border-[#02311f] p-8 z-10 flex flex-col items-center">
+    <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-[#1e1a18] border border-[#2a2421] rounded-3xl p-6 shadow-2xl space-y-6">
         
-        {/* Book cover vertical spine binding stitches on the left */}
-        <div className="absolute left-6 top-6 bottom-6 w-1 border-r-2 border-dashed border-[#f59e0b] opacity-25"></div>
-        <div className="absolute left-7 top-0 bottom-0 w-2 bg-[#012015] shadow-inner opacity-40"></div>
+        {/* En-tête de marque */}
+        <AuthHeader />
 
-        {/* Elegant brass screw locks on the left spine edge */}
-        <div className="absolute left-3.5 top-12 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-[#fffbeb] via-[#f59e0b] to-[#78350f] shadow-md border border-[#b45309]"></div>
-        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-[#fffbeb] via-[#f59e0b] to-[#78350f] shadow-md border border-[#b45309]"></div>
-        <div className="absolute left-3.5 bottom-12 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-[#fffbeb] via-[#f59e0b] to-[#78350f] shadow-md border border-[#b45309]"></div>
-
-        {/* Book Cover Inscription Title (Gold foil typography) */}
-        <div className="flex flex-col items-center mt-4 mb-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#fffbeb] via-[#f59e0b] to-[#d97706] shadow-xl flex items-center justify-center border-2 border-[#b45309] mb-4 select-none transform hover:rotate-6 transition-transform">
-            <Lock className="w-7 h-7 text-[#78350f]" />
-          </div>
-          <h2 className="text-2xl font-extrabold text-[#f59e0b] tracking-wider uppercase font-sans">
-            Cahier de Caisse
-          </h2>
-          <span className="text-[10px] text-[#f59e0b] opacity-60 tracking-[0.3em] font-mono uppercase mt-1">
-            {isConfigured ? "Système Connecté (SaaS)" : "Système Local Autonome"}
-          </span>
-        </div>
-
-        {/* School Owner Paper Label Sticker (Contient le formulaire) */}
-        <div className="w-full bg-[#fefdfa] border-[3px] border-[#e2dcd0] rounded-2xl p-6 shadow-2xl relative z-20 flex flex-col">
-          
-          {/* Label visual guidelines */}
-          <div className="text-center pb-4 mb-4 border-b border-[#e2dcd0] border-dashed">
-            <h3 className="font-handwritten text-2xl text-gray-800 font-bold">
-              {isSignUp ? "Création du Compte" : "Registre de Caisse"}
-            </h3>
-            <p className="text-[10px] text-gray-400 font-mono mt-1 uppercase tracking-wider">
-              Cahier No. 200 • Afrique de l'Ouest
-            </p>
-          </div>
-
-          {!isConfigured && (
-            <div className="mb-4 p-2.5 bg-[#fef3c7] border border-amber-200 text-amber-950 rounded-xl text-[10px] leading-normal font-sans font-medium flex items-start gap-1.5">
-              <span className="text-xs">💡</span>
-              <span>Mode local actif : les comptes créés restent dans ce navigateur et les données de caisse sont isolées par Code Boutique.</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-start gap-2 mb-4 font-sans font-medium">
-              <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {success && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-start gap-2 mb-4 font-sans font-medium">
-              <span>{success}</span>
-            </div>
-          )}
-
-          {!isOnline && (
-            <div className="mb-4 p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-[10px] leading-normal font-sans font-semibold flex items-start gap-1.5">
-              <span className="text-xs">⚠️</span>
-              <span>Vous êtes hors-ligne. Les requêtes de connexion Supabase Cloud sont suspendues. Vous pouvez continuer à utiliser votre cahier en mode local de secours.</span>
-            </div>
-          )}
-
-          <form onSubmit={handleAuth} className="space-y-4 font-sans">
-            
-            {lastActiveUser && (
-              <div className="pb-3 border-b border-[#e2dcd0] border-dashed mb-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onLoginSuccess) {
-                      onLoginSuccess(lastActiveUser)
-                    }
-                  }}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-1.5 border border-emerald-500"
-                >
-                  <span>⚡ Continuer hors-ligne ({lastActiveUser.name || lastActiveUser.full_name || 'Ma Boutique'})</span>
-                </button>
-              </div>
-            )}
-            
-            {/* Rôle Selector - Seul à l'inscription */}
-            {isSignUp && (
-              <div className="space-y-1.5 select-none">
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">
-                  Je suis :
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRole('owner')}
-                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${
-                      role === 'owner'
-                        ? 'bg-[#064e3b] text-white border-[#064e3b]'
-                        : 'bg-[#fdfbf7] text-gray-600 border-[#dcd6c9] hover:bg-gray-50'
-                    }`}
-                  >
-                    👑 Propriétaire
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole('employee')}
-                    className={`py-2 text-xs font-bold rounded-xl border transition-all ${
-                      role === 'employee'
-                        ? 'bg-[#064e3b] text-white border-[#064e3b]'
-                        : 'bg-[#fdfbf7] text-gray-600 border-[#dcd6c9] hover:bg-gray-50'
-                    }`}
-                  >
-                    🙋 Employé / Gérant
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {isSignUp && (
-              <div>
-                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">
-                  {role === 'owner' ? '🏬 Nom de votre Boutique' : '👤 Votre Prénom et Nom'}
-                </label>
-                <div className="relative mt-1">
-                  <input
-                    type="text"
-                    required
-                    placeholder={role === 'owner' ? "Ex: Boutique Chantal et Fils" : "Ex: Mamadou Sylla"}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-3 pr-4 py-2.5 text-sm bg-[#fdfbf7] border border-[#dcd6c9] rounded-xl focus:border-gray-600 text-gray-800 transition-all font-medium placeholder-gray-300"
-                  />
-                </div>
-                {role === 'employee' && (
-                  <p className="text-[8px] text-gray-400 font-mono mt-1">
-                    Votre nom tel qu'il apparaîtra dans le cahier de votre gérant.
-                  </p>
-                )}
-              </div>
-            )}
-
-
-            {isSignUp && role === 'owner' && (
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest pl-1 block">
-                  🎯 Votre Secteur d'Activité *
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActivity('boutique')}
-                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
-                      activity === 'boutique'
-                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
-                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className="text-lg">🛒</span>
-                    <span className="text-[10px] leading-tight font-bold mt-1">Boutique</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActivity('resto')}
-                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
-                      activity === 'resto'
-                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
-                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className="text-lg">🍲</span>
-                    <span className="text-[10px] leading-tight font-bold mt-1">Resto</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActivity('prestations')}
-                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
-                      activity === 'prestations'
-                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
-                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className="text-lg">✂️</span>
-                    <span className="text-[10px] leading-tight font-bold mt-1">Prestation</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActivity('particulier')}
-                    className={`p-2 rounded-xl border text-left flex flex-col items-center text-center transition-all ${
-                      activity === 'particulier'
-                        ? 'bg-amber-100 border-amber-500 text-amber-950 font-bold shadow-xs'
-                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className="text-lg">🏠</span>
-                    <span className="text-[10px] leading-tight font-bold mt-1">Particulier</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {isSignUp && role === 'employee' && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <label className="text-[9px] font-bold text-amber-700 uppercase tracking-widest pl-1 flex items-center gap-1">
-                  🔑 Code Boutique — <span className="text-amber-900">OBLIGATOIRE</span>
-                </label>
-                <div className="relative mt-1">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: SHOP-348291"
-                    value={shopCode}
-                    onChange={(e) => setShopCode(e.target.value.toUpperCase())}
-                    className="w-full pl-3 pr-4 py-2.5 text-sm bg-white border-2 border-amber-400 rounded-xl focus:border-amber-600 text-amber-950 font-bold tracking-wider placeholder-amber-200"
-                  />
-                </div>
-                <p className="text-[8px] text-amber-700 font-mono mt-1.5 leading-normal">
-                  📋 Ce code vous est donné par votre gérant depuis ses Paramètres. Sans ce code, vous ne pouvez pas rejoindre la boutique.
-                </p>
-              </div>
-            )}
-
-
-
-            <div>
-              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">
-                Adresse E-mail
-              </label>
-              <div className="relative mt-1">
-                <input
-                  type="email"
-                  required
-                  placeholder="boutique@gmail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-3 pr-4 py-2.5 text-sm bg-[#fdfbf7] border border-[#dcd6c9] rounded-xl focus:border-gray-600 text-gray-800 transition-all font-medium placeholder-gray-300"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest pl-1">
-                Mot de passe
-              </label>
-              <div className="relative mt-1">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-3 pr-10 py-2.5 text-sm bg-[#fdfbf7] border border-[#dcd6c9] rounded-xl focus:border-gray-600 text-gray-800 transition-all font-medium placeholder-gray-300"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-3 bg-[#064e3b] hover:bg-[#043c2d] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-1.5"
-            >
-              {loading ? (
-                <Loader className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <span>{isSignUp ? "Créer mon Compte" : "Ouvrir mon Cahier"}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Toggle Login/SignUp - Toujours visible pour permettre l'inscription ! */}
+        {/* Sélecteur Mode Connexion / Inscription */}
+        <div className="flex items-center gap-1 bg-[#141210] p-1 rounded-2xl border border-gray-800 font-mono text-xs">
           <button
-            onClick={() => {
-              setIsSignUp(!isSignUp)
-              setError(null)
-              setSuccess(null)
-            }}
-            className="mt-4 text-center text-xs text-[#064e3b] font-bold hover:underline flex items-center justify-center gap-1"
+            type="button"
+            onClick={() => setMode('login')}
+            className={`flex-1 py-2 rounded-xl font-bold transition-all ${
+              mode === 'login' ? 'bg-[#2a2421] text-amber-400 shadow-md' : 'text-gray-400 hover:text-white'
+            }`}
           >
-            {isSignUp ? (
-              <>
-                <LogIn className="w-3 h-3" />
-                <span>Déjà un compte ? Se connecter</span>
-              </>
-            ) : (
-              <>
-                <UserPlus className="w-3 h-3" />
-                <span>Créer un nouveau cahier de caisse</span>
-              </>
-            )}
+            Se Connecter
           </button>
-
+          <button
+            type="button"
+            onClick={() => setMode('signup')}
+            className={`flex-1 py-2 rounded-xl font-bold transition-all ${
+              mode === 'signup' ? 'bg-[#2a2421] text-amber-400 shadow-md' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Créer un Compte
+          </button>
         </div>
 
-        {/* Local Demo Bypass Buttons */}
-        <div className="mt-6 flex flex-col items-center gap-2 select-none w-full">
-          <span className="text-[8px] font-mono text-gray-400 uppercase tracking-widest">Entrée rapide sans compte :</span>
-          <div className="flex gap-4">
-            <button
-              onClick={() => onBypass('owner')}
-              className="text-[10px] font-bold uppercase tracking-widest text-[#f59e0b] hover:text-white transition-colors"
-            >
-              👑 Démo Proprio
-            </button>
-            <span className="text-gray-500 text-[10px]">•</span>
-            <button
-              onClick={() => onBypass('employee')}
-              className="text-[10px] font-bold uppercase tracking-widest text-[#f59e0b] hover:text-white transition-colors"
-            >
-              🙋 Démo Gérant
-            </button>
-          </div>
-        </div>
-
-        {/* Closed cover visual spine stitches footer */}
-        <div className="text-[9px] text-[#f59e0b] opacity-40 font-mono tracking-widest mt-8 uppercase select-none">
-          Propriété Privée • Interdit de Lire
-        </div>
-
+        {/* Formulaire sélectionné */}
+        {mode === 'login' ? (
+          <AuthLoginForm
+            onLogin={onLogin}
+            onMagicLink={onMagicLink}
+            loading={loading}
+            error={error}
+          />
+        ) : (
+          <AuthSignupForm
+            onSignup={onSignup}
+            loading={loading}
+            error={error}
+          />
+        )}
       </div>
-
     </div>
   )
 }
