@@ -22,6 +22,11 @@ import {
 } from '@/lib/offlineDb'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 
+import {
+  parseRequestedProductFromNotebookText,
+  recordRequestedProductInStorage,
+} from '@/lib/requestedProductsUtils'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface UseSaleCreationOptions {
@@ -63,34 +68,54 @@ export function useSaleCreation({
   // ── Construit et sauvegarde localement une vente à partir du texte libre ──
   const buildLocalSale = (text: string, penOverride?: string): OfflineSale => {
     const activePen = penOverride || selectedPen
-    const parsed = parseTextLocally(text, activePen)
     const now = new Date()
 
+    // Détection automatique d'une demande client saisie au cahier
+    const reqMatch = parseRequestedProductFromNotebookText(text.trim())
+    let isClientRequest = false
+
+    if (reqMatch && reqMatch.isRequestedProduct) {
+      recordRequestedProductInStorage(shopId, reqMatch.cleanName, reqMatch.price)
+      isClientRequest = true
+      setPostItWarning(`✓ Demande client enregistrée pour « ${reqMatch.cleanName} » !`)
+    }
+
+    const parsed = parseTextLocally(text, activePen)
+
     let type = 'cash_in'
-    if (activePen === 'red') type = 'cash_out'
-    else if (activePen === 'green') type = 'purchase_cash'
-    else if (activePen === 'purple') type = 'purchase_credit'
-    else if (activePen === 'yellow') type = 'sale_credit'
+    if (isClientRequest) {
+      type = 'client_request'
+    } else if (activePen === 'red') {
+      type = 'cash_out'
+    } else if (activePen === 'green') {
+      type = 'purchase_cash'
+    } else if (activePen === 'purple') {
+      type = 'purchase_credit'
+    } else if (activePen === 'yellow') {
+      type = 'sale_credit'
+    }
 
     const sale: OfflineSale = {
       id: generateOfflineId(),
       shop_id: shopId,
       date: getTodayDateString(),
       time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      client: parsed.nom_client || 'Client',
-      articles: (parsed.articles || []).map(a => ({
-        name: a.nom,
-        quantity: a.quantite,
-        unit_price: a.prix_unitaire,
-      })),
-      total: parsed.total_facture || 0,
-      paid: parsed.montant_paye || 0,
-      debt: parsed.montant_dette || 0,
-      status: (parsed.montant_dette || 0) > 0 ? 'debt' : 'paid',
+      client: isClientRequest ? 'Demande Client' : (parsed.nom_client || 'Client'),
+      articles: isClientRequest
+        ? [{ name: reqMatch?.cleanName || 'Produit demandé', quantity: 1, unit_price: reqMatch?.price || 0 }]
+        : (parsed.articles || []).map(a => ({
+            name: a.nom,
+            quantity: a.quantite,
+            unit_price: a.prix_unitaire,
+          })),
+      total: isClientRequest ? 0 : (parsed.total_facture || 0),
+      paid: isClientRequest ? 0 : (parsed.montant_paye || 0),
+      debt: isClientRequest ? 0 : (parsed.montant_dette || 0),
+      status: 'paid',
       type,
       pen_color: activePen,
       notes: text,
-      category: parsed.categorie || 'Général',
+      category: isClientRequest ? 'Demande Client' : (parsed.categorie || 'Général'),
       created_at: now.toISOString(),
       is_synced: false,
     }
