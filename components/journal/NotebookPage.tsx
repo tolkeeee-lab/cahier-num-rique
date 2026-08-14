@@ -1,8 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { AlertTriangle, Printer, Trash2, BookOpen } from 'lucide-react'
+import { AlertTriangle, Printer, Trash2, BookOpen, PlusCircle } from 'lucide-react'
+
+// ─── Types ─────────────────────────────────────────────────────────────────
 
 interface SaleItem {
   id: string
@@ -28,60 +30,80 @@ interface NotebookPageProps {
   sales: SaleItem[]
   onCrossOutSale: (saleId: string) => void
   onPrintReceipt?: (sale: SaleItem) => void
+  onAddArticleToSale?: (saleId: string, clientName: string) => void
   searchQuery: string
   currentDateStr: string
 }
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+function getPenInkClass(penId: string) {
+  switch (penId) {
+    case 'red':    return 'ink-red'
+    case 'green':  return 'ink-green'
+    case 'purple': return 'ink-purple'
+    case 'yellow': return 'ink-yellow'
+    default:       return 'ink-blue'
+  }
+}
+
+function getBadgeClass(penId: string) {
+  switch (penId) {
+    case 'red':    return 'bg-rose-100/90 text-rose-800 border-rose-300'
+    case 'green':  return 'bg-emerald-100/90 text-emerald-800 border-emerald-300'
+    case 'purple': return 'bg-fuchsia-100/90 text-fuchsia-800 border-fuchsia-300'
+    case 'yellow': return 'bg-amber-100/90 text-amber-800 border-amber-300'
+    default:       return 'bg-blue-100/90 text-blue-800 border-blue-300'
+  }
+}
+
+function getPenLabel(penId: string) {
+  switch (penId) {
+    case 'red':    return 'DÉPENSE'
+    case 'green':  return 'ACHAT STOCK'
+    case 'purple': return 'ACHAT CRÉDIT'
+    case 'yellow': return 'VENTE CRÉDIT'
+    default:       return 'VENTE CASH'
+  }
+}
+
+// ─── Composant ─────────────────────────────────────────────────────────────
 
 export const NotebookPage: React.FC<NotebookPageProps> = ({
   sales,
   onCrossOutSale,
   onPrintReceipt,
+  onAddArticleToSale,
   searchQuery,
   currentDateStr,
 }) => {
-  const getPenInkClass = (penId: string) => {
-    switch (penId) {
-      case 'red':
-        return 'ink-red'
-      case 'green':
-        return 'ink-green'
-      case 'purple':
-        return 'ink-purple'
-      case 'yellow':
-        return 'ink-yellow'
-      default:
-        return 'ink-blue'
-    }
-  }
+  // Auto-scroll vers le bas à chaque nouvelle vente
+  const listRef = useRef<HTMLDivElement>(null)
 
-  const getBadgeClass = (penId: string) => {
-    switch (penId) {
-      case 'red':
-        return 'bg-rose-100/90 text-rose-800 border-rose-300'
-      case 'green':
-        return 'bg-emerald-100/90 text-emerald-800 border-emerald-300'
-      case 'purple':
-        return 'bg-fuchsia-100/90 text-fuchsia-800 border-fuchsia-300'
-      case 'yellow':
-        return 'bg-amber-100/90 text-amber-800 border-amber-300'
-      default:
-        return 'bg-blue-100/90 text-blue-800 border-blue-300'
+  useEffect(() => {
+    if (listRef.current && sales.length > 0) {
+      const el = listRef.current
+      setTimeout(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+      }, 80)
     }
-  }
+  }, [sales.length])
 
   const filteredSales = sales.filter((s) => {
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase()
-    const matchClient = s.client.toLowerCase().includes(q)
-    const matchNotes = (s.notes || '').toLowerCase().includes(q)
-    const matchArticle = s.articles.some((a) => a.name.toLowerCase().includes(q))
-    return matchClient || matchNotes || matchArticle
+    return (
+      s.client.toLowerCase().includes(q) ||
+      (s.notes || '').toLowerCase().includes(q) ||
+      s.articles.some((a) => a.name.toLowerCase().includes(q))
+    )
   })
 
   return (
     <div className="lined-paper relative pl-10 pr-4 py-4 flex-1 min-h-0 flex flex-col rounded-2xl border border-amber-300/40 shadow-sm overflow-hidden">
       <div className="relative z-10 flex flex-col h-full space-y-3">
-        {/* Entête du Cahier Seyes avec Stamp Date (FIXE EN HAUT DE LA PAGE) */}
+
+        {/* En-tête de page (FIXE) */}
         <div className="flex items-center justify-between border-b-2 border-blue-200/60 pb-2.5 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="brass-medallion w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
@@ -91,13 +113,13 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
               📅 {currentDateStr || "Aujourd'hui"}
             </div>
           </div>
-          
+
           <div className="text-[11px] font-mono font-bold text-amber-900/80 uppercase tracking-widest bg-amber-100/80 px-3 py-1 rounded-full border border-amber-300/60 shadow-sm">
             Cahier de Caisse Seyes
           </div>
         </div>
 
-        {/* Liste des Écritures Manuscrites (SEUL CE BLOC DÉFILE VERTICALEMENT) */}
+        {/* Liste des écritures (DÉFILE) */}
         {filteredSales.length === 0 ? (
           <div className="py-12 text-center text-gray-400 handwritten text-lg flex-1 flex flex-col items-center justify-center">
             Aucune écriture enregistrée sur cette page.
@@ -106,11 +128,16 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
             </p>
           </div>
         ) : (
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-3 lined-text-container pr-1 scrollbar-none">
+          <div
+            ref={listRef}
+            className="flex-1 min-h-0 overflow-y-auto space-y-3 lined-text-container pr-1 scrollbar-none"
+          >
             {filteredSales.map((sale) => {
               const inkClass = getPenInkClass(sale.pen_color)
               const badgeClass = getBadgeClass(sale.pen_color)
               const isCrossedOut = sale.status === 'crossed_out'
+              // Seules les ventes cash (bleu) peuvent recevoir des ajouts d'articles
+              const canAddArticle = !isCrossedOut && sale.pen_color === 'blue' && !!onAddArticleToSale
 
               return (
                 <div
@@ -122,23 +149,17 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    {/* Contenu principal de l'écriture au stylo */}
-                    <div className="flex-grow space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-gray-400 font-bold">{sale.time}</span>
-                        <span className={`text-base font-bold ${inkClass}`}>
+                    {/* Contenu principal */}
+                    <div className="flex-grow space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-mono text-gray-400 font-bold flex-shrink-0">
+                          {sale.time}
+                        </span>
+                        <span className={`text-base font-bold truncate ${inkClass}`}>
                           {sale.notes || sale.client}
                         </span>
-                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase font-extrabold border ${badgeClass}`}>
-                          {sale.pen_color === 'red'
-                            ? 'DÉPENSE'
-                            : sale.pen_color === 'green'
-                            ? 'ACHAT STOCK'
-                            : sale.pen_color === 'purple'
-                            ? 'ACHAT CRÉDIT'
-                            : sale.pen_color === 'yellow'
-                            ? 'VENTE CRÉDIT'
-                            : 'VENTE CASH'}
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase font-extrabold border flex-shrink-0 ${badgeClass}`}>
+                          {getPenLabel(sale.pen_color)}
                         </span>
                       </div>
 
@@ -156,23 +177,35 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         </div>
                       )}
 
-                      {/* Reste Dû / Note Dette */}
+                      {/* Reste dû */}
                       {sale.debt > 0 && !isCrossedOut && (
                         <div className="pl-6 text-xs text-amber-800 font-bold flex items-center gap-1">
                           <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Reste dû : {formatPrice(sale.debt)} par {sale.client}</span>
+                          <span>Reste dû : {formatPrice(sale.debt)} — {sale.client}</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Montant Total et Actions */}
-                    <div className="flex flex-col items-end gap-2">
+                    {/* Montant + Actions */}
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
                       <span className={`text-base font-extrabold ${inkClass}`}>
                         {formatPrice(sale.total)}
                       </span>
 
                       {!isCrossedOut && (
                         <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Bouton ajouter article — visible uniquement sur ventes bleues */}
+                          {canAddArticle && (
+                            <button
+                              type="button"
+                              onClick={() => onAddArticleToSale!(sale.id, sale.client)}
+                              className="p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors"
+                              title="Ajouter un article à cette vente"
+                            >
+                              <PlusCircle className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
                           {onPrintReceipt && (
                             <button
                               type="button"
@@ -183,6 +216,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                               <Printer className="w-3.5 h-3.5" />
                             </button>
                           )}
+
                           <button
                             type="button"
                             onClick={() => onCrossOutSale(sale.id)}

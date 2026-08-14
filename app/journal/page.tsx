@@ -24,6 +24,7 @@ import { StockSuggestionsBubble, StockSuggestionItem } from '@/components/journa
 import { AutoLearnModal } from '@/components/journal/AutoLearnModal'
 import { TactileMenuGrid } from '@/components/journal/TactileMenuGrid'
 import { ChangeCalculatorPostIt } from '@/components/journal/ChangeCalculatorPostIt'
+import { AddToExistingSaleBar } from '@/components/journal/AddToExistingSaleBar'
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 import { useShopManager } from '@/hooks/useShopManager'
@@ -32,6 +33,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useSaleCreation } from '@/hooks/useSaleCreation'
 import { useTactileMenu } from '@/hooks/useTactileMenu'
 import { useChangeCalculator } from '@/hooks/useChangeCalculator'
+import { useOfflineSync } from '@/hooks/useOfflineSync'
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 import { isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -75,6 +77,11 @@ export default function JournalPage() {
   const [postItMessage, setPostItMessage] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState('')
   const [receiptSale, setReceiptSale] = useState<any>(null)
+  // Mode ajout d'article à une vente existante
+  const [addingToSaleId, setAddingToSaleId] = useState<string | null>(null)
+  const [addingToSaleClient, setAddingToSaleClient] = useState<string>('')
+  const [addArticleInput, setAddArticleInput] = useState('')
+  const [isAddingArticle, setIsAddingArticle] = useState(false)
 
   // Modales secondaires
   const [showCashAdjustment, setShowCashAdjustment] = useState(false)
@@ -86,9 +93,19 @@ export default function JournalPage() {
 
   // ── Hooks métier ───────────────────────────────────────────────────────────
   const shopManager = useShopManager(mappedUser)
-  const { isOnline, pendingCount, syncStatus, setSyncStatus } = useNetworkStatus(shopManager.shopId)
+  const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopManager.shopId)
   const journalData = useJournalData(shopManager.shopId, isOnline)
   const changeCalc = useChangeCalculator()
+
+  // Synchronisation automatique au retour en ligne
+  useOfflineSync({
+    shopId: shopManager.shopId,
+    shopActivity: shopManager.shopActivity,
+    isOnline,
+    setSyncStatus,
+    refreshPendingCount,
+    onSyncComplete: journalData.reloadData,
+  })
 
   const saleCreation = useSaleCreation({
     shopId: shopManager.shopId,
@@ -153,6 +170,36 @@ export default function JournalPage() {
   }, [])
 
   const pens = getPens(shopManager.shopActivity)
+
+  // Handler pour ajouter un article à une vente existante
+  const handleAddArticleToSale = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!addArticleInput.trim() || !addingToSaleId || isAddingArticle) return
+    setIsAddingArticle(true)
+    try {
+      await fetch('/api/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-shop-id': shopManager.shopId,
+        },
+        body: JSON.stringify({
+          text: addArticleInput.trim(),
+          raw_text: addArticleInput.trim(),
+          pen_color: 'blue',
+          penColor: 'blue',
+          shop_id: shopManager.shopId,
+          append_to_sale_id: addingToSaleId,
+        }),
+      })
+    } finally {
+      setAddArticleInput('')
+      setAddingToSaleId(null)
+      setAddingToSaleClient('')
+      setIsAddingArticle(false)
+      journalData.reloadData()
+    }
+  }
 
   // ── Garde d'authentification ───────────────────────────────────────────────
   if (!user && isConfigured) {
@@ -256,6 +303,11 @@ export default function JournalPage() {
                     sales={journalData.sales}
                     onCrossOutSale={journalData.crossOutSale}
                     onPrintReceipt={(sale) => { setReceiptSale(sale); setShowReceiptModal(true) }}
+                    onAddArticleToSale={(saleId, clientName) => {
+                      setAddingToSaleId(saleId)
+                      setAddingToSaleClient(clientName)
+                      setAddArticleInput('')
+                    }}
                     searchQuery={searchQuery}
                     currentDateStr={getTodayDateString()}
                   />
@@ -284,7 +336,20 @@ export default function JournalPage() {
                   />
                 </div>
 
+                {/* Barre ajout à vente existante — remplace la barre normale */}
+                {addingToSaleId && (
+                  <AddToExistingSaleBar
+                    clientName={addingToSaleClient}
+                    value={addArticleInput}
+                    onChange={setAddArticleInput}
+                    onSubmit={handleAddArticleToSale}
+                    onCancel={() => { setAddingToSaleId(null); setAddArticleInput('') }}
+                    isSubmitting={isAddingArticle}
+                  />
+                )}
+
                 {/* Barre de saisie WhatsApp (FIXE EN BAS) */}
+                {!addingToSaleId && (
                 <div className="flex-shrink-0 pt-1 border-t border-dashed border-amber-300/60 relative z-20">
                   <form onSubmit={saleCreation.handleCreateSale} className="relative flex items-center gap-2">
                     <StockSuggestionsBubble
@@ -319,6 +384,7 @@ export default function JournalPage() {
                     </button>
                   </form>
                 </div>
+                )}
               </div>
             )}
 
