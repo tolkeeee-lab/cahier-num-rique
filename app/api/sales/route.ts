@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     const timeStr = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(now)
     const saleId = randomUUID()
 
-    const newSale = {
+    const saleRecord = {
       id: saleId,
       shop_id: shopId,
       created_at: now.toISOString(),
@@ -92,7 +92,6 @@ export async function POST(request: NextRequest) {
       type,
       raw_text: text,
       notes: text,
-      articles: parsedData?.articles || [],
       total_amount: parsedData?.total_facture || 0,
       paid_amount: parsedData?.montant_paye || 0,
       debt_amount: parsedData?.montant_dette || 0,
@@ -100,17 +99,33 @@ export async function POST(request: NextRequest) {
       status: parsedData?.montant_dette && parsedData.montant_dette > 0 ? 'debt' : 'paid',
       category: parsedData?.categorie || 'Général',
       pen_color: color,
+    }
+
+    const newSale = {
+      ...saleRecord,
+      articles: parsedData?.articles || [],
       synced: true,
     }
 
     // Sauvegarde Supabase ou DB Locale
     if (isSupabaseConfigured() && supabase) {
-      const { error } = await supabase.from('sales').insert([newSale])
-      if (error) {
-        console.error('Erreur Supabase, bascule locale :', error)
+      const { error: saleErr } = await supabase.from('sales').insert([saleRecord])
+      if (saleErr) {
+        console.error('Erreur Supabase, bascule locale :', saleErr)
         const localSales = getLocalDb()
         localSales.unshift(newSale)
         saveLocalDb(localSales)
+      } else {
+        if (parsedData?.articles && parsedData.articles.length > 0) {
+          const soldArticlesRecords = parsedData.articles.map((a: any) => ({
+            sale_id: saleId,
+            product_name: a.nom || a.name,
+            quantity: a.quantite || a.quantity,
+            unit_price: a.prix_unitaire || a.unit_price,
+          }))
+          const { error: artErr } = await supabase.from('sold_articles').insert(soldArticlesRecords)
+          if (artErr) console.warn('Erreur insertion sold_articles:', artErr)
+        }
       }
     } else {
       const localSales = getLocalDb()

@@ -72,19 +72,35 @@ export function cleanThousandSeparators(text: string): string {
 
 /** Vérifie si un prix est explicitement écrit dans la saisie */
 export function checkIfInputHasPrice(text: string): boolean {
-  if (text.match(/\b(?:à|a|@)\s*\d+/i) || text.match(/\b\d+\s*(?:à|a|@)\s*\d+/i)) {
+  if (!text || !text.trim()) return false
+
+  // 1. Séparateurs explicites : "à 500", "a 500", "@ 500", ": 500", "= 500"
+  if (text.match(/\b(?:à|a|@|:|=)\s*\d+/i) || text.match(/\b\d+\s*(?:à|a|@|:|=)\s*\d+/i)) {
     return true
   }
-  const parts = text.split(/\s*(?:\+|,|\bet\b)\s*/i)
-  return parts.every(part => {
-    const match = part.trim().match(/(\d+)\s+(.+?)\s+(\d+)$/)
-    if (match) {
-      const qty = parseInt(match[1], 10)
-      const price = parseInt(match[3], 10)
-      if (price >= 10 && price > qty) return true
-    }
-    return false
-  })
+
+  // 2. Mots-clés de prix / total : "prix 500", "pour 500", "total 500", "payé 500", "500f", "500cfa"
+  if (
+    text.match(/\b(?:prix|total|montant|somme|pour|lot|payé|paye)\s*\d+/i) ||
+    text.match(/\d+\s*(?:f|fcfa|cfa|francs)\b/i)
+  ) {
+    return true
+  }
+
+  // 3. Analyse des nombres dans la chaîne
+  const numbers = text.match(/\d+/g)
+  if (!numbers) return false
+
+  // Plus d'un nombre (ex: "2 flag 600" ou "3 oeufs 275") -> au moins l'un est le prix
+  if (numbers.length >= 2) return true
+
+  // Un seul nombre : si >= 50 FCFA, c'est très probablement un prix (ex: "beaufort 600", "transport 2000", "5000")
+  if (numbers.length === 1) {
+    const num = parseInt(numbers[0], 10)
+    if (num >= 50) return true
+  }
+
+  return false
 }
 
 /** Parse la saisie stock simple : "2 carton de Flag" → { qty, packaging, productName } */
@@ -291,9 +307,10 @@ export function useInputPipeline(callbacks: PipelineCallbacks) {
 
   /**
    * Point d'entrée principal — à connecter au `onSubmit` du formulaire.
+   * Retourne `true` si la vente a été soumise, `false` si une modale ou un avertissement a bloqué la soumission.
    */
-  const processInput = useCallback(async (rawInput: string) => {
-    if (!rawInput.trim()) return
+  const processInput = useCallback(async (rawInput: string): Promise<boolean> => {
+    if (!rawInput.trim()) return false
 
     // ── Étape 1 : Nettoyage séparateurs milliers ──────────────────────────
     let sanitized = cleanThousandSeparators(rawInput)
@@ -309,7 +326,7 @@ export function useInputPipeline(callbacks: PipelineCallbacks) {
     let finalInput = sanitized
 
     if (resolvedResult) {
-      // Des noms non résolus → avertissement et STOP
+      // Des noms non résolus → avertissement et STOP (ne pas effacer la saisie)
       if (resolvedResult.unresolvedNames.length > 0) {
         const productsList = resolvedResult.unresolvedNames.map(n => `« ${n} »`).join(', ')
         onWarning(
@@ -317,7 +334,7 @@ export function useInputPipeline(callbacks: PipelineCallbacks) {
             ? `Le produit ${productsList} n'a pas été trouvé dans le catalogue. Précisez son prix (ex: ${resolvedResult.unresolvedNames[0]} à 600) ou ajoutez-le au stock.`
             : `Les produits ${productsList} n'ont pas été trouvés dans le catalogue. Précisez leurs prix.`
         )
-        return
+        return false
       }
 
       // Conserver le préfixe "stock (de)" ou "achat (de)" si présent
@@ -342,7 +359,7 @@ export function useInputPipeline(callbacks: PipelineCallbacks) {
           `Le produit « ${productNameClean} » n'a pas été trouvé dans le catalogue. ` +
           `Précisez le prix (ex: ${sanitized} à 600) ou ajoutez-le au stock.`
         )
-        return
+        return false
       }
     }
 
@@ -372,7 +389,7 @@ export function useInputPipeline(callbacks: PipelineCallbacks) {
               unit: existing.unit || 'pièce',
               rawText: finalInput,
             })
-            return
+            return false
           } else {
             // ── CAS B : Produit connu, prix écrit → vérifier l'écart ──────────────
             const matchPrice = finalInput.match(/(\d+)\s*(?:à|a|@)\s+(\d+)/i)
@@ -387,7 +404,7 @@ export function useInputPipeline(callbacks: PipelineCallbacks) {
                   rawText: finalInput,
                   penColor: 'green',
                 })
-                return
+                return false
               }
             }
           }
@@ -402,7 +419,7 @@ export function useInputPipeline(callbacks: PipelineCallbacks) {
               multiplier: packDef.multiplier,
               unit: packDef.unit,
             })
-            return
+            return false
           }
         }
       }
@@ -410,6 +427,7 @@ export function useInputPipeline(callbacks: PipelineCallbacks) {
 
     // ── Étape 5 : Soumission normale ──────────────────────────────────────
     await onSubmit(finalInput, selectedPen)
+    return true
   }, [shopId, selectedPen, journalMenuItems, onSubmit, onShowStockConfirmation, onShowStockWizard, onShowPriceChangeDialog, onWarning])
 
   return { processInput }

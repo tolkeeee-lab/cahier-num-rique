@@ -154,8 +154,10 @@ export default function JournalPage() {
   const handlePipelineSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!saleCreation.input.trim()) return
-    await processInput(saleCreation.input)
-    saleCreation.setInput('')
+    const success = await processInput(saleCreation.input)
+    if (success) {
+      saleCreation.setInput('')
+    }
   }
 
   // ── Suggestions prédictives (dernier fragment tapé) ────────────────────────

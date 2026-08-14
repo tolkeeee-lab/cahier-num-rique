@@ -89,16 +89,23 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               is_synced: true,
             }))
 
-            setAllSales(mappedSales)
-            const todays = mappedSales.filter(s => s.date === today)
+            const localSales = getOfflineSales(shopId)
+            const unsyncedLocal = localSales.filter(ls => !ls.is_synced && !mappedSales.some(ms => ms.id === ls.id))
+
+            const combinedSales: Sale[] = [...unsyncedLocal, ...mappedSales].sort(
+              (a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
+            )
+
+            setAllSales(combinedSales)
+            const todays = combinedSales.filter(s => s.date === today)
             setSales(todays)
 
-            calculateSummary(mappedSales, todays)
-            const offlineItems: OfflineSale[] = mappedSales.map(s => ({
+            calculateSummary(combinedSales, todays)
+            const offlineItems: OfflineSale[] = combinedSales.map(s => ({
               ...s,
               shop_id: s.shop_id || shopId,
               created_at: s.created_at || new Date().toISOString(),
-              is_synced: true,
+              is_synced: s.is_synced ?? true,
             }))
             replaceOfflineSales(shopId, offlineItems)
             setIsLoading(false)
