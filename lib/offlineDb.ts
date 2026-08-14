@@ -306,6 +306,23 @@ export function updateOfflineSale(
   }
 }
 
+export function replaceOfflineSaleId(shopId: string, oldId: string, newSale: OfflineSale): void {
+  const sales = getOfflineSales(shopId)
+  const idx = sales.findIndex((s) => s.id === oldId)
+  if (idx !== -1) {
+    sales[idx] = newSale
+  } else {
+    const existingIdx = sales.findIndex((s) => s.id === newSale.id)
+    if (existingIdx !== -1) {
+      sales[existingIdx] = newSale
+    } else {
+      sales.push(newSale)
+    }
+  }
+  writeJson(salesKey(shopId), sales)
+  idbReplaceSales(shopId, sales).catch(() => {})
+}
+
 export function replaceOfflineSales(shopId: string, sales: OfflineSale[]): void {
   writeJson(salesKey(shopId), sales)
   idbReplaceSales(shopId, sales).catch(() => {})

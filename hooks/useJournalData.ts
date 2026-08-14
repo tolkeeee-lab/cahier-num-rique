@@ -73,13 +73,13 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               time: item.time || '00:00',
               client: item.client_name || 'Client anonyme',
               articles: (item.sold_articles || []).map((art: any) => ({
-                name: art.product_name,
-                quantity: art.quantity,
-                unit_price: art.unit_price,
+                name: art.product_name || art.name || art.nom || 'Produit',
+                quantity: Number(art.quantity || art.quantite) || 1,
+                unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
               })),
-              total: item.total_amount || 0,
-              paid: item.paid_amount || 0,
-              debt: item.debt_amount || 0,
+              total: Number(item.total_amount) || 0,
+              paid: Number(item.paid_amount) || 0,
+              debt: Number(item.debt_amount) || 0,
               status: item.status || 'paid',
               type: item.type || 'sale',
               pen_color: item.pen_color || 'blue',
@@ -90,24 +90,45 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             }))
 
             const localSales = getOfflineSales(shopId)
-            const salesMap = new Map<string, Sale>()
+            const rawCombined = [...mappedSales, ...localSales]
+            
+            // Deduplication par clé unique (date + time + total + notes) et normalisation des articles
+            const seenKeys = new Set<string>()
+            const combinedSales: Sale[] = []
 
-            // 1. Conserver toutes les ventes locales (garantie anti-perte au rafraîchissement)
-            for (const ls of localSales) {
-              salesMap.set(ls.id, {
-                ...ls,
-                articles: ls.articles || [],
-              })
+            for (const s of rawCombined) {
+              const cleanArticles = (s.articles || []).map((art: any) => ({
+                name: art.name || art.nom || art.product_name || 'Produit',
+                quantity: Number(art.quantity || art.quantite) || 1,
+                unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
+              }))
+
+              const cleanSale: Sale = {
+                id: s.id,
+                shop_id: s.shop_id || shopId,
+                date: s.date,
+                time: s.time || '00:00',
+                client: s.client || (s as any).client_name || 'Client anonyme',
+                articles: cleanArticles,
+                total: Number(s.total ?? (s as any).total_amount) || 0,
+                paid: Number(s.paid ?? (s as any).paid_amount) || 0,
+                debt: Number(s.debt ?? (s as any).debt_amount) || 0,
+                status: s.status || 'paid',
+                type: s.type || 'sale',
+                pen_color: s.pen_color || 'blue',
+                notes: s.notes || '',
+                category: s.category,
+                created_at: s.created_at || new Date().toISOString(),
+                is_synced: s.is_synced ?? true,
+              }
+
+              const dedupKey = `${cleanSale.date}_${cleanSale.time}_${cleanSale.total}_${(cleanSale.notes || '').trim().toLowerCase()}`
+              if (seenKeys.has(dedupKey)) continue
+              seenKeys.add(dedupKey)
+              combinedSales.push(cleanSale)
             }
 
-            // 2. Mettre à jour / enrichir avec les données distantes Supabase
-            for (const ms of mappedSales) {
-              salesMap.set(ms.id, ms)
-            }
-
-            const combinedSales: Sale[] = Array.from(salesMap.values()).sort(
-              (a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
-            )
+            combinedSales.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
 
             setAllSales(combinedSales)
             const todays = combinedSales.filter(s => s.date === today)
@@ -131,13 +152,46 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
       if (isMounted) {
         const offlineSales = getOfflineSales(shopId)
-        const sortedOffline = [...offlineSales].sort(
-          (a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
-        )
-        setAllSales(sortedOffline)
-        const todays = sortedOffline.filter(s => s.date === today)
+        const seenKeys = new Set<string>()
+        const cleanOffline: Sale[] = []
+
+        for (const s of offlineSales) {
+          const cleanArticles = (s.articles || []).map((art: any) => ({
+            name: art.name || art.nom || art.product_name || 'Produit',
+            quantity: Number(art.quantity || art.quantite) || 1,
+            unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
+          }))
+
+          const cleanSale: Sale = {
+            id: s.id,
+            shop_id: s.shop_id || shopId,
+            date: s.date,
+            time: s.time || '00:00',
+            client: s.client || 'Client anonyme',
+            articles: cleanArticles,
+            total: Number(s.total) || 0,
+            paid: Number(s.paid) || 0,
+            debt: Number(s.debt) || 0,
+            status: s.status || 'paid',
+            type: s.type || 'sale',
+            pen_color: s.pen_color || 'blue',
+            notes: s.notes || '',
+            category: s.category,
+            created_at: s.created_at || new Date().toISOString(),
+            is_synced: s.is_synced ?? true,
+          }
+
+          const dedupKey = `${cleanSale.date}_${cleanSale.time}_${cleanSale.total}_${(cleanSale.notes || '').trim().toLowerCase()}`
+          if (seenKeys.has(dedupKey)) continue
+          seenKeys.add(dedupKey)
+          cleanOffline.push(cleanSale)
+        }
+
+        cleanOffline.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
+        setAllSales(cleanOffline)
+        const todays = cleanOffline.filter(s => s.date === today)
         setSales(todays)
-        calculateSummary(sortedOffline, todays)
+        calculateSummary(cleanOffline, todays)
         setIsLoading(false)
       }
     }

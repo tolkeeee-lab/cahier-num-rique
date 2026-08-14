@@ -16,6 +16,7 @@ import { getTodayDateString } from '@/lib/dateUtils'
 import {
   generateOfflineId,
   saveOfflineSale,
+  replaceOfflineSaleId,
   getOfflineProducts,
   saveOfflineProduct,
   OfflineSale,
@@ -145,21 +146,28 @@ export function useSaleCreation({
 
       if (response.ok) {
         const resJson = await response.json().catch(() => ({}))
-        // Si l'API renvoie une vente avec un nouvel ID serveur, on la sauvegarde en plus
-        if (resJson.sale?.id && resJson.sale.id !== localSaleId) {
-          saveOfflineSale(shopId, {
+        if (resJson.sale?.id) {
+          const rawArticles = resJson.sale.articles || []
+          const normalizedArticles = rawArticles.map((a: any) => ({
+            name: a.name || a.nom || a.product_name || 'Produit',
+            quantity: Number(a.quantity || a.quantite) || 1,
+            unit_price: Number(a.unit_price || a.prix_unitaire) || 0,
+            category: a.category || a.categorie,
+          }))
+
+          replaceOfflineSaleId(shopId, localSaleId, {
             id: resJson.sale.id,
             shop_id: shopId,
-            date: resJson.sale.date,
-            time: resJson.sale.time,
-            client: resJson.sale.client_name || 'Client',
-            articles: resJson.sale.articles || [],
-            total: resJson.sale.total_amount || 0,
-            paid: resJson.sale.paid_amount || 0,
-            debt: resJson.sale.debt_amount || 0,
+            date: resJson.sale.date || getTodayDateString(),
+            time: resJson.sale.time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            client: resJson.sale.client_name || resJson.sale.client || 'Client',
+            articles: normalizedArticles,
+            total: Number(resJson.sale.total_amount || resJson.sale.total) || 0,
+            paid: Number(resJson.sale.paid_amount || resJson.sale.paid) || 0,
+            debt: Number(resJson.sale.debt_amount || resJson.sale.debt) || 0,
             status: resJson.sale.status || 'paid',
             type: resJson.sale.type || 'cash_in',
-            pen_color: resJson.sale.pen_color || selectedPen,
+            pen_color: resJson.sale.pen_color || activePen,
             notes: resJson.sale.notes || text,
             category: resJson.sale.category || 'Général',
             created_at: resJson.sale.created_at || new Date().toISOString(),
