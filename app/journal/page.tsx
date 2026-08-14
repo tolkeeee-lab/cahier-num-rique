@@ -23,7 +23,6 @@ import { JournalPostIt } from '@/components/journal/JournalPostIt'
 import { StockSuggestionsBubble, StockSuggestionItem } from '@/components/journal/StockSuggestionsBubble'
 import { AutoLearnModal } from '@/components/journal/AutoLearnModal'
 import { TactileMenuGrid } from '@/components/journal/TactileMenuGrid'
-import { ChangeCalculatorPostIt } from '@/components/journal/ChangeCalculatorPostIt'
 import { AddToExistingSaleBar } from '@/components/journal/AddToExistingSaleBar'
 import { StockWizardModal } from '@/components/journal/StockWizardModal'
 import { StockConfirmationModal } from '@/components/journal/StockConfirmationModal'
@@ -36,7 +35,6 @@ import { useJournalData } from '@/hooks/useJournalData'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useSaleCreation } from '@/hooks/useSaleCreation'
 import { useTactileMenu } from '@/hooks/useTactileMenu'
-import { useChangeCalculator } from '@/hooks/useChangeCalculator'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
 import { useInputPipeline, StockConfirmationData, PriceChangeData, WizardPrefill } from '@/hooks/useInputPipeline'
 import { saveOfflineProduct } from '@/lib/offlineDb'
@@ -110,7 +108,6 @@ export default function JournalPage() {
   const shopManager = useShopManager(mappedUser)
   const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopManager.shopId)
   const journalData = useJournalData(shopManager.shopId, isOnline)
-  const changeCalc = useChangeCalculator()
 
   // Synchronisation automatique au retour en ligne
   useOfflineSync({
@@ -126,9 +123,6 @@ export default function JournalPage() {
     shopId: shopManager.shopId,
     selectedPen,
     onSaleCreated: journalData.reloadData,
-    onAfterSale: (total) => {
-      if (selectedPen === 'blue') changeCalc.triggerAfterSale(total)
-    },
   })
 
   const tactileMenu = useTactileMenu({
@@ -341,17 +335,6 @@ export default function JournalPage() {
                     currentDateStr={getTodayDateString()}
                   />
                 </div>
-
-                {/* Calculateur de monnaie (FIXE, visible après vente) */}
-                <ChangeCalculatorPostIt
-                  show={changeCalc.show}
-                  changeTotal={changeCalc.changeTotal}
-                  setChangeTotal={changeCalc.setChangeTotal}
-                  changeReceived={changeCalc.changeReceived}
-                  setChangeReceived={changeCalc.setChangeReceived}
-                  monnaie={changeCalc.monnaie}
-                  onDismiss={changeCalc.dismiss}
-                />
 
                 {/* Menu Tactile 1-tap (FIXE) */}
                 <div className="flex-shrink-0 z-10">
