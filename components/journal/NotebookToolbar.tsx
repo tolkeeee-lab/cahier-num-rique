@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Pen } from '@/lib/penUtils'
-import { Search, Sparkles } from 'lucide-react'
+import { Search, Sparkles, Zap } from 'lucide-react'
 
 interface NotebookToolbarProps {
   pens: Pen[]
@@ -10,6 +10,8 @@ interface NotebookToolbarProps {
   onSelectPen: (penId: string) => void
   searchQuery: string
   onSearchChange: (query: string) => void
+  onOpenTactileMenu?: () => void
+  shortcutCount?: number
 }
 
 export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
@@ -18,6 +20,8 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
   onSelectPen,
   searchQuery,
   onSearchChange,
+  onOpenTactileMenu,
+  shortcutCount = 0,
 }) => {
   return (
     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-3 select-none">
@@ -48,16 +52,35 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
         })}
       </div>
 
-      {/* Champ de recherche */}
-      <div className="relative min-w-[200px]">
-        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Rechercher une écriture..."
-          className="w-full pl-8 pr-3 py-1.5 bg-white/90 border border-gray-300 rounded-full text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono transition-colors shadow-sm"
-        />
+      {/* Bouton Raccourcis Pop-up & Champ de recherche */}
+      <div className="flex items-center gap-2">
+        {onOpenTactileMenu && (
+          <button
+            type="button"
+            onClick={onOpenTactileMenu}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-full text-xs font-bold transition-all shadow-sm active:scale-95 flex-shrink-0"
+            title="Ouvrir le menu des raccourcis 1-tap"
+          >
+            <Zap className="w-3.5 h-3.5 fill-white" />
+            <span>Raccourcis</span>
+            {shortcutCount > 0 && (
+              <span className="bg-amber-950 text-amber-200 rounded-full px-1.5 py-0.2 text-[10px] font-mono font-extrabold">
+                {shortcutCount}
+              </span>
+            )}
+          </button>
+        )}
+
+        <div className="relative min-w-[180px] flex-grow">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Rechercher..."
+            className="w-full pl-8 pr-3 py-1.5 bg-white/90 border border-gray-300 rounded-full text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono transition-colors shadow-sm"
+          />
+        </div>
       </div>
     </div>
   )

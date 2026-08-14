@@ -22,7 +22,7 @@ import { CashAdjustmentModal } from '@/components/journal/CashAdjustmentModal'
 import { JournalPostIt } from '@/components/journal/JournalPostIt'
 import { StockSuggestionsBubble, StockSuggestionItem } from '@/components/journal/StockSuggestionsBubble'
 import { AutoLearnModal } from '@/components/journal/AutoLearnModal'
-import { TactileMenuGrid } from '@/components/journal/TactileMenuGrid'
+import { TactileMenuModal } from '@/components/journal/TactileMenuModal'
 import { AddToExistingSaleBar } from '@/components/journal/AddToExistingSaleBar'
 import { StockWizardModal } from '@/components/journal/StockWizardModal'
 import { StockConfirmationModal } from '@/components/journal/StockConfirmationModal'
@@ -101,8 +101,9 @@ export default function JournalPage() {
   const [wizardPrefill, setWizardPrefill] = useState<WizardPrefill | null>(null)
   const [showStockWizard, setShowStockWizard] = useState(false)
 
-  // État de modification d'une vente
+  // État de modification d'une vente & modale menu tactile
   const [editingSale, setEditingSale] = useState<any | null>(null)
+  const [showTactileMenuModal, setShowTactileMenuModal] = useState(false)
 
   // ── Hooks métier ───────────────────────────────────────────────────────────
   const shopManager = useShopManager(mappedUser)
@@ -308,7 +309,7 @@ export default function JournalPage() {
             {activeTab === 'cahier' && (
               <div className="flex-1 min-h-0 flex flex-col space-y-2 overflow-hidden">
 
-                {/* Stylos Bic + Recherche (FIXE) */}
+                {/* Stylos Bic + Recherche + Raccourcis (FIXE) */}
                 <div className="flex-shrink-0 z-10">
                   <NotebookToolbar
                     pens={pens}
@@ -316,6 +317,8 @@ export default function JournalPage() {
                     onSelectPen={setSelectedPen}
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}
+                    onOpenTactileMenu={() => setShowTactileMenuModal(true)}
+                    shortcutCount={tactileMenu.menuItems.length}
                   />
                 </div>
 
@@ -333,18 +336,6 @@ export default function JournalPage() {
                     onEditSale={(sale) => setEditingSale(sale)}
                     searchQuery={searchQuery}
                     currentDateStr={getTodayDateString()}
-                  />
-                </div>
-
-                {/* Menu Tactile 1-tap (FIXE) */}
-                <div className="flex-shrink-0 z-10">
-                  <TactileMenuGrid
-                    items={tactileMenu.menuItems}
-                    isLoading={tactileMenu.isLoadingMenu}
-                    shopActivity={shopManager.shopActivity}
-                    onTapItem={tactileMenu.handleTapItem}
-                    onDeleteItem={tactileMenu.handleDeleteItem}
-                    onAddItem={tactileMenu.handleAddItem}
                   />
                 </div>
 
@@ -599,6 +590,16 @@ export default function JournalPage() {
         onDelete={async (saleId) => {
           await journalData.crossOutSale(saleId)
         }}
+      />
+      <TactileMenuModal
+        isOpen={showTactileMenuModal}
+        onClose={() => setShowTactileMenuModal(false)}
+        items={tactileMenu.menuItems}
+        isLoading={tactileMenu.isLoadingMenu}
+        shopActivity={shopManager.shopActivity}
+        onTapItem={tactileMenu.handleTapItem}
+        onDeleteItem={tactileMenu.handleDeleteItem}
+        onAddItem={tactileMenu.handleAddItem}
       />
     </div>
   )
