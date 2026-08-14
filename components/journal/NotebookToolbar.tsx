@@ -29,10 +29,10 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
             key={pen.id}
             type="button"
             onClick={() => onSelectPen(pen.id)}
-            className={`flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-xs font-mono font-extrabold transition-all duration-150 flex-shrink-0 border cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-extrabold transition-all duration-150 flex-shrink-0 border cursor-pointer ${
               isSelected
                 ? 'text-white shadow-xs scale-102 ring-2 ring-amber-400/80 border-white/60'
-                : 'bg-white/85 text-gray-800 border-amber-300/80 hover:bg-amber-50'
+                : 'bg-white/90 text-gray-800 border-amber-300/80 hover:bg-amber-50 shadow-2xs'
             }`}
             style={
               isSelected
@@ -40,11 +40,21 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
                 : {}
             }
           >
+            {/* Pastille de couleur du stylo toujours éclatante et visible avec sa vraie couleur */}
             <span
-              className={`w-2.5 h-2.5 rounded-full shadow-xs border border-white/40 flex-shrink-0`}
-              style={{ backgroundColor: pen.color }}
-            />
-            <span className="text-[11px] sm:text-xs">{pen.name}</span>
+              className={`w-3 h-3 rounded-full flex items-center justify-center flex-shrink-0 shadow-xs border ${
+                isSelected ? 'border-white/80 ring-1 ring-white/60 bg-white' : 'border-black/20'
+              }`}
+              style={{ backgroundColor: isSelected ? '#ffffff' : pen.color }}
+            >
+              {isSelected && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: pen.color }}
+                />
+              )}
+            </span>
+            <span className="text-[11px] sm:text-xs font-extrabold tracking-wide">{pen.name}</span>
           </button>
         )
       })}
