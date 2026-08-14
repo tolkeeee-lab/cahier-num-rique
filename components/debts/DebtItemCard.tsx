@@ -36,27 +36,27 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
     <div
       className={`p-4 rounded-2xl border transition-all ${
         isSettled
-          ? 'opacity-40 bg-[#1a1715] border-gray-800 line-through'
-          : 'bg-[#1e1a18] hover:bg-[#25201d] border-gray-800 shadow-md'
+          ? 'opacity-40 bg-gray-200/50 border-gray-300 line-through'
+          : 'bg-white hover:bg-amber-50/50 border-amber-300/80 shadow-sm'
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         {/* Infos Dette */}
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-white">{debt.client_name || 'Client anonyme'}</span>
+            <span className="font-extrabold text-sm text-gray-900">{debt.client_name || 'Client anonyme'}</span>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-bold border ${
+              className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase font-extrabold border ${
                 isSupplier
-                  ? 'bg-fuchsia-950/40 text-fuchsia-300 border-fuchsia-800/60'
-                  : 'bg-amber-950/40 text-amber-300 border-amber-800/60'
+                  ? 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300'
+                  : 'bg-amber-100 text-amber-800 border-amber-300'
               }`}
             >
               {isSupplier ? 'FOURNISSEUR' : 'CLIENT'}
             </span>
           </div>
 
-          {debt.notes && <p className="text-xs text-gray-400 font-mono italic">{debt.notes}</p>}
+          {debt.notes && <p className="text-xs text-gray-600 font-mono italic">{debt.notes}</p>}
 
           <p className="text-[11px] text-gray-500 font-mono">
             Date : {new Date(debt.created_at).toLocaleDateString('fr-FR')}
@@ -65,7 +65,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
 
         {/* Montant & Actions */}
         <div className="flex flex-col items-end gap-2">
-          <span className={`text-sm font-extrabold font-mono ${isSupplier ? 'text-fuchsia-400' : 'text-amber-400'}`}>
+          <span className={`text-base font-black font-mono ${isSupplier ? 'text-fuchsia-900' : 'text-rose-900'}`}>
             {formatPrice(debt.amount_owed)}
           </span>
 
@@ -73,8 +73,9 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
             <div className="flex items-center gap-1.5">
               {!isSupplier && (
                 <button
+                  type="button"
                   onClick={handleSendWhatsAppReminder}
-                  className="p-1.5 rounded-lg bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/60 transition-colors border border-emerald-800/40"
+                  className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 transition-colors cursor-pointer"
                   title="Relancer par WhatsApp"
                 >
                   <Share2 className="w-3.5 h-3.5" />
@@ -83,10 +84,11 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
 
               {onOpenRepaymentModal && (
                 <button
+                  type="button"
                   onClick={() => onOpenRepaymentModal(debt)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#2a2421] text-amber-400 border border-gray-800 hover:bg-[#342d29] transition-all text-xs font-mono font-bold"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 transition-all text-xs font-mono font-bold cursor-pointer"
                 >
-                  <Calculator className="w-3.5 h-3.5" />
+                  <Calculator className="w-3.5 h-3.5 text-amber-700" />
                   <span>Solder</span>
                 </button>
               )}

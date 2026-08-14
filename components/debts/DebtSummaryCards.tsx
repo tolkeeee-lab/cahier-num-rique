@@ -14,25 +14,25 @@ export const DebtSummaryCards: React.FC<DebtSummaryCardsProps> = ({
   totalSupplierDebts,
 }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
       {/* Argent Dehors Clients */}
-      <div className="bg-[#1e1a18] p-4 rounded-2xl border border-amber-900/40 space-y-1 shadow-md">
-        <div className="flex items-center gap-1.5 text-xs text-amber-400 font-mono">
-          <AlertTriangle className="w-3.5 h-3.5" />
+      <div className="bg-gradient-to-br from-rose-50 to-rose-100/70 p-4 rounded-2xl border border-rose-300 space-y-1 shadow-sm">
+        <div className="flex items-center gap-1.5 text-xs text-rose-800 font-mono font-extrabold uppercase">
+          <AlertTriangle className="w-4 h-4 text-rose-600" />
           <span>Argent Dehors (Dettes Clients)</span>
         </div>
-        <p className="text-xl font-extrabold text-amber-400 font-mono">
+        <p className="text-xl font-black text-rose-950 font-mono">
           {formatPrice(totalClientDebts)}
         </p>
       </div>
 
       {/* Dettes Fournisseurs / Grossistes */}
-      <div className="bg-[#1e1a18] p-4 rounded-2xl border border-fuchsia-950/60 space-y-1 shadow-md">
-        <div className="flex items-center gap-1.5 text-xs text-fuchsia-400 font-mono">
-          <Store className="w-3.5 h-3.5" />
+      <div className="bg-gradient-to-br from-fuchsia-50 to-purple-100/70 p-4 rounded-2xl border border-fuchsia-300 space-y-1 shadow-sm">
+        <div className="flex items-center gap-1.5 text-xs text-fuchsia-800 font-mono font-extrabold uppercase">
+          <Store className="w-4 h-4 text-fuchsia-600" />
           <span>Dettes Grossistes (Fournisseurs)</span>
         </div>
-        <p className="text-xl font-extrabold text-fuchsia-400 font-mono">
+        <p className="text-xl font-black text-fuchsia-950 font-mono">
           {formatPrice(totalSupplierDebts)}
         </p>
       </div>

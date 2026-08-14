@@ -25,18 +25,18 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
   isEmployee = false,
 }) => {
   return (
-    <div className="bg-[#1e1a18] p-4 rounded-2xl border border-gray-800 space-y-3 mb-6 shadow-md">
+    <div className="bg-white/90 p-3.5 rounded-2xl border border-amber-300/80 space-y-3 mb-4 shadow-sm">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         
         {/* Champ de recherche */}
         <div className="relative flex-grow max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Rechercher un produit en stock..."
-            className="w-full pl-9 pr-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 font-mono"
+            className="w-full pl-9 pr-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono shadow-inner font-bold"
           />
         </div>
 
@@ -47,7 +47,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
           <select
             value={categoryFilter}
             onChange={(e) => onCategoryFilterChange(e.target.value)}
-            className="px-3 py-1.5 bg-[#141210] border border-gray-800 rounded-xl text-xs text-gray-300 font-mono focus:outline-none"
+            className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
           >
             <option value="TOUT">Toutes les catégories</option>
             {categories.map((cat, idx) => (
@@ -61,7 +61,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
           {onExportCSV && (
             <button
               onClick={onExportCSV}
-              className="p-2 rounded-xl bg-[#2a2421] text-gray-300 border border-gray-800 hover:text-white transition-all"
+              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all shadow-xs cursor-pointer"
               title="Exporter l'inventaire Excel / CSV"
             >
               <FileSpreadsheet className="w-4 h-4" />
@@ -72,10 +72,10 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
           {!isEmployee && (
             <button
               onClick={onAddProduct}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all whitespace-nowrap shadow-md"
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all whitespace-nowrap shadow-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Nouveau Produit</span>
+              <span>+ Nouveau Produit</span>
             </button>
           )}
         </div>
