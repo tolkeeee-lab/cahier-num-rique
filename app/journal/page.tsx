@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { DebtsBook } from '@/components/DebtsBook'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
@@ -62,12 +62,12 @@ export default function JournalPage() {
 
   const [activeTab, setActiveTab] = useState<JournalTab>('cahier')
   const [selectedPen, setSelectedPen] = useState('blue')
-  const [activeFilter, setActiveFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [postItMessage, setPostItMessage] = useState<string | null>(null)
+  const [currentTime, setCurrentTime] = useState('')
 
   // Modales d'action
   const [showCashAdjustment, setShowCashAdjustment] = useState(false)
@@ -80,14 +80,6 @@ export default function JournalPage() {
 
   const pens = getPens(shopManager.shopActivity)
 
-  const filters = [
-    { id: 'all', label: 'Tout', emoji: '🌟' },
-    { id: 'fourniture', label: 'Fournitures', emoji: '📚' },
-    { id: 'alimentaire', label: 'Alimentaire', emoji: '🌾' },
-    { id: 'boisson', label: 'Boissons', emoji: '🥤' },
-    { id: 'autre', label: 'Divers', emoji: '🏷️' }
-  ]
-
   const quickProducts = [
     { name: 'Beaufort Canette 33cl', price: 600 },
     { name: 'Boîte de Sardines', price: 500 },
@@ -96,6 +88,16 @@ export default function JournalPage() {
     { name: 'Sac de Riz 50kg', price: 22000 },
     { name: 'Huile Dinor 1L', price: 1200 },
   ]
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date()
+      setCurrentTime(now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
+    }
+    updateTime()
+    const interval = setInterval(updateTime, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleSelectQuickProduct = (prod: { name: string; price: number }) => {
     if (!input.trim()) {
@@ -226,22 +228,28 @@ export default function JournalPage() {
           />
 
           {/* Corps du Cahier Seyes & Autres Onglets */}
-          <div className="p-3 md:p-6 flex-grow">
+          <div className="p-3 md:p-6 flex-grow flex flex-col justify-between space-y-4">
             {/* Post-it d'alerte */}
             <JournalPostIt message={postItMessage} onDismiss={() => setPostItMessage(null)} />
 
             {activeTab === 'cahier' && (
-              <div className="space-y-4">
-                {/* Barre de stylos & filtres */}
+              <div className="flex-grow flex flex-col justify-between space-y-4">
+                {/* Barre de stylos Bic & Recherche (SANS filtres de catégorie) */}
                 <NotebookToolbar
                   pens={pens}
                   selectedPen={selectedPen}
                   onSelectPen={setSelectedPen}
-                  filters={filters}
-                  activeFilter={activeFilter}
-                  onSelectFilter={setActiveFilter}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
+                />
+
+                {/* Rendu de la Page Seyes du Cahier */}
+                <NotebookPage
+                  sales={journalData.sales}
+                  onCrossOutSale={journalData.crossOutSale}
+                  onPrintReceipt={handlePrintReceipt}
+                  searchQuery={searchQuery}
+                  currentDateStr={getTodayDateString()}
                 />
 
                 {/* Badges de raccourcis produits fréquents */}
@@ -250,41 +258,38 @@ export default function JournalPage() {
                   onSelectProduct={handleSelectQuickProduct}
                 />
 
-                {/* Saisie manuscrite au stylo */}
-                <form onSubmit={handleCreateSale} className="bg-amber-100/40 p-2.5 rounded-2xl border border-amber-300/60 shadow-sm space-y-2">
-                  <div className="flex gap-2">
-                    <textarea
+                {/* Barre de Saisie WhatsApp flottante tout en bas */}
+                <form onSubmit={handleCreateSale} className="relative flex items-center gap-2 pt-2 border-t border-dashed border-amber-300/60 mt-auto">
+                  {/* Horloge à gauche */}
+                  <div className="font-mono text-xs font-bold text-gray-500 flex-shrink-0 min-w-[45px] text-center">
+                    ⏰ {currentTime || '14:42'}
+                  </div>
+
+                  {/* Champ de texte WhatsApp */}
+                  <div className="relative flex-grow">
+                    <input
+                      type="text"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      placeholder={pens.find(p => p.id === selectedPen)?.placeholder || 'Écrivez votre vente ou dépense...'}
-                      rows={2}
-                      className="w-full px-4 py-2.5 bg-[#fdfaf2] border border-amber-300 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-amber-500 resize-none font-handwritten"
+                      placeholder={pens.find(p => p.id === selectedPen)?.placeholder || `Stylo ${selectedPen} : Écrivez une vente cash... (ex: 2 sacs de riz à 22000)`}
+                      className="w-full pl-4 pr-4 py-3 bg-white border-2 border-amber-300 rounded-full text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner font-handwritten"
                     />
-                    <button
-                      type="submit"
-                      disabled={!input.trim() || isSubmitting}
-                      className="px-5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 flex-shrink-0 shadow-md"
-                    >
-                      {isSubmitting ? (
-                        <Loader className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <>
-                          <span className="font-mono text-xs uppercase font-extrabold">Enregistrer</span>
-                          <Send className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
                   </div>
-                </form>
 
-                {/* Rendu de la Page Seyes */}
-                <NotebookPage
-                  sales={journalData.sales}
-                  onCrossOutSale={journalData.crossOutSale}
-                  onPrintReceipt={handlePrintReceipt}
-                  searchQuery={searchQuery}
-                  currentDateStr={getTodayDateString()}
-                />
+                  {/* Bouton d'envoi circulaire style WhatsApp */}
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || isSubmitting}
+                    className="w-12 h-12 rounded-full bg-gradient-to-br from-[#f59e0b] to-[#d97706] text-[#141210] flex items-center justify-center font-extrabold hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex-shrink-0 shadow-lg"
+                    title="Enregistrer l'écriture"
+                  >
+                    {isSubmitting ? (
+                      <Loader className="w-5 h-5 animate-spin text-[#141210]" />
+                    ) : (
+                      <Send className="w-5 h-5 text-[#141210] -mr-0.5" />
+                    )}
+                  </button>
+                </form>
               </div>
             )}
 
