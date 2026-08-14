@@ -79,10 +79,10 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   })
 
   return (
-    <div className="lined-paper relative pl-10 pr-4 py-4 flex-grow flex flex-col justify-between min-h-[500px] rounded-2xl border border-amber-300/40 shadow-sm">
-      <div className="relative z-10 space-y-4">
-        {/* Entête du Cahier Seyes avec Stamp Date */}
-        <div className="flex items-center justify-between border-b-2 border-blue-200/60 pb-2.5">
+    <div className="lined-paper relative pl-10 pr-4 py-4 flex-1 min-h-0 flex flex-col rounded-2xl border border-amber-300/40 shadow-sm overflow-hidden">
+      <div className="relative z-10 flex flex-col h-full space-y-3">
+        {/* Entête du Cahier Seyes avec Stamp Date (FIXE EN HAUT DE LA PAGE) */}
+        <div className="flex items-center justify-between border-b-2 border-blue-200/60 pb-2.5 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="brass-medallion w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
               <BookOpen className="w-3.5 h-3.5" />
@@ -97,16 +97,16 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
           </div>
         </div>
 
-        {/* Liste des Écritures Manuscrites */}
+        {/* Liste des Écritures Manuscrites (SEUL CE BLOC DÉFILE VERTICALEMENT) */}
         {filteredSales.length === 0 ? (
-          <div className="py-16 text-center text-gray-400 handwritten text-lg">
+          <div className="py-12 text-center text-gray-400 handwritten text-lg flex-1 flex flex-col items-center justify-center">
             Aucune écriture enregistrée sur cette page.
             <p className="text-xs font-sans text-gray-500 mt-1.5">
-              Choisissez un stylo et saisissez votre première opération ci-dessus.
+              Choisissez un stylo et saisissez votre première opération ci-dessous.
             </p>
           </div>
         ) : (
-          <div className="space-y-3 lined-text-container">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-3 lined-text-container pr-1 scrollbar-none">
             {filteredSales.map((sale) => {
               const inkClass = getPenInkClass(sale.pen_color)
               const badgeClass = getBadgeClass(sale.pen_color)
