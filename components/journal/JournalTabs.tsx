@@ -86,7 +86,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
   ].filter(t => t.show)
 
   return (
-    <nav className="bg-[#191614] border-b border-[#2a2421] px-4 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
+    <nav className="bg-[#f5eea5]/20 border-b border-amber-300/60 px-3 pt-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none select-none">
       {tabs.map(tab => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
@@ -94,17 +94,18 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
         return (
           <button
             key={tab.id}
+            type="button"
             onClick={() => onTabChange(tab.id)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
+            className={`notebook-tab flex items-center gap-1.5 px-3 py-2 text-xs font-mono font-extrabold transition-all whitespace-nowrap border-t border-x ${
               isActive
-                ? 'bg-gradient-to-r from-[#064e3b] to-[#043c2d] text-[#f59e0b] border-[#047857]/60 shadow-md scale-[1.02]'
-                : 'bg-[#221e1b]/60 text-gray-400 border-transparent hover:text-gray-200 hover:bg-[#2a2421]'
+                ? 'bg-[#064e3b] text-[#f59e0b] border-[#047857] shadow-lg -mb-[1px] rounded-t-xl scale-[1.02]'
+                : 'bg-amber-100/60 text-amber-950 border-amber-300/60 hover:bg-amber-200/80 rounded-t-lg opacity-85'
             }`}
           >
-            <Icon className={`w-4 h-4 ${isActive ? 'text-[#f59e0b]' : 'text-gray-400'}`} />
+            <Icon className="w-3.5 h-3.5" />
             <span>{tab.label}</span>
-            {tab.badge !== undefined && (
-              <span className="px-1.5 py-0.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-mono rounded-full font-bold">
+            {tab.badge && (
+              <span className="px-1.5 py-0.2 bg-rose-600 text-white text-[10px] rounded-full font-bold">
                 {tab.badge}
               </span>
             )}

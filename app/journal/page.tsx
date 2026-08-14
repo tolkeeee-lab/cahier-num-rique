@@ -134,120 +134,176 @@ export default function JournalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#141210] text-[#fefdfa] font-sans antialiased">
-      {/* En-tête Navigation Principale */}
-      <JournalHeader
-        user={mappedUser}
-        currentShopName={shopManager.currentShop?.name || 'Mon Point de Vente'}
-        activity={shopManager.shopActivity}
-        isOnline={isOnline}
-        pendingSyncCount={pendingCount}
-        isSyncing={syncStatus === 'syncing'}
-        onSyncClick={() => setSyncStatus('syncing')}
-        onOpenSettings={() => setActiveTab('settings')}
-        onOpenCashClosing={() => setShowCashClosing(true)}
-        onOpenBarcodeScanner={() => setShowBarcodeScannerModal(true)}
-        onOpenBoutiqueAssistant={() => setShowAssistantModal(true)}
-        onOpenSyscohada={() => setShowSyscohadaModal(true)}
-      />
-
-      {/* Onglets de navigation */}
-      <JournalTabs
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        activity={shopManager.shopActivity}
-      />
-
-      {/* Contenu Principal */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+    <div className="min-h-screen bg-[#141210] text-[#1e1a18] font-sans p-2 md:p-6 antialiased flex flex-col justify-between">
+      
+      {/* Chassis Principal du Cahier Ouvert */}
+      <div className="bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-amber-950/20 shadow-2xl flex relative z-0 min-h-[750px] overflow-hidden w-full max-w-6xl mx-auto">
         
-        {/* Post-it d'alerte */}
-        <JournalPostIt message={postItMessage} onDismiss={() => setPostItMessage(null)} />
+        {/* Reliure Cuir Vert Émeraude à Gauche */}
+        <div className="hidden sm:flex w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-10 z-10 flex-shrink-0 select-none">
+          {/* Vis en laiton supérieure */}
+          <div className="brass-screw" />
 
-        {activeTab === 'cahier' && (
-          <div className="space-y-6">
-            {/* Zone de saisie rapide au stylo */}
-            <form onSubmit={handleCreateSale} className="bg-[#1e1a18] p-4 rounded-2xl border border-gray-800 shadow-xl space-y-3">
-              <NotebookToolbar
-                pens={pens}
-                selectedPen={selectedPen}
-                onSelectPen={setSelectedPen}
-                filters={filters}
-                activeFilter={activeFilter}
-                onSelectFilter={setActiveFilter}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-              />
-
-              <div className="flex gap-2">
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={pens.find(p => p.id === selectedPen)?.placeholder || 'Écrivez votre vente ou dépense...'}
-                  rows={2}
-                  className="w-full px-4 py-3 bg-[#141210] border border-gray-800 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 resize-none font-handwritten"
-                />
-                <button
-                  type="submit"
-                  disabled={!input.trim() || isSubmitting}
-                  className="px-6 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center justify-center gap-2 flex-shrink-0"
-                >
-                  {isSubmitting ? (
-                    <Loader className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Enregistrer</span>
-                      <Send className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {/* Rendu visuel de la Page Seyes du Cahier */}
-            <NotebookPage
-              sales={journalData.sales}
-              onCrossOutSale={journalData.crossOutSale}
-              onPrintReceipt={handlePrintReceipt}
-              searchQuery={searchQuery}
-              currentDateStr={getTodayDateString()}
-            />
+          {/* Titre doré vertical sur le dos du cahier */}
+          <div className="font-extrabold text-[8px] md:text-[10px] text-[#f59e0b] font-sans tracking-[0.3em] uppercase select-none my-auto whitespace-nowrap [writing-mode:vertical-lr] rotate-180 text-center opacity-90">
+            CAHIER DE CAISSE INTELLIGENT
           </div>
-        )}
 
-        {/* Autres Onglets */}
-        {activeTab === 'dettes' && (
-          <DebtsBook
-            shopId={shopManager.shopId}
-            onRefreshTotals={() => journalData.reloadData()}
-            onError={(msg) => setPostItMessage(msg)}
-          />
-        )}
-        {activeTab === 'stock' && <StockManager shopId={shopManager.shopId} />}
-        {activeTab === 'analytics' && <AnalyticsDashboard sales={journalData.allSales} shopId={shopManager.shopId} />}
-        {activeTab === 'settings' && (
-          <SettingsManager
-            shopId={shopManager.shopId}
-            userEmail={mappedUser?.email}
-            userShops={shopManager.userShops}
-            onUpdateShopActivity={(sId, act) => {
-              const updated = shopManager.userShops.map(s => s.id === sId ? { ...s, activity: act } : s)
-              shopManager.setUserShops(updated)
+          {/* Médaillon central en laiton */}
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full brass-medallion flex flex-col items-center justify-center text-[8px] md:text-[9px] font-bold font-mono my-2 shadow-md">
+            <span className="scale-[0.8] md:scale-100">200</span>
+            <span className="text-[5px] uppercase tracking-tighter -mt-0.5">PAGES</span>
+          </div>
+
+          {/* Vis en laiton inférieure */}
+          <div className="brass-screw" />
+        </div>
+
+        {/* Anneaux Spirales Métalliques en Laiton */}
+        <div className="hidden sm:flex absolute left-[28px] md:left-[48px] top-0 bottom-0 w-4 md:w-5 flex-col items-center justify-around py-4 z-20 pointer-events-none">
+          {Array.from({ length: 15 }).map((_, i) => (
+            <div key={i} className="w-5 md:w-7 h-2.5 spiral-ring shadow-md rounded-sm" />
+          ))}
+        </div>
+
+        {/* Page de Papier Seyes Ivoire à Droite */}
+        <div className="flex-1 min-w-0 flex flex-col h-full bg-[#fdfaf2] relative">
+          
+          {/* Entête du Cahier + KPIs Financiers */}
+          <JournalHeader
+            user={mappedUser}
+            currentShopName={shopManager.currentShop?.name || 'Mon Point de Vente'}
+            activity={shopManager.shopActivity}
+            shops={shopManager.userShops}
+            selectedShopId={shopManager.shopId}
+            onSelectShopId={(id) => shopManager.setSelectedShopId(id)}
+            onOpenNewShopModal={() => shopManager.setShowNewShopModal(true)}
+            soldeDuJour={journalData.soldeDuJour}
+            tiroirCaisse={journalData.tiroirCaisse}
+            argentDehors={journalData.argentDehors}
+            nosDettes={journalData.nosDettes}
+            isOnline={isOnline}
+            pendingSyncCount={pendingCount}
+            isSyncing={syncStatus === 'syncing'}
+            onSyncClick={() => setSyncStatus('syncing')}
+            onOpenSettings={() => setActiveTab('settings')}
+            onOpenCashAdjustment={() => setShowCashAdjustment(true)}
+            onOpenCashClosing={() => setShowCashClosing(true)}
+            onOpenBarcodeScanner={() => setShowBarcodeScannerModal(true)}
+            onOpenBoutiqueAssistant={() => setShowAssistantModal(true)}
+            onOpenSyscohada={() => setShowSyscohadaModal(true)}
+            onLogout={() => {
+              localStorage.removeItem('cahier_mock_session')
+              localStorage.removeItem('cahier_last_active_user')
+              localStorage.setItem('cahier_logged_out_flag', 'true')
+              setUser(null)
             }}
           />
-        )}
-        {activeTab === 'shopping' && <ShoppingListManager shopId={shopManager.shopId} />}
-        {activeTab === 'demandes' && <RequestedProductsManager shopId={shopManager.shopId} />}
-        {activeTab === 'particulier' && (
-          <ParticulierDashboard
-            sales={journalData.sales}
-            allSales={journalData.allSales}
-            shopId={shopManager.shopId}
-          />
-        )}
-      </main>
 
-      {/* Ensemble des Modales */}
+          {/* Onglets Intercalaires du Cahier */}
+          <JournalTabs
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            activity={shopManager.shopActivity}
+          />
+
+          {/* Corps du Cahier Seyes & Autres Onglets */}
+          <div className="p-3 md:p-6 flex-grow">
+            {/* Post-it d'alerte */}
+            <JournalPostIt message={postItMessage} onDismiss={() => setPostItMessage(null)} />
+
+            {activeTab === 'cahier' && (
+              <div className="space-y-4">
+                {/* Barre de stylos & filtres */}
+                <NotebookToolbar
+                  pens={pens}
+                  selectedPen={selectedPen}
+                  onSelectPen={setSelectedPen}
+                  filters={filters}
+                  activeFilter={activeFilter}
+                  onSelectFilter={setActiveFilter}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                />
+
+                {/* Saisie manuscrite au stylo */}
+                <form onSubmit={handleCreateSale} className="bg-amber-100/40 p-2.5 rounded-2xl border border-amber-300/60 shadow-sm space-y-2">
+                  <div className="flex gap-2">
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder={pens.find(p => p.id === selectedPen)?.placeholder || 'Écrivez votre vente ou dépense...'}
+                      rows={2}
+                      className="w-full px-4 py-2.5 bg-[#fdfaf2] border border-amber-300 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-amber-500 resize-none font-handwritten"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!input.trim() || isSubmitting}
+                      className="px-5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 flex-shrink-0 shadow-md"
+                    >
+                      {isSubmitting ? (
+                        <Loader className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <span className="font-mono text-xs uppercase font-extrabold">Enregistrer</span>
+                          <Send className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Rendu de la Page Seyes */}
+                <NotebookPage
+                  sales={journalData.sales}
+                  onCrossOutSale={journalData.crossOutSale}
+                  onPrintReceipt={handlePrintReceipt}
+                  searchQuery={searchQuery}
+                  currentDateStr={getTodayDateString()}
+                />
+              </div>
+            )}
+
+            {/* Autres onglets */}
+            {activeTab === 'dettes' && (
+              <DebtsBook
+                shopId={shopManager.shopId}
+                onRefreshTotals={() => journalData.reloadData()}
+                onError={(msg) => setPostItMessage(msg)}
+              />
+            )}
+            {activeTab === 'stock' && <StockManager shopId={shopManager.shopId} />}
+            {activeTab === 'analytics' && <AnalyticsDashboard sales={journalData.allSales} shopId={shopManager.shopId} />}
+            {activeTab === 'settings' && (
+              <SettingsManager
+                shopId={shopManager.shopId}
+                userEmail={mappedUser?.email}
+                userShops={shopManager.userShops}
+                onUpdateShopActivity={(sId, act) => {
+                  const updated = shopManager.userShops.map(s => s.id === sId ? { ...s, activity: act } : s)
+                  shopManager.setUserShops(updated)
+                }}
+              />
+            )}
+            {activeTab === 'shopping' && <ShoppingListManager shopId={shopManager.shopId} />}
+            {activeTab === 'demandes' && <RequestedProductsManager shopId={shopManager.shopId} />}
+            {activeTab === 'particulier' && (
+              <ParticulierDashboard
+                sales={journalData.sales}
+                allSales={journalData.allSales}
+                shopId={shopManager.shopId}
+              />
+            )}
+          </div>
+
+          {/* Pied de page du Cahier */}
+          <footer className="text-center text-[10px] text-amber-900/60 font-mono py-2 uppercase tracking-widest border-t border-dashed border-amber-300/40 select-none">
+            CAHIER NO. 200 • WEST AFRICA MARKET RD.
+          </footer>
+        </div>
+      </div>
+
+      {/* Modales */}
       <NotebookModals
         showAssistantModal={showAssistantModal}
         onCloseAssistantModal={() => setShowAssistantModal(false)}
