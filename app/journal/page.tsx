@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
+
+// ── Composants ────────────────────────────────────────────────────────────────
 import { DebtsBook } from '@/components/DebtsBook'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
 import { RequestedProductsManager } from '@/components/RequestedProductsManager'
-import { isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { AuthScreen } from '@/components/AuthScreen'
-import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { StockManager } from '@/components/StockManager'
 import { SettingsManager } from '@/components/SettingsManager'
 import { ParticulierDashboard } from '@/components/ParticulierDashboard'
@@ -20,30 +20,38 @@ import { NotebookModals } from '@/components/journal/NotebookModals'
 import { NewShopModal } from '@/components/journal/NewShopModal'
 import { CashAdjustmentModal } from '@/components/journal/CashAdjustmentModal'
 import { JournalPostIt } from '@/components/journal/JournalPostIt'
-import { QuickProductBadges } from '@/components/sales/QuickProductBadges'
 import { StockSuggestionsBubble, StockSuggestionItem } from '@/components/journal/StockSuggestionsBubble'
 import { AutoLearnModal } from '@/components/journal/AutoLearnModal'
+import { TactileMenuGrid } from '@/components/journal/TactileMenuGrid'
+import { ChangeCalculatorPostIt } from '@/components/journal/ChangeCalculatorPostIt'
 
+// ── Hooks ─────────────────────────────────────────────────────────────────────
 import { useShopManager } from '@/hooks/useShopManager'
 import { useJournalData } from '@/hooks/useJournalData'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { useSaleCreation } from '@/hooks/useSaleCreation'
+import { useTactileMenu } from '@/hooks/useTactileMenu'
+import { useChangeCalculator } from '@/hooks/useChangeCalculator'
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+import { isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
-import { getOfflineProducts, saveOfflineProduct, generateOfflineId, saveOfflineSale } from '@/lib/offlineDb'
-import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
+import { getOfflineProducts } from '@/lib/offlineDb'
 import { Send, Loader } from 'lucide-react'
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function JournalPage() {
   const isConfigured = isSupabaseClientConfigured()
-  
+
+  // ── Utilisateur connecté ───────────────────────────────────────────────────
   const [user, setUser] = useState<any>(() => {
-    if (typeof window !== 'undefined') {
-      const loggedOut = localStorage.getItem('cahier_logged_out_flag') === 'true'
-      if (!loggedOut) {
-        const cached = localStorage.getItem('cahier_last_active_user') || localStorage.getItem('cahier_mock_session')
-        if (cached) {
-          try { return JSON.parse(cached) } catch { return null }
-        }
-      }
+    if (typeof window === 'undefined') return null
+    const loggedOut = localStorage.getItem('cahier_logged_out_flag') === 'true'
+    if (!loggedOut) {
+      const cached = localStorage.getItem('cahier_last_active_user') || localStorage.getItem('cahier_mock_session')
+      if (cached) { try { return JSON.parse(cached) } catch { return null } }
     }
     return null
   })
@@ -56,62 +64,62 @@ export default function JournalPage() {
       email: user.email,
       name: meta.full_name || user.full_name || 'Utilisateur',
       role: meta.role || user.role || 'owner',
-      shop_id: meta.shop_id || user.shop_id || user.id || 'default-shop'
+      shop_id: meta.shop_id || user.shop_id || user.id || 'default-shop',
     }
   }, [user])
 
-  const shopManager = useShopManager(mappedUser)
-  const { isOnline, pendingCount, syncStatus, setSyncStatus } = useNetworkStatus(shopManager.shopId)
-  const journalData = useJournalData(shopManager.shopId, isOnline)
-
+  // ── Onglets & UI locale ────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<JournalTab>('cahier')
   const [selectedPen, setSelectedPen] = useState('blue')
   const [searchQuery, setSearchQuery] = useState('')
-  
-  const [input, setInput] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [postItMessage, setPostItMessage] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState('')
+  const [receiptSale, setReceiptSale] = useState<any>(null)
 
-  // Modale d'Auto-apprentissage
-  const [showAutoLearnModal, setShowAutoLearnModal] = useState(false)
-  const [autoLearnData, setAutoLearnData] = useState<{ name: string; price: number } | null>(null)
-
-  // Modales d'action
+  // Modales secondaires
   const [showCashAdjustment, setShowCashAdjustment] = useState(false)
   const [showCashClosing, setShowCashClosing] = useState(false)
   const [showAssistantModal, setShowAssistantModal] = useState(false)
   const [showBarcodeScannerModal, setShowBarcodeScannerModal] = useState(false)
   const [showSyscohadaModal, setShowSyscohadaModal] = useState(false)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
-  const [receiptSale, setReceiptSale] = useState<any>(null)
 
-  const pens = getPens(shopManager.shopActivity)
+  // ── Hooks métier ───────────────────────────────────────────────────────────
+  const shopManager = useShopManager(mappedUser)
+  const { isOnline, pendingCount, syncStatus, setSyncStatus } = useNetworkStatus(shopManager.shopId)
+  const journalData = useJournalData(shopManager.shopId, isOnline)
+  const changeCalc = useChangeCalculator()
 
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setCurrentTime(now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
-    }
-    updateTime()
-    const interval = setInterval(updateTime, 30000)
-    return () => clearInterval(interval)
-  }, [])
+  const saleCreation = useSaleCreation({
+    shopId: shopManager.shopId,
+    selectedPen,
+    onSaleCreated: journalData.reloadData,
+    onAfterSale: (total) => {
+      if (selectedPen === 'blue') changeCalc.triggerAfterSale(total)
+    },
+  })
 
-  // Suggestions prédictives du stock en temps réel
+  const tactileMenu = useTactileMenu({
+    shopId: shopManager.shopId,
+    shopActivity: shopManager.shopActivity,
+    input: saleCreation.input,
+    setInput: saleCreation.setInput,
+  })
+
+  // ── Suggestions prédictives (dernier fragment tapé) ────────────────────────
   const stockSuggestions = useMemo(() => {
-    if (!input || !input.trim()) return []
+    const text = saleCreation.input
+    if (!text.trim()) return []
 
-    const parts = input.split(/(?:,|\+|\bet\b)/i)
+    const parts = text.split(/(?:,|\+|\bet\b)/i)
     const lastPart = parts[parts.length - 1] || ''
     const cleanTerm = lastPart.replace(/^\s*\d+\s*/, '').trim().toLowerCase()
     if (cleanTerm.length < 1) return []
 
-    const localProds = getOfflineProducts(shopManager.shopId) || []
-    return localProds
-      .filter((p) => p.name.toLowerCase().includes(cleanTerm))
+    return (getOfflineProducts(shopManager.shopId) || [])
+      .filter(p => p.name.toLowerCase().includes(cleanTerm))
       .slice(0, 5)
-      .map((p) => ({
+      .map(p => ({
         id: p.id,
         name: p.name,
         price: p.unit_price || 0,
@@ -119,194 +127,34 @@ export default function JournalPage() {
         stock: (p as any).current_stock ?? p.initial_stock,
         emoji: '📦',
       }))
-  }, [input, shopManager.shopId])
+  }, [saleCreation.input, shopManager.shopId])
 
   const activeQty = useMemo(() => {
-    if (!input) return 1
-    const parts = input.split(/(?:,|\+|\bet\b)/i)
+    const parts = saleCreation.input.split(/(?:,|\+|\bet\b)/i)
     const lastPart = parts[parts.length - 1] || ''
-    const qtyMatch = lastPart.match(/^\s*(\d+)\s*/)
-    return qtyMatch ? parseInt(qtyMatch[1], 10) : 1
-  }, [input])
+    const m = lastPart.match(/^\s*(\d+)\s*/)
+    return m ? parseInt(m[1], 10) : 1
+  }, [saleCreation.input])
 
   const handleAppendStockSuggestion = (item: StockSuggestionItem) => {
-    const parts = input.split(/(?:,|\+|\bet\b)/i)
-    parts.pop() // Retirer la dernière frappe incomplète
+    const parts = saleCreation.input.split(/(?:,|\+|\bet\b)/i)
+    parts.pop()
     const prefix = parts.join(', ').trim()
-    const newEntry = `${activeQty} ${item.name} à ${item.price}`
-    setInput(prefix ? `${prefix}, ${newEntry}` : newEntry)
+    const entry = `${activeQty} ${item.name} à ${item.price}`
+    saleCreation.setInput(prefix ? `${prefix}, ${entry}` : entry)
   }
 
-  const quickProducts = [
-    { name: 'Beaufort Canette 33cl', price: 600 },
-    { name: 'Boîte de Sardines', price: 500 },
-    { name: 'Boîte de Tomate', price: 200 },
-    { name: 'Dentifrice Colgate', price: 350 },
-    { name: 'Sac de Riz 50kg', price: 22000 },
-    { name: 'Huile Dinor 1L', price: 1200 },
-  ]
+  // ── Horloge ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const update = () => setCurrentTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
+    update()
+    const t = setInterval(update, 30000)
+    return () => clearInterval(t)
+  }, [])
 
-  // Ajout intelligent avec incrémentation de quantité (ex: clic répétitif sur un produit)
-  const handleSelectQuickProduct = (prod: { name: string; price: number }) => {
-    const currentText = input.trim()
-    if (!currentText) {
-      setInput(`1 ${prod.name} à ${prod.price}`)
-      return
-    }
+  const pens = getPens(shopManager.shopActivity)
 
-    const escapedName = prod.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const regex = new RegExp(`(\\d+)?\\s*${escapedName}\\s*(?:à|a|@)\\s*${prod.price}`, 'i')
-    const match = currentText.match(regex)
-
-    if (match) {
-      const currentQty = match[1] ? parseInt(match[1], 10) : 1
-      const newQty = currentQty + 1
-      const updatedText = currentText.replace(regex, `${newQty} ${prod.name} à ${prod.price}`)
-      setInput(updatedText)
-    } else {
-      setInput(`${currentText}, 1 ${prod.name} à ${prod.price}`)
-    }
-  }
-
-  const handlePrintReceipt = (sale: any) => {
-    setReceiptSale(sale)
-    setShowReceiptModal(true)
-  }
-
-  const handleConfirmAutoLearn = async (name: string, price: number) => {
-    const sid = shopManager.shopId
-    saveOfflineProduct(sid, {
-      id: generateOfflineId(),
-      shop_id: sid,
-      name,
-      category: 'Général',
-      unit: 'pièce',
-      alert_threshold: 5,
-      initial_stock: 0,
-      unit_cost: 0,
-      unit_price: price,
-      created_at: new Date().toISOString(),
-    })
-    setShowAutoLearnModal(false)
-    setAutoLearnData(null)
-  }
-
-  const saveSaleLocally = (textCreated: string) => {
-    const parsed = parseTextLocally(textCreated, selectedPen)
-    const now = new Date()
-    const dateStr = getTodayDateString()
-    const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    let type = 'cash_in'
-    if (selectedPen === 'red') type = 'cash_out'
-    else if (selectedPen === 'green') type = 'purchase_cash'
-    else if (selectedPen === 'purple') type = 'purchase_credit'
-    else if (selectedPen === 'yellow') type = 'sale_credit'
-
-    const localSale = {
-      id: generateOfflineId(),
-      shop_id: shopManager.shopId,
-      date: dateStr,
-      time: timeStr,
-      client: parsed.nom_client || 'Client',
-      articles: (parsed.articles || []).map(a => ({
-        name: a.nom,
-        quantity: a.quantite,
-        unit_price: a.prix_unitaire,
-      })),
-      total: parsed.total_facture || 0,
-      paid: parsed.montant_paye || 0,
-      debt: parsed.montant_dette || 0,
-      status: parsed.montant_dette && parsed.montant_dette > 0 ? ('debt' as const) : ('paid' as const),
-      type,
-      pen_color: selectedPen,
-      notes: textCreated,
-      category: parsed.categorie || 'Général',
-      created_at: now.toISOString(),
-      is_synced: false,
-    }
-
-    saveOfflineSale(shopManager.shopId, localSale)
-    return localSale
-  }
-
-  const handleCreateSale = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isSubmitting) return
-
-    setIsSubmitting(true)
-    const textCreated = input.trim()
-
-    // 1. SAUVEGARDE LOCALE IMMÉDIATE — garantit l'affichage instantané dans le cahier
-    const localSale = saveSaleLocally(textCreated)
-
-    // 2. Vider le champ et rafraîchir l'affichage immédiatement
-    setInput('')
-    journalData.reloadData()
-
-    // 3. Tenter la synchronisation avec l'API en arrière-plan (non bloquant)
-    try {
-      const response = await fetch('/api/sales', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-shop-id': shopManager.shopId,
-        },
-        body: JSON.stringify({
-          text: textCreated,
-          raw_text: textCreated,
-          penColor: selectedPen,
-          pen_color: selectedPen,
-          shop_id: shopManager.shopId,
-        }),
-      })
-
-      if (response.ok) {
-        const resJson = await response.json().catch(() => ({}))
-        // Si l'API renvoie un vrai objet vente avec ID, on remplace la vente locale par la version serveur
-        if (resJson.sale && resJson.sale.id && resJson.sale.id !== localSale.id) {
-          // Mettre à jour la vente locale avec l'ID serveur pour cohérence future
-          saveOfflineSale(shopManager.shopId, {
-            id: resJson.sale.id,
-            shop_id: shopManager.shopId,
-            date: resJson.sale.date || localSale.date,
-            time: resJson.sale.time || localSale.time,
-            client: resJson.sale.client_name || localSale.client,
-            articles: resJson.sale.articles?.length > 0 ? resJson.sale.articles : localSale.articles,
-            total: resJson.sale.total_amount ?? localSale.total,
-            paid: resJson.sale.paid_amount ?? localSale.paid,
-            debt: resJson.sale.debt_amount ?? localSale.debt,
-            status: resJson.sale.status || localSale.status,
-            type: resJson.sale.type || localSale.type,
-            pen_color: resJson.sale.pen_color || selectedPen,
-            notes: resJson.sale.notes || textCreated,
-            category: resJson.sale.category || localSale.category || 'Général',
-            created_at: resJson.sale.created_at || localSale.created_at,
-            is_synced: true,
-          })
-          journalData.reloadData()
-        }
-      }
-    } catch (_err) {
-      // Pas grave — la vente est déjà dans le localStorage, elle sera affichée
-    } finally {
-      setIsSubmitting(false)
-
-      // Déclencher la modale d'auto-apprentissage si nouveau produit détecté
-      const matchSingle = textCreated.match(/^(\d+)?\s*([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@)\s*(\d+)/i)
-      if (matchSingle) {
-        const prodName = matchSingle[2].trim()
-        const prodPrice = parseInt(matchSingle[3], 10)
-        const existing = getOfflineProducts(shopManager.shopId)?.find(
-          (p) => p.name.toLowerCase().trim() === prodName.toLowerCase()
-        )
-        if (!existing && prodName.length >= 3) {
-          setAutoLearnData({ name: prodName, price: prodPrice })
-          setShowAutoLearnModal(true)
-        }
-      }
-    }
-  }
-
+  // ── Garde d'authentification ───────────────────────────────────────────────
   if (!user && isConfigured) {
     return (
       <AuthScreen
@@ -316,43 +164,37 @@ export default function JournalPage() {
     )
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="h-screen w-screen max-h-screen max-w-screen bg-[#141210] text-[#1e1a18] font-sans p-2 md:p-4 antialiased flex flex-col justify-between overflow-hidden select-none">
-      
-      {/* Chassis Principal du Cahier Ouvert (STRICTEMENT H-FULL AVEC OVERFLOW HIDDEN) */}
-      <div className="flex-1 min-h-0 bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-amber-950/20 shadow-2xl flex relative z-0 overflow-hidden w-full max-w-6xl mx-auto flex-row">
-        
-        {/* Reliure Cuir Vert Émeraude à Gauche (STRICTEMENT FIXE) */}
-        <div className="hidden sm:flex w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-10 z-10 flex-shrink-0 select-none h-full">
-          {/* Vis en laiton supérieure */}
-          <div className="brass-screw" />
 
-          {/* Titre doré vertical sur le dos du cahier */}
-          <div className="font-extrabold text-[8px] md:text-[10px] text-[#f59e0b] font-sans tracking-[0.3em] uppercase select-none my-auto whitespace-nowrap [writing-mode:vertical-lr] rotate-180 text-center opacity-90">
+      {/* ── Chassis Principal du Cahier Ouvert ── */}
+      <div className="flex-1 min-h-0 bg-[#fdfaf2] md:rounded-3xl border-0 md:border border-amber-950/20 shadow-2xl flex relative z-0 overflow-hidden w-full max-w-6xl mx-auto flex-row">
+
+        {/* Reliure Cuir Émeraude (FIXE) */}
+        <div className="hidden sm:flex w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-10 z-10 flex-shrink-0 select-none h-full">
+          <div className="brass-screw" />
+          <div className="font-extrabold text-[8px] md:text-[10px] text-[#f59e0b] tracking-[0.3em] uppercase select-none my-auto whitespace-nowrap [writing-mode:vertical-lr] rotate-180 text-center opacity-90">
             CAHIER DE CAISSE INTELLIGENT
           </div>
-
-          {/* Médaillon central en laiton */}
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-full brass-medallion flex flex-col items-center justify-center text-[8px] md:text-[9px] font-bold font-mono my-2 shadow-md">
             <span className="scale-[0.8] md:scale-100">200</span>
             <span className="text-[5px] uppercase tracking-tighter -mt-0.5">PAGES</span>
           </div>
-
-          {/* Vis en laiton inférieure */}
           <div className="brass-screw" />
         </div>
 
-        {/* Anneaux Spirales Métalliques en Laiton (STRICTEMENT FIXES) */}
+        {/* Anneaux Spirales (FIXES) */}
         <div className="hidden sm:flex absolute left-[28px] md:left-[48px] top-0 bottom-0 w-4 md:w-5 flex-col items-center justify-around py-4 z-20 pointer-events-none">
           {Array.from({ length: 15 }).map((_, i) => (
             <div key={i} className="w-5 md:w-7 h-2.5 spiral-ring shadow-md rounded-sm" />
           ))}
         </div>
 
-        {/* Page de Papier Seyes Ivoire à Droite (FIXE PARTIE HAUTE & BASSE, SEUL LE MILIEU DÉFILE) */}
+        {/* ── Page Seyes ── */}
         <div className="flex-1 min-w-0 flex flex-col h-full bg-[#fdfaf2] relative overflow-hidden">
-          
-          {/* Entête du Cahier + KPIs Financiers (STRICTEMENT FIXE EN HAUT) */}
+
+          {/* En-tête + KPIs (FIXE) */}
           <div className="flex-shrink-0 z-10">
             <JournalHeader
               user={mappedUser}
@@ -385,23 +227,19 @@ export default function JournalPage() {
             />
           </div>
 
-          {/* Onglets Intercalaires du Cahier (STRICTEMENT FIXES) */}
+          {/* Onglets (FIXES) */}
           <div className="flex-shrink-0 z-10">
-            <JournalTabs
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              activity={shopManager.shopActivity}
-            />
+            <JournalTabs activeTab={activeTab} onTabChange={setActiveTab} activity={shopManager.shopActivity} />
           </div>
 
-          {/* Corps du Cahier Seyes & Autres Onglets */}
+          {/* Corps principal */}
           <div className="p-2 md:p-4 flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
-            {/* Post-it d'alerte */}
             <JournalPostIt message={postItMessage} onDismiss={() => setPostItMessage(null)} />
 
             {activeTab === 'cahier' && (
               <div className="flex-1 min-h-0 flex flex-col space-y-2 overflow-hidden">
-                {/* Barre de stylos Bic & Recherche (STRICTEMENT FIXE) */}
+
+                {/* Stylos Bic + Recherche (FIXE) */}
                 <div className="flex-shrink-0 z-10">
                   <NotebookToolbar
                     pens={pens}
@@ -412,78 +250,82 @@ export default function JournalPage() {
                   />
                 </div>
 
-                {/* Rendu de la Page Seyes du Cahier (SEUL CE MILIEU DÉFILE !) */}
+                {/* Page Seyes — SEUL ÉLÉMENT QUI DÉFILE */}
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                   <NotebookPage
                     sales={journalData.sales}
                     onCrossOutSale={journalData.crossOutSale}
-                    onPrintReceipt={handlePrintReceipt}
+                    onPrintReceipt={(sale) => { setReceiptSale(sale); setShowReceiptModal(true) }}
                     searchQuery={searchQuery}
                     currentDateStr={getTodayDateString()}
                   />
                 </div>
 
-                {/* Badges de raccourcis produits fréquents (STRICTEMENT FIXES) */}
-                <div className="flex-shrink-0 pt-0.5 z-10">
-                  <QuickProductBadges
-                    products={quickProducts}
-                    onSelectProduct={handleSelectQuickProduct}
+                {/* Calculateur de monnaie (FIXE, visible après vente) */}
+                <ChangeCalculatorPostIt
+                  show={changeCalc.show}
+                  changeTotal={changeCalc.changeTotal}
+                  setChangeTotal={changeCalc.setChangeTotal}
+                  changeReceived={changeCalc.changeReceived}
+                  setChangeReceived={changeCalc.setChangeReceived}
+                  monnaie={changeCalc.monnaie}
+                  onDismiss={changeCalc.dismiss}
+                />
+
+                {/* Menu Tactile 1-tap (FIXE) */}
+                <div className="flex-shrink-0 z-10">
+                  <TactileMenuGrid
+                    items={tactileMenu.menuItems}
+                    isLoading={tactileMenu.isLoadingMenu}
+                    shopActivity={shopManager.shopActivity}
+                    onTapItem={tactileMenu.handleTapItem}
+                    onDeleteItem={tactileMenu.handleDeleteItem}
+                    onAddItem={tactileMenu.handleAddItem}
                   />
                 </div>
 
-                {/* Barre de Saisie WhatsApp flottante tout en bas (STRICTEMENT FIXE EN BAS) */}
+                {/* Barre de saisie WhatsApp (FIXE EN BAS) */}
                 <div className="flex-shrink-0 pt-1 border-t border-dashed border-amber-300/60 relative z-20">
-                  <form onSubmit={handleCreateSale} className="relative flex items-center gap-2">
-                    
-                    {/* Bulle de Suggestions Prédictives du Stock */}
+                  <form onSubmit={saleCreation.handleCreateSale} className="relative flex items-center gap-2">
                     <StockSuggestionsBubble
                       suggestions={stockSuggestions}
                       activeQty={activeQty}
                       onSelectSuggestion={handleAppendStockSuggestion}
                     />
 
-                    {/* Horloge à gauche */}
                     <div className="font-mono text-xs font-bold text-gray-500 flex-shrink-0 min-w-[45px] text-center">
-                      ⏰ {currentTime || '14:42'}
+                      ⏰ {currentTime || '--:--'}
                     </div>
 
-                    {/* Champ de texte WhatsApp */}
                     <div className="relative flex-grow">
                       <input
                         type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder={pens.find(p => p.id === selectedPen)?.placeholder || `Stylo ${selectedPen} : Écrivez une vente cash... (ex: 2 sacs de riz à 22000)`}
+                        value={saleCreation.input}
+                        onChange={(e) => saleCreation.setInput(e.target.value)}
+                        placeholder={pens.find(p => p.id === selectedPen)?.placeholder || 'Écrivez une vente...'}
                         className="w-full pl-4 pr-4 py-2.5 bg-[#fdfaf2] border border-amber-300 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-amber-500 font-handwritten"
                       />
                     </div>
 
-                    {/* Bouton d'envoi circulaire style WhatsApp */}
                     <button
                       type="submit"
-                      disabled={!input.trim() || isSubmitting}
-                      className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-[#f59e0b] to-[#d97706] text-[#141210] flex items-center justify-center font-extrabold hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex-shrink-0 shadow-lg"
-                      title="Enregistrer l'écriture"
+                      disabled={!saleCreation.input.trim() || saleCreation.isSubmitting}
+                      className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-[#f59e0b] to-[#d97706] text-[#141210] flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex-shrink-0 shadow-lg"
                     >
-                      {isSubmitting ? (
-                        <Loader className="w-4 h-4 animate-spin text-[#141210]" />
-                      ) : (
-                        <Send className="w-4 h-4 text-[#141210] -mr-0.5" />
-                      )}
+                      {saleCreation.isSubmitting
+                        ? <Loader className="w-4 h-4 animate-spin" />
+                        : <Send className="w-4 h-4 -mr-0.5" />
+                      }
                     </button>
                   </form>
                 </div>
               </div>
             )}
 
-            {/* Autres onglets (chacun possède son propre défilement si besoin) */}
+            {/* Autres onglets */}
             {activeTab === 'dettes' && (
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <DebtsBook
-                  shopId={shopManager.shopId}
-                  onRefreshTotals={() => journalData.reloadData()}
-                  onError={(msg) => setPostItMessage(msg)}
-                />
+                <DebtsBook shopId={shopManager.shopId} onRefreshTotals={journalData.reloadData} onError={setPostItMessage} />
               </div>
             )}
             {activeTab === 'stock' && (
@@ -503,8 +345,7 @@ export default function JournalPage() {
                   userEmail={mappedUser?.email}
                   userShops={shopManager.userShops}
                   onUpdateShopActivity={(sId, act) => {
-                    const updated = shopManager.userShops.map(s => s.id === sId ? { ...s, activity: act } : s)
-                    shopManager.setUserShops(updated)
+                    shopManager.setUserShops(shopManager.userShops.map(s => s.id === sId ? { ...s, activity: act } : s))
                   }}
                 />
               </div>
@@ -521,23 +362,19 @@ export default function JournalPage() {
             )}
             {activeTab === 'particulier' && (
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <ParticulierDashboard
-                  sales={journalData.sales}
-                  allSales={journalData.allSales}
-                  shopId={shopManager.shopId}
-                />
+                <ParticulierDashboard sales={journalData.sales} allSales={journalData.allSales} shopId={shopManager.shopId} />
               </div>
             )}
           </div>
 
-          {/* Pied de page du Cahier (STRICTEMENT FIXE ABSOLU EN BAS) */}
+          {/* Pied de page (FIXE) */}
           <footer className="flex-shrink-0 text-center text-[10px] text-amber-900/60 font-mono py-1 uppercase tracking-widest border-t border-dashed border-amber-300/40 select-none">
             CAHIER NO. 200 • WEST AFRICA MARKET RD.
           </footer>
         </div>
       </div>
 
-      {/* Modales Principales */}
+      {/* ── Modales ── */}
       <NotebookModals
         showAssistantModal={showAssistantModal}
         onCloseAssistantModal={() => setShowAssistantModal(false)}
@@ -554,15 +391,13 @@ export default function JournalPage() {
         receiptSale={receiptSale}
       />
 
-      {/* Modale d'Auto-apprentissage du Stock */}
       <AutoLearnModal
-        isOpen={showAutoLearnModal}
-        autoLearnData={autoLearnData}
-        onClose={() => setShowAutoLearnModal(false)}
-        onConfirmSave={handleConfirmAutoLearn}
+        isOpen={saleCreation.showAutoLearnModal}
+        autoLearnData={saleCreation.autoLearnData}
+        onClose={saleCreation.handleDismissAutoLearn}
+        onConfirmSave={saleCreation.handleConfirmAutoLearn}
       />
 
-      {/* Modale de création d'une nouvelle boutique */}
       <NewShopModal
         isOpen={shopManager.showNewShopModal}
         onClose={() => shopManager.setShowNewShopModal(false)}
@@ -573,12 +408,11 @@ export default function JournalPage() {
         onCreate={shopManager.handleCreateShop}
       />
 
-      {/* Modale d'ajustement de caisse */}
       <CashAdjustmentModal
         isOpen={showCashAdjustment}
         onClose={() => setShowCashAdjustment(false)}
         currentCash={journalData.tiroirCaisse}
-        onSaveAdjustment={() => journalData.reloadData()}
+        onSaveAdjustment={journalData.reloadData}
       />
     </div>
   )
