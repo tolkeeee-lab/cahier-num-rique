@@ -114,7 +114,7 @@ export function ShoppingListManager({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Barre d'outils */}
       <ShoppingListToolbar
         searchQuery={searchQuery}
@@ -126,10 +126,10 @@ export function ShoppingListManager({
       />
 
       {/* Formulaire rapide d'ajout */}
-      <form onSubmit={handleAddItem} className="bg-[#1e1a18] p-4 rounded-2xl border border-gray-800 space-y-3 shadow-md">
+      <form onSubmit={handleAddItem} className="bg-white/90 p-4 rounded-2xl border border-amber-300/80 space-y-3 shadow-sm">
         <div className="flex items-center gap-2">
-          <ShoppingBag className="w-5 h-5 text-amber-400" />
-          <h4 className="text-sm font-extrabold text-white">Ajouter un produit au Bon de Commande</h4>
+          <ShoppingBag className="w-5 h-5 text-amber-700" />
+          <h4 className="text-sm font-extrabold text-gray-900">Ajouter un produit au Bon de Commande</h4>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
           <input
@@ -137,26 +137,26 @@ export function ShoppingListManager({
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
             placeholder="Nom du produit (ex: Sac de riz 50kg, Carton Beaufort...)"
-            className="sm:col-span-6 px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+            className="sm:col-span-6 px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-bold"
           />
           <input
             type="number"
             value={qtyInput}
             onChange={(e) => setQtyInput(e.target.value)}
             placeholder="Qté"
-            className="sm:col-span-2 px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white focus:outline-none font-mono"
+            className="sm:col-span-2 px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-extrabold focus:outline-none font-mono text-center"
           />
           <input
             type="number"
             value={costInput}
             onChange={(e) => setCostInput(e.target.value)}
             placeholder="Coût unitaire (F)"
-            className="sm:col-span-2 px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white focus:outline-none font-mono"
+            className="sm:col-span-2 px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-extrabold focus:outline-none font-mono text-right"
           />
           <button
             type="submit"
             disabled={!nameInput.trim()}
-            className="sm:col-span-2 px-4 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center justify-center gap-1"
+            className="sm:col-span-2 px-4 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer shadow-sm"
           >
             <Plus className="w-4 h-4" />
             <span>Ajouter</span>
@@ -166,11 +166,11 @@ export function ShoppingListManager({
 
       {/* Liste des articles du Bon de Commande */}
       {filteredItems.length === 0 ? (
-        <div className="p-12 text-center text-gray-500 bg-[#1e1a18] rounded-2xl border border-gray-800 font-mono text-xs">
+        <div className="p-12 text-center text-gray-500 bg-white/80 rounded-2xl border border-amber-300/80 font-mono text-xs shadow-sm">
           Votre bon de commande est actuellement vide.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {filteredItems.map((item) => (
             <ShoppingItemRow
               key={item.id}
@@ -184,9 +184,9 @@ export function ShoppingListManager({
 
       {/* Bilan du bon de commande */}
       {items.length > 0 && (
-        <div className="bg-[#1e1a18] p-4 rounded-2xl border border-amber-900/40 flex justify-between items-center font-mono">
-          <span className="text-xs text-gray-400">Total estimé de la commande :</span>
-          <span className="text-base font-extrabold text-amber-400">
+        <div className="bg-amber-100/90 p-4 rounded-2xl border border-amber-300 flex justify-between items-center font-mono shadow-sm">
+          <span className="text-xs text-amber-950 font-bold">Total estimé de la commande :</span>
+          <span className="text-lg font-black text-amber-950">
             {formatPrice(totalEstimated)}
           </span>
         </div>

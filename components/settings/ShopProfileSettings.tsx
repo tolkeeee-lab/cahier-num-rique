@@ -39,50 +39,50 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-[#1e1a18] p-5 rounded-2xl border border-gray-800 space-y-4 shadow-md">
-      <div className="flex items-center gap-2 border-b border-gray-800 pb-3">
-        <Store className="w-5 h-5 text-amber-400" />
-        <h4 className="text-sm font-extrabold text-white">Profil du Point de Vente</h4>
+    <form onSubmit={handleSubmit} className="bg-white/90 p-5 rounded-2xl border border-amber-300/80 space-y-4 shadow-sm">
+      <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
+        <Store className="w-5 h-5 text-amber-700" />
+        <h4 className="text-sm font-extrabold text-gray-900">Profil du Point de Vente</h4>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
         <div>
-          <label className="block text-gray-300 uppercase mb-1">Nom du commerce :</label>
+          <label className="block text-amber-950 font-bold uppercase mb-1">Nom du commerce :</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-amber-500/50"
+            className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner"
           />
         </div>
 
         <div>
-          <label className="block text-gray-300 uppercase mb-1">Secteur d'activité :</label>
+          <label className="block text-amber-950 font-bold uppercase mb-1">Secteur d'activité :</label>
           <input
             type="text"
             value={activity}
             onChange={(e) => setActivity(e.target.value)}
-            className="w-full px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-amber-500/50"
+            className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner"
           />
         </div>
 
         <div>
-          <label className="block text-gray-300 uppercase mb-1">Numéro WhatsApp / Téléphone :</label>
+          <label className="block text-amber-950 font-bold uppercase mb-1">Numéro WhatsApp / Téléphone :</label>
           <input
             type="text"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="w-full px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-amber-500/50"
+            className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner"
           />
         </div>
 
         <div>
-          <label className="block text-gray-300 uppercase mb-1">Adresse / Ville :</label>
+          <label className="block text-amber-950 font-bold uppercase mb-1">Adresse / Ville :</label>
           <input
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="w-full px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-white focus:outline-none focus:border-amber-500/50"
+            className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner"
           />
         </div>
       </div>
@@ -91,7 +91,7 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
         <button
           type="submit"
           disabled={isSaving}
-          className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all flex items-center gap-1.5"
+          className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
         >
           <Save className="w-4 h-4" />
           <span>{isSaving ? 'Enregistrement...' : 'Sauvegarder les Modifications'}</span>

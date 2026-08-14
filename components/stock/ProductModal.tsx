@@ -41,14 +41,14 @@ export function ProductModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-lg bg-[#1e1a18] border border-[#2a2421] rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+      <div className="w-full max-w-lg bg-[#fdfaf2] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Entête */}
-        <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-400" />
-            <h3 className="text-base font-extrabold text-white">
+            <Sparkles className="w-5 h-5 text-amber-700" />
+            <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">
               {editingItem ? 'Modifier le Produit' : 'Nouveau Produit en Stock'}
             </h3>
           </div>
@@ -56,12 +56,12 @@ export function ProductModal({
           <div className="flex items-center gap-2">
             {/* Toggle Mode Rapide / Avancé */}
             {!editingItem && (
-              <div className="flex items-center gap-1 bg-[#141210] p-1 rounded-xl border border-gray-800 text-[11px] font-mono">
+              <div className="flex items-center gap-1 bg-amber-100/80 p-1 rounded-xl border border-amber-300 text-[11px] font-mono">
                 <button
                   type="button"
                   onClick={() => setMode('fast')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    mode === 'fast' ? 'bg-[#2a2421] text-amber-400 font-bold' : 'text-gray-400'
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    mode === 'fast' ? 'bg-amber-800 text-white font-extrabold shadow-xs' : 'text-amber-900 font-bold'
                   }`}
                 >
                   Rapide
@@ -69,8 +69,8 @@ export function ProductModal({
                 <button
                   type="button"
                   onClick={() => setMode('advanced')}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
-                    mode === 'advanced' ? 'bg-[#2a2421] text-amber-400 font-bold' : 'text-gray-400'
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    mode === 'advanced' ? 'bg-amber-800 text-white font-extrabold shadow-xs' : 'text-amber-900 font-bold'
                   }`}
                 >
                   Avancé
@@ -78,8 +78,8 @@ export function ProductModal({
               </div>
             )}
 
-            <button onClick={onClose} className="p-1 text-gray-400 hover:text-white rounded-lg transition-colors">
-              <X className="w-4 h-4" />
+            <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 rounded-lg transition-colors cursor-pointer">
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -93,18 +93,18 @@ export function ProductModal({
           )}
 
           {/* Boutons d'Action */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-amber-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-800 text-gray-300 text-xs font-bold rounded-xl hover:bg-gray-700 transition-colors"
+              className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 transition-colors cursor-pointer"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={!formData.name.trim() || saving}
-              className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center gap-1.5"
+              className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-md"
             >
               <Save className="w-4 h-4" />
               <span>{saving ? 'Enregistrement...' : 'Sauvegarder'}</span>

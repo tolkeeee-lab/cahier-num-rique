@@ -113,7 +113,7 @@ export function DebtsBook({
       />
 
       {filteredDebts.length === 0 ? (
-        <div className="p-12 text-center text-gray-500 bg-[#1e1a18] rounded-2xl border border-gray-800 font-mono text-xs">
+        <div className="p-12 text-center text-gray-500 bg-white/80 rounded-2xl border border-amber-300/80 font-mono text-xs shadow-sm">
           Aucune dette ne correspond à vos filtres.
         </div>
       ) : (

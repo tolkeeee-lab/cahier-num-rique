@@ -14,22 +14,22 @@ export const CarnetBoutiquierWidget: React.FC<CarnetBoutiquierWidgetProps> = ({
   debtsCount,
 }) => {
   return (
-    <div className="bg-[#1e1a18] p-5 rounded-2xl border border-fuchsia-950/60 space-y-3 mb-6 shadow-md">
+    <div className="bg-fuchsia-50/90 p-4 rounded-2xl border border-fuchsia-200 space-y-3 mb-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Store className="w-5 h-5 text-fuchsia-400" />
-          <h4 className="text-sm font-extrabold text-white">Carnet Boutiquier (Crédits Foyer)</h4>
+          <Store className="w-5 h-5 text-fuchsia-700" />
+          <h4 className="text-sm font-extrabold text-fuchsia-950">Carnet Boutiquier (Crédits Foyer)</h4>
         </div>
-        <span className="text-xs font-mono font-bold text-fuchsia-400">
+        <span className="text-sm font-mono font-black text-fuchsia-950">
           {formatPrice(totalCreditBoutiquier)}
         </span>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
+      <div className="flex items-center justify-between text-xs text-fuchsia-900 font-mono font-bold">
         <span>Achats pris à crédit : {debtsCount} opération(s)</span>
         {totalCreditBoutiquier > 0 && (
-          <span className="text-amber-400 font-bold flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5" /> À régler à la paie
+          <span className="text-amber-900 font-extrabold flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> À régler à la paie
           </span>
         )}
       </div>

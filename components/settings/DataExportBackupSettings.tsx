@@ -13,38 +13,40 @@ export const DataExportBackupSettings: React.FC<DataExportBackupSettingsProps> =
   onResetData,
 }) => {
   return (
-    <div className="bg-[#1e1a18] p-5 rounded-2xl border border-gray-800 space-y-4 shadow-md">
-      <div className="flex items-center gap-2 border-b border-gray-800 pb-3">
-        <Download className="w-5 h-5 text-amber-400" />
-        <h4 className="text-sm font-extrabold text-white">Sauvegarde & Exportation des Données</h4>
+    <div className="bg-white/90 p-5 rounded-2xl border border-amber-300/80 space-y-4 shadow-sm">
+      <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
+        <Download className="w-5 h-5 text-amber-700" />
+        <h4 className="text-sm font-extrabold text-gray-900">Sauvegarde & Exportation des Données</h4>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Exportation de sauvegarde */}
         {onExportBackup && (
           <button
+            type="button"
             onClick={onExportBackup}
-            className="flex items-center justify-between p-4 bg-[#141210] rounded-xl border border-gray-800 hover:border-amber-500/40 transition-colors text-left"
+            className="flex items-center justify-between p-4 bg-amber-50/70 rounded-xl border border-amber-200 hover:border-amber-400 transition-colors text-left cursor-pointer"
           >
             <div>
-              <p className="text-xs font-bold text-white">Sauvegarde Complète (JSON)</p>
-              <p className="text-[11px] text-gray-400 font-mono">Exporter l'ensemble de votre cahier</p>
+              <p className="text-xs font-extrabold text-gray-900">Sauvegarde Complète (JSON)</p>
+              <p className="text-[11px] text-gray-600 font-mono">Exporter l'ensemble de votre cahier</p>
             </div>
-            <Download className="w-5 h-5 text-amber-400" />
+            <Download className="w-5 h-5 text-amber-700" />
           </button>
         )}
 
         {/* Réinitialisation */}
         {onResetData && (
           <button
+            type="button"
             onClick={onResetData}
-            className="flex items-center justify-between p-4 bg-red-950/20 rounded-xl border border-red-800/40 hover:bg-red-950/40 transition-colors text-left"
+            className="flex items-center justify-between p-4 bg-rose-50/80 rounded-xl border border-rose-200 hover:bg-rose-100 transition-colors text-left cursor-pointer"
           >
             <div>
-              <p className="text-xs font-bold text-red-400">Réinitialiser les données locales</p>
-              <p className="text-[11px] text-red-300/60 font-mono">Vider le cache IndexedDB / localStorage</p>
+              <p className="text-xs font-extrabold text-rose-800">Réinitialiser les données locales</p>
+              <p className="text-[11px] text-rose-700 font-mono">Vider le cache IndexedDB / localStorage</p>
             </div>
-            <AlertTriangle className="w-5 h-5 text-red-400" />
+            <AlertTriangle className="w-5 h-5 text-rose-600" />
           </button>
         )}
       </div>

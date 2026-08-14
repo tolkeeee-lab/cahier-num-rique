@@ -21,18 +21,18 @@ export const ShoppingListToolbar: React.FC<ShoppingListToolbarProps> = ({
   onConvertToStockPurchase,
 }) => {
   return (
-    <div className="bg-[#1e1a18] p-4 rounded-2xl border border-gray-800 space-y-3 mb-6 shadow-md">
+    <div className="bg-white/90 p-3.5 rounded-2xl border border-amber-300/80 space-y-3 mb-4 shadow-sm">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         
         {/* Champ de recherche */}
         <div className="relative flex-grow max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Rechercher un article à commander..."
-            className="w-full pl-9 pr-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 font-mono"
+            className="w-full pl-9 pr-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono shadow-inner font-bold"
           />
         </div>
 
@@ -40,19 +40,21 @@ export const ShoppingListToolbar: React.FC<ShoppingListToolbarProps> = ({
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {onSendWhatsApp && (
             <button
+              type="button"
               onClick={onSendWhatsApp}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 hover:bg-emerald-900/60 text-xs font-mono font-bold transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 text-xs font-mono font-extrabold transition-all shadow-xs cursor-pointer"
               title="Envoyer le Bon de Commande par WhatsApp"
             >
-              <Share2 className="w-3.5 h-3.5" />
+              <Share2 className="w-3.5 h-3.5 text-emerald-700" />
               <span>WhatsApp</span>
             </button>
           )}
 
           {onExportPDF && (
             <button
+              type="button"
               onClick={onExportPDF}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#2a2421] text-gray-300 border border-gray-800 hover:text-white transition-all text-xs font-mono font-bold"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 text-xs font-mono font-extrabold transition-all shadow-xs cursor-pointer"
               title="Télécharger Bon de Commande PDF"
             >
               <FileText className="w-3.5 h-3.5" />
@@ -62,8 +64,9 @@ export const ShoppingListToolbar: React.FC<ShoppingListToolbarProps> = ({
 
           {onConvertToStockPurchase && (
             <button
+              type="button"
               onClick={onConvertToStockPurchase}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 text-xs font-mono font-bold transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 border border-amber-400 text-xs font-mono font-extrabold transition-all shadow-xs cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Enregistrer en Achat Stock</span>

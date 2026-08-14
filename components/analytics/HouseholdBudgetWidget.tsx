@@ -105,22 +105,22 @@ export function HouseholdBudgetWidget({
   }, [sales])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Plafond de Budget & Suivi */}
-      <div className="bg-[#1e1a18] p-5 rounded-2xl border border-gray-800 space-y-3 shadow-md">
+      <div className="bg-white/90 p-4 rounded-2xl border border-amber-300/80 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-amber-400" />
-            <h4 className="text-sm font-extrabold text-white">Objectif Plafond Mensuel</h4>
+            <Target className="w-5 h-5 text-amber-700" />
+            <h4 className="text-sm font-extrabold text-gray-900">Objectif Plafond Mensuel</h4>
           </div>
-          <span className="text-xs font-mono font-bold text-amber-400">
+          <span className="text-xs font-mono font-black text-amber-950">
             {formatPrice(budgetStats.totalSorties)} / {formatPrice(monthlyCap)}
           </span>
         </div>
 
-        <div className="w-full bg-[#141210] h-3 rounded-full overflow-hidden border border-gray-800">
+        <div className="w-full bg-amber-100/80 h-3.5 rounded-full overflow-hidden border border-amber-200 shadow-inner">
           <div
-            className="bg-gradient-to-r from-amber-500 to-rose-500 h-full rounded-full transition-all duration-500"
+            className="bg-gradient-to-r from-amber-500 to-rose-500 h-full rounded-full transition-all duration-500 shadow-xs"
             style={{ width: `${Math.min(100, Math.round((budgetStats.totalSorties / monthlyCap) * 100))}%` }}
           />
         </div>

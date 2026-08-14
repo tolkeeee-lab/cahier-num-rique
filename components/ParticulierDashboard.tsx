@@ -83,15 +83,16 @@ export function ParticulierDashboard({
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Navigation Onglets Foyer */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-800 scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-amber-300/80 scrollbar-none">
         <button
+          type="button"
           onClick={() => setActiveTab('budget')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold transition-all border cursor-pointer ${
             activeTab === 'budget'
-              ? 'bg-[#064e3b] text-[#f59e0b] border-[#047857] shadow-lg'
-              : 'bg-[#1e1a18] text-gray-400 border-gray-800 hover:text-white'
+              ? 'bg-amber-800 text-white border-amber-900 shadow-md'
+              : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
           }`}
         >
           <Home className="w-4 h-4" />
@@ -99,11 +100,12 @@ export function ParticulierDashboard({
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('tontine')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold transition-all border cursor-pointer ${
             activeTab === 'tontine'
-              ? 'bg-[#064e3b] text-[#f59e0b] border-[#047857] shadow-lg'
-              : 'bg-[#1e1a18] text-gray-400 border-gray-800 hover:text-white'
+              ? 'bg-amber-800 text-white border-amber-900 shadow-md'
+              : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
           }`}
         >
           <PiggyBank className="w-4 h-4" />
@@ -111,11 +113,12 @@ export function ParticulierDashboard({
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('carnet')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold transition-all border cursor-pointer ${
             activeTab === 'carnet'
-              ? 'bg-[#064e3b] text-[#f59e0b] border-[#047857] shadow-lg'
-              : 'bg-[#1e1a18] text-gray-400 border-gray-800 hover:text-white'
+              ? 'bg-amber-800 text-white border-amber-900 shadow-md'
+              : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
           }`}
         >
           <Store className="w-4 h-4" />
@@ -123,11 +126,12 @@ export function ParticulierDashboard({
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('historique')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold transition-all border cursor-pointer ${
             activeTab === 'historique'
-              ? 'bg-[#064e3b] text-[#f59e0b] border-[#047857] shadow-lg'
-              : 'bg-[#1e1a18] text-gray-400 border-gray-800 hover:text-white'
+              ? 'bg-amber-800 text-white border-amber-900 shadow-md'
+              : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
           }`}
         >
           <FileText className="w-4 h-4" />
@@ -137,7 +141,7 @@ export function ParticulierDashboard({
 
       {/* Contenu Onglet Budget */}
       {activeTab === 'budget' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <BudgetOverviewCard
             income={incomeTotal}
             expenses={expensesTotal}
