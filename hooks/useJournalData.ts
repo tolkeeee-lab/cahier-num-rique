@@ -198,10 +198,38 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     loadJournal()
 
+    // ── Supabase Realtime Channel pour synchronisation multi-appareils instantanée ──
+    let channel: any = null
+    if (isSupabaseClientConfigured() && isOnline && shopId) {
+      try {
+        channel = supabaseClient
+          .channel(`realtime_sales_${shopId}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${shopId}` },
+            () => {
+              if (isMounted) reloadData()
+            }
+          )
+          .subscribe()
+      } catch {}
+    }
+
+    // Polling doux de sécurité toutes les 12 secondes
+    const pollInterval = setInterval(() => {
+      if (isOnline && isMounted) {
+        reloadData()
+      }
+    }, 12000)
+
     return () => {
       isMounted = false
+      if (channel) {
+        try { supabaseClient.removeChannel(channel) } catch {}
+      }
+      clearInterval(pollInterval)
     }
-  }, [shopId, isOnline, refreshTrigger])
+  }, [shopId, isOnline, refreshTrigger, reloadData])
 
   const calculateSummary = (all: Sale[], todays: Sale[]) => {
     let cash = 0

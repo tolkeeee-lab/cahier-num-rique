@@ -28,16 +28,22 @@ interface NetworkStatus {
 async function checkRealConnectivity(): Promise<boolean> {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     const target = supabaseUrl && !supabaseUrl.includes('placeholder')
       ? `${supabaseUrl}/rest/v1/`
       : 'https://www.google.com/generate_204'
 
+    const headers: Record<string, string> = {}
+    if (supabaseKey && !supabaseKey.includes('placeholder')) {
+      headers['apikey'] = supabaseKey
+    }
+
     const response = await fetch(target, {
       method: 'HEAD',
+      headers,
       cache: 'no-store',
       signal: AbortSignal.timeout(3500),
     })
-    // Accepte 200, 204, 400, 404 — tout sauf erreur réseau pure
     return response.ok || response.status < 500
   } catch {
     return false

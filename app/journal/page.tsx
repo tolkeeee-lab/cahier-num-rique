@@ -41,7 +41,7 @@ import { useInputPipeline, StockConfirmationData, PriceChangeData, WizardPrefill
 import { saveOfflineProduct } from '@/lib/offlineDb'
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
-import { isSupabaseClientConfigured } from '@/lib/supabaseClient'
+import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
 import { getOfflineProducts } from '@/lib/offlineDb'
@@ -52,7 +52,7 @@ import { Send, Loader, Zap } from 'lucide-react'
 export default function JournalPage() {
   const isConfigured = isSupabaseClientConfigured()
 
-  // ── Utilisateur connecté ───────────────────────────────────────────────────
+  // ── Utilisateur connecté & Session Supabase synchronisée ────────────────────
   const [user, setUser] = useState<any>(() => {
     if (typeof window === 'undefined') return null
     const loggedOut = localStorage.getItem('cahier_logged_out_flag') === 'true'
@@ -62,6 +62,136 @@ export default function JournalPage() {
     }
     return null
   })
+  const [authLoading, setAuthLoading] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  // Écoute de session Supabase pour synchronisation cross-device temps réel
+  useEffect(() => {
+    if (!isConfigured) return
+
+    // 1. Récupération de la session active Supabase
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const u = session.user
+        localStorage.removeItem('cahier_logged_out_flag')
+        localStorage.setItem('cahier_last_active_user', JSON.stringify(u))
+        setUser(u)
+      }
+    }).catch(() => {})
+
+    // 2. Écouteur de changement d'état d'authentification
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (session?.user) {
+          const u = session.user
+          localStorage.removeItem('cahier_logged_out_flag')
+          localStorage.setItem('cahier_last_active_user', JSON.stringify(u))
+          setUser(u)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        localStorage.setItem('cahier_logged_out_flag', 'true')
+        localStorage.removeItem('cahier_last_active_user')
+        localStorage.removeItem('cahier_mock_session')
+        setUser(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [isConfigured])
+
+  const handleLogin = async (email: string, password?: string) => {
+    setAuthLoading(true)
+    setAuthError(null)
+    try {
+      if (isConfigured && password) {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        })
+        if (error) throw error
+        if (data.user) {
+          localStorage.removeItem('cahier_logged_out_flag')
+          localStorage.setItem('cahier_last_active_user', JSON.stringify(data.user))
+          setUser(data.user)
+        }
+      } else {
+        const localUser = { id: email.replace(/[^a-zA-Z0-9]/g, '_'), email, role: 'owner' }
+        localStorage.removeItem('cahier_logged_out_flag')
+        localStorage.setItem('cahier_last_active_user', JSON.stringify(localUser))
+        setUser(localUser)
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || 'Erreur de connexion. Vérifiez vos identifiants.')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const handleSignup = async (name: string, email: string, password?: string, shopName?: string) => {
+    setAuthLoading(true)
+    setAuthError(null)
+    try {
+      if (isConfigured && password) {
+        const { data, error } = await supabaseClient.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              full_name: name,
+              shop_name: shopName || 'Mon Point de Vente',
+              role: 'owner',
+            }
+          }
+        })
+        if (error) throw error
+        if (data.user) {
+          localStorage.removeItem('cahier_logged_out_flag')
+          localStorage.setItem('cahier_last_active_user', JSON.stringify(data.user))
+          setUser(data.user)
+        }
+      } else {
+        const localUser = { id: email.replace(/[^a-zA-Z0-9]/g, '_'), email, name, role: 'owner', shop_name: shopName }
+        localStorage.removeItem('cahier_logged_out_flag')
+        localStorage.setItem('cahier_last_active_user', JSON.stringify(localUser))
+        setUser(localUser)
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || 'Erreur lors de la création du compte.')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const handleMagicLink = async (email: string) => {
+    setAuthLoading(true)
+    setAuthError(null)
+    try {
+      if (isConfigured) {
+        const { error } = await supabaseClient.auth.signInWithOtp({
+          email: email.trim(),
+          options: { emailRedirectTo: typeof window !== 'undefined' ? window.location.origin + '/journal' : undefined }
+        })
+        if (error) throw error
+        alert('Un lien de connexion magique a été envoyé à votre adresse e-mail !')
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || "Erreur lors de l'envoi du lien magique.")
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    if (isConfigured) {
+      await supabaseClient.auth.signOut().catch(() => {})
+    }
+    localStorage.setItem('cahier_logged_out_flag', 'true')
+    localStorage.removeItem('cahier_last_active_user')
+    localStorage.removeItem('cahier_mock_session')
+    setUser(null)
+  }
 
   const mappedUser = useMemo(() => {
     if (!user) return null
@@ -229,6 +359,11 @@ export default function JournalPage() {
   if (!user && isConfigured) {
     return (
       <AuthScreen
+        onLogin={handleLogin}
+        onSignup={handleSignup}
+        onMagicLink={handleMagicLink}
+        loading={authLoading}
+        error={authError}
         onBypass={(role) => setUser({ id: 'demo', email: 'demo@cahier.app', role })}
         onLoginSuccess={(usr) => setUser(usr)}
       />
@@ -289,12 +424,7 @@ export default function JournalPage() {
               onOpenBarcodeScanner={() => setShowBarcodeScannerModal(true)}
               onOpenBoutiqueAssistant={() => setShowAssistantModal(true)}
               onOpenSyscohada={() => setShowSyscohadaModal(true)}
-              onLogout={() => {
-                localStorage.removeItem('cahier_mock_session')
-                localStorage.removeItem('cahier_last_active_user')
-                localStorage.setItem('cahier_logged_out_flag', 'true')
-                setUser(null)
-              }}
+              onLogout={handleLogout}
             />
           </div>
 
