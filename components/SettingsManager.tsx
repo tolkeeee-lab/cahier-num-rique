@@ -30,6 +30,7 @@ export interface SettingsManagerProps {
 }
 
 export function SettingsManager({
+  shopId = 'default-shop',
   shopName = 'Ma Boutique',
   activity = 'Commerce général',
   phone = '',
@@ -59,8 +60,9 @@ export function SettingsManager({
         onRemoveEmployee={onRemoveEmployee}
       />
 
-      {/* Sauvegarde & Exportations */}
+      {/* Sauvegarde & Nettoyage Sélectif */}
       <DataExportBackupSettings
+        shopId={shopId}
         onExportBackup={onExportBackup}
         onResetData={onResetData}
       />

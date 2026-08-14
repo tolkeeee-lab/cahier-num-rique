@@ -443,8 +443,13 @@ export default function JournalPage() {
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <SettingsManager
                   shopId={shopManager.shopId}
+                  shopName={shopManager.currentShop?.name || 'Ma Boutique'}
+                  activity={shopManager.shopActivity}
                   userEmail={mappedUser?.email}
                   userShops={shopManager.userShops}
+                  onResetData={() => {
+                    journalData.reloadData()
+                  }}
                   onUpdateShopActivity={(sId, act) => {
                     shopManager.setUserShops(shopManager.userShops.map(s => s.id === sId ? { ...s, activity: act } : s))
                   }}
