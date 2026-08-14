@@ -146,11 +146,25 @@ export default function JournalPage() {
     { name: 'Huile Dinor 1L', price: 1200 },
   ]
 
+  // Ajout intelligent avec incrémentation de quantité (ex: clic répétitif sur un produit)
   const handleSelectQuickProduct = (prod: { name: string; price: number }) => {
-    if (!input.trim()) {
+    const currentText = input.trim()
+    if (!currentText) {
       setInput(`1 ${prod.name} à ${prod.price}`)
+      return
+    }
+
+    const escapedName = prod.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`(\\d+)?\\s*${escapedName}\\s*(?:à|a|@)\\s*${prod.price}`, 'i')
+    const match = currentText.match(regex)
+
+    if (match) {
+      const currentQty = match[1] ? parseInt(match[1], 10) : 1
+      const newQty = currentQty + 1
+      const updatedText = currentText.replace(regex, `${newQty} ${prod.name} à ${prod.price}`)
+      setInput(updatedText)
     } else {
-      setInput(`${input.trim()}, 1 ${prod.name} à ${prod.price}`)
+      setInput(`${currentText}, 1 ${prod.name} à ${prod.price}`)
     }
   }
 
@@ -435,7 +449,7 @@ export default function JournalPage() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder={pens.find(p => p.id === selectedPen)?.placeholder || `Stylo ${selectedPen} : Écrivez une vente cash... (ex: 2 sacs de riz à 22000)`}
-                        className="w-full pl-4 pr-4 py-2.5 bg-white border-2 border-amber-300 rounded-full text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner font-handwritten"
+                        className="w-full pl-4 pr-4 py-2.5 bg-[#fdfaf2] border border-amber-300 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-amber-500 font-handwritten"
                       />
                     </div>
 
