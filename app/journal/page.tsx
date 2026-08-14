@@ -20,6 +20,7 @@ import { NotebookModals } from '@/components/journal/NotebookModals'
 import { NewShopModal } from '@/components/journal/NewShopModal'
 import { CashAdjustmentModal } from '@/components/journal/CashAdjustmentModal'
 import { JournalPostIt } from '@/components/journal/JournalPostIt'
+import { QuickProductBadges } from '@/components/sales/QuickProductBadges'
 
 import { useShopManager } from '@/hooks/useShopManager'
 import { useJournalData } from '@/hooks/useJournalData'
@@ -86,6 +87,23 @@ export default function JournalPage() {
     { id: 'boisson', label: 'Boissons', emoji: '🥤' },
     { id: 'autre', label: 'Divers', emoji: '🏷️' }
   ]
+
+  const quickProducts = [
+    { name: 'Beaufort Canette 33cl', price: 600 },
+    { name: 'Boîte de Sardines', price: 500 },
+    { name: 'Boîte de Tomate', price: 200 },
+    { name: 'Dentifrice Colgate', price: 350 },
+    { name: 'Sac de Riz 50kg', price: 22000 },
+    { name: 'Huile Dinor 1L', price: 1200 },
+  ]
+
+  const handleSelectQuickProduct = (prod: { name: string; price: number }) => {
+    if (!input.trim()) {
+      setInput(`1 ${prod.name} à ${prod.price}`)
+    } else {
+      setInput(`${input.trim()}, 1 ${prod.name} à ${prod.price}`)
+    }
+  }
 
   const handlePrintReceipt = (sale: any) => {
     setReceiptSale(sale)
@@ -224,6 +242,12 @@ export default function JournalPage() {
                   onSelectFilter={setActiveFilter}
                   searchQuery={searchQuery}
                   onSearchChange={setSearchQuery}
+                />
+
+                {/* Badges de raccourcis produits fréquents */}
+                <QuickProductBadges
+                  products={quickProducts}
+                  onSelectProduct={handleSelectQuickProduct}
                 />
 
                 {/* Saisie manuscrite au stylo */}
