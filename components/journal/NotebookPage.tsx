@@ -186,24 +186,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         </span>
                       </div>
 
-                      {/* Articles détaillés */}
-                      {sale.articles && sale.articles.length > 0 && (
-                        <div className="pl-6 space-y-0.5 text-xs text-gray-700 font-mono">
-                          {sale.articles.map((art: any, idx) => {
-                            const name = art.name || art.nom || art.product_name || 'Produit'
-                            const qty = Number(art.quantity || art.quantite) || 1
-                            const price = Number(art.unit_price || art.prix_unitaire) || 0
-                            return (
-                              <div key={idx} className="flex items-center gap-2">
-                                <span className="text-blue-500">•</span>
-                                <span className="font-semibold">{qty}x {name}</span>
-                                <span>@ {formatPrice(price)}</span>
-                                <span className="text-gray-400">({formatPrice(qty * price)})</span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
+
 
                       {/* Reste dû */}
                       {sale.debt > 0 && !isCrossedOut && (
