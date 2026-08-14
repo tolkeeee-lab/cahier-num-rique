@@ -1,24 +1,10 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { 
-  Store, 
-  Users, 
-  TrendingUp, 
-  FileText, 
-  Search, 
-  Download, 
-  ShieldAlert, 
-  Eye, 
-  X, 
-  Lock,
-  RefreshCw,
-  BookOpen
-} from 'lucide-react'
-import { SalesHistory } from '@/components/SalesHistory'
-import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
+import { Store, Lock, LogOut, RefreshCw } from 'lucide-react'
+import { AdminStatsCards } from '@/components/admin/AdminStatsCards'
+import { AdminShopsTable } from '@/components/admin/AdminShopsTable'
+import { AdminSubscriptionModal } from '@/components/admin/AdminSubscriptionModal'
 
 interface AdminKPIs {
   totalBoutiques: number
@@ -38,57 +24,23 @@ interface AdminShop {
   created_at: string
 }
 
-interface AdminUser {
-  id: string
-  shop_id: string
-  name: string
-  email: string
-  role: 'owner' | 'employee'
-  distinct_shops_count?: number
-  owned_shops?: string[]
-  created_at: string
-}
-
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: 0,
-  }).format(price) + ' FCFA'
-}
-
 export default function SuperAdminPage() {
-  const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminEmail, setAdminEmail] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState<'shops' | 'users' | 'analytics' | 'raw_data'>('shops')
-  
-  // Data States
+
   const [kpis, setKpis] = useState<AdminKPIs | null>(null)
   const [shops, setShops] = useState<AdminShop[]>([])
-  const [users, setUsers] = useState<AdminUser[]>([])
-  const [allNetworkSales, setAllNetworkSales] = useState<any[]>([])
-  
-  // Search & Filter
   const [searchQuery, setSearchQuery] = useState('')
-  const [shopSortBy, setShopSortBy] = useState<'sales' | 'transactions' | 'cash'>('sales')
-  const [selectedShopForJournal, setSelectedShopForJournal] = useState<string | null>(null)
+
+  // Modale d'inspection
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
   const [selectedShopName, setSelectedShopName] = useState('')
   const [journalSales, setJournalSales] = useState<any[]>([])
   const [shopModalTab, setShopModalTab] = useState<'journal' | 'analytics'>('journal')
   const [loadingJournal, setLoadingJournal] = useState(false)
-
-  // Dev mode bypass checker
-  const [isDev, setIsDev] = useState(false)
-
-  useEffect(() => {
-    // Vérifier si on est en dev local
-    if (typeof window !== 'undefined') {
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      setIsDev(isLocal)
-    }
-  }, [])
 
   const loadAdminData = useCallback(async (emailToUse?: string) => {
     setLoading(true)
@@ -96,31 +48,26 @@ export default function SuperAdminPage() {
     try {
       const email = emailToUse || adminEmail || localStorage.getItem('cahier_admin_email') || 'admin@cahier.com'
       const response = await fetch('/api/admin', {
-        headers: {
-          'x-admin-email': email
-        }
+        headers: { 'x-admin-email': email },
       })
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.error || 'Impossible de récupérer les données d\'administration')
       }
       setKpis(data.kpis)
-      setShops(data.shops)
-      setUsers(data.users)
-      setAllNetworkSales(data.allSales || [])
+      setShops(data.shops || [])
       setIsAdmin(true)
       if (emailToUse) {
         localStorage.setItem('cahier_admin_email', emailToUse)
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de connexion')
+    } catch (err: any) {
+      setError(err.message || 'Erreur de connexion')
       setIsAdmin(false)
     } finally {
       setLoading(false)
     }
   }, [adminEmail])
 
-  // Chargement automatique si déjà authentifié localement
   useEffect(() => {
     const saved = localStorage.getItem('cahier_admin_email')
     if (saved) {
@@ -139,622 +86,116 @@ export default function SuperAdminPage() {
     }
   }
 
-  const handleBypass = () => {
-    setAdminEmail('tolkeeee@gmail.com')
-    loadAdminData('tolkeeee@gmail.com')
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('cahier_admin_email')
-    setIsAdmin(false)
-    setAdminPassword('')
-    setKpis(null)
-    setShops([])
-    setUsers([])
-    router.push('/')
-  }
-
-  // Charger le journal d'une boutique en lecture seule
-  const viewShopJournal = async (shopId: string, shopName: string) => {
-    setLoadingJournal(true)
-    setSelectedShopForJournal(shopId)
+  const handleInspectShop = async (shopId: string, shopName: string) => {
+    setSelectedShopId(shopId)
     setSelectedShopName(shopName)
-    setJournalSales([])
+    setLoadingJournal(true)
     try {
-      const response = await fetch('/api/sales', {
-        headers: {
-          'x-shop-id': shopId
-        }
+      const res = await fetch(`/api/sales?date=all`, {
+        headers: { 'x-shop-id': shopId },
       })
-      const data = await response.json()
-      if (response.ok) {
+      if (res.ok) {
+        const data = await res.json()
         setJournalSales(data.sales || [])
-      } else {
-        setError(data.error || 'Erreur lors du chargement des transactions')
       }
-    } catch (err) {
-      setError('Impossible de joindre le serveur')
+    } catch (e) {
+      console.error('Erreur chargement journal boutique:', e)
     } finally {
       setLoadingJournal(false)
     }
   }
 
-  // Export CSV
-  const exportToCSV = (type: 'shops' | 'users' | 'analytics' | 'raw_data') => {
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF" // UTF-8 BOM pour Excel
-    
-    if (type === 'shops') {
-      csvContent += "ID Boutique,Nom,Email Proprio,Transactions,Volume Ventes,Solde Caisse,Employes,Date Creation\n"
-      shops.forEach(s => {
-        csvContent += `"${s.shop_id}","${s.name}","${s.owner_email}",${s.transactions_count},${s.total_sales},${s.cash_balance},${s.employees_count},"${s.created_at.slice(0, 10)}"\n`
-      })
-    } else if (type === 'users') {
-      csvContent += "ID Utilisateur,Email,Nom,Role,Boutiques Distinctes (Nombre),Noms des Boutiques,Liaison Principale (Shop ID),Date Inscription\n"
-      users.forEach(u => {
-        const count = u.distinct_shops_count || 1
-        const listStr = (u.owned_shops || [u.shop_id]).join(' | ')
-        csvContent += `"${u.id}","${u.email}","${u.name}","${u.role}",${count},"${listStr.replace(/"/g, '""')}","${u.shop_id}","${u.created_at.slice(0, 10)}"\n`
-      })
-    } else if (type === 'raw_data') {
-      csvContent += "ID Transaction,ID Boutique,Date,Heure,Texte Brut Saisi (Notes),Client,Total FCFA,Payé,Reste Dette,Statut,Type,Couleur Stylo,Articles Détaillés\n"
-      allNetworkSales.forEach(s => {
-        const articlesStr = (s.articles || []).map((a: any) => `${a.quantity || a.quantite}x ${a.name || a.nom} (${a.unit_price || a.prix_unitaire}F)`).join(' | ')
-        csvContent += `"${s.id}","${s.shop_id || ''}","${s.date}","${s.time || ''}","${(s.notes || '').replace(/"/g, '""')}","${s.client || ''}",${s.total || 0},${s.paid || 0},${s.debt || 0},"${s.status || ''}","${s.type || ''}","${s.pen_color || ''}","${articlesStr.replace(/"/g, '""')}"\n`
-      })
-    } else {
-      csvContent += "ID Transaction,Date,Heure,Client,Total,Statut,Type,Notes,Categorie\n"
-      allNetworkSales.forEach(s => {
-        csvContent += `"${s.id}","${s.date}","${s.time}","${s.client}",${s.total},"${s.status}","${s.type}","${(s.notes || '').replace(/"/g, '""')}","${s.category}"\n`
-      })
-    }
-    
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", `export_donnees_brutes_${type}_${new Date().toISOString().slice(0, 10)}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  // Export JSON complet pour entraînement / analyse IA & NLP
-  const exportRawDataToJSON = () => {
-    const rawDataPayload = allNetworkSales.map(s => ({
-      transaction_id: s.id,
-      shop_id: s.shop_id,
-      created_at: s.created_at,
-      date: s.date,
-      time: s.time,
-      raw_typed_text: s.notes,
-      client_name: s.client,
-      pen_color: s.pen_color,
-      transaction_type: s.type,
-      status: s.status,
-      financials: {
-        total_fcfa: s.total,
-        paid_fcfa: s.paid,
-        debt_fcfa: s.debt
-      },
-      parsed_articles: s.articles || []
-    }))
-
-    const jsonStr = JSON.stringify(rawDataPayload, null, 2)
-    const blob = new Blob([jsonStr], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `dataset_textes_bruts_nlp_${new Date().toISOString().slice(0, 10)}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  // Filtres de recherche & tri
-  const filteredShops = shops
-    .filter(s => 
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.shop_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.owner_email.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (shopSortBy === 'sales') return b.total_sales - a.total_sales
-      if (shopSortBy === 'cash') return b.cash_balance - a.cash_balance
-      return b.transactions_count - a.transactions_count
-    })
-
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.shop_id.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-radial-gradient flex items-center justify-center p-4 bg-[#141210]">
-        <div className="w-full max-w-md bg-[#fdfaf2] border border-gray-300 shadow-2xl rounded-[32px] p-8 space-y-6">
-          <div className="text-center space-y-2">
-            <div className="w-12 h-12 bg-rose-50 border border-rose-200 rounded-full flex items-center justify-center text-rose-600 mx-auto">
-              <ShieldAlert className="w-6 h-6" />
-            </div>
-            <h1 className="font-handwritten text-3xl font-bold text-gray-800">
-              Accès Super Admin
-            </h1>
-            <p className="text-xs text-gray-400 font-mono uppercase tracking-wider">
-              Cahier de Caisse Intelligent
-            </p>
+      <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="w-full max-w-sm bg-[#1e1a18] p-6 rounded-2xl border border-gray-800 space-y-4 shadow-2xl">
+          <div className="flex items-center gap-2 border-b border-gray-800 pb-3">
+            <Lock className="w-5 h-5 text-amber-400" />
+            <h2 className="text-base font-extrabold text-white">Administration Plateforme</h2>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-600">
-                {error}
-              </div>
-            )}
+          {error && <p className="text-xs text-red-400 font-mono">{error}</p>}
 
-            <div>
-              <label className="text-[10px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">
-                E-mail Administrateur
-              </label>
-              <input
-                type="email"
-                required
-                value={adminEmail}
-                onChange={e => setAdminEmail(e.target.value)}
-                placeholder="ex: admin@cahier.com"
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-400 transition-colors"
-              />
-            </div>
+          <input
+            type="email"
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+            placeholder="E-mail Admin..."
+            className="w-full px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white focus:outline-none font-mono"
+          />
+          <input
+            type="password"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            placeholder="Mot de passe..."
+            className="w-full px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white focus:outline-none font-mono"
+          />
 
-            <div>
-              <label className="text-[10px] uppercase font-bold text-gray-500 tracking-wider font-sans block mb-1">
-                Mot de passe
-              </label>
-              <input
-                type="password"
-                required
-                value={adminPassword}
-                onChange={e => setAdminPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-gray-400 transition-colors"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              {loading ? 'Connexion...' : 'S\'authentifier'}
-            </button>
-          </form>
-
-          {isDev && (
-            <div className="pt-4 border-t border-gray-200 text-center">
-              <button
-                onClick={handleBypass}
-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline"
-              >
-                ⚡ Démo local : Contourner l'accès
-              </button>
-            </div>
-          )}
-        </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all"
+          >
+            {loading ? 'Connexion...' : 'Se Connecter'}
+          </button>
+        </form>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#141210] text-gray-800 p-4 md:p-8 flex flex-col font-sans">
-      <div className="w-full max-w-6xl mx-auto bg-[#fdfaf2] border border-gray-300 shadow-2xl rounded-[40px] overflow-hidden flex flex-col min-h-[90vh]">
-        
-        {/* En-tête */}
-        <div className="px-6 py-5 border-b border-gray-200 bg-[#f5f1e8] flex items-center justify-between select-none">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-900 text-white rounded-full flex items-center justify-center">
-              <ShieldAlert className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="font-handwritten text-2xl font-bold text-gray-900">
-                Panneau Super Admin
-              </h1>
-              <p className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">
-                Surveillance Réseau & Métriques
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/journal"
-              className="px-4 py-2 bg-[#064e3b] hover:bg-[#043c2d] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center gap-1.5"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Mon Cahier Proprio</span>
-            </Link>
-
-            <button
-              onClick={() => loadAdminData()}
-              title="Rafraîchir les statistiques"
-              className="p-2 hover:bg-gray-200 rounded-full text-gray-500 hover:text-gray-800 transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 border border-gray-300 hover:bg-gray-100 text-gray-600 hover:text-gray-900 text-xs font-bold uppercase tracking-wider rounded-xl transition-all"
-            >
-              Déconnexion
-            </button>
-          </div>
+    <div className="min-h-screen bg-[#141210] text-white p-6 space-y-6">
+      {/* En-tête Admin */}
+      <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+        <div className="flex items-center gap-3">
+          <Store className="w-6 h-6 text-amber-400" />
+          <h1 className="text-lg font-extrabold text-white">Tableau de Super-Administration</h1>
         </div>
 
-        {/* KPIs Section */}
-        {kpis && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b border-gray-200 bg-white">
-            <div className="bg-[#fffdf9] border border-gray-150 p-4 rounded-2xl flex items-center gap-3">
-              <div className="p-3 bg-amber-50 rounded-xl text-amber-600">
-                <Store className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Boutiques</span>
-                <span className="text-xl font-bold font-mono text-gray-800">{kpis.totalBoutiques}</span>
-              </div>
-            </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => loadAdminData()}
+            className="p-2 rounded-xl bg-[#1e1a18] border border-gray-800 text-gray-400 hover:text-white transition-colors"
+            title="Rafraîchir"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
 
-            <div className="bg-[#fffdf9] border border-gray-150 p-4 rounded-2xl flex items-center gap-3">
-              <div className="p-3 bg-blue-50 rounded-xl text-blue-600">
-                <Users className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Utilisateurs</span>
-                <span className="text-xl font-bold font-mono text-gray-800">{kpis.totalUsers}</span>
-              </div>
-            </div>
-
-            <div className="bg-[#fffdf9] border border-gray-150 p-4 rounded-2xl flex items-center gap-3">
-              <div className="p-3 bg-purple-50 rounded-xl text-purple-600">
-                <FileText className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Transactions (NLP)</span>
-                <span className="text-xl font-bold font-mono text-gray-800">{kpis.globalTransactions}</span>
-              </div>
-            </div>
-
-            <div className="bg-[#fffdf9] border border-gray-150 p-4 rounded-2xl flex items-center gap-3">
-              <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Volume Affaires</span>
-                <span className="text-xs font-bold font-mono text-emerald-800 block truncate">{formatPrice(kpis.globalVolumeSales)}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab & Search Bar */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-[#f5f1e8] flex flex-col md:flex-row gap-4 items-center justify-between select-none">
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => { setActiveTab('shops'); setSearchQuery('') }}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-                activeTab === 'shops' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-250 text-gray-500 hover:text-gray-850'
-              }`}
-            >
-              🏪 Boutiques ({shops.length})
-            </button>
-            <button
-              onClick={() => { setActiveTab('users'); setSearchQuery('') }}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-                activeTab === 'users' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-250 text-gray-500 hover:text-gray-850'
-              }`}
-            >
-              👥 Utilisateurs ({users.length})
-            </button>
-            <button
-              onClick={() => { setActiveTab('analytics'); setSearchQuery('') }}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-                activeTab === 'analytics' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-250 text-gray-500 hover:text-gray-850'
-              }`}
-            >
-              📊 Analyses Réseau
-            </button>
-            <button
-              onClick={() => { setActiveTab('raw_data'); setSearchQuery('') }}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${
-                activeTab === 'raw_data' ? 'bg-gray-900 text-white shadow-sm' : 'bg-white border border-gray-250 text-gray-500 hover:text-gray-850'
-              }`}
-            >
-              📝 Données Brutes ({allNetworkSales.length})
-            </button>
-          </div>
-
-          <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
-            {activeTab === 'shops' && (
-              <select
-                value={shopSortBy}
-                onChange={e => setShopSortBy(e.target.value as any)}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold font-sans text-gray-700 outline-none"
-              >
-                <option value="sales">💰 Trier par CA Ventes</option>
-                <option value="transactions">📑 Trier par Transactions</option>
-                <option value="cash">💵 Trier par Solde Caisse</option>
-              </select>
-            )}
-
-            <div className="relative flex-grow md:flex-grow-0">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder={activeTab === 'shops' ? "Rechercher boutique ou propriétaire..." : "Rechercher email ou nom..."}
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full md:w-64 pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-gray-400"
-              />
-            </div>
-            <button
-              onClick={() => exportToCSV(activeTab)}
-              title="Exporter les lignes"
-              className="p-2.5 bg-white border border-gray-250 hover:bg-gray-50 rounded-xl text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Tab Contents */}
-        <div className="flex-1 overflow-x-auto p-6">
-          {activeTab === 'shops' ? (
-            <div className="min-w-full overflow-x-auto max-h-[480px] overflow-y-auto border border-gray-200 rounded-2xl bg-white shadow-sm">
-              <table className="min-w-full divide-y divide-gray-200 font-sans text-xs border-collapse">
-                <thead className="bg-gray-50 uppercase text-[9px] font-bold text-gray-400 tracking-wider sticky top-0 z-10 shadow-sm">
-                  <tr>
-                    <th className="px-5 py-3.5 text-left bg-gray-50">Code Boutique (Shop ID)</th>
-                    <th className="px-5 py-3.5 text-left bg-gray-50">Nom Boutique</th>
-                    <th className="px-5 py-3.5 text-left bg-gray-50">E-mail Propriétaire</th>
-                    <th className="px-5 py-3.5 text-center bg-gray-50">Transactions</th>
-                    <th className="px-5 py-3.5 text-right bg-gray-50">CA Total</th>
-                    <th className="px-5 py-3.5 text-right bg-gray-50">Solde Caisse</th>
-                    <th className="px-5 py-3.5 text-center bg-gray-50">Staff</th>
-                    <th className="px-5 py-3.5 text-center bg-gray-50">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 text-gray-700 bg-white">
-                  {filteredShops.map((shop, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 hover:bg-opacity-40 transition-colors">
-                      <td className="px-5 py-3 font-mono font-bold text-[10px] text-gray-400">{shop.shop_id}</td>
-                      <td className="px-5 py-3 font-bold text-gray-800">{shop.name}</td>
-                      <td className="px-5 py-3">{shop.owner_email}</td>
-                      <td className="px-5 py-3 text-center font-mono font-bold">{shop.transactions_count}</td>
-                      <td className="px-5 py-3 text-right font-mono font-bold text-emerald-700">{formatPrice(shop.total_sales)}</td>
-                      <td className="px-5 py-3 text-right font-mono font-bold text-blue-700">{formatPrice(shop.cash_balance)}</td>
-                      <td className="px-5 py-3 text-center font-mono font-bold">{shop.employees_count}</td>
-                      <td className="px-5 py-3 text-center">
-                        <button
-                          onClick={() => viewShopJournal(shop.shop_id, shop.name)}
-                          className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 border border-gray-300 hover:border-gray-400 rounded-lg text-[9px] font-bold text-gray-700 flex items-center gap-1.5 mx-auto transition-all"
-                        >
-                          <Eye className="w-3 h-3" /> Journal
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredShops.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="px-5 py-8 text-center text-gray-400 font-handwritten text-lg font-bold">
-                        Aucune boutique trouvée.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          ) : activeTab === 'users' ? (
-            <div className="min-w-full overflow-x-auto max-h-[480px] overflow-y-auto border border-gray-200 rounded-2xl bg-white shadow-sm">
-              <table className="min-w-full divide-y divide-gray-200 font-sans text-xs border-collapse">
-                <thead className="bg-gray-50 uppercase text-[9px] font-bold text-gray-400 tracking-wider sticky top-0 z-10 shadow-sm">
-                  <tr>
-                    <th className="px-5 py-3.5 text-left bg-gray-50">Nom Utilisateur</th>
-                    <th className="px-5 py-3.5 text-left bg-gray-50">Email</th>
-                    <th className="px-5 py-3.5 text-left bg-gray-50">Rôle</th>
-                    <th className="px-5 py-3.5 text-center bg-gray-50">Boutiques / Foyer Possédés</th>
-                    <th className="px-5 py-3.5 text-left bg-gray-50">Liaison Principale (Shop ID)</th>
-                    <th className="px-5 py-3.5 text-center bg-gray-50">Date Inscription</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 text-gray-700 bg-white">
-                  {filteredUsers.map((user, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 hover:bg-opacity-40 transition-colors">
-                      <td className="px-5 py-3 font-bold text-gray-800">{user.name}</td>
-                      <td className="px-5 py-3 font-medium text-gray-900">{user.email}</td>
-                      <td className="px-5 py-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold ${
-                          user.role === 'owner' ? 'bg-amber-100 text-amber-800 border border-amber-250' : 'bg-teal-150 text-teal-800 border border-teal-200'
-                        }`}>
-                          {user.role === 'owner' ? 'Propriétaire' : 'Employé'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-center">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="px-2.5 py-1 bg-amber-50 text-amber-900 border border-amber-250 rounded-xl text-[11px] font-extrabold shadow-xs inline-flex items-center gap-1">
-                            🏢 {user.distinct_shops_count || 1} boutique{(user.distinct_shops_count || 1) > 1 ? 's' : ''}
-                          </span>
-                          {user.owned_shops && user.owned_shops.length > 0 && (
-                            <span className="text-[10px] text-gray-500 max-w-[180px] truncate" title={user.owned_shops.join(', ')}>
-                              {user.owned_shops.join(' • ')}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 font-mono text-[10px] text-gray-400">{user.shop_id}</td>
-                      <td className="px-5 py-3 text-center">{user.created_at.slice(0, 10)}</td>
-                    </tr>
-                  ))}
-                  {filteredUsers.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-8 text-center text-gray-400 font-handwritten text-lg font-bold">
-                        Aucun utilisateur trouvé.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          ) : activeTab === 'raw_data' ? (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-amber-50 p-4 border border-amber-200 rounded-2xl">
-                <div>
-                  <h3 className="font-bold text-sm text-amber-950 flex items-center gap-2">
-                    <span>📝 Dataset des Textes Bruts Saisis par les Caissiers</span>
-                  </h3>
-                  <p className="text-xs text-amber-800 font-sans mt-0.5">
-                    Exportez l'ensemble des phrases vernaculaires saisies pour entraîner l'IA, analyser le langage naturel (NLP) et améliorer les suggestions du site.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => exportToCSV('raw_data')}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Exporter CSV (Excel)</span>
-                  </button>
-                  <button
-                    onClick={exportRawDataToJSON}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Exporter Dataset JSON (IA / NLP)</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="min-w-full overflow-x-auto max-h-[480px] overflow-y-auto border border-gray-200 rounded-2xl bg-white shadow-sm">
-                <table className="min-w-full divide-y divide-gray-200 font-sans text-xs border-collapse">
-                  <thead className="bg-gray-50 uppercase text-[9px] font-bold text-gray-400 tracking-wider sticky top-0 z-10 shadow-sm">
-                    <tr>
-                      <th className="px-4 py-3.5 text-left bg-gray-50">Date & Heure</th>
-                      <th className="px-4 py-3.5 text-left bg-gray-50">Code Boutique</th>
-                      <th className="px-4 py-3.5 text-left bg-gray-50">Texte Brut Saisi (Notes)</th>
-                      <th className="px-4 py-3.5 text-left bg-gray-50">Client</th>
-                      <th className="px-4 py-3.5 text-right bg-gray-50">Montant Total</th>
-                      <th className="px-4 py-3.5 text-left bg-gray-50">Articles Extraits</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 text-gray-700 bg-white font-mono">
-                    {allNetworkSales
-                      .filter(s => 
-                        (s.notes || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        (s.client || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        (s.shop_id || '').toLowerCase().includes(searchQuery.toLowerCase())
-                      )
-                      .map((sale, idx) => (
-                        <tr key={idx} className="hover:bg-amber-50/50 transition-colors">
-                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{sale.date} {sale.time || ''}</td>
-                          <td className="px-4 py-3 font-bold text-gray-600">{sale.shop_id}</td>
-                          <td className="px-4 py-3 font-sans font-bold text-gray-900 bg-amber-50/30 rounded-lg max-w-xs truncate">
-                            {sale.notes || '—'}
-                          </td>
-                          <td className="px-4 py-3 font-sans font-semibold text-gray-800">{sale.client || 'Client anonyme'}</td>
-                          <td className="px-4 py-3 text-right font-bold text-emerald-700">{formatPrice(sale.total || 0)}</td>
-                          <td className="px-4 py-3 font-sans text-xs text-gray-600">
-                            {(sale.articles || []).map((a: any, i: number) => (
-                              <span key={i} className="inline-block bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5 text-[10px] mr-1 mb-1">
-                                {a.quantity || a.quantite}x {a.name || a.nom} ({formatPrice(a.unit_price || a.prix_unitaire || 0)})
-                              </span>
-                            ))}
-                          </td>
-                        </tr>
-                      ))}
-                    {allNetworkSales.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-5 py-8 text-center text-gray-400 font-handwritten text-lg font-bold">
-                          Aucune donnée brute enregistrée.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="min-w-full">
-              <AnalyticsDashboard sales={allNetworkSales} />
-            </div>
-          )}
+          <button
+            onClick={() => {
+              localStorage.removeItem('cahier_admin_email')
+              setIsAdmin(false)
+            }}
+            className="p-2 rounded-xl bg-red-950/40 border border-red-800/40 text-red-400 hover:bg-red-900/60 transition-colors"
+            title="Déconnexion"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* ── Tiroir / Modal de Journal & Analyses de Boutique (Lecture Seule) ── */}
-      {selectedShopForJournal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black bg-opacity-40 p-4 animate-fade-in">
-          <div className="w-full max-w-2xl h-full bg-[#fdfaf2] border border-gray-300 shadow-2xl rounded-l-[32px] overflow-hidden flex flex-col transform transition-transform duration-350 translate-x-0">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-[#f5f1e8]">
-              <div>
-                <h3 className="font-handwritten text-xl font-bold text-gray-900">
-                  🏪 {selectedShopName}
-                </h3>
-                <p className="text-[8px] text-gray-400 font-mono uppercase tracking-wider">
-                  Code : {selectedShopForJournal}
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="flex bg-white border border-gray-250 rounded-xl p-0.5">
-                  <button
-                    onClick={() => setShopModalTab('journal')}
-                    className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all ${
-                      shopModalTab === 'journal' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    📖 Journal
-                  </button>
-                  <button
-                    onClick={() => setShopModalTab('analytics')}
-                    className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all ${
-                      shopModalTab === 'analytics' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    📊 Analyses
-                  </button>
-                </div>
+      {/* Cartes KPI */}
+      <AdminStatsCards kpis={kpis} />
 
-                <button 
-                  onClick={() => setSelectedShopForJournal(null)} 
-                  className="text-gray-400 hover:text-gray-700 transition-colors p-1"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+      {/* Tableau des Boutiques */}
+      <AdminShopsTable
+        shops={shops}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onInspectShop={handleInspectShop}
+      />
 
-            <div className="flex-1 overflow-y-auto pb-20">
-              {loadingJournal ? (
-                <div className="flex items-center justify-center p-24">
-                  <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
-                </div>
-              ) : shopModalTab === 'journal' ? (
-                journalSales.length > 0 ? (
-                  <SalesHistory 
-                    sales={journalSales} 
-                    shopId={selectedShopForJournal}
-                    isEmployee={true} // Lecture seule en se faisant passer pour un employé
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-24 text-center">
-                    <span className="text-3xl mb-2">📖</span>
-                    <p className="font-handwritten text-lg text-gray-500 font-bold">Aucune transaction.</p>
-                  </div>
-                )
-              ) : (
-                <AnalyticsDashboard sales={journalSales} />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modale d'inspection */}
+      <AdminSubscriptionModal
+        isOpen={!!selectedShopId}
+        onClose={() => setSelectedShopId(null)}
+        shopId={selectedShopId || ''}
+        shopName={selectedShopName}
+        sales={journalSales}
+        activeTab={shopModalTab}
+        onTabChange={setShopModalTab}
+        loading={loadingJournal}
+      />
     </div>
   )
 }
