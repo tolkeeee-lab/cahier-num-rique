@@ -1,5 +1,55 @@
 [
   {
+    "id": "9ab910e3-84d1-4c98-9473-f2a8cb636895",
+    "shop_id": "demo-owner-shop",
+    "created_at": "2026-08-14T05:18:06.895Z",
+    "date": "2026-08-14",
+    "time": "06:18",
+    "type": "cash_in",
+    "raw_text": "1 Beaufort Canette 33cl à 600",
+    "notes": "1 Beaufort Canette 33cl à 600",
+    "articles": [
+      {
+        "nom": "Beaufort Canette 33cl",
+        "quantite": 1,
+        "prix_unitaire": 600
+      }
+    ],
+    "total_amount": 600,
+    "paid_amount": 600,
+    "debt_amount": 0,
+    "client_name": "Client anonyme",
+    "status": "paid",
+    "category": "Divers",
+    "pen_color": "blue",
+    "synced": true
+  },
+  {
+    "id": "55a3c39d-8acb-4f74-9212-4128633f79dc",
+    "shop_id": "demo-owner-shop",
+    "created_at": "2026-08-14T05:16:36.757Z",
+    "date": "2026-08-14",
+    "time": "06:16",
+    "type": "cash_in",
+    "raw_text": "1 Beaufort a 600",
+    "notes": "1 Beaufort a 600",
+    "articles": [
+      {
+        "nom": "Beaufort",
+        "quantite": 1,
+        "prix_unitaire": 600
+      }
+    ],
+    "total_amount": 600,
+    "paid_amount": 600,
+    "debt_amount": 0,
+    "client_name": "Client anonyme",
+    "status": "paid",
+    "category": "Divers",
+    "pen_color": "blue",
+    "synced": true
+  },
+  {
     "id": "d7d6cdb8-f263-4d25-b6b3-81f703b8c166",
     "shop_id": "demo-owner-shop",
     "date": "2026-07-23",

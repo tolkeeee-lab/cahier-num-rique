@@ -236,6 +236,14 @@ export default function JournalPage() {
     setIsSubmitting(true)
     const textCreated = input.trim()
 
+    // 1. SAUVEGARDE LOCALE IMMÉDIATE — garantit l'affichage instantané dans le cahier
+    const localSale = saveSaleLocally(textCreated)
+
+    // 2. Vider le champ et rafraîchir l'affichage immédiatement
+    setInput('')
+    journalData.reloadData()
+
+    // 3. Tenter la synchronisation avec l'API en arrière-plan (non bloquant)
     try {
       const response = await fetch('/api/sales', {
         method: 'POST',
@@ -254,36 +262,33 @@ export default function JournalPage() {
 
       if (response.ok) {
         const resJson = await response.json().catch(() => ({}))
-        if (resJson.sale) {
+        // Si l'API renvoie un vrai objet vente avec ID, on remplace la vente locale par la version serveur
+        if (resJson.sale && resJson.sale.id && resJson.sale.id !== localSale.id) {
+          // Mettre à jour la vente locale avec l'ID serveur pour cohérence future
           saveOfflineSale(shopManager.shopId, {
             id: resJson.sale.id,
             shop_id: shopManager.shopId,
-            date: resJson.sale.date,
-            time: resJson.sale.time,
-            client: resJson.sale.client_name || 'Client',
-            articles: resJson.sale.articles || [],
-            total: resJson.sale.total_amount || 0,
-            paid: resJson.sale.paid_amount || 0,
-            debt: resJson.sale.debt_amount || 0,
-            status: resJson.sale.status || 'paid',
-            type: resJson.sale.type || 'sale',
+            date: resJson.sale.date || localSale.date,
+            time: resJson.sale.time || localSale.time,
+            client: resJson.sale.client_name || localSale.client,
+            articles: resJson.sale.articles?.length > 0 ? resJson.sale.articles : localSale.articles,
+            total: resJson.sale.total_amount ?? localSale.total,
+            paid: resJson.sale.paid_amount ?? localSale.paid,
+            debt: resJson.sale.debt_amount ?? localSale.debt,
+            status: resJson.sale.status || localSale.status,
+            type: resJson.sale.type || localSale.type,
             pen_color: resJson.sale.pen_color || selectedPen,
             notes: resJson.sale.notes || textCreated,
-            category: resJson.sale.category || 'Général',
-            created_at: resJson.sale.created_at || new Date().toISOString(),
+            category: resJson.sale.category || localSale.category || 'Général',
+            created_at: resJson.sale.created_at || localSale.created_at,
             is_synced: true,
           })
+          journalData.reloadData()
         }
-      } else {
-        // Sauvegarde de secours en mode local si l'API route renvoie une erreur
-        saveSaleLocally(textCreated)
       }
-    } catch (err) {
-      // Sauvegarde de secours immédiate en mode hors-ligne
-      saveSaleLocally(textCreated)
+    } catch (_err) {
+      // Pas grave — la vente est déjà dans le localStorage, elle sera affichée
     } finally {
-      setInput('')
-      journalData.reloadData()
       setIsSubmitting(false)
 
       // Déclencher la modale d'auto-apprentissage si nouveau produit détecté
