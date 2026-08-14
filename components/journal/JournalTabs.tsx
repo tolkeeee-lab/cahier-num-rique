@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import { useFeatures } from '@/context/FeatureContext'
 
+import { getActivityLabels } from '@/lib/activityLabels'
+
 export type JournalTab = 'cahier' | 'stock' | 'dettes' | 'shopping' | 'demandes' | 'analytics' | 'particulier' | 'settings'
 
 interface JournalTabsProps {
@@ -31,43 +33,44 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
   pendingRequestsCount = 0,
 }) => {
   const { features } = useFeatures()
+  const labels = getActivityLabels(activity)
 
   const tabs = [
     {
       id: 'cahier' as JournalTab,
-      label: activity === 'particulier' ? 'Mon Journal' : 'Mon Cahier',
+      label: labels.tabCahier,
       icon: BookOpen,
       show: true,
     },
     {
       id: 'stock' as JournalTab,
-      label: activity === 'resto' ? 'Stock & Bar' : 'Stock Produits',
+      label: labels.tabStock,
       icon: Package,
       show: features.enableStockManagement && activity !== 'particulier',
     },
     {
       id: 'dettes' as JournalTab,
-      label: activity === 'particulier' ? 'Carnet Boutiquier' : 'Dettes & Règlements',
+      label: labels.tabDettes,
       icon: BookText,
       badge: pendingDebtsCount > 0 ? pendingDebtsCount : undefined,
       show: true,
     },
     {
       id: 'shopping' as JournalTab,
-      label: activity === 'particulier' ? 'Marché & Courses' : 'Liste de Ravitaillement',
+      label: labels.tabShopping,
       icon: ShoppingCart,
       show: true,
     },
     {
       id: 'demandes' as JournalTab,
-      label: 'Demandes Clients',
+      label: labels.tabDemandes,
       icon: ClipboardList,
       badge: pendingRequestsCount > 0 ? pendingRequestsCount : undefined,
       show: activity !== 'particulier',
     },
     {
       id: 'analytics' as JournalTab,
-      label: 'Statistiques',
+      label: labels.tabTrends,
       icon: BarChart3,
       show: features.enableAnalytics,
     },

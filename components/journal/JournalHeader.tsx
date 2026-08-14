@@ -41,6 +41,8 @@ interface JournalHeaderProps {
   onLogout?: () => void
 }
 
+import { getActivityLabels } from '@/lib/activityLabels'
+
 export const JournalHeader: React.FC<JournalHeaderProps> = ({
   user,
   currentShopName,
@@ -66,6 +68,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
   onLogout,
 }) => {
   const { features } = useFeatures()
+  const labels = getActivityLabels(activity)
 
   const getActivityBadge = (act: string) => {
     switch (act) {
@@ -87,7 +90,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg md:text-xl font-bold text-gray-900 font-handwritten tracking-wide">
-                {currentShopName || 'Cahier de Caisse Intelligent'}
+                {currentShopName || labels.title}
               </h1>
               
               {/* Sélecteur de Boutique */}
@@ -228,7 +231,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
         {/* Aujourd'hui */}
         <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-2.5 space-y-0.5 shadow-sm">
           <div className="text-[10px] text-blue-700 font-bold uppercase tracking-wider">
-            📅 AUJOURD'HUI
+            {labels.soldeJour}
           </div>
           <div className="text-base font-extrabold text-blue-900">
             {soldeDuJour >= 0 ? `+${formatPrice(soldeDuJour)}` : formatPrice(soldeDuJour)}
@@ -238,7 +241,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
         {/* Tiroir Cash */}
         <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-2.5 space-y-0.5 shadow-sm relative">
           <div className="flex items-center justify-between text-[10px] text-amber-800 font-bold uppercase tracking-wider">
-            <span>💵 TIROIR CASH</span>
+            <span>{labels.tiroirCash}</span>
             {onOpenCashAdjustment && (
               <button
                 type="button"
@@ -257,7 +260,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
         {/* Crédits Dehors */}
         <div className="bg-rose-50/90 border border-rose-200 rounded-2xl p-2.5 space-y-0.5 shadow-sm">
           <div className="text-[10px] text-rose-700 font-bold uppercase tracking-wider">
-            🔴 CRÉDITS DEHORS
+            {labels.creditsDehors}
           </div>
           <div className="text-base font-extrabold text-rose-900">
             {formatPrice(argentDehors)}
@@ -267,7 +270,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
         {/* Nos Dettes */}
         <div className="bg-fuchsia-50/90 border border-fuchsia-200 rounded-2xl p-2.5 space-y-0.5 shadow-sm">
           <div className="text-[10px] text-fuchsia-700 font-bold uppercase tracking-wider">
-            🟣 NOS DETTES
+            {labels.nosDettes}
           </div>
           <div className="text-base font-extrabold text-fuchsia-900">
             {formatPrice(nosDettes)}
