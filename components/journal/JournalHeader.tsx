@@ -79,16 +79,16 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
   }
 
   return (
-    <div className="px-4 pt-4 pb-2 border-b border-dashed border-sky-300/50 select-none space-y-3 bg-[#fdfaf2]">
+    <div className="px-3 py-1.5 border-b border-dashed border-amber-300/50 select-none space-y-1.5 bg-[#fdfaf2]">
       {/* Rangée 1 : Titre Cahier + Selecteur de Boutique + Actions Rapides */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#f59e0b] to-[#d97706] flex items-center justify-center shadow-lg text-lg font-bold text-[#141210]">
+      <div className="flex flex-wrap items-center justify-between gap-1.5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#f59e0b] to-[#d97706] flex items-center justify-center shadow-md text-sm font-bold text-[#141210]">
             📖
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg md:text-xl font-bold text-gray-900 font-handwritten tracking-wide">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-base md:text-lg font-bold text-gray-900 font-handwritten tracking-wide">
                 {currentShopName || labels.title}
               </h1>
               
@@ -226,44 +226,44 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
       </div>
 
       {/* Rangée 2 : Cartes KPI Financières (Tiroir Cash, Crédits Dehors, Nos Dettes) */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-1 font-mono">
+      <div className="grid grid-cols-3 gap-2 pt-0.5 font-mono">
         {/* Tiroir Cash */}
-        <div className="bg-gradient-to-br from-amber-50/95 to-amber-100/80 border border-amber-300/80 rounded-2xl p-2.5 sm:p-3 space-y-1 shadow-xs hover:shadow-md transition-all relative">
-          <div className="flex items-center justify-between text-[10px] text-amber-900 font-extrabold uppercase tracking-wider">
+        <div className="bg-gradient-to-br from-amber-50/95 to-amber-100/80 border border-amber-300/80 rounded-xl px-2.5 py-1.5 shadow-2xs hover:shadow-xs transition-all relative">
+          <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-amber-900 font-extrabold uppercase tracking-wider">
             <span>{labels.tiroirCash}</span>
             {onOpenCashAdjustment && (
               <button
                 type="button"
                 onClick={onOpenCashAdjustment}
-                className="text-[9px] underline text-amber-800 hover:text-amber-950 font-extrabold uppercase cursor-pointer"
+                className="text-[8px] sm:text-[9px] underline text-amber-800 hover:text-amber-950 font-extrabold uppercase cursor-pointer"
               >
                 AJUSTER
               </button>
             )}
           </div>
-          <div className="text-sm sm:text-lg font-black text-amber-950">
+          <div className="text-xs sm:text-base font-black text-amber-950">
             {formatPrice(tiroirCaisse)}
           </div>
         </div>
 
         {/* Crédits Dehors */}
-        <div className="bg-gradient-to-br from-rose-50/95 to-rose-100/70 border border-rose-300/70 rounded-2xl p-2.5 sm:p-3 space-y-1 shadow-xs hover:shadow-md transition-all">
-          <div className="text-[10px] text-rose-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
+        <div className="bg-gradient-to-br from-rose-50/95 to-rose-100/70 border border-rose-300/70 rounded-xl px-2.5 py-1.5 shadow-2xs hover:shadow-xs transition-all">
+          <div className="text-[9px] sm:text-[10px] text-rose-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
             <span>{labels.creditsDehors}</span>
-            <span className="w-2 h-2 rounded-full bg-rose-500 shadow-xs" />
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-xs" />
           </div>
-          <div className="text-sm sm:text-lg font-black text-rose-950">
+          <div className="text-xs sm:text-base font-black text-rose-950">
             {formatPrice(argentDehors)}
           </div>
         </div>
 
         {/* Nos Dettes */}
-        <div className="bg-gradient-to-br from-fuchsia-50/95 to-purple-100/70 border border-fuchsia-300/70 rounded-2xl p-2.5 sm:p-3 space-y-1 shadow-xs hover:shadow-md transition-all">
-          <div className="text-[10px] text-fuchsia-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
+        <div className="bg-gradient-to-br from-fuchsia-50/95 to-purple-100/70 border border-fuchsia-300/70 rounded-xl px-2.5 py-1.5 shadow-2xs hover:shadow-xs transition-all">
+          <div className="text-[9px] sm:text-[10px] text-fuchsia-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
             <span>{labels.nosDettes}</span>
-            <span className="w-2 h-2 rounded-full bg-fuchsia-500 shadow-xs" />
+            <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-xs" />
           </div>
-          <div className="text-sm sm:text-lg font-black text-fuchsia-950">
+          <div className="text-xs sm:text-base font-black text-fuchsia-950">
             {formatPrice(nosDettes)}
           </div>
         </div>

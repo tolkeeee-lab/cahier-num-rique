@@ -89,7 +89,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
   ].filter(t => t.show)
 
   return (
-    <nav className="bg-[#f5eea5]/20 border-b border-amber-300/60 px-3 pt-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none select-none">
+    <nav className="bg-[#f5eea5]/20 border-b border-amber-300/60 px-2 sm:px-3 pt-1 flex items-center gap-1 overflow-x-auto scrollbar-none select-none">
       {tabs.map(tab => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
@@ -99,9 +99,9 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
             key={tab.id}
             type="button"
             onClick={() => onTabChange(tab.id)}
-            className={`notebook-tab flex items-center gap-2 px-3.5 py-2 text-xs font-mono font-extrabold transition-all whitespace-nowrap border-t border-x cursor-pointer ${
+            className={`notebook-tab flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-extrabold transition-all whitespace-nowrap border-t border-x cursor-pointer ${
               isActive
-                ? 'bg-gradient-to-b from-[#064e3b] to-[#022c1b] text-[#f59e0b] border-[#047857] shadow-lg -mb-[1px] rounded-t-xl scale-[1.03] ring-1 ring-amber-400/40'
+                ? 'bg-gradient-to-b from-[#064e3b] to-[#022c1b] text-[#f59e0b] border-[#047857] shadow-md -mb-[1px] rounded-t-xl scale-[1.02] ring-1 ring-amber-400/40'
                 : 'bg-amber-100/70 text-amber-950 border-amber-300/60 hover:bg-amber-200/90 rounded-t-lg opacity-90 hover:opacity-100'
             }`}
           >

@@ -302,12 +302,12 @@ export default function JournalPage() {
             <JournalTabs activeTab={activeTab} onTabChange={setActiveTab} activity={shopManager.shopActivity} />
           </div>
 
-          {/* Corps principal */}
-          <div className="p-2 md:p-4 flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
+          {/* Corps principal — Hauteur Maximisée */}
+          <div className="p-1 sm:p-2 md:p-2.5 flex-1 min-h-0 flex flex-col justify-between overflow-hidden space-y-1">
             <JournalPostIt message={postItMessage} onDismiss={() => setPostItMessage(null)} />
 
             {activeTab === 'cahier' && (
-              <div className="flex-1 min-h-0 flex flex-col space-y-2 overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col space-y-1 overflow-hidden">
 
                 {/* Stylos Bic 4-Couleurs (FIXE) */}
                 <div className="flex-shrink-0 z-10">
