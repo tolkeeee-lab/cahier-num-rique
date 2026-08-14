@@ -28,7 +28,8 @@ import { useShopManager } from '@/hooks/useShopManager'
 import { useJournalData } from '@/hooks/useJournalData'
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
-import { getOfflineProducts, saveOfflineProduct, generateOfflineId } from '@/lib/offlineDb'
+import { getOfflineProducts, saveOfflineProduct, generateOfflineId, saveOfflineSale } from '@/lib/offlineDb'
+import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { Send, Loader } from 'lucide-react'
 
 export default function JournalPage() {
@@ -176,12 +177,51 @@ export default function JournalPage() {
     setAutoLearnData(null)
   }
 
+  const saveSaleLocally = (textCreated: string) => {
+    const parsed = parseTextLocally(textCreated, selectedPen)
+    const now = new Date()
+    const dateStr = getTodayDateString()
+    const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    let type = 'cash_in'
+    if (selectedPen === 'red') type = 'cash_out'
+    else if (selectedPen === 'green') type = 'purchase_cash'
+    else if (selectedPen === 'purple') type = 'purchase_credit'
+    else if (selectedPen === 'yellow') type = 'sale_credit'
+
+    const localSale = {
+      id: generateOfflineId(),
+      shop_id: shopManager.shopId,
+      date: dateStr,
+      time: timeStr,
+      client: parsed.nom_client || 'Client',
+      articles: (parsed.articles || []).map(a => ({
+        name: a.nom,
+        quantity: a.quantite,
+        unit_price: a.prix_unitaire,
+      })),
+      total: parsed.total_facture || 0,
+      paid: parsed.montant_paye || 0,
+      debt: parsed.montant_dette || 0,
+      status: parsed.montant_dette && parsed.montant_dette > 0 ? ('debt' as const) : ('paid' as const),
+      type,
+      pen_color: selectedPen,
+      notes: textCreated,
+      category: parsed.categorie || 'Général',
+      created_at: now.toISOString(),
+      is_synced: false,
+    }
+
+    saveOfflineSale(shopManager.shopId, localSale)
+    return localSale
+  }
+
   const handleCreateSale = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isSubmitting) return
 
     setIsSubmitting(true)
     const textCreated = input.trim()
+
     try {
       const response = await fetch('/api/sales', {
         method: 'POST',
@@ -199,30 +239,52 @@ export default function JournalPage() {
       })
 
       if (response.ok) {
-        setInput('')
-        journalData.reloadData()
-
-        // Déclencher la modale d'auto-apprentissage si nouveau produit détecté
-        const matchSingle = textCreated.match(/^(\d+)?\s*([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@)\s*(\d+)/i)
-        if (matchSingle) {
-          const prodName = matchSingle[2].trim()
-          const prodPrice = parseInt(matchSingle[3], 10)
-          const existing = getOfflineProducts(shopManager.shopId)?.find(
-            (p) => p.name.toLowerCase().trim() === prodName.toLowerCase()
-          )
-          if (!existing && prodName.length >= 3) {
-            setAutoLearnData({ name: prodName, price: prodPrice })
-            setShowAutoLearnModal(true)
-          }
+        const resJson = await response.json().catch(() => ({}))
+        if (resJson.sale) {
+          saveOfflineSale(shopManager.shopId, {
+            id: resJson.sale.id,
+            shop_id: shopManager.shopId,
+            date: resJson.sale.date,
+            time: resJson.sale.time,
+            client: resJson.sale.client_name || 'Client',
+            articles: resJson.sale.articles || [],
+            total: resJson.sale.total_amount || 0,
+            paid: resJson.sale.paid_amount || 0,
+            debt: resJson.sale.debt_amount || 0,
+            status: resJson.sale.status || 'paid',
+            type: resJson.sale.type || 'sale',
+            pen_color: resJson.sale.pen_color || selectedPen,
+            notes: resJson.sale.notes || textCreated,
+            category: resJson.sale.category || 'Général',
+            created_at: resJson.sale.created_at || new Date().toISOString(),
+            is_synced: true,
+          })
         }
       } else {
-        const errJson = await response.json().catch(() => ({}))
-        setPostItMessage(errJson.error || 'Erreur lors de l\'enregistrement. Vérifiez vos données.')
+        // Sauvegarde de secours en mode local si l'API route renvoie une erreur
+        saveSaleLocally(textCreated)
       }
     } catch (err) {
-      setPostItMessage('Mode hors-ligne : la vente sera synchronisée ultérieurement.')
+      // Sauvegarde de secours immédiate en mode hors-ligne
+      saveSaleLocally(textCreated)
     } finally {
+      setInput('')
+      journalData.reloadData()
       setIsSubmitting(false)
+
+      // Déclencher la modale d'auto-apprentissage si nouveau produit détecté
+      const matchSingle = textCreated.match(/^(\d+)?\s*([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@)\s*(\d+)/i)
+      if (matchSingle) {
+        const prodName = matchSingle[2].trim()
+        const prodPrice = parseInt(matchSingle[3], 10)
+        const existing = getOfflineProducts(shopManager.shopId)?.find(
+          (p) => p.name.toLowerCase().trim() === prodName.toLowerCase()
+        )
+        if (!existing && prodName.length >= 3) {
+          setAutoLearnData({ name: prodName, price: prodPrice })
+          setShowAutoLearnModal(true)
+        }
+      }
     }
   }
 
