@@ -350,8 +350,8 @@ export default function JournalPage() {
 
                 {/* Barre de saisie WhatsApp (FIXE EN BAS) */}
                 {!addingToSaleId && (
-                <div className="flex-shrink-0 pt-1 border-t border-dashed border-amber-300/60 relative z-20">
-                  <form onSubmit={handlePipelineSubmit} className="relative flex items-center gap-2">
+                <div className="flex-shrink-0 pt-2 relative z-20">
+                  <form onSubmit={handlePipelineSubmit} className="relative flex items-center gap-2 bg-amber-100/50 backdrop-blur-md p-1.5 rounded-2xl border border-amber-300/80 shadow-md">
                     <StockSuggestionsBubble
                       suggestions={stockSuggestions}
                       activeQty={activeQty}
@@ -362,19 +362,19 @@ export default function JournalPage() {
                     <button
                       type="button"
                       onClick={() => setShowTactileMenuModal(true)}
-                      className="px-2.5 py-2 bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 flex-shrink-0 cursor-pointer"
+                      className="px-3 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 border border-amber-400 text-amber-950 rounded-xl text-xs font-extrabold transition-all shadow-xs flex items-center gap-1.5 flex-shrink-0 cursor-pointer hover:scale-[1.02] active:scale-95"
                       title="Ouvrir le menu des raccourcis 1-tap"
                     >
-                      <Zap className="w-3.5 h-3.5 fill-amber-600 text-amber-600" />
+                      <Zap className="w-4 h-4 fill-amber-950 text-amber-950" />
                       <span className="hidden sm:inline font-mono text-xs">Raccourcis</span>
                       {tactileMenu.menuItems.length > 0 && (
-                        <span className="bg-amber-900 text-amber-100 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                        <span className="bg-amber-950 text-amber-100 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black">
                           {tactileMenu.menuItems.length}
                         </span>
                       )}
                     </button>
 
-                    <div className="font-mono text-xs font-bold text-gray-500 flex-shrink-0 min-w-[45px] text-center">
+                    <div className="font-mono text-xs font-extrabold text-amber-900 flex-shrink-0 min-w-[45px] text-center bg-amber-200/60 px-2 py-1 rounded-lg">
                       ⏰ {currentTime || '--:--'}
                     </div>
 
@@ -384,18 +384,18 @@ export default function JournalPage() {
                         value={saleCreation.input}
                         onChange={(e) => saleCreation.setInput(e.target.value)}
                         placeholder={pens.find(p => p.id === selectedPen)?.placeholder || 'Écrivez une vente...'}
-                        className="w-full pl-4 pr-4 py-2.5 bg-[#fdfaf2] border border-amber-300 rounded-xl text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-amber-500 font-handwritten"
+                        className="w-full pl-4 pr-4 py-2.5 bg-white border border-amber-300/90 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40 font-handwritten shadow-inner font-bold"
                       />
                     </div>
 
                     <button
                       type="submit"
                       disabled={!saleCreation.input.trim() || saleCreation.isSubmitting}
-                      className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-[#f59e0b] to-[#d97706] text-[#141210] flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex-shrink-0 shadow-lg"
+                      className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-[#f59e0b] to-[#d97706] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-40 flex-shrink-0 shadow-md hover:shadow-lg border border-amber-300"
                     >
                       {saleCreation.isSubmitting
                         ? <Loader className="w-4 h-4 animate-spin" />
-                        : <Send className="w-4 h-4 -mr-0.5" />
+                        : <Send className="w-4 h-4 -mr-0.5 text-white" />
                       }
                     </button>
                   </form>

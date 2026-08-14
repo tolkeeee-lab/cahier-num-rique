@@ -227,52 +227,55 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
       </div>
 
       {/* Rangée 2 : Cartes KPI Financières (Aujourd'hui, Tiroir Cash, Crédits Dehors, Nos Dettes) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 font-mono">
         {/* Aujourd'hui */}
-        <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-2.5 space-y-0.5 shadow-sm">
-          <div className="text-[10px] text-blue-700 font-bold uppercase tracking-wider">
-            {labels.soldeJour}
+        <div className="bg-gradient-to-br from-blue-50/95 to-sky-100/70 border border-blue-300/70 rounded-2xl p-3 space-y-1 shadow-sm hover:shadow-md transition-all">
+          <div className="text-[10px] text-blue-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
+            <span>{labels.soldeJour}</span>
+            <span className="w-2 h-2 rounded-full bg-blue-500 shadow-xs" />
           </div>
-          <div className="text-base font-extrabold text-blue-900">
+          <div className="text-base sm:text-lg font-black text-blue-950">
             {soldeDuJour >= 0 ? `+${formatPrice(soldeDuJour)}` : formatPrice(soldeDuJour)}
           </div>
         </div>
 
         {/* Tiroir Cash */}
-        <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-2.5 space-y-0.5 shadow-sm relative">
-          <div className="flex items-center justify-between text-[10px] text-amber-800 font-bold uppercase tracking-wider">
+        <div className="bg-gradient-to-br from-amber-50/95 to-amber-100/80 border border-amber-300/80 rounded-2xl p-3 space-y-1 shadow-sm hover:shadow-md transition-all relative">
+          <div className="flex items-center justify-between text-[10px] text-amber-900 font-extrabold uppercase tracking-wider">
             <span>{labels.tiroirCash}</span>
             {onOpenCashAdjustment && (
               <button
                 type="button"
                 onClick={onOpenCashAdjustment}
-                className="text-[9px] underline text-amber-700 hover:text-amber-950 font-bold uppercase"
+                className="text-[9px] underline text-amber-800 hover:text-amber-950 font-extrabold uppercase"
               >
                 AJUSTER
               </button>
             )}
           </div>
-          <div className="text-base font-extrabold text-amber-950">
+          <div className="text-base sm:text-lg font-black text-amber-950">
             {formatPrice(tiroirCaisse)}
           </div>
         </div>
 
         {/* Crédits Dehors */}
-        <div className="bg-rose-50/90 border border-rose-200 rounded-2xl p-2.5 space-y-0.5 shadow-sm">
-          <div className="text-[10px] text-rose-700 font-bold uppercase tracking-wider">
-            {labels.creditsDehors}
+        <div className="bg-gradient-to-br from-rose-50/95 to-rose-100/70 border border-rose-300/70 rounded-2xl p-3 space-y-1 shadow-sm hover:shadow-md transition-all">
+          <div className="text-[10px] text-rose-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
+            <span>{labels.creditsDehors}</span>
+            <span className="w-2 h-2 rounded-full bg-rose-500 shadow-xs" />
           </div>
-          <div className="text-base font-extrabold text-rose-900">
+          <div className="text-base sm:text-lg font-black text-rose-950">
             {formatPrice(argentDehors)}
           </div>
         </div>
 
         {/* Nos Dettes */}
-        <div className="bg-fuchsia-50/90 border border-fuchsia-200 rounded-2xl p-2.5 space-y-0.5 shadow-sm">
-          <div className="text-[10px] text-fuchsia-700 font-bold uppercase tracking-wider">
-            {labels.nosDettes}
+        <div className="bg-gradient-to-br from-fuchsia-50/95 to-purple-100/70 border border-fuchsia-300/70 rounded-2xl p-3 space-y-1 shadow-sm hover:shadow-md transition-all">
+          <div className="text-[10px] text-fuchsia-800 font-extrabold uppercase tracking-wider flex items-center justify-between">
+            <span>{labels.nosDettes}</span>
+            <span className="w-2 h-2 rounded-full bg-fuchsia-500 shadow-xs" />
           </div>
-          <div className="text-base font-extrabold text-fuchsia-900">
+          <div className="text-base sm:text-lg font-black text-fuchsia-950">
             {formatPrice(nosDettes)}
           </div>
         </div>
