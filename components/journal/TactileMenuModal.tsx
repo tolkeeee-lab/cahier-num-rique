@@ -97,12 +97,12 @@ export function TactileMenuModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-40 flex flex-col justify-end pb-20 md:pb-24 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200 pointer-events-none">
       {/* Arrière-plan cliquable pour fermer */}
-      <div className="flex-1" onClick={onClose} />
+      <div className="flex-1 pointer-events-auto" onClick={onClose} />
 
-      {/* Panneau tiroir bas (Bottom Sheet) */}
-      <div className="w-full max-w-2xl mx-auto bg-[#fffdf2] border-t-2 border-x-2 border-amber-300 rounded-t-[28px] p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom duration-200 max-h-[70vh] flex flex-col">
+      {/* Panneau tiroir bas (Bottom Sheet) positionné au-dessus de la barre de saisie */}
+      <div className="w-full max-w-2xl mx-auto bg-[#fffdf2] border-2 border-amber-300 rounded-3xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom duration-200 max-h-[55vh] flex flex-col pointer-events-auto">
         
         {/* Poignée de glissement & En-tête Tiroir */}
         <div className="flex flex-col items-center flex-shrink-0">
