@@ -212,27 +212,14 @@ export default function JournalPage() {
     if (!addArticleInput.trim() || !addingToSaleId || isAddingArticle) return
     setIsAddingArticle(true)
     try {
-      await fetch('/api/sales', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-shop-id': shopManager.shopId,
-        },
-        body: JSON.stringify({
-          text: addArticleInput.trim(),
-          raw_text: addArticleInput.trim(),
-          pen_color: 'blue',
-          penColor: 'blue',
-          shop_id: shopManager.shopId,
-          append_to_sale_id: addingToSaleId,
-        }),
-      })
+      await journalData.addArticleToSale(addingToSaleId, addArticleInput.trim(), 'blue')
+    } catch (err: any) {
+      saleCreation.setPostItWarning(err?.message || "Erreur lors de l'ajout d'article")
     } finally {
       setAddArticleInput('')
       setAddingToSaleId(null)
       setAddingToSaleClient('')
       setIsAddingArticle(false)
-      journalData.reloadData()
     }
   }
 

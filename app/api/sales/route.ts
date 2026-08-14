@@ -135,3 +135,165 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: err?.message || 'Erreur d\'extraction' }, { status: 500 })
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, action, text, penColor, articles, clientName, category } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID de vente manquant' }, { status: 400 })
+    }
+
+    if (action === 'add_article') {
+      if (!text || typeof text !== 'string') {
+        return NextResponse.json({ error: 'Texte d\'article manquant' }, { status: 400 })
+      }
+      const color = penColor || 'blue'
+      const parsed = parseTextLocally(text, color)
+      if (!parsed || !parsed.articles || parsed.articles.length === 0) {
+        return NextResponse.json({ error: 'Saisie d\'article non reconnue' }, { status: 400 })
+      }
+
+      if (isSupabaseConfigured() && supabase) {
+        const { data: currentSale, error: fetchErr } = await supabase
+          .from('sales')
+          .select('*, sold_articles(*)')
+          .eq('id', id)
+          .single()
+
+        if (currentSale && !fetchErr) {
+          const addedAmount = parsed.total_facture || 0
+          const newTotal = (currentSale.total_amount || 0) + addedAmount
+          const newPaid = currentSale.type === 'cash_in' ? newTotal : (currentSale.paid_amount || 0)
+          const newDebt = currentSale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : (currentSale.debt_amount || 0)
+          const newNotes = currentSale.notes ? `${currentSale.notes}, ${text}` : text
+          const newStatus = newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid'
+
+          await supabase.from('sales').update({
+            total_amount: newTotal,
+            paid_amount: newPaid,
+            debt_amount: newDebt,
+            notes: newNotes,
+            status: newStatus,
+          }).eq('id', id)
+
+          const newSoldArticles = parsed.articles.map(a => ({
+            sale_id: id,
+            product_name: a.nom,
+            quantity: a.quantite,
+            unit_price: a.prix_unitaire,
+          }))
+          await supabase.from('sold_articles').insert(newSoldArticles)
+
+          return NextResponse.json({ success: true })
+        }
+      }
+
+      const localSales = getLocalDb()
+      const idx = localSales.findIndex((s: any) => s.id === id)
+      if (idx !== -1) {
+        const sale = localSales[idx]
+        const addedAmount = parsed.total_facture || 0
+        const newTotal = (sale.total_amount || 0) + addedAmount
+        const newPaid = sale.type === 'cash_in' ? newTotal : (sale.paid_amount || 0)
+        const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : (sale.debt_amount || 0)
+        sale.total_amount = newTotal
+        sale.paid_amount = newPaid
+        sale.debt_amount = newDebt
+        sale.notes = sale.notes ? `${sale.notes}, ${text}` : text
+        sale.status = newDebt > 0 && sale.type === 'sale_credit' ? 'debt' : 'paid'
+        sale.articles = [
+          ...(sale.articles || []),
+          ...parsed.articles.map(a => ({
+            name: a.nom,
+            quantity: a.quantite,
+            unit_price: a.prix_unitaire,
+          }))
+        ]
+        saveLocalDb(localSales)
+        return NextResponse.json({ success: true, sale })
+      }
+      return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
+    }
+
+    if (action === 'update_sale') {
+      const updatedArticles = articles || []
+      const newTotal = updatedArticles.reduce((acc: number, a: any) => acc + ((a.quantity || a.quantite || 0) * (a.unit_price || a.prix_unitaire || 0)), 0)
+      const newNotes = updatedArticles.map((a: any) => `${a.quantity} ${a.name} à ${a.unit_price}`).join(', ')
+
+      if (isSupabaseConfigured() && supabase) {
+        const { data: currentSale } = await supabase.from('sales').select('*').eq('id', id).single()
+        if (currentSale) {
+          const isCashIn = currentSale.type === 'cash_in'
+          const newPaid = isCashIn ? newTotal : (currentSale.paid_amount || 0)
+          const newDebt = currentSale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
+          const patchObj: any = {
+            total_amount: newTotal,
+            paid_amount: newPaid,
+            debt_amount: newDebt,
+            notes: newNotes,
+            status: newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid',
+          }
+          if (clientName) patchObj.client_name = clientName
+          await supabase.from('sales').update(patchObj).eq('id', id)
+
+          await supabase.from('sold_articles').delete().eq('sale_id', id)
+          if (updatedArticles.length > 0) {
+            await supabase.from('sold_articles').insert(
+              updatedArticles.map((a: any) => ({
+                sale_id: id,
+                product_name: a.name || a.nom,
+                quantity: a.quantity || a.quantite,
+                unit_price: a.unit_price || a.prix_unitaire,
+              }))
+            )
+          }
+          return NextResponse.json({ success: true })
+        }
+      }
+
+      const localSales = getLocalDb()
+      const idx = localSales.findIndex((s: any) => s.id === id)
+      if (idx !== -1) {
+        const sale = localSales[idx]
+        const isCashIn = sale.type === 'cash_in'
+        const newPaid = isCashIn ? newTotal : (sale.paid_amount || 0)
+        const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
+        sale.total_amount = newTotal
+        sale.paid_amount = newPaid
+        sale.debt_amount = newDebt
+        sale.notes = newNotes
+        if (clientName) sale.client_name = clientName
+        sale.articles = updatedArticles.map((a: any) => ({
+          name: a.name || a.nom,
+          quantity: a.quantity || a.quantite,
+          unit_price: a.unit_price || a.prix_unitaire,
+        }))
+        saveLocalDb(localSales)
+        return NextResponse.json({ success: true, sale })
+      }
+      return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
+    }
+
+    if (action === 'update_category') {
+      if (isSupabaseConfigured() && supabase) {
+        await supabase.from('sales').update({ category }).eq('id', id)
+        return NextResponse.json({ success: true })
+      }
+      const localSales = getLocalDb()
+      const idx = localSales.findIndex((s: any) => s.id === id)
+      if (idx !== -1) {
+        localSales[idx].category = category
+        saveLocalDb(localSales)
+        return NextResponse.json({ success: true })
+      }
+      return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
+    }
+
+    return NextResponse.json({ error: 'Action inconnue' }, { status: 400 })
+  } catch (err: any) {
+    console.error('Erreur dans PATCH /api/sales :', err)
+    return NextResponse.json({ error: err?.message || 'Erreur serveur' }, { status: 500 })
+  }
+}

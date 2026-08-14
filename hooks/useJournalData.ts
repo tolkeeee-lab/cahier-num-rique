@@ -10,6 +10,8 @@ import {
 } from '@/lib/offlineDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
+import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
+
 export interface Sale {
   id: string
   shop_id?: string
@@ -199,6 +201,143 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     }
   }
 
+  const addArticleToSale = async (saleId: string, text: string, penColor?: string) => {
+    const activePen = penColor || 'blue'
+    const parsed = parseTextLocally(text, activePen)
+
+    if (!parsed || !parsed.articles || parsed.articles.length === 0) {
+      throw new Error("Saisie d'article non reconnue")
+    }
+
+    const offlineSales = getOfflineSales(shopId)
+    const idx = offlineSales.findIndex(s => s.id === saleId)
+
+    if (idx !== -1) {
+      const sale = offlineSales[idx]
+      const addedAmount = parsed.total_facture || 0
+      const newTotal = (sale.total || 0) + addedAmount
+      const newPaid = sale.type === 'cash_in' ? newTotal : (sale.paid || 0)
+      const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : (sale.debt || 0)
+
+      sale.total = newTotal
+      sale.paid = newPaid
+      sale.debt = newDebt
+      sale.status = newDebt > 0 && sale.type === 'sale_credit' ? 'debt' : 'paid'
+      sale.notes = sale.notes ? `${sale.notes}, ${text}` : text
+      sale.articles = [
+        ...(sale.articles || []),
+        ...parsed.articles.map(a => ({
+          name: a.nom,
+          quantity: a.quantite,
+          unit_price: a.prix_unitaire,
+        }))
+      ]
+      sale.is_synced = false
+      replaceOfflineSales(shopId, offlineSales)
+      reloadData()
+    }
+
+    if (isSupabaseClientConfigured() && isOnline) {
+      try {
+        await fetch('/api/sales', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId,
+          },
+          body: JSON.stringify({
+            id: saleId,
+            action: 'add_article',
+            text,
+            penColor: activePen,
+          }),
+        })
+      } catch (e) {
+        console.warn('Erreur PATCH add_article:', e)
+      }
+    }
+  }
+
+  const updateSale = async (
+    saleId: string,
+    updatedArticles: Array<{ name: string; quantity: number; unit_price: number }>,
+    clientName?: string
+  ) => {
+    const newTotal = updatedArticles.reduce((acc, a) => acc + (a.quantity * a.unit_price), 0)
+    const newNotes = updatedArticles.map(a => `${a.quantity} ${a.name} à ${a.unit_price}`).join(', ')
+
+    const offlineSales = getOfflineSales(shopId)
+    const idx = offlineSales.findIndex(s => s.id === saleId)
+
+    if (idx !== -1) {
+      const sale = offlineSales[idx]
+      const isCashIn = sale.type === 'cash_in'
+      const newPaid = isCashIn ? newTotal : (sale.paid || 0)
+      const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
+
+      sale.total = newTotal
+      sale.paid = newPaid
+      sale.debt = newDebt
+      sale.status = (newDebt > 0 && sale.type === 'sale_credit') ? 'debt' : 'paid'
+      sale.notes = newNotes
+      if (clientName) sale.client = clientName
+      sale.articles = updatedArticles
+      sale.is_synced = false
+      replaceOfflineSales(shopId, offlineSales)
+      reloadData()
+    }
+
+    if (isSupabaseClientConfigured() && isOnline) {
+      try {
+        await fetch('/api/sales', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId,
+          },
+          body: JSON.stringify({
+            id: saleId,
+            action: 'update_sale',
+            articles: updatedArticles,
+            clientName,
+          }),
+        })
+      } catch (e) {
+        console.warn('Erreur PATCH update_sale:', e)
+      }
+    }
+  }
+
+  const updateCategory = async (saleId: string, category: string) => {
+    const offlineSales = getOfflineSales(shopId)
+    const idx = offlineSales.findIndex(s => s.id === saleId)
+    if (idx !== -1) {
+      offlineSales[idx].category = category
+      offlineSales[idx].is_synced = false
+      replaceOfflineSales(shopId, offlineSales)
+      reloadData()
+    }
+
+    if (isSupabaseClientConfigured() && isOnline) {
+      try {
+        await fetch('/api/sales', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId,
+          },
+          body: JSON.stringify({
+            id: saleId,
+            action: 'update_category',
+            category,
+          }),
+        })
+      } catch (e) {
+        console.warn('Erreur PATCH update_category:', e)
+      }
+    }
+  }
+
   return {
     sales,
     allSales,
@@ -209,5 +348,8 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     isLoading,
     reloadData,
     crossOutSale,
+    addArticleToSale,
+    updateSale,
+    updateCategory,
   }
 }
