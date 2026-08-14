@@ -57,15 +57,15 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   const getBadgeClass = (penId: string) => {
     switch (penId) {
       case 'red':
-        return 'bg-rose-100/80 text-rose-800 border-rose-300'
+        return 'bg-rose-100/90 text-rose-800 border-rose-300'
       case 'green':
-        return 'bg-emerald-100/80 text-emerald-800 border-emerald-300'
+        return 'bg-emerald-100/90 text-emerald-800 border-emerald-300'
       case 'purple':
-        return 'bg-fuchsia-100/80 text-fuchsia-800 border-fuchsia-300'
+        return 'bg-fuchsia-100/90 text-fuchsia-800 border-fuchsia-300'
       case 'yellow':
-        return 'bg-amber-100/80 text-amber-800 border-amber-300'
+        return 'bg-amber-100/90 text-amber-800 border-amber-300'
       default:
-        return 'bg-blue-100/80 text-blue-800 border-blue-300'
+        return 'bg-blue-100/90 text-blue-800 border-blue-300'
     }
   }
 
@@ -79,48 +79,48 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   })
 
   return (
-    <div className="w-full max-w-4xl mx-auto rounded-3xl shadow-2xl border-2 border-[#064e3b]/30 overflow-hidden relative min-h-[650px] flex flex-col justify-between transition-all">
+    <div className="w-full max-w-4xl mx-auto bg-[#fdfaf2] text-[#1e1a18] rounded-3xl shadow-2xl border-2 border-amber-950/20 overflow-hidden relative min-h-[600px] flex flex-col justify-between transition-all">
       
       {/* Reliure Cuir Émeraude & Anneaux Métalliques en Laiton */}
-      <div className="absolute left-0 top-0 bottom-0 w-12 notebook-cover-left flex flex-col justify-around py-6 z-20 pointer-events-none">
-        {Array.from({ length: 14 }).map((_, i) => (
+      <div className="absolute left-0 top-0 bottom-0 w-10 notebook-cover-left flex flex-col justify-around py-4 z-20 pointer-events-none shadow-xl">
+        {Array.from({ length: 15 }).map((_, i) => (
           <div key={i} className="flex items-center justify-between px-1">
             <div className="brass-screw" />
-            <div className="w-8 h-2 spiral-ring shadow-lg" />
+            <div className="w-6 h-2 spiral-ring shadow-md" />
           </div>
         ))}
       </div>
 
-      {/* Véritable Papier Seyes Ivoire */}
-      <div className="lined-paper relative pl-16 pr-8 py-8 flex-grow flex flex-col justify-between">
+      {/* Page Papier Seyes Ivoire */}
+      <div className="lined-paper relative pl-14 pr-6 py-6 flex-grow flex flex-col justify-between min-h-[580px]">
         
-        <div className="relative z-10 space-y-6">
-          {/* Entête du Cahier avec Médaillon en Laiton */}
-          <div className="flex items-center justify-between border-b-2 border-blue-300/40 pb-3">
+        <div className="relative z-10 space-y-5">
+          {/* Entête du Cahier Seyes avec Stamp Date */}
+          <div className="flex items-center justify-between border-b-2 border-blue-200/60 pb-3">
             <div className="flex items-center gap-2">
-              <div className="brass-medallion w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs">
-                <BookOpen className="w-4 h-4" />
+              <div className="brass-medallion w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
+                <BookOpen className="w-3.5 h-3.5" />
               </div>
-              <div className="font-handwritten text-xl font-bold text-blue-900 tracking-wide">
+              <div className="font-handwritten text-lg font-bold text-blue-900 tracking-wide">
                 📅 {currentDateStr || "Aujourd'hui"}
               </div>
             </div>
             
-            <div className="text-xs font-mono font-bold text-amber-900/70 uppercase tracking-widest bg-amber-200/50 px-3 py-1 rounded-full border border-amber-300/60 shadow-sm">
+            <div className="text-[11px] font-mono font-bold text-amber-900/80 uppercase tracking-widest bg-amber-100/80 px-3 py-1 rounded-full border border-amber-300/60 shadow-sm">
               Cahier de Caisse Seyes
             </div>
           </div>
 
           {/* Liste des Écritures Manuscrites */}
           {filteredSales.length === 0 ? (
-            <div className="py-20 text-center text-gray-400 handwritten text-xl">
+            <div className="py-20 text-center text-gray-400 handwritten text-lg">
               Aucune écriture enregistrée sur cette page.
               <p className="text-xs font-sans text-gray-500 mt-2">
                 Choisissez un stylo et saisissez votre première opération ci-dessus.
               </p>
             </div>
           ) : (
-            <div className="space-y-4 lined-text-container">
+            <div className="space-y-3.5 lined-text-container">
               {filteredSales.map((sale) => {
                 const inkClass = getPenInkClass(sale.pen_color)
                 const badgeClass = getBadgeClass(sale.pen_color)
@@ -132,11 +132,11 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     className={`relative group p-3 rounded-xl transition-all border ${
                       isCrossedOut
                         ? 'opacity-40 bg-gray-200/40 border-gray-300 line-through'
-                        : 'bg-white/75 hover:bg-white border-blue-200/60 shadow-sm hover:shadow-md'
+                        : 'bg-white/80 hover:bg-white border-blue-200/60 shadow-sm hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      {/* Détail de l'écriture au stylo */}
+                      {/* Contenu principal de l'écriture au stylo */}
                       <div className="flex-grow space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-mono text-gray-400 font-bold">{sale.time}</span>
@@ -179,7 +179,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         )}
                       </div>
 
-                      {/* Montant & Boutons d'Impression/Annulation */}
+                      {/* Montant Total et Actions */}
                       <div className="flex flex-col items-end gap-2">
                         <span className={`text-base font-extrabold ${inkClass}`}>
                           {formatPrice(sale.total)}
