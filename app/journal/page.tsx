@@ -310,12 +310,13 @@ export default function JournalPage() {
             {activeTab === 'cahier' && (
               <div className="flex-1 min-h-0 flex flex-col space-y-1 overflow-hidden">
 
-                {/* Stylos Bic 4-Couleurs (FIXE) */}
+                {/* Stylos Bic 4-Couleurs avec Totaux (FIXE) */}
                 <div className="flex-shrink-0 z-10">
                   <NotebookToolbar
                     pens={pens}
                     selectedPen={selectedPen}
                     onSelectPen={setSelectedPen}
+                    sales={journalData.sales}
                   />
                 </div>
 

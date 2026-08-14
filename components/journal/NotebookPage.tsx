@@ -174,26 +174,71 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
           className="flex-1 min-h-0 overflow-y-auto space-y-2 sm:space-y-3 lined-text-container pr-1 scrollbar-none pb-2"
         >
           {salesByDate.map(([dateKey, dateSales]) => {
-            const dailyTurnover = dateSales
-              .filter(s => s.status !== 'crossed_out')
-              .reduce((sum, s) => {
-                if (s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit') {
-                  return sum + (s.total || 0)
-                }
-                return sum
-              }, 0)
+            const validDateSales = dateSales.filter(s => s.status !== 'crossed_out')
+
+            const salesTotal = validDateSales
+              .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit')
+              .reduce((sum, s) => sum + (s.total || 0), 0)
+
+            const expensesTotal = validDateSales
+              .filter(s => s.pen_color === 'red' || s.type === 'cash_out')
+              .reduce((sum, s) => sum + (s.total || 0), 0)
+
+            const stockCashTotal = validDateSales
+              .filter(s => s.pen_color === 'green' || s.type === 'stock_cash')
+              .reduce((sum, s) => sum + (s.total || 0), 0)
+
+            const stockCreditTotal = validDateSales
+              .filter(s => s.pen_color === 'purple' || s.type === 'stock_credit')
+              .reduce((sum, s) => sum + (s.total || 0), 0)
+
+            const debtCustomerTotal = validDateSales
+              .filter(s => s.pen_color === 'yellow' || s.type === 'sale_credit')
+              .reduce((sum, s) => sum + (s.debt || s.total || 0), 0)
+
+            const dayNet = salesTotal - expensesTotal - stockCashTotal
 
             return (
               <div key={dateKey} className="space-y-2">
-                {/* ── Bannière Date & CA du Jour ── */}
-                <div className="mx-auto my-1 flex flex-col items-center justify-center p-2 sm:p-2.5 bg-amber-50/95 border border-amber-300 rounded-xl shadow-2xs text-center max-w-xs sm:max-w-sm w-full animate-in fade-in duration-150">
+                {/* ── Bannière Date & Totaux Complets par Catégorie ── */}
+                <div className="mx-auto my-1 flex flex-col items-center justify-center p-2 sm:p-2.5 bg-amber-50/95 border border-amber-300 rounded-xl shadow-2xs text-center max-w-lg w-full animate-in fade-in duration-150 space-y-1">
                   <div className="flex items-center gap-1.5 text-amber-950 font-extrabold text-xs sm:text-sm font-handwritten tracking-wide">
                     <span>📅</span>
                     <span>{formatLongDateFr(dateKey)}</span>
                   </div>
-                  <div className="mt-0.5 inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-100 border border-emerald-300 text-emerald-950 rounded-full font-mono text-[11px] sm:text-xs font-black shadow-2xs">
-                    <span className="text-emerald-700">💰</span>
-                    <span>CA du Jour : {dailyTurnover > 0 ? `+${formatPrice(dailyTurnover)}` : '0 F'}</span>
+
+                  {/* Ligne des totaux détaillés */}
+                  <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap font-mono text-[10px] sm:text-[11px] font-black">
+                    <span className="px-2 py-0.5 bg-blue-100 border border-blue-300 text-blue-950 rounded-full shadow-2xs">
+                      💰 Ventes : +{formatPrice(salesTotal)}
+                    </span>
+                    {expensesTotal > 0 && (
+                      <span className="px-2 py-0.5 bg-rose-100 border border-rose-300 text-rose-950 rounded-full shadow-2xs">
+                        🔴 Dépenses : -{formatPrice(expensesTotal)}
+                      </span>
+                    )}
+                    {stockCashTotal > 0 && (
+                      <span className="px-2 py-0.5 bg-emerald-100 border border-emerald-300 text-emerald-950 rounded-full shadow-2xs">
+                        🟢 Stock Cash : -{formatPrice(stockCashTotal)}
+                      </span>
+                    )}
+                    {stockCreditTotal > 0 && (
+                      <span className="px-2 py-0.5 bg-fuchsia-100 border border-fuchsia-300 text-fuchsia-950 rounded-full shadow-2xs">
+                        🟣 Stock Crédit : {formatPrice(stockCreditTotal)}
+                      </span>
+                    )}
+                    {debtCustomerTotal > 0 && (
+                      <span className="px-2 py-0.5 bg-amber-100 border border-amber-300 text-amber-950 rounded-full shadow-2xs">
+                        🟡 Crédits Clients : {formatPrice(debtCustomerTotal)}
+                      </span>
+                    )}
+                    <span className={`px-2 py-0.5 border rounded-full shadow-2xs font-extrabold ${
+                      dayNet >= 0
+                        ? 'bg-emerald-200/90 border-emerald-400 text-emerald-950'
+                        : 'bg-rose-200/90 border-rose-400 text-rose-950'
+                    }`}>
+                      ⭐ Total Net : {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                    </span>
                   </div>
                 </div>
 
