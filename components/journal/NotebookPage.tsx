@@ -167,56 +167,24 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
               .filter(s => s.pen_color === 'green' || s.type === 'stock_cash')
               .reduce((sum, s) => sum + (s.total || 0), 0)
 
-            const stockCreditTotal = validDateSales
-              .filter(s => s.pen_color === 'purple' || s.type === 'stock_credit')
-              .reduce((sum, s) => sum + (s.total || 0), 0)
-
-            const debtCustomerTotal = validDateSales
-              .filter(s => s.pen_color === 'yellow' || s.type === 'sale_credit')
-              .reduce((sum, s) => sum + (s.debt || s.total || 0), 0)
-
             const dayNet = salesTotal - expensesTotal - stockCashTotal
 
             return (
-              <div key={dateKey} className="space-y-2">
-                {/* ── Bannière Date & Totaux Complets par Catégorie ── */}
-                <div className="mx-auto my-1 flex flex-col items-center justify-center p-2 sm:p-2.5 bg-amber-50/95 border border-amber-300 rounded-xl shadow-2xs text-center max-w-lg w-full animate-in fade-in duration-150 space-y-1">
-                  <div className="flex items-center gap-1.5 text-amber-950 font-extrabold text-xs sm:text-sm font-handwritten tracking-wide">
+              <div key={dateKey} className="space-y-1.5">
+                {/* ── Séparateur Date Authentique Cahier d'Écolier ── */}
+                <div className="flex items-center justify-between gap-2 py-0.5 px-1 border-b border-dashed border-amber-300/80 font-handwritten text-xs sm:text-sm text-amber-900 select-none font-bold">
+                  <div className="flex items-center gap-1.5">
                     <span>📅</span>
-                    <span>{formatLongDateFr(dateKey)}</span>
+                    <span className="font-extrabold text-amber-950">{formatLongDateFr(dateKey)}</span>
                   </div>
-
-                  {/* Ligne des totaux détaillés */}
-                  <div className="flex items-center justify-center gap-1 sm:gap-1.5 flex-wrap font-mono text-[10px] sm:text-[11px] font-black">
-                    <span className="px-2 py-0.5 bg-blue-100 border border-blue-300 text-blue-950 rounded-full shadow-2xs">
-                      💰 Ventes : +{formatPrice(salesTotal)}
-                    </span>
-                    {expensesTotal > 0 && (
-                      <span className="px-2 py-0.5 bg-rose-100 border border-rose-300 text-rose-950 rounded-full shadow-2xs">
-                        🔴 Dépenses : -{formatPrice(expensesTotal)}
-                      </span>
-                    )}
-                    {stockCashTotal > 0 && (
-                      <span className="px-2 py-0.5 bg-emerald-100 border border-emerald-300 text-emerald-950 rounded-full shadow-2xs">
-                        🟢 Stock Cash : -{formatPrice(stockCashTotal)}
-                      </span>
-                    )}
-                    {stockCreditTotal > 0 && (
-                      <span className="px-2 py-0.5 bg-fuchsia-100 border border-fuchsia-300 text-fuchsia-950 rounded-full shadow-2xs">
-                        🟣 Stock Crédit : {formatPrice(stockCreditTotal)}
-                      </span>
-                    )}
-                    {debtCustomerTotal > 0 && (
-                      <span className="px-2 py-0.5 bg-amber-100 border border-amber-300 text-amber-950 rounded-full shadow-2xs">
-                        🟡 Crédits Clients : {formatPrice(debtCustomerTotal)}
-                      </span>
-                    )}
-                    <span className={`px-2 py-0.5 border rounded-full shadow-2xs font-extrabold ${
+                  <div className="flex items-center gap-1 font-mono text-[10px] sm:text-xs">
+                    <span className="text-blue-900 font-extrabold hidden sm:inline">Ventes: +{formatPrice(salesTotal)}</span>
+                    <span className={`px-2 py-0.2 rounded-full font-black border ${
                       dayNet >= 0
-                        ? 'bg-emerald-200/90 border-emerald-400 text-emerald-950'
-                        : 'bg-rose-200/90 border-rose-400 text-rose-950'
+                        ? 'bg-emerald-100/90 border-emerald-300 text-emerald-950'
+                        : 'bg-rose-100/90 border-rose-300 text-rose-950'
                     }`}>
-                      ⭐ Total Net : {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                      Net: {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
                     </span>
                   </div>
                 </div>
