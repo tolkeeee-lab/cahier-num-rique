@@ -201,9 +201,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             <button
               type="button"
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="p-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs cursor-pointer"
+              className="p-1.5 rounded-xl bg-amber-100/90 text-amber-950 border border-amber-300 shadow-xs cursor-pointer hover:bg-amber-200"
+              title="Plus d'actions"
             >
-              <MoreVertical className="w-3.5 h-3.5" />
+              <MoreVertical className="w-4 h-4" />
             </button>
 
             {showMobileMenu && (
@@ -215,19 +216,19 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                 />
 
                 {/* Tiroir Popup Net & Opaque */}
-                <div className="fixed right-3 top-12 w-56 bg-[#fffdf2] border-2 border-amber-400 rounded-2xl shadow-2xl z-50 p-2 space-y-1 font-mono text-xs animate-in fade-in zoom-in-95">
-                  <div className="px-2 py-1 text-[10px] text-amber-900 font-extrabold uppercase border-b border-amber-200/80 mb-1">
-                    Actions Rapides
+                <div className="absolute right-0 top-full mt-1.5 w-64 bg-[#fffdf2] border-2 border-amber-400 rounded-2xl shadow-2xl z-50 p-2 space-y-1 font-mono text-xs animate-in fade-in zoom-in-95">
+                  <div className="px-2.5 py-1 text-[10px] text-amber-900 font-black uppercase border-b border-amber-200 mb-1 tracking-wider">
+                    Menu & Outils
                   </div>
 
                   {features.enableCashClosing && onOpenCashClosing && (
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenCashClosing() }}
-                      className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-amber-100/90 text-gray-900 font-extrabold flex items-center gap-2.5 transition-colors cursor-pointer"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0">
-                        <Calculator className="w-3.5 h-3.5 text-amber-800" />
+                      <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0 text-amber-900">
+                        <Calculator className="w-3.5 h-3.5" />
                       </div>
                       <span>Clôture de Caisse (Z)</span>
                     </button>
@@ -237,10 +238,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenBoutiqueAssistant() }}
-                      className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-amber-100/90 text-gray-900 font-extrabold flex items-center gap-2.5 transition-colors cursor-pointer"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-800" />
+                      <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0 text-amber-900">
+                        <Sparkles className="w-3.5 h-3.5" />
                       </div>
                       <span>Assistant IA Boutique</span>
                     </button>
@@ -250,10 +251,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenBarcodeScanner() }}
-                      className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-amber-100/90 text-gray-900 font-extrabold flex items-center gap-2.5 transition-colors cursor-pointer"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      <div className="w-6 h-6 rounded-lg bg-gray-200/80 flex items-center justify-center flex-shrink-0">
-                        <ScanLine className="w-3.5 h-3.5 text-gray-800" />
+                      <div className="w-6 h-6 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0 text-gray-800">
+                        <ScanLine className="w-3.5 h-3.5" />
                       </div>
                       <span>Scanner Code-barres</span>
                     </button>
@@ -263,12 +264,12 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenSyscohada() }}
-                      className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-amber-100/90 text-gray-900 font-extrabold flex items-center gap-2.5 transition-colors cursor-pointer"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0">
-                        <BookText className="w-3.5 h-3.5 text-amber-800" />
+                      <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0 text-amber-900">
+                        <BookText className="w-3.5 h-3.5" />
                       </div>
-                      <span>SYSCOHADA</span>
+                      <span>Compta SYSCOHADA</span>
                     </button>
                   )}
 
@@ -276,10 +277,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onLogout() }}
-                      className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-rose-100 text-rose-700 font-extrabold flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-200/80 mt-1 pt-1.5"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-100 text-rose-700 font-black flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-200 mt-1 pt-1.5 whitespace-nowrap"
                     >
-                      <div className="w-6 h-6 rounded-lg bg-rose-200/80 flex items-center justify-center flex-shrink-0">
-                        <LogOut className="w-3.5 h-3.5 text-rose-700" />
+                      <div className="w-6 h-6 rounded-lg bg-rose-200/80 flex items-center justify-center flex-shrink-0 text-rose-700">
+                        <LogOut className="w-3.5 h-3.5" />
                       </div>
                       <span>Déconnexion</span>
                     </button>

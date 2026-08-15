@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useMemo } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3 } from 'lucide-react'
+import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -106,6 +106,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   const listRef = useRef<HTMLDivElement>(null)
   const [activeChangeSaleId, setActiveChangeSaleId] = React.useState<string | null>(null)
   const [changeReceivedMap, setChangeReceivedMap] = React.useState<Record<string, string>>({})
+  const [activeActionMenuSaleId, setActiveActionMenuSaleId] = React.useState<string | null>(null)
 
   useEffect(() => {
     if (listRef.current && sales.length > 0) {
@@ -246,8 +247,8 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                             </span>
 
                             {!isCrossedOut && (
-                              <div className="flex items-center gap-0.5 opacity-90 group-hover:opacity-100 transition-opacity">
-                                {/* Bouton Monnaie */}
+                              <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity relative">
+                                {/* Bouton Monnaie Rapide */}
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -260,7 +261,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                       }
                                     }
                                   }}
-                                  className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold transition-all flex items-center gap-0.5 border cursor-pointer ${
+                                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-0.5 border cursor-pointer ${
                                     isChangeActive
                                       ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
                                       : 'text-amber-800 bg-amber-100/90 hover:bg-amber-200 border-amber-300'
@@ -271,49 +272,97 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                   <span className="hidden sm:inline">Monnaie</span>
                                 </button>
 
-                                {/* Bouton ajouter article */}
-                                {canAddArticle && (
+                                {/* Bouton Trois Points (Actions Rapides) */}
+                                <div className="relative">
                                   <button
                                     type="button"
-                                    onClick={() => onAddArticleToSale!(sale.id, sale.client)}
-                                    className="p-1 text-gray-400 hover:text-emerald-600 rounded-md hover:bg-emerald-50 transition-colors cursor-pointer"
-                                    title="Ajouter article"
+                                    onClick={() => setActiveActionMenuSaleId(activeActionMenuSaleId === sale.id ? null : sale.id)}
+                                    className="p-1 rounded-md text-amber-900 hover:bg-amber-200/90 bg-amber-100/80 border border-amber-300 shadow-2xs transition-colors cursor-pointer"
+                                    title="Options de cette vente"
                                   >
-                                    <PlusCircle className="w-3 h-3" />
+                                    <MoreVertical className="w-3.5 h-3.5" />
                                   </button>
-                                )}
 
-                                {/* Bouton modifier */}
-                                {onEditSale && (
-                                  <button
-                                    type="button"
-                                    onClick={() => onEditSale(sale)}
-                                    className="p-1 text-gray-400 hover:text-amber-600 rounded-md hover:bg-amber-50 transition-colors cursor-pointer"
-                                    title="Modifier"
-                                  >
-                                    <Edit3 className="w-3 h-3" />
-                                  </button>
-                                )}
+                                  {/* Menu Popup d'actions pour cette écriture */}
+                                  {activeActionMenuSaleId === sale.id && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setActiveActionMenuSaleId(null)}
+                                      />
+                                      <div className="absolute right-0 top-full mt-1 w-52 bg-[#fffdf2] border-2 border-amber-400 rounded-xl shadow-2xl z-50 p-1.5 space-y-0.5 font-mono text-xs animate-in fade-in zoom-in-95">
+                                        {canAddArticle && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setActiveActionMenuSaleId(null)
+                                              onAddArticleToSale!(sale.id, sale.client)
+                                            }}
+                                            className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-emerald-50 text-emerald-900 font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                                          >
+                                            <PlusCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Ajouter un article</span>
+                                          </button>
+                                        )}
 
-                                {onPrintReceipt && (
-                                  <button
-                                    type="button"
-                                    onClick={() => onPrintReceipt(sale)}
-                                    className="p-1 text-gray-500 hover:text-blue-600 rounded-md hover:bg-blue-50 transition-colors cursor-pointer"
-                                    title="Reçu"
-                                  >
-                                    <Printer className="w-3 h-3" />
-                                  </button>
-                                )}
+                                        {onEditSale && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setActiveActionMenuSaleId(null)
+                                              onEditSale(sale)
+                                            }}
+                                            className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-amber-100 text-gray-900 font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                                          >
+                                            <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                                            <span>Modifier</span>
+                                          </button>
+                                        )}
 
-                                <button
-                                  type="button"
-                                  onClick={() => onCrossOutSale(sale.id)}
-                                  className="p-1 text-gray-400 hover:text-rose-500 rounded-md hover:bg-rose-50 transition-colors cursor-pointer"
-                                  title="Supprimer"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
+                                        {onPrintReceipt && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setActiveActionMenuSaleId(null)
+                                              onPrintReceipt(sale)
+                                            }}
+                                            className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                                          >
+                                            <Printer className="w-3.5 h-3.5 text-blue-700" />
+                                            <span>Imprimer le reçu</span>
+                                          </button>
+                                        )}
+
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setActiveActionMenuSaleId(null)
+                                            setActiveChangeSaleId(sale.id)
+                                            if (changeReceivedMap[sale.id] === undefined) {
+                                              setChangeReceivedMap(prev => ({ ...prev, [sale.id]: '' }))
+                                            }
+                                          }}
+                                          className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-amber-100 text-amber-900 font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                                        >
+                                          <Calculator className="w-3.5 h-3.5 text-amber-700" />
+                                          <span>Calculer la monnaie</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setActiveActionMenuSaleId(null)
+                                            onCrossOutSale(sale.id)
+                                          }}
+                                          className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-rose-100 text-rose-700 font-bold flex items-center gap-2 transition-colors cursor-pointer border-t border-amber-200 mt-1 pt-1"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                                          <span>Rayer cette ligne</span>
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
