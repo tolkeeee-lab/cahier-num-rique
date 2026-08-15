@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useMemo } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, Search } from 'lucide-react'
+import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3 } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -32,8 +32,7 @@ interface NotebookPageProps {
   onPrintReceipt?: (sale: SaleItem) => void
   onAddArticleToSale?: (saleId: string, clientName: string) => void
   onEditSale?: (sale: SaleItem) => void
-  searchQuery: string
-  onSearchChange?: (query: string) => void
+  searchQuery?: string
   currentDateStr: string
 }
 
@@ -101,8 +100,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   onPrintReceipt,
   onAddArticleToSale,
   onEditSale,
-  searchQuery,
-  onSearchChange,
+  searchQuery = '',
   currentDateStr,
 }) => {
   const listRef = useRef<HTMLDivElement>(null)
@@ -148,25 +146,6 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   return (
     <div className="lined-paper relative pl-5 sm:pl-9 pr-1.5 sm:pr-3.5 py-1 sm:py-2 flex-1 min-h-0 flex flex-col rounded-xl sm:rounded-2xl border border-amber-300/40 shadow-xs overflow-hidden bg-[#fdfaf2]">
       <div className="relative z-10 flex flex-col h-full space-y-1 sm:space-y-1.5">
-
-        {/* Barre de Recherche Épurée */}
-        {onSearchChange && (
-          <div className="flex items-center justify-between gap-2 border-b border-blue-200/50 pb-1 flex-shrink-0">
-            <div className="relative flex-grow max-w-xs sm:max-w-sm">
-              <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-amber-700" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Rechercher une vente..."
-                className="w-full pl-7 pr-3 py-0.5 bg-amber-50/80 border border-amber-300/80 rounded-full text-xs text-gray-900 placeholder-amber-800/50 focus:outline-none focus:border-amber-500 font-mono shadow-inner"
-              />
-            </div>
-            <div className="hidden sm:inline-block text-[10px] font-mono font-bold text-amber-900/80 uppercase tracking-widest bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300/60 shadow-2xs">
-              Seyes
-            </div>
-          </div>
-        )}
 
         {/* Liste des écritures avec Bannière Date & CA sur chaque journée */}
         <div

@@ -208,7 +208,6 @@ export default function JournalPage() {
   // ── Onglets & UI locale ────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<JournalTab>('cahier')
   const [selectedPen, setSelectedPen] = useState('blue')
-  const [searchQuery, setSearchQuery] = useState('')
   const [postItMessage, setPostItMessage] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState('')
   const [receiptSale, setReceiptSale] = useState<any>(null)
@@ -462,8 +461,6 @@ export default function JournalPage() {
                       setAddArticleInput('')
                     }}
                     onEditSale={(sale) => setEditingSale(sale)}
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
                     currentDateStr={getTodayDateString()}
                   />
                 </div>
