@@ -304,43 +304,43 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
         </div>
       </div>
 
-      {/* Rangée 2 : Mini-Barre Soldes 3 Pilules (Ultra Compacte sur Mobile) */}
-      <div className="grid grid-cols-3 gap-1.5 pt-1 font-mono">
+      {/* Rangée 2 : Tiroirs KPI Défilables Horizontalement sur Mobile (et Grille 3 colonnes sur Écran Large) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 font-mono sm:grid sm:grid-cols-3 w-full">
         {/* Tiroir Cash */}
-        <div className="bg-amber-100/90 border border-amber-300/90 rounded-xl px-2 py-1 shadow-2xs relative flex flex-col justify-center">
-          <div className="flex items-center justify-between text-[8px] sm:text-[9px] text-amber-900 font-extrabold uppercase">
-            <span className="truncate">{labels.tiroirCash}</span>
+        <div className="flex-shrink-0 min-w-[135px] sm:min-w-0 sm:flex-1 bg-amber-100/90 border border-amber-300/90 rounded-xl px-2.5 py-1 shadow-2xs relative flex flex-col justify-center">
+          <div className="flex items-center justify-between text-[8.5px] sm:text-[9px] text-amber-900 font-extrabold uppercase gap-1">
+            <span className="whitespace-nowrap">{labels.tiroirCash}</span>
             {onOpenCashAdjustment && (
               <button
                 type="button"
                 onClick={onOpenCashAdjustment}
-                className="text-[7px] sm:text-[8px] underline text-amber-800 font-black cursor-pointer"
+                className="text-[7.5px] sm:text-[8px] underline text-amber-800 font-black cursor-pointer flex-shrink-0"
               >
                 AJUST.
               </button>
             )}
           </div>
-          <div className="text-xs sm:text-sm font-black text-amber-950 truncate">
+          <div className="text-xs sm:text-sm font-black text-amber-950 whitespace-nowrap">
             {formatPrice(tiroirCaisse)}
           </div>
         </div>
 
         {/* Crédits Dehors */}
-        <div className="bg-rose-100/80 border border-rose-300/80 rounded-xl px-2 py-1 shadow-2xs flex flex-col justify-center">
-          <div className="text-[8px] sm:text-[9px] text-rose-800 font-extrabold uppercase truncate">
+        <div className="flex-shrink-0 min-w-[135px] sm:min-w-0 sm:flex-1 bg-rose-100/80 border border-rose-300/80 rounded-xl px-2.5 py-1 shadow-2xs flex flex-col justify-center">
+          <div className="text-[8.5px] sm:text-[9px] text-rose-800 font-extrabold uppercase whitespace-nowrap">
             {labels.creditsDehors}
           </div>
-          <div className="text-xs sm:text-sm font-black text-rose-950 truncate">
+          <div className="text-xs sm:text-sm font-black text-rose-950 whitespace-nowrap">
             {formatPrice(argentDehors)}
           </div>
         </div>
 
         {/* Nos Dettes */}
-        <div className="bg-fuchsia-100/80 border border-fuchsia-300/80 rounded-xl px-2 py-1 shadow-2xs flex flex-col justify-center">
-          <div className="text-[8px] sm:text-[9px] text-fuchsia-800 font-extrabold uppercase truncate">
+        <div className="flex-shrink-0 min-w-[135px] sm:min-w-0 sm:flex-1 bg-fuchsia-100/80 border border-fuchsia-300/80 rounded-xl px-2.5 py-1 shadow-2xs flex flex-col justify-center">
+          <div className="text-[8.5px] sm:text-[9px] text-fuchsia-800 font-extrabold uppercase whitespace-nowrap">
             {labels.nosDettes}
           </div>
-          <div className="text-xs sm:text-sm font-black text-fuchsia-950 truncate">
+          <div className="text-xs sm:text-sm font-black text-fuchsia-950 whitespace-nowrap">
             {formatPrice(nosDettes)}
           </div>
         </div>
