@@ -143,16 +143,24 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
           )
         })}
 
-        {/* ── À LA FIN : BOUTON CALCUL & SOLDE NET (Ouvre le Cadre de Calcul) ── */}
+        {/* ── À LA FIN : BOUTON TOTAL / SOLDE NET (Active le Calcul en Page) ── */}
         <button
           type="button"
-          onClick={() => setBreakdownType('total')}
-          className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-950 border border-emerald-300 rounded-full font-mono text-xs font-black shadow-xs flex-shrink-0 ml-auto hover:bg-emerald-200 transition-colors cursor-pointer"
-          title="Ouvrir le cadre des calculs et du solde net"
+          onClick={() => {
+            if (onSelectFilter) {
+              onSelectFilter(activeFilter === 'total' ? 'all' : 'total')
+            }
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-xs font-black shadow-xs flex-shrink-0 ml-auto transition-all cursor-pointer border ${
+            activeFilter === 'total'
+              ? 'bg-emerald-700 text-white border-emerald-800 ring-2 ring-emerald-400 scale-102'
+              : 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-950 border-emerald-300 hover:bg-emerald-200'
+          }`}
+          title="Afficher le calcul complet en page"
         >
-          <Calculator className="w-3.5 h-3.5 text-emerald-800" />
+          <Calculator className={`w-3.5 h-3.5 ${activeFilter === 'total' ? 'text-white' : 'text-emerald-800'}`} />
           <span>SOLDE :</span>
-          <span className="text-emerald-800 font-extrabold">
+          <span className={`font-extrabold ${activeFilter === 'total' ? 'text-white' : 'text-emerald-900'}`}>
             {netTotal >= 0 ? `+${formatPrice(netTotal)}` : `-${formatPrice(Math.abs(netTotal))}`}
           </span>
         </button>

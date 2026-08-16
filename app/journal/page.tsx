@@ -213,6 +213,7 @@ export default function JournalPage() {
   // ── Onglets & UI locale ────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<JournalTab>('cahier')
   const [selectedPen, setSelectedPen] = useState('blue')
+  const [activeFilter, setActiveFilter] = useState('all')
   const [postItMessage, setPostItMessage] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState('')
   const [receiptSale, setReceiptSale] = useState<any>(null)
@@ -461,8 +462,13 @@ export default function JournalPage() {
                   <NotebookToolbar
                     pens={pens}
                     selectedPen={selectedPen}
-                    onSelectPen={setSelectedPen}
+                    onSelectPen={(penId) => {
+                      setSelectedPen(penId)
+                      setActiveFilter(penId)
+                    }}
                     sales={journalData.sales}
+                    activeFilter={activeFilter}
+                    onSelectFilter={setActiveFilter}
                   />
                 </div>
 
@@ -479,6 +485,7 @@ export default function JournalPage() {
                     }}
                     onEditSale={(sale) => setEditingSale(sale)}
                     currentDateStr={getTodayDateString()}
+                    activeFilter={activeFilter}
                   />
                 </div>
 

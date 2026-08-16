@@ -34,6 +34,7 @@ interface NotebookPageProps {
   onEditSale?: (sale: SaleItem) => void
   searchQuery?: string
   currentDateStr: string
+  activeFilter?: string
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -102,6 +103,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   onEditSale,
   searchQuery = '',
   currentDateStr,
+  activeFilter = 'all',
 }) => {
   const listRef = useRef<HTMLDivElement>(null)
   const [activeChangeSaleId, setActiveChangeSaleId] = React.useState<string | null>(null)
@@ -117,8 +119,16 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
     }
   }, [sales.length])
 
+  // Filtrage combiné (Recherche + Filtre par catégorie de stylo)
   const filteredSales = useMemo(() => {
     return sales.filter((s) => {
+      // Filtre par catégorie de stylo cliqué
+      if (activeFilter === 'blue' && !(s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit')) return false
+      if (activeFilter === 'red' && !(s.pen_color === 'red' || s.type === 'cash_out')) return false
+      if (activeFilter === 'green' && !(s.pen_color === 'green' || s.type === 'stock_cash')) return false
+      if (activeFilter === 'purple' && !(s.pen_color === 'purple' || s.type === 'stock_credit')) return false
+      if (activeFilter === 'yellow' && !(s.pen_color === 'yellow' || s.type === 'sale_credit')) return false
+
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase()
       return (
@@ -127,7 +137,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
         (s.articles || []).some((a) => (a.name || '').toLowerCase().includes(q))
       )
     })
-  }, [sales, searchQuery])
+  }, [sales, searchQuery, activeFilter])
 
   const salesByDate = useMemo(() => {
     const map = new Map<string, SaleItem[]>()
@@ -148,49 +158,127 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
     <div className="lined-paper relative pl-5 sm:pl-9 pr-1.5 sm:pr-3.5 py-1 sm:py-2 flex-1 min-h-0 flex flex-col rounded-xl sm:rounded-2xl border border-amber-300/40 shadow-xs overflow-hidden bg-[#fdfaf2]">
       <div className="relative z-10 flex flex-col h-full space-y-1 sm:space-y-1.5">
 
-        {/* Liste des écritures avec Bannière Date & CA sur chaque journée */}
+        {/* Liste des écritures avec Bannière Dynamique de Catégorie sur chaque journée */}
         <div
           ref={listRef}
           className="flex-1 min-h-0 overflow-y-auto space-y-2 sm:space-y-3 lined-text-container pr-1 scrollbar-none pb-2"
         >
           {salesByDate.map(([dateKey, dateSales]) => {
-            const validDateSales = dateSales.filter(s => s.status !== 'crossed_out')
+            const allDaySales = sales.filter(s => s.date === dateKey && s.status !== 'crossed_out')
 
-            const salesTotal = validDateSales
+            const salesTotal = allDaySales
               .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit')
               .reduce((sum, s) => sum + (s.total || 0), 0)
 
-            const expensesTotal = validDateSales
+            const expensesTotal = allDaySales
               .filter(s => s.pen_color === 'red' || s.type === 'cash_out')
               .reduce((sum, s) => sum + (s.total || 0), 0)
 
-            const stockCashTotal = validDateSales
+            const stockCashTotal = allDaySales
               .filter(s => s.pen_color === 'green' || s.type === 'stock_cash')
               .reduce((sum, s) => sum + (s.total || 0), 0)
+
+            const purpleCreditTotal = allDaySales
+              .filter(s => s.pen_color === 'purple' || s.type === 'stock_credit')
+              .reduce((sum, s) => sum + (s.total || 0), 0)
+
+            const yellowCreditTotal = allDaySales
+              .filter(s => s.pen_color === 'yellow' || s.type === 'sale_credit')
+              .reduce((sum, s) => sum + (s.debt || s.total || 0), 0)
 
             const dayNet = salesTotal - expensesTotal - stockCashTotal
 
             return (
               <div key={dateKey} className="space-y-1.5">
-                {/* ── Séparateur Date Authentique Cahier d'Écolier ── */}
-                <div className="flex items-center justify-between gap-2 py-0.5 px-1 border-b border-dashed border-amber-300/80 font-handwritten text-xs sm:text-sm text-amber-900 select-none font-bold">
-                  <div className="flex items-center gap-1.5">
-                    <span>📅</span>
-                    <span className="font-extrabold text-amber-950">{formatLongDateFr(dateKey)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 font-mono text-[10px] sm:text-xs">
-                    <span className="px-2 py-0.2 rounded-full font-extrabold bg-blue-50 text-blue-900 border border-blue-200">
-                      CA: +{formatPrice(salesTotal)}
-                    </span>
-                    <span className={`px-2 py-0.2 rounded-full font-black border ${
-                      dayNet >= 0
-                        ? 'bg-emerald-100/90 border-emerald-300 text-emerald-950 shadow-2xs'
-                        : 'bg-rose-100/90 border-rose-300 text-rose-950 shadow-2xs'
-                    }`}>
-                      Net: {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                {/* ── BANNIÈRE DYNAMIQUE DE CATÉGORIE DU CAHIER ── */}
+                {activeFilter === 'blue' ? (
+                  <div className="flex items-center justify-between gap-2 py-1 px-2 border border-blue-300 font-mono text-xs text-blue-950 font-bold bg-blue-50/90 rounded-xl shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-blue-900 font-bold">
+                      <span>📅</span>
+                      <span>{formatLongDateFr(dateKey)}</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-xs">
+                      🔵 Ventes (CA) : +{formatPrice(salesTotal)}
                     </span>
                   </div>
-                </div>
+                ) : activeFilter === 'red' ? (
+                  <div className="flex items-center justify-between gap-2 py-1 px-2 border border-rose-300 font-mono text-xs text-rose-950 font-bold bg-rose-50/90 rounded-xl shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-rose-900 font-bold">
+                      <span>📅</span>
+                      <span>{formatLongDateFr(dateKey)}</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-rose-600 text-white shadow-xs">
+                      🔴 Dépenses : -{formatPrice(expensesTotal)}
+                    </span>
+                  </div>
+                ) : activeFilter === 'green' ? (
+                  <div className="flex items-center justify-between gap-2 py-1 px-2 border border-emerald-300 font-mono text-xs text-emerald-950 font-bold bg-emerald-50/90 rounded-xl shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-emerald-900 font-bold">
+                      <span>📅</span>
+                      <span>{formatLongDateFr(dateKey)}</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-emerald-600 text-white shadow-xs">
+                      🟢 Achats Stock : -{formatPrice(stockCashTotal)}
+                    </span>
+                  </div>
+                ) : activeFilter === 'purple' ? (
+                  <div className="flex items-center justify-between gap-2 py-1 px-2 border border-fuchsia-300 font-mono text-xs text-fuchsia-950 font-bold bg-fuchsia-50/90 rounded-xl shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-fuchsia-900 font-bold">
+                      <span>📅</span>
+                      <span>{formatLongDateFr(dateKey)}</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-fuchsia-600 text-white shadow-xs">
+                      🟣 Dettes Fournisseurs : -{formatPrice(purpleCreditTotal)}
+                    </span>
+                  </div>
+                ) : activeFilter === 'yellow' ? (
+                  <div className="flex items-center justify-between gap-2 py-1 px-2 border border-amber-300 font-mono text-xs text-amber-950 font-bold bg-amber-50/90 rounded-xl shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-amber-900 font-bold">
+                      <span>📅</span>
+                      <span>{formatLongDateFr(dateKey)}</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-amber-600 text-white shadow-xs">
+                      🟡 Crédits Clients : +{formatPrice(yellowCreditTotal)}
+                    </span>
+                  </div>
+                ) : activeFilter === 'total' ? (
+                  /* ── CALCUL COMPLET EN PAGE POUR LE TOTAL ── */
+                  <div className="py-1 px-2 border border-emerald-300 font-mono text-xs bg-emerald-50/90 rounded-xl space-y-1 shadow-2xs">
+                    <div className="flex items-center justify-between font-handwritten text-xs sm:text-sm text-emerald-950 font-bold">
+                      <span>📅 {formatLongDateFr(dateKey)}</span>
+                      <span className="px-2 py-0.5 rounded-full font-black text-xs bg-emerald-200 text-emerald-950 border border-emerald-300">
+                        Solde Net : {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none text-[10px] sm:text-[11px] font-bold text-gray-700 pt-0.5">
+                      <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-900 whitespace-nowrap">🔵 CA : +{formatPrice(salesTotal)}</span>
+                      <span>-</span>
+                      <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-900 whitespace-nowrap">🔴 Dép. : -{formatPrice(expensesTotal)}</span>
+                      <span>-</span>
+                      <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 whitespace-nowrap">🟢 Achats : -{formatPrice(stockCashTotal)}</span>
+                      <span>=</span>
+                      <span className={`px-1.5 py-0.2 rounded font-black whitespace-nowrap ${dayNet >= 0 ? 'bg-emerald-200 text-emerald-950' : 'bg-rose-200 text-rose-950'}`}>
+                        💰 {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  /* ── BANNIÈRE TOUS ── */
+                  <div className="flex items-center justify-between gap-2 py-1 px-2 border-b border-dashed border-amber-300/80 font-handwritten text-xs sm:text-sm text-amber-900 select-none font-bold bg-amber-50/60 rounded-xl">
+                    <div className="flex items-center gap-1.5">
+                      <span>📅</span>
+                      <span className="font-extrabold text-amber-950">{formatLongDateFr(dateKey)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-[10px] sm:text-xs">
+                      <span className="px-2 py-0.2 rounded-full font-extrabold bg-blue-50 text-blue-900 border border-blue-200">
+                        CA : +{formatPrice(salesTotal)}
+                      </span>
+                      <span className="px-2 py-0.2 rounded-full font-black bg-amber-200/90 text-amber-950 border border-amber-300">
+                        {allDaySales.length} écriture(s)
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Ventes du jour */}
                 {dateSales.length === 0 ? (
