@@ -293,6 +293,8 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     const canAddArticle = !isCrossedOut && sale.pen_color === 'blue' && !!onAddArticleToSale
                     const isChangeActive = activeChangeSaleId === sale.id
 
+                    const cleanTime = (sale.time || '').slice(0, 5)
+
                     return (
                       <div
                         key={sale.id}
@@ -306,14 +308,21 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           {/* Contenu principal */}
                           <div className="flex-grow space-y-0.5 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[11px] font-mono text-gray-400 font-bold flex-shrink-0">
-                                {sale.time}
+                              {/* 1. Type d'écriture tout devant */}
+                              <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-black border flex-shrink-0 shadow-2xs ${badgeClass}`}>
+                                {getPenLabel(sale.pen_color)}
                               </span>
+
+                              {/* 2. Heure propre sans secondes */}
+                              {cleanTime && (
+                                <span className="text-[10px] sm:text-[11px] font-mono text-gray-400 font-bold flex-shrink-0">
+                                  {cleanTime}
+                                </span>
+                              )}
+
+                              {/* 3. Texte manuscrit de l'écriture */}
                               <span className={`text-xs sm:text-sm font-bold break-words whitespace-normal leading-snug ${inkClass}`}>
                                 {sale.notes || sale.client}
-                              </span>
-                              <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono uppercase font-black border flex-shrink-0 ${badgeClass}`}>
-                                {getPenLabel(sale.pen_color)}
                               </span>
                             </div>
 
