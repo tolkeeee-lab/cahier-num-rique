@@ -89,10 +89,11 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               is_synced: true,
             }))
 
-            const localSales = getOfflineSales(shopId)
-            const rawCombined = [...mappedSales, ...localSales]
+            // Seules les écritures locales réellement en attente de sync (is_synced === false) sont fusionnées
+            const localPending = getOfflineSales(shopId).filter(s => s.is_synced === false)
+            const rawCombined = [...mappedSales, ...localPending]
             
-            // Deduplication par clé unique (date + time + total + notes) et normalisation des articles
+            // Déduplication par clé unique et normalisation
             const seenKeys = new Set<string>()
             const combinedSales: Sale[] = []
 
@@ -130,18 +131,37 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
             combinedSales.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
 
+            // Mettre à jour le cache local avec la vérité du Cloud Supabase
+            try {
+              const offlineFormatted: OfflineSale[] = combinedSales.map(cs => ({
+                id: cs.id,
+                shop_id: cs.shop_id || shopId,
+                date: cs.date,
+                time: cs.time,
+                client: cs.client,
+                articles: cs.articles.map(a => ({
+                  name: a.name,
+                  quantity: a.quantity,
+                  unit_price: a.unit_price,
+                })),
+                total: cs.total,
+                paid: cs.paid,
+                debt: cs.debt,
+                status: cs.status as any,
+                type: cs.type,
+                pen_color: cs.pen_color,
+                notes: cs.notes,
+                category: cs.category,
+                created_at: cs.created_at || new Date().toISOString(),
+                is_synced: cs.is_synced ?? true,
+              }))
+              replaceOfflineSales(shopId, offlineFormatted)
+            } catch {}
+
             setAllSales(combinedSales)
             const todays = combinedSales.filter(s => s.date === today)
             setSales(todays)
-
             calculateSummary(combinedSales, todays)
-            const offlineItems: OfflineSale[] = combinedSales.map(s => ({
-              ...s,
-              shop_id: s.shop_id || shopId,
-              created_at: s.created_at || new Date().toISOString(),
-              is_synced: s.is_synced ?? true,
-            }))
-            replaceOfflineSales(shopId, offlineItems)
             setIsLoading(false)
             return
           }
