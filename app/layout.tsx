@@ -38,7 +38,10 @@ export const metadata: Metadata = {
     title: 'Cahier Caisse',
   },
   icons: {
-    icon: '/icon.svg',
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/icon.svg',
     apple: '/icon.svg',
   },
 }
@@ -51,8 +54,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="fr" className={`${inter.variable} ${itim.variable} ${jetbrains.variable}`}>
-      <body className="font-sans antialiased bg-[#141210] text-gray-900 min-h-screen">
+    <html lang="fr" suppressHydrationWarning className={`${inter.variable} ${itim.variable} ${jetbrains.variable}`}>
+      <body suppressHydrationWarning className="font-sans antialiased bg-[#141210] text-gray-900 min-h-screen">
         <FeatureProvider>
           {children}
         </FeatureProvider>

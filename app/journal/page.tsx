@@ -51,6 +51,11 @@ import { Send, Loader, Zap } from 'lucide-react'
 
 export default function JournalPage() {
   const isConfigured = isSupabaseClientConfigured()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // ── Utilisateur connecté & Session Supabase synchronisée ────────────────────
   const [user, setUser] = useState<any>(() => {
@@ -352,6 +357,18 @@ export default function JournalPage() {
       setAddingToSaleClient('')
       setIsAddingArticle(false)
     }
+  }
+
+  // ── Garde SSR / Hydratation ───────────────────────────────────────────────
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-amber-400 font-mono text-xs">
+          <Loader className="w-7 h-7 animate-spin text-amber-500" />
+          <span className="font-bold tracking-wider">CHARGEMENT DU CAHIER...</span>
+        </div>
+      </div>
+    )
   }
 
   // ── Garde d'authentification ───────────────────────────────────────────────

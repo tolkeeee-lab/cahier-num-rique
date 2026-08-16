@@ -27,27 +27,25 @@ interface NetworkStatus {
  */
 async function checkRealConnectivity(): Promise<boolean> {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    const target = supabaseUrl && !supabaseUrl.includes('placeholder')
-      ? `${supabaseUrl}/rest/v1/`
-      : 'https://www.google.com/generate_204'
-
-    const headers: Record<string, string> = {}
-    if (supabaseKey && !supabaseKey.includes('placeholder')) {
-      headers['apikey'] = supabaseKey
-      headers['Authorization'] = `Bearer ${supabaseKey}`
-    }
-
-    const response = await fetch(target, {
+    const response = await fetch('/api/sales', {
       method: 'HEAD',
-      headers,
       cache: 'no-store',
       signal: AbortSignal.timeout(3500),
     })
-    return response.ok || response.status === 200 || response.status === 204 || response.status === 401
+    return response.status < 500
   } catch {
-    return false
+    // Secours externe sans CORS
+    try {
+      await fetch('https://www.google.com/generate_204', {
+        method: 'HEAD',
+        mode: 'no-cors',
+        cache: 'no-store',
+        signal: AbortSignal.timeout(3000),
+      })
+      return true
+    } catch {
+      return false
+    }
   }
 }
 

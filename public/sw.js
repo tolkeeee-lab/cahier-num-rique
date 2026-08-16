@@ -51,6 +51,11 @@ self.addEventListener('activate', (event) => {
 
 // Interception des requêtes réseau
 self.addEventListener('fetch', (event) => {
+  // Ignorer toute requête non HTTP/HTTPS (ex: chrome-extension://, moz-extension://, data:)
+  if (!event.request.url.startsWith('http://') && !event.request.url.startsWith('https://')) {
+    return
+  }
+
   const url = new URL(event.request.url)
 
   // 1. Ignorer les API dynamiques et requêtes non-GET (gérées côté client avec IndexedDB)
