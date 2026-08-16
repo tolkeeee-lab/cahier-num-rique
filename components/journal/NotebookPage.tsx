@@ -241,28 +241,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       🟡 Crédits Clients : +{formatPrice(yellowCreditTotal)}
                     </span>
                   </div>
-                ) : activeFilter === 'total' ? (
-                  /* ── CALCUL COMPLET EN PAGE POUR LE TOTAL ── */
-                  <div className="py-1 px-2 border border-emerald-300 font-mono text-xs bg-emerald-50/90 rounded-xl space-y-1 shadow-2xs">
-                    <div className="flex items-center justify-between font-handwritten text-xs sm:text-sm text-emerald-950 font-bold">
-                      <span>📅 {formatLongDateFr(dateKey)}</span>
-                      <span className="px-2 py-0.5 rounded-full font-black text-xs bg-emerald-200 text-emerald-950 border border-emerald-300">
-                        Solde Net : {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none text-[10px] sm:text-[11px] font-bold text-gray-700 pt-0.5">
-                      <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-900 whitespace-nowrap">🔵 CA : +{formatPrice(salesTotal)}</span>
-                      <span>-</span>
-                      <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-900 whitespace-nowrap">🔴 Dép. : -{formatPrice(expensesTotal)}</span>
-                      <span>-</span>
-                      <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 whitespace-nowrap">🟢 Achats : -{formatPrice(stockCashTotal)}</span>
-                      <span>=</span>
-                      <span className={`px-1.5 py-0.2 rounded font-black whitespace-nowrap ${dayNet >= 0 ? 'bg-emerald-200 text-emerald-950' : 'bg-rose-200 text-rose-950'}`}>
-                        💰 {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
+                ) : activeFilter === 'total' ? null : (
                   /* ── BANNIÈRE TOUS ── */
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border-b border-dashed border-amber-300/80 font-handwritten text-xs sm:text-sm text-amber-900 select-none font-bold bg-amber-50/60 rounded-xl">
                     <div className="flex items-center gap-1.5">
@@ -280,20 +259,93 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                   </div>
                 )}
 
-                {/* Ventes du jour */}
-                {dateSales.length === 0 ? (
-                  <div className="py-4 text-center text-gray-400 handwritten text-sm flex flex-col items-center justify-center">
-                    Aucune écriture enregistrée pour cette journée.
+                {/* ── MODE SOLDE EXCLUSIF : Affiche UNIQUEMENT le Bilan de Caisse ── */}
+                {activeFilter === 'total' ? (
+                  <div className="py-3 px-3.5 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/85 border-2 border-emerald-400/90 rounded-2xl font-mono text-xs shadow-md space-y-3 select-none">
+                    <div className="flex items-center justify-between border-b-2 border-dashed border-amber-300 pb-2 font-handwritten font-black text-amber-950 text-sm sm:text-base">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">📐</span>
+                        <span className="tracking-wide uppercase">Bilan & Solde de Caisse</span>
+                      </div>
+                      <span className="font-mono text-xs text-emerald-950 bg-emerald-100 px-2.5 py-0.5 rounded-full font-extrabold border border-emerald-300">
+                        {formatLongDateFr(dateKey)}
+                      </span>
+                    </div>
+
+                    {/* Lignes de décomposition arithmétique */}
+                    <div className="space-y-2 text-xs sm:text-sm">
+                      <div className="flex items-center justify-between text-blue-900 font-bold bg-blue-50/80 p-2 rounded-xl border border-blue-200">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
+                          <span>(+) Ventes encaissées (CA)</span>
+                        </span>
+                        <span className="font-extrabold text-blue-950 text-sm sm:text-base">+{formatPrice(salesTotal)}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-rose-900 font-bold bg-rose-50/80 p-2 rounded-xl border border-rose-200">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block" />
+                          <span>(-) Dépenses réglées</span>
+                        </span>
+                        <span className="font-extrabold text-rose-950 text-sm sm:text-base">-{formatPrice(expensesTotal)}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-emerald-900 font-bold bg-emerald-50/80 p-2 rounded-xl border border-emerald-200">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
+                          <span>(-) Achats stock au comptant</span>
+                        </span>
+                        <span className="font-extrabold text-emerald-950 text-sm sm:text-base">-{formatPrice(stockCashTotal)}</span>
+                      </div>
+
+                      {/* Ligne Maîtresse : Solde Net */}
+                      <div className={`mt-3 pt-3 pb-3 px-3 border-2 flex items-center justify-between font-black text-sm sm:text-base rounded-xl shadow-xs ${
+                        dayNet >= 0
+                          ? 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-300/60'
+                          : 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-300/60'
+                      }`}>
+                        <span className="flex items-center gap-2 font-handwritten text-base sm:text-lg">
+                          <span>💰</span>
+                          <span>SOLDE NET DU JOUR</span>
+                        </span>
+                        <span className="font-mono font-black text-base sm:text-lg">
+                          {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                        </span>
+                      </div>
+
+                      {/* Crédits et Dettes */}
+                      {(yellowCreditTotal > 0 || purpleCreditTotal > 0) && (
+                        <div className="pt-2 border-t border-dashed border-amber-300 flex items-center justify-between text-[11px] font-bold text-gray-700 flex-wrap gap-2">
+                          {yellowCreditTotal > 0 && (
+                            <span className="text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300">
+                              ⏳ Crédits clients en cours : +{formatPrice(yellowCreditTotal)}
+                            </span>
+                          )}
+                          {purpleCreditTotal > 0 && (
+                            <span className="text-fuchsia-900 bg-fuchsia-100 px-2.5 py-1 rounded-lg border border-fuchsia-300">
+                              💳 Dettes fournisseurs : -{formatPrice(purpleCreditTotal)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  dateSales.map((sale) => {
-                    const inkClass = getPenInkClass(sale.pen_color)
-                    const badgeClass = getBadgeClass(sale.pen_color)
-                    const isCrossedOut = sale.status === 'crossed_out'
-                    const canAddArticle = !isCrossedOut && sale.pen_color === 'blue' && !!onAddArticleToSale
-                    const isChangeActive = activeChangeSaleId === sale.id
+                  <>
+                    {/* Ventes du jour */}
+                    {dateSales.length === 0 ? (
+                      <div className="py-4 text-center text-gray-400 handwritten text-sm flex flex-col items-center justify-center">
+                        Aucune écriture enregistrée pour cette journée.
+                      </div>
+                    ) : (
+                      dateSales.map((sale) => {
+                        const inkClass = getPenInkClass(sale.pen_color)
+                        const badgeClass = getBadgeClass(sale.pen_color)
+                        const isCrossedOut = sale.status === 'crossed_out'
+                        const canAddArticle = !isCrossedOut && sale.pen_color === 'blue' && !!onAddArticleToSale
+                        const isChangeActive = activeChangeSaleId === sale.id
 
-                    const cleanTime = (sale.time || '').slice(0, 5)
+                        const cleanTime = (sale.time || '').slice(0, 5)
 
                     return (
                       <div
@@ -492,8 +544,9 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                   })
                 )}
 
-                {/* ── BILAN MANUSCRIT DE LA JOURNÉE (Dans le Cahier Seyes) ── */}
-                <div className="mt-3 pt-2.5 pb-2 px-3 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/80 border-2 border-dashed border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs space-y-2 select-none">
+                {/* ── BILAN MANUSCRIT AU BAS DES ÉCRITURES (Mode TOUS uniquement) ── */}
+                {activeFilter === 'all' && (
+                  <div className="mt-3 pt-2.5 pb-2 px-3 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/80 border-2 border-dashed border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs space-y-2 select-none">
                   <div className="flex items-center justify-between border-b border-amber-300/80 pb-1 font-handwritten font-black text-amber-950 text-xs sm:text-sm">
                     <div className="flex items-center gap-1.5">
                       <span>📐</span>
@@ -562,9 +615,12 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     )}
                   </div>
                 </div>
-              </div>
-            )
-          })}
+                )}
+              </>
+            )}
+          </div>
+        )
+      })}
         </div>
       </div>
     </div>
