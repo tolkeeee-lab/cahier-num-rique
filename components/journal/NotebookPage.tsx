@@ -482,6 +482,77 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     )
                   })
                 )}
+
+                {/* ── BILAN MANUSCRIT DE LA JOURNÉE (Dans le Cahier Seyes) ── */}
+                <div className="mt-3 pt-2.5 pb-2 px-3 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/80 border-2 border-dashed border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs space-y-2 select-none">
+                  <div className="flex items-center justify-between border-b border-amber-300/80 pb-1 font-handwritten font-black text-amber-950 text-xs sm:text-sm">
+                    <div className="flex items-center gap-1.5">
+                      <span>📐</span>
+                      <span className="tracking-wide uppercase">Bilan de Caisse du Jour</span>
+                    </div>
+                    <span className="font-mono text-[11px] text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full font-bold">
+                      {allDaySales.length} opération(s)
+                    </span>
+                  </div>
+
+                  {/* Lignes de décomposition du calcul */}
+                  <div className="space-y-1.5 text-[11px] sm:text-xs">
+                    <div className="flex items-center justify-between text-blue-900 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
+                        <span>(+) Ventes encaissées (CA)</span>
+                      </span>
+                      <span className="font-extrabold text-blue-950">+{formatPrice(salesTotal)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-rose-900 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
+                        <span>(-) Dépenses réglées</span>
+                      </span>
+                      <span className="font-extrabold text-rose-950">-{formatPrice(expensesTotal)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-emerald-900 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
+                        <span>(-) Achats stock au comptant</span>
+                      </span>
+                      <span className="font-extrabold text-emerald-950">-{formatPrice(stockCashTotal)}</span>
+                    </div>
+
+                    {/* Ligne de Solde Net */}
+                    <div className={`mt-2 pt-2 border-t-2 border-amber-300 flex items-center justify-between font-black text-xs sm:text-sm p-2 rounded-xl ${
+                      dayNet >= 0
+                        ? 'bg-emerald-100/90 text-emerald-950 border border-emerald-300'
+                        : 'bg-rose-100/90 text-rose-950 border border-rose-300'
+                    }`}>
+                      <span className="flex items-center gap-1.5 font-handwritten sm:text-base">
+                        <span>💰</span>
+                        <span>SOLDE NET DU JOUR</span>
+                      </span>
+                      <span className="font-mono font-black text-sm sm:text-base">
+                        {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                      </span>
+                    </div>
+
+                    {/* Dettes et Crédits à suivre si présents */}
+                    {(yellowCreditTotal > 0 || purpleCreditTotal > 0) && (
+                      <div className="pt-1.5 border-t border-dashed border-amber-300/60 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-gray-700 flex-wrap gap-2">
+                        {yellowCreditTotal > 0 && (
+                          <span className="text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-lg border border-amber-300">
+                            ⏳ Crédits clients : +{formatPrice(yellowCreditTotal)}
+                          </span>
+                        )}
+                        {purpleCreditTotal > 0 && (
+                          <span className="text-fuchsia-900 bg-fuchsia-100/90 px-2 py-0.5 rounded-lg border border-fuchsia-300">
+                            💳 Dettes fournisseurs : -{formatPrice(purpleCreditTotal)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )
           })}
