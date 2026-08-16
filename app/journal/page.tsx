@@ -445,14 +445,14 @@ export default function JournalPage() {
                     pens={pens}
                     selectedPen={selectedPen}
                     onSelectPen={setSelectedPen}
-                    sales={journalData.sales}
+                    sales={journalData.allSales}
                   />
                 </div>
 
                 {/* Page Seyes — SEUL ÉLÉMENT QUI DÉFILE */}
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                   <NotebookPage
-                    sales={journalData.sales}
+                    sales={journalData.allSales}
                     onCrossOutSale={journalData.crossOutSale}
                     onPrintReceipt={(sale) => { setReceiptSale(sale); setShowReceiptModal(true) }}
                     onAddArticleToSale={(saleId, clientName) => {
