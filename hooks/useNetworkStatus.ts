@@ -36,6 +36,7 @@ async function checkRealConnectivity(): Promise<boolean> {
     const headers: Record<string, string> = {}
     if (supabaseKey && !supabaseKey.includes('placeholder')) {
       headers['apikey'] = supabaseKey
+      headers['Authorization'] = `Bearer ${supabaseKey}`
     }
 
     const response = await fetch(target, {
@@ -44,7 +45,7 @@ async function checkRealConnectivity(): Promise<boolean> {
       cache: 'no-store',
       signal: AbortSignal.timeout(3500),
     })
-    return response.ok || response.status < 500
+    return response.ok || response.status === 200 || response.status === 204 || response.status === 401
   } catch {
     return false
   }

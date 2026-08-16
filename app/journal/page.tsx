@@ -400,7 +400,7 @@ export default function JournalPage() {
         <div className="flex-1 min-w-0 flex flex-col h-full bg-[#fdfaf2] relative overflow-hidden">
 
           {/* En-tête + KPIs (FIXE) */}
-          <div className="flex-shrink-0 z-10">
+          <div className="flex-shrink-0 z-30 relative">
             <JournalHeader
               user={mappedUser}
               currentShopName={shopManager.currentShop?.name || 'Mon Point de Vente'}
