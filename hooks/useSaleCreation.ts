@@ -16,7 +16,6 @@ import { getTodayDateString } from '@/lib/dateUtils'
 import {
   generateOfflineId,
   saveOfflineSale,
-  replaceOfflineSaleId,
   getOfflineProducts,
   saveOfflineProduct,
   OfflineSale,
@@ -27,6 +26,7 @@ import {
   parseRequestedProductFromNotebookText,
   recordRequestedProductInStorage,
 } from '@/lib/requestedProductsUtils'
+import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -129,6 +129,44 @@ export function useSaleCreation({
   const syncWithApi = async (text: string, localSaleId: string, penOverride?: string) => {
     const activePen = penOverride || selectedPen
     try {
+      if (isSupabaseClientConfigured()) {
+        const parsed = parseTextLocally(text, activePen)
+        const now = new Date()
+        const saleRecord = {
+          id: localSaleId,
+          shop_id: shopId,
+          created_at: now.toISOString(),
+          date: getTodayDateString(),
+          time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          type: activePen === 'red' ? 'cash_out' : activePen === 'green' ? 'purchase_cash' : activePen === 'purple' ? 'purchase_credit' : activePen === 'yellow' ? 'sale_credit' : 'cash_in',
+          notes: text,
+          total_amount: parsed?.total_facture || 0,
+          paid_amount: parsed?.montant_paye || 0,
+          debt_amount: parsed?.montant_dette || 0,
+          client_name: parsed?.nom_client || 'Client',
+          status: parsed?.montant_dette && parsed.montant_dette > 0 ? 'debt' : 'paid',
+          category: parsed?.categorie || 'Général',
+          pen_color: activePen,
+        }
+
+        const { error: insertErr } = await supabaseClient.from('sales').insert([saleRecord])
+        if (!insertErr) {
+          if (parsed?.articles && parsed.articles.length > 0) {
+            const articlesRecords = parsed.articles.map((a: any) => ({
+              sale_id: localSaleId,
+              product_name: a.nom || a.name,
+              quantity: a.quantite || a.quantity,
+              unit_price: a.prix_unitaire || a.unit_price,
+              subtotal: (a.quantite || 1) * (a.prix_unitaire || 0),
+            }))
+            await supabaseClient.from('sold_articles').insert(articlesRecords)
+          }
+          onSaleCreated()
+          return
+        }
+      }
+
+      // Fallback via API route serveur
       const response = await fetch('/api/sales', {
         method: 'POST',
         headers: {
@@ -145,39 +183,10 @@ export function useSaleCreation({
       })
 
       if (response.ok) {
-        const resJson = await response.json().catch(() => ({}))
-        if (resJson.sale?.id) {
-          const rawArticles = resJson.sale.articles || []
-          const normalizedArticles = rawArticles.map((a: any) => ({
-            name: a.name || a.nom || a.product_name || 'Produit',
-            quantity: Number(a.quantity || a.quantite) || 1,
-            unit_price: Number(a.unit_price || a.prix_unitaire) || 0,
-            category: a.category || a.categorie,
-          }))
-
-          replaceOfflineSaleId(shopId, localSaleId, {
-            id: resJson.sale.id,
-            shop_id: shopId,
-            date: resJson.sale.date || getTodayDateString(),
-            time: resJson.sale.time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-            client: resJson.sale.client_name || resJson.sale.client || 'Client',
-            articles: normalizedArticles,
-            total: Number(resJson.sale.total_amount || resJson.sale.total) || 0,
-            paid: Number(resJson.sale.paid_amount || resJson.sale.paid) || 0,
-            debt: Number(resJson.sale.debt_amount || resJson.sale.debt) || 0,
-            status: resJson.sale.status || 'paid',
-            type: resJson.sale.type || 'cash_in',
-            pen_color: resJson.sale.pen_color || activePen,
-            notes: resJson.sale.notes || text,
-            category: resJson.sale.category || 'Général',
-            created_at: resJson.sale.created_at || new Date().toISOString(),
-            is_synced: true,
-          })
-          onSaleCreated()
-        }
+        onSaleCreated()
       }
     } catch {
-      // Silencieux — la vente est déjà dans le localStorage
+      // Silencieux — la vente est déjà préservée dans le localStorage
     }
   }
 
