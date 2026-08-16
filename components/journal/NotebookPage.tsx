@@ -172,20 +172,40 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
 
             return (
               <div key={dateKey} className="space-y-1.5">
-                {/* ── Séparateur Date Authentique Cahier d'Écolier ── */}
-                <div className="flex items-center justify-between gap-2 py-0.5 px-1 border-b border-dashed border-amber-300/80 font-handwritten text-xs sm:text-sm text-amber-900 select-none font-bold">
-                  <div className="flex items-center gap-1.5">
-                    <span>📅</span>
-                    <span className="font-extrabold text-amber-950">{formatLongDateFr(dateKey)}</span>
-                  </div>
-                  <div className="flex items-center gap-1 font-mono text-[10px] sm:text-xs">
-                    <span className="text-blue-900 font-extrabold hidden sm:inline">Ventes: +{formatPrice(salesTotal)}</span>
-                    <span className={`px-2 py-0.2 rounded-full font-black border ${
+                {/* ── Séparateur Date Authentique Cahier d'Écolier avec Calcul Réel en Page ── */}
+                <div className="py-1 px-1.5 border-b border-dashed border-amber-300/80 font-mono text-xs select-none bg-amber-50/60 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between gap-2 font-handwritten text-xs sm:text-sm text-amber-900 font-bold">
+                    <div className="flex items-center gap-1.5">
+                      <span>📅</span>
+                      <span className="font-extrabold text-amber-950">{formatLongDateFr(dateKey)}</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full font-black text-xs border ${
                       dayNet >= 0
-                        ? 'bg-emerald-100/90 border-emerald-300 text-emerald-950'
-                        : 'bg-rose-100/90 border-rose-300 text-rose-950'
+                        ? 'bg-emerald-100/90 border-emerald-300 text-emerald-950 shadow-2xs'
+                        : 'bg-rose-100/90 border-rose-300 text-rose-950 shadow-2xs'
                     }`}>
-                      Net: {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                      Solde Net : {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                    </span>
+                  </div>
+
+                  {/* Formule Arithmétique Réelle en Page */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none text-[10px] sm:text-[11px] pt-0.5 text-gray-700 font-bold">
+                    <span className="px-1.5 py-0.2 rounded-md bg-blue-100/80 text-blue-900 border border-blue-200 whitespace-nowrap">
+                      🔵 CA : +{formatPrice(salesTotal)}
+                    </span>
+                    <span className="text-gray-400 font-black">-</span>
+                    <span className="px-1.5 py-0.2 rounded-md bg-rose-100/80 text-rose-900 border border-rose-200 whitespace-nowrap">
+                      🔴 Dépenses : -{formatPrice(expensesTotal)}
+                    </span>
+                    <span className="text-gray-400 font-black">-</span>
+                    <span className="px-1.5 py-0.2 rounded-md bg-emerald-100/80 text-emerald-900 border border-emerald-200 whitespace-nowrap">
+                      🟢 Achats : -{formatPrice(stockCashTotal)}
+                    </span>
+                    <span className="text-gray-400 font-black">=</span>
+                    <span className={`px-1.5 py-0.2 rounded-md font-black border whitespace-nowrap ${
+                      dayNet >= 0 ? 'bg-emerald-200/90 text-emerald-950 border-emerald-300' : 'bg-rose-200/90 text-rose-950 border-rose-300'
+                    }`}>
+                      💰 {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
                     </span>
                   </div>
                 </div>
