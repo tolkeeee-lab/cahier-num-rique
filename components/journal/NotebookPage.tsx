@@ -248,37 +248,13 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
 
                             {!isCrossedOut && (
                               <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity relative">
-                                {/* Bouton Monnaie Rapide */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (isChangeActive) {
-                                      setActiveChangeSaleId(null)
-                                    } else {
-                                      setActiveChangeSaleId(sale.id)
-                                      if (changeReceivedMap[sale.id] === undefined) {
-                                        setChangeReceivedMap(prev => ({ ...prev, [sale.id]: '' }))
-                                      }
-                                    }
-                                  }}
-                                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-0.5 border cursor-pointer ${
-                                    isChangeActive
-                                      ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                                      : 'text-amber-800 bg-amber-100/90 hover:bg-amber-200 border-amber-300'
-                                  }`}
-                                  title="Calculer la monnaie"
-                                >
-                                  <Calculator className="w-3 h-3" />
-                                  <span className="hidden sm:inline">Monnaie</span>
-                                </button>
-
-                                {/* Bouton Trois Points (Actions Rapides) */}
+                                {/* Bouton Trois Points Unique (Actions Rapides) */}
                                 <div className="relative">
                                   <button
                                     type="button"
                                     onClick={() => setActiveActionMenuSaleId(activeActionMenuSaleId === sale.id ? null : sale.id)}
-                                    className="p-1 rounded-md text-amber-900 hover:bg-amber-200/90 bg-amber-100/80 border border-amber-300 shadow-2xs transition-colors cursor-pointer"
-                                    title="Options de cette vente"
+                                    className="p-1 rounded-lg text-amber-950 hover:bg-amber-200/90 bg-amber-100/90 border border-amber-300 shadow-2xs transition-colors cursor-pointer"
+                                    title="Actions sur cette écriture"
                                   >
                                     <MoreVertical className="w-3.5 h-3.5" />
                                   </button>

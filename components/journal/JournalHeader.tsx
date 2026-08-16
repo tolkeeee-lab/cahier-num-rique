@@ -197,7 +197,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
           </button>
 
           {/* Menu d'actions secondaires sur mobile */}
-          <div className="relative sm:hidden">
+          <div className="sm:hidden">
             <button
               type="button"
               onClick={() => setShowMobileMenu(!showMobileMenu)}
@@ -209,14 +209,14 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
 
             {showMobileMenu && (
               <>
-                {/* Backdrop pour fermer en cliquant à l'extérieur */}
+                {/* Backdrop plein écran pour fermer en cliquant à l'extérieur */}
                 <div
-                  className="fixed inset-0 bg-black/40 backdrop-blur-2xs z-40"
+                  className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[90] pointer-events-auto"
                   onClick={() => setShowMobileMenu(false)}
                 />
 
-                {/* Tiroir Popup Net & Opaque */}
-                <div className="absolute right-0 top-full mt-1.5 w-64 bg-[#fffdf2] border-2 border-amber-400 rounded-2xl shadow-2xl z-50 p-2 space-y-1 font-mono text-xs animate-in fade-in zoom-in-95">
+                {/* Tiroir Popup Net, 100% Opaque et au premier plan */}
+                <div className="fixed right-3 top-12 w-64 bg-[#fffdf2] border-2 border-amber-500 rounded-2xl shadow-2xl z-[100] p-2.5 space-y-1 font-mono text-xs animate-in fade-in zoom-in-95 pointer-events-auto">
                   <div className="px-2.5 py-1 text-[10px] text-amber-900 font-black uppercase border-b border-amber-200 mb-1 tracking-wider">
                     Menu & Outils
                   </div>
