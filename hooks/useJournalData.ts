@@ -89,15 +89,19 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               is_synced: true,
             }))
 
-            // Seules les écritures locales réellement en attente de sync (is_synced === false) sont fusionnées
-            const localPending = getOfflineSales(shopId).filter(s => s.is_synced === false)
-            const rawCombined = [...mappedSales, ...localPending]
+            // Récupérer toutes les écritures locales existantes
+            const localSales = getOfflineSales(shopId)
+            const rawCombined = [...mappedSales, ...localSales]
             
-            // Déduplication par clé unique et normalisation
+            // Déduplication par ID et par signature unique
+            const seenIds = new Set<string>()
             const seenKeys = new Set<string>()
             const combinedSales: Sale[] = []
 
             for (const s of rawCombined) {
+              if (s.id && seenIds.has(s.id)) continue
+              if (s.id) seenIds.add(s.id)
+
               const cleanArticles = (s.articles || []).map((art: any) => ({
                 name: art.name || art.nom || art.product_name || 'Produit',
                 quantity: Number(art.quantity || art.quantite) || 1,
