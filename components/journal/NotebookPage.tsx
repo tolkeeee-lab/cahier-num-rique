@@ -73,7 +73,8 @@ function getPenInkClass(penId: string) {
   }
 }
 
-function getBadgeClass(penId: string) {
+function getBadgeClass(penId: string, type?: string) {
+  if (type === 'client_request') return 'bg-amber-100/95 text-amber-950 border-amber-300 shadow-2xs font-black'
   switch (penId) {
     case 'red':    return 'bg-rose-100/90 text-rose-800 border-rose-300'
     case 'green':  return 'bg-emerald-100/90 text-emerald-800 border-emerald-300'
@@ -83,7 +84,8 @@ function getBadgeClass(penId: string) {
   }
 }
 
-function getPenLabel(penId: string) {
+function getPenLabel(penId: string, type?: string) {
+  if (type === 'client_request') return '💡 DEMANDE'
   switch (penId) {
     case 'red':    return 'DÉPENSE'
     case 'green':  return 'ACHAT STOCK'
@@ -165,9 +167,10 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
         >
           {salesByDate.map(([dateKey, dateSales]) => {
             const allDaySales = sales.filter(s => s.date === dateKey && s.status !== 'crossed_out')
+            const allDayOperations = allDaySales.filter(s => s.type !== 'client_request')
 
             const salesTotal = allDaySales
-              .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit')
+              .filter(s => s.type !== 'client_request' && (s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit' || s.type === 'sale'))
               .reduce((sum, s) => sum + (s.total || 0), 0)
 
             const expensesTotal = allDaySales
@@ -253,7 +256,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         CA : +{formatPrice(salesTotal)}
                       </span>
                       <span className="px-2 py-0.2 rounded-full font-black bg-amber-200/90 text-amber-950 border border-amber-300">
-                        {allDaySales.length} écriture(s)
+                        {allDayOperations.length} écriture(s)
                       </span>
                     </div>
                   </div>
@@ -340,7 +343,6 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     ) : (
                       dateSales.map((sale) => {
                         const inkClass = getPenInkClass(sale.pen_color)
-                        const badgeClass = getBadgeClass(sale.pen_color)
                         const isCrossedOut = sale.status === 'crossed_out'
                         const canAddArticle = !isCrossedOut && sale.pen_color === 'blue' && !!onAddArticleToSale
                         const isChangeActive = activeChangeSaleId === sale.id
@@ -361,8 +363,8 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           <div className="flex-grow space-y-0.5 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {/* 1. Type d'écriture tout devant */}
-                              <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-black border flex-shrink-0 shadow-2xs ${badgeClass}`}>
-                                {getPenLabel(sale.pen_color)}
+                              <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-black border flex-shrink-0 shadow-2xs ${getBadgeClass(sale.pen_color, sale.type)}`}>
+                                {getPenLabel(sale.pen_color, sale.type)}
                               </span>
 
                               {/* 2. Heure propre sans secondes */}
@@ -389,13 +391,19 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
 
                           {/* Montant + Actions */}
                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            <span className={`text-xs sm:text-sm font-extrabold px-2 py-0.2 rounded-lg font-mono ${
-                              sale.pen_color === 'red'
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                            }`}>
-                              {sale.pen_color === 'red' ? `-${formatPrice(sale.total)}` : `+${formatPrice(sale.total)}`}
-                            </span>
+                            {sale.type === 'client_request' ? (
+                              <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-lg font-mono bg-amber-100/90 text-amber-950 border border-amber-300 shadow-2xs">
+                                💡 Demande
+                              </span>
+                            ) : (
+                              <span className={`text-xs sm:text-sm font-extrabold px-2 py-0.2 rounded-lg font-mono ${
+                                sale.pen_color === 'red'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              }`}>
+                                {sale.pen_color === 'red' ? `-${formatPrice(sale.total)}` : `+${formatPrice(sale.total)}`}
+                              </span>
+                            )}
 
                             {!isCrossedOut && (
                               <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity relative">

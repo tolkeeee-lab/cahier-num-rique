@@ -41,14 +41,14 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
 }) => {
   const [breakdownType, setBreakdownType] = useState<'all' | 'blue' | 'red' | 'green' | 'purple' | 'yellow' | 'total' | null>(null)
 
-  // Calcul des totaux par stylo / catégorie
-  const validSales = sales.filter(s => s.status !== 'crossed_out')
+  // Calcul des totaux par stylo / catégorie (Ignore les demandes clients à 0 FCFA)
+  const validSales = sales.filter(s => s.status !== 'crossed_out' && s.type !== 'client_request')
 
   const getPenAmount = (penId: string) => {
     switch (penId) {
       case 'blue':
         return validSales
-          .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit')
+          .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit' || s.type === 'sale')
           .reduce((sum, s) => sum + (s.total || 0), 0)
       case 'red':
         return validSales
