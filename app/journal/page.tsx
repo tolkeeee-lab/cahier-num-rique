@@ -243,6 +243,7 @@ export default function JournalPage() {
 
   // ── Hooks métier ───────────────────────────────────────────────────────────
   const shopManager = useShopManager(mappedUser)
+  const effectiveRole = shopManager.employeeRole || mappedUser?.role || 'owner'
   const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopManager.shopId)
   const journalData = useJournalData(shopManager.shopId, isOnline)
 
@@ -585,7 +586,7 @@ export default function JournalPage() {
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <StockManager 
                   shopId={shopManager.shopId} 
-                  isEmployee={isEmployeeRole(mappedUser?.role)} 
+                  isEmployee={isEmployeeRole(effectiveRole)} 
                 />
               </div>
             )}
@@ -594,7 +595,7 @@ export default function JournalPage() {
                 <AnalyticsDashboard 
                   sales={journalData.allSales} 
                   shopId={shopManager.shopId} 
-                  userRole={mappedUser?.role || 'owner'}
+                  userRole={effectiveRole}
                   currentShopActivity={shopManager.shopActivity}
                 />
               </div>

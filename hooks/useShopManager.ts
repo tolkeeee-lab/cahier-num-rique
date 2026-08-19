@@ -12,6 +12,7 @@ export interface Shop {
 export function useShopManager(mappedUser: any) {
   const [selectedShopId, setSelectedShopId] = useState<string>('')
   const [userShops, setUserShops] = useState<Shop[]>([])
+  const [employeeRole, setEmployeeRole] = useState<string | null>(null)
   const [showNewShopModal, setShowNewShopModal] = useState(false)
   const [newShopName, setNewShopName] = useState('')
   const [newShopActivity, setNewShopActivity] = useState<'boutique' | 'resto' | 'prestations'>('boutique')
@@ -38,6 +39,8 @@ export function useShopManager(mappedUser: any) {
 
           if (empData?.shop_id && isMounted) {
             const assignedShopId = empData.shop_id
+            const assignedRole = empData.role || 'employee'
+            setEmployeeRole(assignedRole)
             const empShop: Shop = {
               id: assignedShopId,
               name: (mappedUser as any)?.shop_name || 'Boutique Assignée',
@@ -118,6 +121,7 @@ export function useShopManager(mappedUser: any) {
     setUserShops,
     currentShop,
     shopActivity,
+    employeeRole,
     showNewShopModal,
     setShowNewShopModal,
     newShopName,
