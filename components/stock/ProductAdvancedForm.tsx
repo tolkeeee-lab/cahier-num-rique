@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { StockFormState } from './types'
 import { CATEGORIES, UNITS } from './stockUtils'
-import { Store, Package, Truck, Layers } from 'lucide-react'
+import { Store, Package, Truck } from 'lucide-react'
 
 interface ProductAdvancedFormProps {
   formData: StockFormState
@@ -175,21 +175,27 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
         </div>
       </div>
 
-      {/* ── 3. SECTION SPÉCIFIQUE GROSSISTE (COLISAGE & MULTIPLICATEUR) ── */}
-      {tradeType === 'wholesale' && (
-        <div className="p-3 bg-amber-100/60 border-2 border-amber-300/90 rounded-2xl space-y-3">
-          <div className="flex items-center gap-1.5 text-amber-950 font-black text-xs">
-            <Layers className="w-4 h-4 text-amber-800" />
-            <span>Colisage & Conditionnement de Gros :</span>
+      {/* ── 3. SECTION SPÉCIFIQUE DEMI-GROSSISTE & GROSSISTE : ACHAT EN GROS (CARTON/SAC) ── */}
+      {(tradeType === 'semi_wholesale' || tradeType === 'wholesale') && (
+        <div className="p-3.5 bg-gradient-to-br from-amber-100/90 to-yellow-100/60 border-2 border-amber-400/90 rounded-2xl space-y-3 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-amber-300 pb-2">
+            <div className="flex items-center gap-1.5 text-amber-950 font-black text-xs sm:text-sm">
+              <Truck className="w-4 h-4 text-amber-800" />
+              <span>1. Achat chez le Fournisseur (En Gros) :</span>
+            </div>
+            <span className="text-[10px] text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full font-bold border border-amber-300">
+              Calcul auto du coût unitaire
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {/* Type de colisage */}
             <div>
-              <label className="block text-amber-900 font-bold uppercase mb-1 text-[11px]">Type d'emballage :</label>
+              <label className="block text-amber-950 font-bold uppercase mb-1 text-[10px]">Emballage acheté :</label>
               <select
                 value={formData.packaging_name || 'carton'}
                 onChange={(e) => setFormData(prev => ({ ...prev, packaging_name: e.target.value }))}
-                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-bold"
+                className="w-full px-2.5 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-bold text-xs"
               >
                 <option value="carton">Carton</option>
                 <option value="sac">Sac (25kg / 50kg)</option>
@@ -201,9 +207,32 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
               </select>
             </div>
 
+            {/* Prix d'Achat du Carton / Sac */}
             <div>
-              <label className="block text-amber-900 font-bold uppercase mb-1 text-[11px]">
-                Contenance (pièces / kg) :
+              <label className="block text-amber-950 font-bold uppercase mb-1 text-[10px]">
+                Prix Achat Carton/Sac (F) :
+              </label>
+              <input
+                type="number"
+                value={cartonCost}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setCartonCost(val)
+                  const cCost = parseFloat(val) || 0
+                  const m = formData.multiplier || 24
+                  if (m > 0) {
+                    setFormData(prev => ({ ...prev, unit_cost: Math.round(cCost / m) }))
+                  }
+                }}
+                placeholder="ex: 12000"
+                className="w-full px-2.5 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-black text-xs shadow-inner"
+              />
+            </div>
+
+            {/* Nombre de pièces dedans (Contenance) */}
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-amber-950 font-bold uppercase mb-1 text-[10px]">
+                Nb de pièces dedans :
               </label>
               <input
                 type="number"
@@ -214,41 +243,101 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
                   if (cartonCost && m > 0) {
                     setFormData(prev => ({ ...prev, unit_cost: Math.round(parseFloat(cartonCost) / m) }))
                   }
-                  if (cartonPrice && m > 0) {
-                    setFormData(prev => ({ ...prev, unit_price: Math.round(parseFloat(cartonPrice) / m) }))
-                  }
                 }}
-                placeholder="ex: 24 (bouteilles/carton)"
-                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold"
+                placeholder="ex: 24 pièces"
+                className="w-full px-2.5 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-black text-xs shadow-inner"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-amber-900 font-bold uppercase mb-1 text-[11px]">
-                Prix Achat Carton/Sac (F) :
-              </label>
-              <input
-                type="number"
-                value={cartonCost}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setCartonCost(val)
-                  const cCost = parseFloat(val) || 0
-                  const m = formData.multiplier || 1
-                  if (m > 0) {
-                    setFormData(prev => ({ ...prev, unit_cost: Math.round(cCost / m) }))
-                  }
-                }}
-                placeholder="ex: 12000"
-                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold"
-              />
-            </div>
+          {/* Badge Résultat Calcul automatique Coût Unitaire */}
+          <div className="p-2 bg-white/90 border border-amber-300 rounded-xl flex items-center justify-between font-mono">
+            <span className="text-gray-700 text-xs font-bold flex items-center gap-1">
+              <span>💡</span>
+              <span>Prix d'achat unitaire de revient :</span>
+            </span>
+            <span className="text-amber-950 font-black text-xs sm:text-sm px-2 py-0.5 bg-amber-100 rounded-lg border border-amber-300">
+              {formData.unit_cost > 0 ? `${formData.unit_cost} FCFA / ${formData.unit || 'pièce'}` : '0 FCFA'}
+            </span>
+          </div>
+        </div>
+      )}
 
-            <div>
-              <label className="block text-amber-900 font-bold uppercase mb-1 text-[11px]">
-                Prix Vente Carton/Sac (F) :
+      {/* ── 4. SECTION TARIFS DE REVENTE SOUHAITÉS ── */}
+      <div className="p-3.5 bg-white border border-amber-300/90 rounded-2xl space-y-3 shadow-2xs">
+        <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+          <div className="flex items-center gap-1.5 text-amber-950 font-black text-xs sm:text-sm">
+            <Package className="w-4 h-4 text-amber-800" />
+            <span>2. Prix de Vente Souhaités :</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Prix de Vente Détail (À l'unité) */}
+          <div className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5">
+            <label className="block text-amber-950 font-extrabold uppercase text-[10px]">
+              Prix de Vente Détail (À l'unité) :
+            </label>
+            <input
+              type="number"
+              value={formData.unit_price || ''}
+              onChange={(e) => {
+                const price = parseFloat(e.target.value) || 0
+                setFormData((prev) => ({ ...prev, unit_price: price }))
+                if (formData.multiplier > 1) {
+                  setCartonPrice(String(Math.round(price * formData.multiplier)))
+                }
+              }}
+              placeholder="ex: 600 FCFA"
+              className="w-full px-2.5 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-black text-xs"
+            />
+            {formData.unit_price > 0 && formData.unit_cost > 0 && (
+              <div className="text-[10px] text-emerald-800 font-bold flex items-center justify-between">
+                <span>Marge brute détail :</span>
+                <span className="font-extrabold">+{formData.unit_price - formData.unit_cost} F (+{Math.round(((formData.unit_price - formData.unit_cost) / formData.unit_cost) * 100)}%)</span>
+              </div>
+            )}
+          </div>
+
+          {/* Prix de Vente Demi-Gros / Lot (si demi-grossiste) */}
+          {tradeType === 'semi_wholesale' && (
+            <div className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5">
+              <label className="block text-amber-950 font-extrabold uppercase text-[10px]">
+                Prix Lot Demi-Gros (ex: Pack de 6) :
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <input
+                    type="number"
+                    value={formData.lot_quantity || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lot_quantity: parseInt(e.target.value) || 0 }))}
+                    placeholder="Nb pièces (ex: 6)"
+                    className="w-full px-2 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-bold text-xs"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    value={formData.lot_price || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lot_price: parseFloat(e.target.value) || 0 }))}
+                    placeholder="Prix lot (ex: 3300)"
+                    className="w-full px-2 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-black text-xs"
+                  />
+                </div>
+              </div>
+              {formData.lot_price > 0 && formData.lot_quantity > 0 && (
+                <div className="text-[10px] text-amber-900 font-bold">
+                  Soit {Math.round(formData.lot_price / formData.lot_quantity)} F / pièce
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Prix de Vente Carton complet (si Grossiste) */}
+          {tradeType === 'wholesale' && (
+            <div className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1.5">
+              <label className="block text-amber-950 font-extrabold uppercase text-[10px]">
+                Prix de Vente Carton/Sac Complet :
               </label>
               <input
                 type="number"
@@ -262,106 +351,17 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
                     setFormData(prev => ({ ...prev, unit_price: Math.round(cPrice / m) }))
                   }
                 }}
-                placeholder="ex: 14000"
-                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold"
+                placeholder="ex: 13500 FCFA"
+                className="w-full px-2.5 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-black text-xs"
               />
+              {parseFloat(cartonPrice) > 0 && parseFloat(cartonCost) > 0 && (
+                <div className="text-[10px] text-emerald-800 font-bold flex items-center justify-between">
+                  <span>Bénéfice par carton :</span>
+                  <span className="font-extrabold">+{parseFloat(cartonPrice) - parseFloat(cartonCost)} F</span>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 4. SECTION SPÉCIFIQUE DEMI-GROSSISTE (VENTE PAR LOT / PACK) ── */}
-      {tradeType === 'semi_wholesale' && (
-        <div className="p-3 bg-amber-100/60 border-2 border-amber-300/90 rounded-2xl space-y-3">
-          <div className="flex items-center gap-1.5 text-amber-950 font-black text-xs">
-            <Package className="w-4 h-4 text-amber-800" />
-            <span>Tarif Demi-Gros / Vente par Lot :</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-amber-900 font-bold uppercase mb-1 text-[11px]">
-                Nombre de pièces par Lot :
-              </label>
-              <input
-                type="number"
-                value={formData.lot_quantity || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, lot_quantity: parseInt(e.target.value) || 0 }))}
-                placeholder="ex: 6 (demi-carton) ou 12"
-                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-amber-900 font-bold uppercase mb-1 text-[11px]">
-                Prix du Lot complet (F) :
-              </label>
-              <input
-                type="number"
-                value={formData.lot_price || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, lot_price: parseFloat(e.target.value) || 0 }))}
-                placeholder="ex: 2700 (remise demi-gros)"
-                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 5. TARIFS ET STOCK À L'UNITÉ (POUR TOUS LES MODÈLES) ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {/* Prix d'Achat Unitaire */}
-        <div>
-          <label className="block text-amber-950 font-extrabold uppercase mb-1 text-[11px]">
-            Achat Unit. (F) :
-          </label>
-          <input
-            type="number"
-            value={formData.unit_cost || ''}
-            onChange={(e) => {
-              const cost = parseFloat(e.target.value) || 0
-              setFormData((prev) => ({ ...prev, unit_cost: cost }))
-              if (tradeType === 'wholesale' && formData.multiplier > 1) {
-                setCartonCost(String(Math.round(cost * formData.multiplier)))
-              }
-            }}
-            placeholder="Prix achat"
-            className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
-          />
-        </div>
-
-        {/* Prix de Vente Unitaire (Détail) */}
-        <div>
-          <label className="block text-amber-950 font-extrabold uppercase mb-1 text-[11px]">
-            Vente Unit. (F) :
-          </label>
-          <input
-            type="number"
-            value={formData.unit_price || ''}
-            onChange={(e) => {
-              const price = parseFloat(e.target.value) || 0
-              setFormData((prev) => ({ ...prev, unit_price: price }))
-              if (tradeType === 'wholesale' && formData.multiplier > 1) {
-                setCartonPrice(String(Math.round(price * formData.multiplier)))
-              }
-            }}
-            placeholder="Prix vente"
-            className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
-          />
-        </div>
-
-        {/* Seuil d'Alerte */}
-        <div className="col-span-2 sm:col-span-1">
-          <label className="block text-amber-950 font-extrabold uppercase mb-1 text-[11px]">
-            Seuil Alerte :
-          </label>
-          <input
-            type="number"
-            value={formData.alert_threshold || ''}
-            onChange={(e) => setFormData((prev) => ({ ...prev, alert_threshold: parseFloat(e.target.value) || 5 }))}
-            placeholder="ex: 5"
-            className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
-          />
+          )}
         </div>
       </div>
 
