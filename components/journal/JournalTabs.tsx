@@ -84,7 +84,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
       id: 'particulier' as JournalTab,
       label: 'Mon Foyer',
       icon: Utensils,
-      show: features.enableParticulierMode || activity === 'particulier',
+      show: Boolean(features.enableParticulierMode && activity !== 'particulier'),
     },
     {
       id: 'settings' as JournalTab,

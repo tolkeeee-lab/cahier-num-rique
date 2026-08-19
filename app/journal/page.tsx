@@ -44,6 +44,7 @@ import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
 import { getOfflineProducts } from '@/lib/offlineDb'
+import { isEmployeeRole } from '@/lib/roleUtils'
 import { Send, Loader, Zap } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -582,12 +583,20 @@ export default function JournalPage() {
             )}
             {activeTab === 'stock' && (
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <StockManager shopId={shopManager.shopId} />
+                <StockManager 
+                  shopId={shopManager.shopId} 
+                  isEmployee={isEmployeeRole(mappedUser?.role)} 
+                />
               </div>
             )}
             {activeTab === 'analytics' && (
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <AnalyticsDashboard sales={journalData.allSales} shopId={shopManager.shopId} />
+                <AnalyticsDashboard 
+                  sales={journalData.allSales} 
+                  shopId={shopManager.shopId} 
+                  userRole={mappedUser?.role || 'owner'}
+                  currentShopActivity={shopManager.shopActivity}
+                />
               </div>
             )}
             {activeTab === 'settings' && (

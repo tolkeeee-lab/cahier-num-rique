@@ -58,12 +58,16 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
 
         <div>
           <label className="block text-amber-950 font-bold uppercase mb-1">Secteur d'activité :</label>
-          <input
-            type="text"
+          <select
             value={activity}
             onChange={(e) => setActivity(e.target.value)}
-            className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner"
-          />
+            className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner cursor-pointer"
+          >
+            <option value="boutique">🏪 Commerce / Boutique / Grossiste</option>
+            <option value="resto">🍽️ Cafétéria / Restaurant / Bar / Maquis</option>
+            <option value="prestations">✂️ Salon de Coiffure / Atelier / Services</option>
+            <option value="particulier">🏡 Particulier / Budget du Foyer</option>
+          </select>
         </div>
 
         <div>
