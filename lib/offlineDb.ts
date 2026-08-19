@@ -207,6 +207,7 @@ export interface OfflineProduct {
   unit: string
   alert_threshold: number
   initial_stock: number
+  current_stock?: number
   unit_cost: number
   unit_price: number
   created_at: string

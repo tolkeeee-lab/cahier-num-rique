@@ -1,14 +1,15 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
+import { ShopAccountingReport } from '@/components/analytics/ShopAccountingReport'
 import { HouseholdBudgetWidget } from '@/components/analytics/HouseholdBudgetWidget'
 import { RestaurantAnalyticsWidget } from '@/components/analytics/RestaurantAnalyticsWidget'
 import { ServicesAnalyticsWidget } from '@/components/analytics/ServicesAnalyticsWidget'
 import { RetailAnalyticsWidget } from '@/components/analytics/RetailAnalyticsWidget'
 import { SyscohadaModal } from '@/components/SyscohadaModal'
 import { DashboardCustomizerModal } from '@/components/analytics/DashboardCustomizerModal'
-import { Landmark, Sliders, Wallet, ShoppingBag } from 'lucide-react'
-import { canViewExecutiveDashboard, DASHBOARD_WIDGET_IDS, getDefaultDashboardWidgets } from '@/lib/roleUtils'
+import { Landmark, BarChart3, Receipt } from 'lucide-react'
+import { canViewExecutiveDashboard, getDefaultDashboardWidgets } from '@/lib/roleUtils'
 
 interface Sale {
   id: string
@@ -115,8 +116,10 @@ export function AnalyticsDashboard({
     return { totalCash, count }
   }, [sales])
 
+  const [viewMode, setViewMode] = useState<'accounting' | 'products'>('accounting')
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fbf9f4] font-sans p-4 md:p-6 space-y-4">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fbf9f4] font-sans p-3 sm:p-5 md:p-6 space-y-4">
       {/* Barre supérieure d'actions et de personnalisation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div>
@@ -130,29 +133,44 @@ export function AnalyticsDashboard({
           </div>
           <p className="text-xs text-stone-500 mt-0.5">
             {isExecutive
-              ? 'Tableau de bord de pilotage exécutif et comptable'
+              ? 'Comptabilité certifiée, chiffre d\'affaires à vie et bilan financier'
               : 'Espace de caisse opérationnel de l\'équipe'}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          {isExecutive && (
+        <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+          {/* Switcher Bilan vs Produits */}
+          <div className="flex items-center gap-1 bg-amber-100/70 p-1 rounded-xl border border-amber-300 font-mono text-xs">
             <button
-              onClick={() => setShowCustomizer(true)}
-              className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-xl transition-all flex items-center gap-2 border border-stone-300"
+              type="button"
+              onClick={() => setViewMode('accounting')}
+              className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'accounting' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
+              }`}
             >
-              <Sliders className="w-3.5 h-3.5 text-stone-600" />
-              <span>Personnaliser</span>
+              <Receipt className="w-3.5 h-3.5" />
+              <span>Bilan & Comptabilité</span>
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setViewMode('products')}
+              className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'products' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Top Ventes & Rayons</span>
+            </button>
+          </div>
 
           {isExecutive && (
             <button
               onClick={() => setShowSyscohada(true)}
-              className="px-3.5 py-2 bg-amber-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2"
+              className="px-3 py-2 bg-amber-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+              title="Bilan conforme référentiel SYSCOHADA"
             >
               <Landmark className="w-3.5 h-3.5" />
-              <span>Bilan SYSCOHADA</span>
+              <span className="hidden sm:inline">SYSCOHADA</span>
             </button>
           )}
         </div>
@@ -160,97 +178,86 @@ export function AnalyticsDashboard({
 
       {/* Vue Épurée pour Employé / Caissier */}
       {!isExecutive && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                <Wallet className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-xs text-stone-500 font-semibold uppercase tracking-wider">Caisse Encaissée Aujourd'hui</span>
-                <div className="text-2xl font-black text-emerald-700 mt-0.5">
-                  {todayStats.totalCash.toLocaleString()} <span className="text-sm font-normal">FCFA</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
-                <ShoppingBag className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-xs text-stone-500 font-semibold uppercase tracking-wider">Ventes du jour</span>
-                <div className="text-2xl font-black text-blue-900 mt-0.5">
-                  {todayStats.count} <span className="text-sm font-normal">opérations</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Banner Comptabilité SYSCOHADA (si actif et autorisé) */}
-      {isExecutive && activeWidgets.includes(DASHBOARD_WIDGET_IDS.SYSCOHADA_SUMMARY) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#f4ebd9] border border-amber-250 rounded-2xl px-4 py-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-amber-900 text-amber-100 flex items-center justify-center font-bold">
-              <Landmark className="w-4 h-4" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+              💰
             </div>
             <div>
-              <h4 className="text-xs font-bold text-amber-950">Comptabilité Référentiel SYSCOHADA (OHADA)</h4>
-              <p className="text-[10.5px] text-amber-800">Système Minimal de Trésorerie (SMT), Comptes 701, 601, 571, 411, 401 & Export CSV</p>
+              <span className="text-[11px] text-stone-500 font-bold uppercase tracking-wider font-mono">Caisse Encaissée Aujourd'hui</span>
+              <div className="text-xl font-black text-emerald-700 font-mono">
+                {todayStats.totalCash.toLocaleString('fr-FR')} <span className="text-xs font-normal">FCFA</span>
+              </div>
             </div>
           </div>
 
-          <button
-            onClick={() => setShowSyscohada(true)}
-            className="px-3.5 py-1.5 bg-amber-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 self-end sm:self-auto"
-          >
-            <Landmark className="w-3.5 h-3.5" />
-            <span>Ouvrir Bilan SMT</span>
-          </button>
+          <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
+              📦
+            </div>
+            <div>
+              <span className="text-[11px] text-stone-500 font-bold uppercase tracking-wider font-mono">Ventes du jour</span>
+              <div className="text-xl font-black text-blue-900 font-mono">
+                {todayStats.count} <span className="text-xs font-normal">opérations</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Widgets Métier Spécifiques */}
-      {activeActivity === 'particulier' && (
-        <HouseholdBudgetWidget
-          sales={filteredSales}
-          period={period}
-          onPeriodChange={setPeriod}
-          shopName={shopName}
+      {/* ── 1. Vue Comptabilité Complète (Par défaut) ── */}
+      {viewMode === 'accounting' && (
+        <ShopAccountingReport
+          sales={sales}
           shopId={activeShopId}
-          onRefreshData={onRefreshData}
+          shopName={shopName}
+          shopActivity={activeActivity}
         />
       )}
 
-      {activeActivity === 'resto' && (
-        <RestaurantAnalyticsWidget
-          sales={filteredSales}
-          period={period}
-          onPeriodChange={setPeriod}
-          shopName={shopName}
-        />
-      )}
+      {/* ── 2. Vue Analyse Produits & Rayons ── */}
+      {viewMode === 'products' && (
+        <div className="space-y-4">
+          {activeActivity === 'particulier' && (
+            <HouseholdBudgetWidget
+              sales={filteredSales}
+              period={period}
+              onPeriodChange={setPeriod}
+              shopName={shopName}
+              shopId={activeShopId}
+              onRefreshData={onRefreshData}
+            />
+          )}
 
-      {activeActivity === 'prestations' && (
-        <ServicesAnalyticsWidget
-          sales={filteredSales}
-          period={period}
-          onPeriodChange={setPeriod}
-          shopName={shopName}
-        />
-      )}
+          {activeActivity === 'resto' && (
+            <RestaurantAnalyticsWidget
+              sales={filteredSales}
+              period={period}
+              onPeriodChange={setPeriod}
+              shopName={shopName}
+            />
+          )}
 
-      {activeActivity === 'boutique' && (
-        <RetailAnalyticsWidget
-          sales={filteredSales}
-          period={period}
-          onPeriodChange={setPeriod}
-          shopName={shopName}
-          shopId={shopId}
-          onRefreshData={onRefreshData}
-        />
+          {activeActivity === 'prestations' && (
+            <ServicesAnalyticsWidget
+              sales={filteredSales}
+              period={period}
+              onPeriodChange={setPeriod}
+              shopName={shopName}
+            />
+          )}
+
+          {activeActivity === 'boutique' && (
+            <RetailAnalyticsWidget
+              sales={filteredSales}
+              period={period}
+              onPeriodChange={setPeriod}
+              shopName={shopName}
+              shopId={shopId}
+              onRefreshData={onRefreshData}
+            />
+          )}
+        </div>
       )}
 
       {/* Modal SYSCOHADA */}

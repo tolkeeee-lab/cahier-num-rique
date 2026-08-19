@@ -76,7 +76,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
     },
     {
       id: 'analytics' as JournalTab,
-      label: labels.tabTrends,
+      label: 'Comptabilité & Bilan',
       icon: BarChart3,
       show: features.enableAnalytics,
     },
