@@ -103,7 +103,7 @@ export function checkIfInputHasPrice(text: string): boolean {
   return false
 }
 
-/** Parse la saisie stock simple : "2 carton de Flag" → { qty, packaging, productName } */
+/** Parse la saisie stock simple : "2 carton de Flag", "1/2 carton de Beaufort", "demi pack eau fifa" */
 export function parseSimpleStockInput(text: string): { qty: number; packaging?: string; productName: string } {
   let cleaned = text.replace(/^(?:stock|achat)\s+de\s+/i, '').replace(/^(?:stock|achat)\s+/i, '').trim()
 
@@ -111,22 +111,58 @@ export function parseSimpleStockInput(text: string): { qty: number; packaging?: 
   let packaging: string | undefined = undefined
   let productName = cleaned
 
-  const qtyMatch = cleaned.match(/^(\d+)\s+(.+)$/)
-  if (qtyMatch) {
-    qty = parseInt(qtyMatch[1], 10)
-    const rest = qtyMatch[2].trim()
-    const packMatch = rest.match(/^(caissier|carton|sac|boite|boîte|paquet|unité|unite)\s+(?:de\s+)?(.+)$/i)
+  // Gestion des fractions : 1/2 carton, demi carton, 1/4 carton, quart sac, etc.
+  if (/^(?:1\/2|demi|demi-carton)\b/i.test(cleaned)) {
+    qty = 0.5
+    cleaned = cleaned.replace(/^(?:1\/2|demi|demi-carton)\s*(?:de\s+)?/i, '').trim()
+    const packMatch = cleaned.match(/^(carton|sac|pack|caisse|fardeau|paquet)\s+(?:de\s+)?(.+)$/i)
     if (packMatch) {
       packaging = packMatch[1].toLowerCase()
       productName = packMatch[2].trim()
     } else {
-      productName = rest
+      packaging = 'carton'
+      productName = cleaned
     }
-  } else {
-    const packMatch = cleaned.match(/^(caissier|carton|sac|boite|boîte|paquet|unité|unite)\s+(?:de\s+)?(.+)$/i)
+  } else if (/^(?:1\/4|quart)\b/i.test(cleaned)) {
+    qty = 0.25
+    cleaned = cleaned.replace(/^(?:1\/4|quart)\s*(?:de\s+)?/i, '').trim()
+    const packMatch = cleaned.match(/^(carton|sac|pack|caisse|fardeau|paquet)\s+(?:de\s+)?(.+)$/i)
     if (packMatch) {
       packaging = packMatch[1].toLowerCase()
       productName = packMatch[2].trim()
+    } else {
+      packaging = 'carton'
+      productName = cleaned
+    }
+  } else if (/^(?:3\/4)\b/i.test(cleaned)) {
+    qty = 0.75
+    cleaned = cleaned.replace(/^(?:3\/4)\s*(?:de\s+)?/i, '').trim()
+    const packMatch = cleaned.match(/^(carton|sac|pack|caisse|fardeau|paquet)\s+(?:de\s+)?(.+)$/i)
+    if (packMatch) {
+      packaging = packMatch[1].toLowerCase()
+      productName = packMatch[2].trim()
+    } else {
+      packaging = 'carton'
+      productName = cleaned
+    }
+  } else {
+    const qtyMatch = cleaned.match(/^(\d+(?:[.,]\d+)?)\s+(.+)$/)
+    if (qtyMatch) {
+      qty = parseFloat(qtyMatch[1].replace(',', '.')) || 1
+      const rest = qtyMatch[2].trim()
+      const packMatch = rest.match(/^(caissier|carton|sac|pack|fardeau|boite|boîte|paquet|palette|bidon|unité|unite)\s+(?:de\s+)?(.+)$/i)
+      if (packMatch) {
+        packaging = packMatch[1].toLowerCase()
+        productName = packMatch[2].trim()
+      } else {
+        productName = rest
+      }
+    } else {
+      const packMatch = cleaned.match(/^(caissier|carton|sac|pack|fardeau|boite|boîte|paquet|palette|bidon|unité|unite)\s+(?:de\s+)?(.+)$/i)
+      if (packMatch) {
+        packaging = packMatch[1].toLowerCase()
+        productName = packMatch[2].trim()
+      }
     }
   }
 
@@ -139,8 +175,10 @@ export function parseSimpleStockInput(text: string): { qty: number; packaging?: 
 /** Multiplicateurs par défaut selon l'emballage */
 function defaultMultiplierForPackaging(packaging: string): { multiplier: string; unit: string } {
   switch (packaging.toLowerCase()) {
+    case 'pack': return { multiplier: '6', unit: 'bouteille' }
+    case 'fardeau': return { multiplier: '12', unit: 'bouteille' }
     case 'caissier': return { multiplier: '12', unit: 'bouteille' }
-    case 'carton': return { multiplier: '24', unit: 'paquet' }
+    case 'carton': return { multiplier: '24', unit: 'bouteille' }
     case 'sac': return { multiplier: '50', unit: 'kg' }
     default: return { multiplier: '1', unit: 'pièce' }
   }

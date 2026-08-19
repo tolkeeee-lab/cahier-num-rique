@@ -107,13 +107,26 @@ export function analyzeNotebookInputWithMasterCatalog(
     cleanText = cleanText.replace(explicitPriceMatch[0], '').trim()
   }
 
-  // Détecter la quantité initiale (ex: "2 coca", "10 cartons biere", "stock 5 sacs")
-  const qtyMatch = cleanText.match(/^(?:stock|achat)?\s*(\d+)\s+(.+)/i)
-  if (qtyMatch) {
-    qty = Math.max(1, parseInt(qtyMatch[1], 10))
-    cleanText = qtyMatch[2].trim()
+  // Détecter les fractions de conditionnement (ex: "1/2 carton", "demi carton", "1/4 carton", "demi sac", "quart carton")
+  let fractionMultiplier = 1
+  if (/^(?:1\/2|demi|demi-carton)\b/i.test(cleanText)) {
+    fractionMultiplier = 0.5
+    cleanText = cleanText.replace(/^(?:1\/2|demi|demi-carton)\s*(?:de\s+)?(?:carton\s*(?:de\s+)?)?/i, '').trim()
+  } else if (/^(?:1\/4|quart)\b/i.test(cleanText)) {
+    fractionMultiplier = 0.25
+    cleanText = cleanText.replace(/^(?:1\/4|quart)\s*(?:de\s+)?(?:carton\s*(?:de\s+)?)?/i, '').trim()
+  } else if (/^(?:3\/4)\b/i.test(cleanText)) {
+    fractionMultiplier = 0.75
+    cleanText = cleanText.replace(/^(?:3\/4)\s*(?:de\s+)?(?:carton\s*(?:de\s+)?)?/i, '').trim()
   } else {
-    cleanText = cleanText.replace(/^(?:stock|achat)\s+/i, '').trim()
+    // Détecter la quantité initiale (ex: "2 coca", "10 cartons biere", "stock 5 sacs")
+    const qtyMatch = cleanText.match(/^(?:stock|achat)?\s*(\d+(?:[.,]\d+)?)\s+(.+)/i)
+    if (qtyMatch) {
+      qty = Math.max(0.1, parseFloat(qtyMatch[1].replace(',', '.')))
+      cleanText = qtyMatch[2].trim()
+    } else {
+      cleanText = cleanText.replace(/^(?:stock|achat)\s+/i, '').trim()
+    }
   }
 
   // 3. Chercher la carte produit correspondante dans le catalogue (avec tolérance aux fautes Levenshtein)
@@ -173,13 +186,13 @@ export function analyzeNotebookInputWithMasterCatalog(
     if (pkgName && lower.includes(pkgName)) {
       packagingUsed = bestMatch.packaging_name || 'lot'
       multiplier = bestMatch.multiplier
-    } else if (lower.includes('carton') || lower.includes('sac') || lower.includes('pack') || lower.includes('caisse')) {
+    } else if (lower.includes('carton') || lower.includes('sac') || lower.includes('pack') || lower.includes('caisse') || fractionMultiplier < 1) {
       packagingUsed = bestMatch.packaging_name || 'lot'
       multiplier = bestMatch.multiplier
     }
   }
 
-  const calculatedItemsCount = qty * multiplier
+  const calculatedItemsCount = Math.max(1, Math.round(qty * fractionMultiplier * multiplier))
   const stockBefore = typeof bestMatch.current_stock === 'number'
     ? bestMatch.current_stock
     : (bestMatch.initial_stock || 0)
