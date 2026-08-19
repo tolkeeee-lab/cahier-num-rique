@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, Plus, FileSpreadsheet } from 'lucide-react'
+import { Search, Plus, FileSpreadsheet, Trash2 } from 'lucide-react'
 
 interface StockToolbarProps {
   searchQuery: string
@@ -11,6 +11,8 @@ interface StockToolbarProps {
   categories: string[]
   onAddProduct: () => void
   onExportCSV?: () => void
+  onClearAllStock?: () => void
+  hasProducts?: boolean
   isEmployee?: boolean
 }
 
@@ -22,6 +24,8 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
   categories,
   onAddProduct,
   onExportCSV,
+  onClearAllStock,
+  hasProducts = false,
   isEmployee = false,
 }) => {
   return (
@@ -65,6 +69,18 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
               title="Exporter l'inventaire Excel / CSV"
             >
               <FileSpreadsheet className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Bouton Vider tout le stock */}
+          {!isEmployee && hasProducts && onClearAllStock && (
+            <button
+              onClick={onClearAllStock}
+              className="p-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 transition-all shadow-xs cursor-pointer flex items-center gap-1 text-xs font-mono font-bold"
+              title="Vider et réinitialiser tout le stock à zéro"
+            >
+              <Trash2 className="w-4 h-4 text-rose-600" />
+              <span className="hidden sm:inline">Vider le stock</span>
             </button>
           )}
 

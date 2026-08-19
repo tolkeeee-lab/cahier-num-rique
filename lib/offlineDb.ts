@@ -431,6 +431,11 @@ export function replaceOfflineProducts(shopId: string, products: OfflineProduct[
   idbReplaceProducts(shopId, clean).catch(() => {})
 }
 
+export function clearOfflineProducts(shopId: string): void {
+  writeJson(productsKey(shopId), [])
+  idbReplaceProducts(shopId, []).catch(() => {})
+}
+
 export function saveOfflineProduct(shopId: string, product: OfflineProduct): void {
   const cleanProduct = sanitizeProductData(product as any)
   const products = getOfflineProducts(shopId)

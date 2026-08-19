@@ -7,6 +7,7 @@ import { StockTable } from '@/components/stock/StockTable'
 import { ProductModal } from '@/components/stock/ProductModal'
 import { StockFormState } from '@/components/stock/types'
 import { exportSalesToCSV } from '@/lib/exportUtils'
+import { clearOfflineProducts } from '@/lib/offlineDb'
 
 interface Product {
   id: string
@@ -165,6 +166,22 @@ export function StockManager({
     }
   }
 
+  const handleClearAllStock = async () => {
+    if (!window.confirm('⚠️ Êtes-vous certain de vouloir supprimer TOUS les produits du stock ? Cette action est irréversible et remettra le stock à zéro.')) {
+      return
+    }
+    setProducts([])
+    clearOfflineProducts(shopId)
+    try {
+      await fetch('/api/stock/reset', {
+        method: 'POST',
+        headers: { 'x-shop-id': shopId },
+      })
+    } catch (err) {
+      console.error('Erreur reset stock:', err)
+    }
+  }
+
   const categories = Array.from(new Set(products.map((p) => p.category || 'Divers')))
 
   const filteredProducts = products.filter((p) => {
@@ -207,6 +224,8 @@ export function StockManager({
         categories={categories}
         onAddProduct={handleOpenAddModal}
         onExportCSV={() => exportSalesToCSV(filteredProducts as any, `Inventaire_Stock_${shopId}`)}
+        onClearAllStock={handleClearAllStock}
+        hasProducts={products.length > 0}
         isEmployee={isEmployee}
       />
 

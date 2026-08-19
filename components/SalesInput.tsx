@@ -27,13 +27,7 @@ export function SalesInput({
   const pens = getPens(shopActivity)
   const currentPen = pens.find(p => p.id === activePenColor) || pens[0]
 
-  const quickProducts = [
-    { name: 'Pain', price: 150 },
-    { name: 'Lait', price: 500 },
-    { name: 'Eau', price: 300 },
-    { name: 'Riz 1kg', price: 700 },
-    { name: 'Sucre', price: 650 },
-  ]
+  const quickProducts: Array<{ name: string; price: number }> = []
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
