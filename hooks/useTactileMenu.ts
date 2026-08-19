@@ -15,7 +15,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { getOfflineProducts, saveOfflineProduct, generateOfflineId } from '@/lib/offlineDb'
-import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,22 +66,6 @@ function getProductEmoji(name: string): string {
   return '📦'
 }
 
-/** Décide si un produit doit être filtré selon l'activité */
-function isProductAllowedForActivity(name: string, category: string, activity: string): boolean {
-  const cat = category.toLowerCase()
-  const isCookedDish =
-    cat === 'cuisine' || cat === 'cafétéria' || cat === 'plats' ||
-    /poulet|riz|spaghetti|sandwich|atassi|plat|repas|omelette|sauce/i.test(name)
-  const isPrestation =
-    cat === 'prestations' || cat === 'service' ||
-    /coiffure|tresse|vidange|réparation|lavage|soin/i.test(name)
-
-  if (activity === 'boutique' && (isCookedDish || isPrestation)) return false
-  if (activity === 'resto' && isPrestation) return false
-  if (activity === 'prestations' && isCookedDish) return false
-  return true
-}
-
 const EXCLUDED_ITEMS_KEY = (shopId: string) => `cahier_deleted_menu_items_${shopId}`
 
 function getExcludedNames(shopId: string): string[] {
@@ -132,11 +115,10 @@ export function useTactileMenu({
         const rawName = p.name || ''
         if (!rawName.trim()) return
 
-        const cleanName = getCanonicalProductName(rawName)
+        const cleanName = rawName.trim()
         const cleanLower = cleanName.toLowerCase().trim()
 
         if (excluded.some(ex => ex.toLowerCase().trim() === cleanLower)) return
-        if (!isProductAllowedForActivity(cleanName, p.category || '', shopActivity)) return
 
         const price = p.unit_price || p.price || 0
         const dedupeKey = `${cleanLower}_${price}`
@@ -165,8 +147,10 @@ export function useTactileMenu({
 
         if (res.ok) {
           const data = await res.json()
-          setMenuItems(buildMenu(data.products || []))
-          return
+          if (data.products && data.products.length > 0) {
+            setMenuItems(buildMenu(data.products))
+            return
+          }
         }
       } catch {
         // Fallback silencieux sur les données offline
@@ -178,6 +162,16 @@ export function useTactileMenu({
     }
 
     load().finally(() => setIsLoadingMenu(false))
+
+    // Écouter les mises à jour en temps réel du stock
+    const handleStockUpdate = () => {
+      load()
+    }
+
+    window.addEventListener('cahier_stock_updated', handleStockUpdate)
+    return () => {
+      window.removeEventListener('cahier_stock_updated', handleStockUpdate)
+    }
   }, [shopId, shopActivity, refreshTrigger])
 
   // ── Tap 1-clic sur un article — incrémente la quantité si déjà présent ─────

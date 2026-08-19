@@ -7,7 +7,7 @@ import { StockTable } from '@/components/stock/StockTable'
 import { ProductModal } from '@/components/stock/ProductModal'
 import { StockFormState } from '@/components/stock/types'
 import { exportSalesToCSV } from '@/lib/exportUtils'
-import { clearOfflineProducts } from '@/lib/offlineDb'
+import { clearOfflineProducts, saveOfflineProduct } from '@/lib/offlineDb'
 
 interface Product {
   id: string
@@ -123,11 +123,23 @@ export function StockManager({
         lot_price: Number(formData.lot_price) || 0,
       }
 
-      await fetch('/api/stock', {
+      const res = await fetch('/api/stock', {
         method: editingProduct ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
         body: JSON.stringify(body),
       })
+
+      const savedData = res.ok ? await res.json() : null
+      const finalProduct = savedData?.product || {
+        ...body,
+        id: editingProduct?.id || `stk_${Date.now()}`,
+        shop_id: shopId,
+      }
+
+      saveOfflineProduct(shopId, finalProduct)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+      }
 
       setIsProductModalOpen(false)
       loadStock()
