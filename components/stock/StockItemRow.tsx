@@ -212,7 +212,7 @@ export function StockItemRow({
                 </span>
                 {item.unit_cost > 0 && (
                   <span className="text-amber-800 font-bold">
-                    Prix Gros ({item.packaging_name || 'Carton'}): <strong>{formatPrice(item.unit_cost * item.multiplier)}</strong>
+                    Prix Gros ({item.packaging_name || 'Carton'}): <strong>{formatPrice(Math.round(item.unit_cost * item.multiplier))}</strong>
                   </span>
                 )}
               </>

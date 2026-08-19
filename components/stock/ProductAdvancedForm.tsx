@@ -221,10 +221,10 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
                   const cCost = parseFloat(val) || 0
                   const m = formData.multiplier || 24
                   if (m > 0) {
-                    setFormData(prev => ({ ...prev, unit_cost: Math.round(cCost / m) }))
+                    setFormData(prev => ({ ...prev, unit_cost: cCost / m }))
                   }
                 }}
-                placeholder="ex: 12000"
+                placeholder="ex: 10000"
                 className="w-full px-2.5 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-black text-xs shadow-inner"
               />
             </div>
@@ -242,7 +242,7 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
                   const m = val === '' ? 0 : (parseInt(val, 10) || 0)
                   setFormData(prev => ({ ...prev, multiplier: m }))
                   if (cartonCost && m > 0) {
-                    setFormData(prev => ({ ...prev, unit_cost: Math.round(parseFloat(cartonCost) / m) }))
+                    setFormData(prev => ({ ...prev, unit_cost: parseFloat(cartonCost) / m }))
                   }
                 }}
                 placeholder="ex: 24 pièces"
@@ -258,7 +258,11 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
               <span>Prix d'achat unitaire de revient :</span>
             </span>
             <span className="text-amber-950 font-black text-xs sm:text-sm px-2 py-0.5 bg-amber-100 rounded-lg border border-amber-300">
-              {formData.unit_cost > 0 ? `${formData.unit_cost} FCFA / ${formData.unit || 'pièce'}` : '0 FCFA'}
+              {formData.unit_cost > 0 
+                ? (formData.unit_cost % 1 === 0 
+                    ? `${formData.unit_cost} FCFA / ${formData.unit || 'pièce'}` 
+                    : `~${formData.unit_cost.toFixed(2)} FCFA / ${formData.unit || 'pièce'}`)
+                : '0 FCFA'}
             </span>
           </div>
         </div>
@@ -356,7 +360,7 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
                   const cPrice = parseFloat(val) || 0
                   const m = formData.multiplier || 1
                   if (m > 0) {
-                    setFormData(prev => ({ ...prev, unit_price: Math.round(cPrice / m) }))
+                    setFormData(prev => ({ ...prev, unit_price: cPrice / m }))
                   }
                 }}
                 placeholder="ex: 13500 FCFA"
@@ -365,7 +369,7 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
               {parseFloat(cartonPrice) > 0 && parseFloat(cartonCost) > 0 && (
                 <div className="text-[10px] text-emerald-800 font-bold flex items-center justify-between">
                   <span>Bénéfice par carton :</span>
-                  <span className="font-extrabold">+{parseFloat(cartonPrice) - parseFloat(cartonCost)} F</span>
+                  <span className="font-extrabold">+{Math.round(parseFloat(cartonPrice) - parseFloat(cartonCost))} F</span>
                 </div>
               )}
             </div>

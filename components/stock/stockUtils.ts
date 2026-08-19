@@ -54,25 +54,11 @@ export function getItemPurchaseValue(item: StockItem): number {
   if (mult > 1) {
     const wholeCartons = Math.floor(stock / mult)
     const extraUnits = stock % mult
-    const wholesalePrice = Math.round(item.unit_cost * mult)
-    
-    let cleanWholesale = wholesalePrice
-    if (wholesalePrice > 500) {
-      const nearestThousand = Math.round(wholesalePrice / 1000) * 1000
-      if (Math.abs(wholesalePrice - nearestThousand) <= 20) {
-        cleanWholesale = nearestThousand
-      } else {
-        const nearestHundred = Math.round(wholesalePrice / 100) * 100
-        if (Math.abs(wholesalePrice - nearestHundred) <= 20) {
-          cleanWholesale = nearestHundred
-        }
-      }
-    }
-
-    return (wholeCartons * cleanWholesale) + (extraUnits * item.unit_cost)
+    const cartonCost = Math.round(item.unit_cost * mult)
+    return Math.round((wholeCartons * cartonCost) + (extraUnits * item.unit_cost))
   }
 
-  return stock * item.unit_cost
+  return Math.round(stock * item.unit_cost)
 }
 
 export function getStockStatus(item: StockItem): StockStatus {
