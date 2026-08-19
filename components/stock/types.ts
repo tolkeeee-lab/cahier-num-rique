@@ -41,3 +41,4 @@ export interface StockFormState {
 }
 
 export type StockStatus = 'ok' | 'low' | 'out' | 'untracked'
+export type TradeType = 'retail' | 'semi_wholesale' | 'wholesale'
