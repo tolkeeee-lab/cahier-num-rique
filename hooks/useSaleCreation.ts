@@ -16,8 +16,6 @@ import { getTodayDateString } from '@/lib/dateUtils'
 import {
   generateOfflineId,
   saveOfflineSale,
-  getOfflineProducts,
-  saveOfflineProduct,
   OfflineSale,
 } from '@/lib/offlineDb'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
@@ -45,11 +43,6 @@ export interface UseSaleCreationReturn {
   setPostItWarning: Dispatch<SetStateAction<string | null>>
   handleCreateSale: (e: FormEvent) => void
   submitText: (text: string, penColor?: string) => Promise<void>
-  autoLearnData: { name: string; price: number } | null
-  showAutoLearnModal: boolean
-  setShowAutoLearnModal: Dispatch<SetStateAction<boolean>>
-  handleConfirmAutoLearn: (name: string, price: number) => Promise<void>
-  handleDismissAutoLearn: () => void
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -63,8 +56,6 @@ export function useSaleCreation({
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [postItWarning, setPostItWarning] = useState<string | null>(null)
-  const [autoLearnData, setAutoLearnData] = useState<{ name: string; price: number } | null>(null)
-  const [showAutoLearnModal, setShowAutoLearnModal] = useState(false)
 
   // ── Construit et sauvegarde localement une vente à partir du texte libre ──
   const buildLocalSale = (text: string, penOverride?: string): OfflineSale => {
@@ -83,7 +74,7 @@ export function useSaleCreation({
 
     const parsed = parseTextLocally(text, activePen)
 
-    let type = 'cash_in'
+    let type: OfflineSale['type'] = 'cash_in'
     if (isClientRequest) {
       type = 'client_request'
     } else if (activePen === 'red') {
@@ -190,29 +181,6 @@ export function useSaleCreation({
     }
   }
 
-  // ── Détecter si un produit est nouveau pour proposer l'auto-apprentissage ──
-  const checkAutoLearn = (text: string) => {
-    // On ne détecte que pour les ventes cash (stylo bleu)
-    if (selectedPen !== 'blue') return
-
-    const match = text.match(/^(\d+)?\s*([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@)\s*(\d+)/i)
-    if (!match) return
-
-    const prodName = match[2].trim()
-    const prodPrice = parseInt(match[3], 10)
-
-    if (prodName.length < 3) return
-
-    const existing = getOfflineProducts(shopId)?.find(
-      p => p.name.toLowerCase().trim() === prodName.toLowerCase()
-    )
-
-    if (!existing) {
-      setAutoLearnData({ name: prodName, price: prodPrice })
-      setShowAutoLearnModal(true)
-    }
-  }
-
   // ── submitText : pour le pipeline et les modales d'interception ──
   const submitText = async (text: string, penOverride?: string): Promise<void> => {
     if (!text.trim() || isSubmitting) return
@@ -221,7 +189,6 @@ export function useSaleCreation({
     onSaleCreated()
     if (onAfterSale && localSale.total > 0) onAfterSale(localSale.total)
     syncWithApi(text, localSale.id, penOverride).finally(() => setIsSubmitting(false))
-    checkAutoLearn(text)
   }
 
   // ── Handler principal de création de vente ──
@@ -248,32 +215,6 @@ export function useSaleCreation({
     syncWithApi(text, localSale.id).finally(() => {
       setIsSubmitting(false)
     })
-
-    // 5. Proposer d'apprendre le produit (ne bloque pas)
-    checkAutoLearn(text)
-  }
-
-  // ── Confirmer l'enregistrement d'un nouveau produit au catalogue ──
-  const handleConfirmAutoLearn = async (name: string, price: number): Promise<void> => {
-    saveOfflineProduct(shopId, {
-      id: generateOfflineId(),
-      shop_id: shopId,
-      name,
-      category: 'Général',
-      unit: 'pièce',
-      alert_threshold: 5,
-      initial_stock: 0,
-      unit_cost: 0,
-      unit_price: price,
-      created_at: new Date().toISOString(),
-    })
-    setShowAutoLearnModal(false)
-    setAutoLearnData(null)
-  }
-
-  const handleDismissAutoLearn = () => {
-    setShowAutoLearnModal(false)
-    setAutoLearnData(null)
   }
 
   return {
@@ -284,10 +225,5 @@ export function useSaleCreation({
     setPostItWarning,
     handleCreateSale,
     submitText,
-    autoLearnData,
-    showAutoLearnModal,
-    setShowAutoLearnModal,
-    handleConfirmAutoLearn,
-    handleDismissAutoLearn,
   }
 }

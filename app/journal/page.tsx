@@ -22,7 +22,6 @@ import { NewShopModal } from '@/components/journal/NewShopModal'
 import { CashAdjustmentModal } from '@/components/journal/CashAdjustmentModal'
 import { JournalPostIt } from '@/components/journal/JournalPostIt'
 import { StockSuggestionsBubble, StockSuggestionItem } from '@/components/journal/StockSuggestionsBubble'
-import { AutoLearnModal } from '@/components/journal/AutoLearnModal'
 import { TactileMenuModal } from '@/components/journal/TactileMenuModal'
 import { AddToExistingSaleBar } from '@/components/journal/AddToExistingSaleBar'
 import { StockWizardModal } from '@/components/journal/StockWizardModal'
@@ -647,13 +646,6 @@ export default function JournalPage() {
         sales={journalData.allSales}
         currentShopName={shopManager.currentShop?.name || 'Cahier Numérique'}
         receiptSale={receiptSale}
-      />
-
-      <AutoLearnModal
-        isOpen={saleCreation.showAutoLearnModal}
-        autoLearnData={saleCreation.autoLearnData}
-        onClose={saleCreation.handleDismissAutoLearn}
-        onConfirmSave={saleCreation.handleConfirmAutoLearn}
       />
 
       <NewShopModal
