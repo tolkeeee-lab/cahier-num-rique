@@ -19,6 +19,10 @@ interface Product {
   unit_price: number
   category?: string
   unit?: string
+  multiplier?: number
+  packaging_name?: string
+  lot_quantity?: number
+  lot_price?: number
 }
 
 interface StockManagerProps {
@@ -36,7 +40,7 @@ const defaultFormData: StockFormState = {
   category: 'Divers',
   unit: 'unité',
   multiplier: 1,
-  packaging_name: 'carton',
+  packaging_name: '',
   lot_quantity: 0,
   lot_price: 0,
 }
@@ -93,10 +97,10 @@ export function StockManager({
       alert_threshold: p.alert_threshold || 5,
       category: p.category || 'Divers',
       unit: p.unit || 'unité',
-      multiplier: 1,
-      packaging_name: 'carton',
-      lot_quantity: 0,
-      lot_price: 0,
+      multiplier: p.multiplier || 1,
+      packaging_name: p.packaging_name || '',
+      lot_quantity: p.lot_quantity || 0,
+      lot_price: p.lot_price || 0,
     })
     setIsProductModalOpen(true)
   }
@@ -113,6 +117,10 @@ export function StockManager({
         alert_threshold: Number(formData.alert_threshold) || 5,
         category: formData.category,
         unit: formData.unit,
+        multiplier: Number(formData.multiplier) || 1,
+        packaging_name: formData.packaging_name || '',
+        lot_quantity: Number(formData.lot_quantity) || 0,
+        lot_price: Number(formData.lot_price) || 0,
       }
 
       await fetch('/api/stock', {
