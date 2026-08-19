@@ -236,9 +236,10 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
               </label>
               <input
                 type="number"
-                value={formData.multiplier || ''}
+                value={formData.multiplier === 0 ? '' : (formData.multiplier || '')}
                 onChange={(e) => {
-                  const m = parseInt(e.target.value) || 1
+                  const val = e.target.value
+                  const m = val === '' ? 0 : (parseInt(val, 10) || 0)
                   setFormData(prev => ({ ...prev, multiplier: m }))
                   if (cartonCost && m > 0) {
                     setFormData(prev => ({ ...prev, unit_cost: Math.round(parseFloat(cartonCost) / m) }))
@@ -280,12 +281,13 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
             </label>
             <input
               type="number"
-              value={formData.unit_price || ''}
+              value={formData.unit_price === 0 ? '' : (formData.unit_price || '')}
               onChange={(e) => {
-                const price = parseFloat(e.target.value) || 0
+                const val = e.target.value
+                const price = val === '' ? 0 : (parseFloat(val) || 0)
                 setFormData((prev) => ({ ...prev, unit_price: price }))
                 if (formData.multiplier > 1) {
-                  setCartonPrice(String(Math.round(price * formData.multiplier)))
+                  setCartonPrice(price > 0 ? String(Math.round(price * formData.multiplier)) : '')
                 }
               }}
               placeholder="ex: 600 FCFA"
@@ -309,8 +311,11 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
                 <div>
                   <input
                     type="number"
-                    value={formData.lot_quantity || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, lot_quantity: parseInt(e.target.value) || 0 }))}
+                    value={formData.lot_quantity === 0 ? '' : (formData.lot_quantity || '')}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setFormData(prev => ({ ...prev, lot_quantity: val === '' ? 0 : (parseInt(val, 10) || 0) }))
+                    }}
                     placeholder="Nb pièces (ex: 6)"
                     className="w-full px-2 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-bold text-xs"
                   />
@@ -318,8 +323,11 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
                 <div>
                   <input
                     type="number"
-                    value={formData.lot_price || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, lot_price: parseFloat(e.target.value) || 0 }))}
+                    value={formData.lot_price === 0 ? '' : (formData.lot_price || '')}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setFormData(prev => ({ ...prev, lot_price: val === '' ? 0 : (parseFloat(val) || 0) }))
+                    }}
                     placeholder="Prix lot (ex: 3300)"
                     className="w-full px-2 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-black text-xs"
                   />
@@ -365,6 +373,68 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
         </div>
       </div>
 
+      {/* ── 5. TARIFS ET STOCK À L'UNITÉ (POUR TOUS LES MODÈLES) ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {/* Prix d'Achat Unitaire */}
+        <div>
+          <label className="block text-amber-950 font-extrabold uppercase mb-1 text-[11px]">
+            Achat Unit. (F) :
+          </label>
+          <input
+            type="number"
+            value={formData.unit_cost === 0 ? '' : (formData.unit_cost || '')}
+            onChange={(e) => {
+              const val = e.target.value
+              const cost = val === '' ? 0 : (parseFloat(val) || 0)
+              setFormData((prev) => ({ ...prev, unit_cost: cost }))
+              if (tradeType === 'wholesale' && formData.multiplier > 1) {
+                setCartonCost(cost > 0 ? String(Math.round(cost * formData.multiplier)) : '')
+              }
+            }}
+            placeholder="Prix achat"
+            className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
+          />
+        </div>
+
+        {/* Prix de Vente Unitaire (Détail) */}
+        <div>
+          <label className="block text-amber-950 font-extrabold uppercase mb-1 text-[11px]">
+            Vente Unit. (F) :
+          </label>
+          <input
+            type="number"
+            value={formData.unit_price === 0 ? '' : (formData.unit_price || '')}
+            onChange={(e) => {
+              const val = e.target.value
+              const price = val === '' ? 0 : (parseFloat(val) || 0)
+              setFormData((prev) => ({ ...prev, unit_price: price }))
+              if (tradeType === 'wholesale' && formData.multiplier > 1) {
+                setCartonPrice(price > 0 ? String(Math.round(price * formData.multiplier)) : '')
+              }
+            }}
+            placeholder="Prix vente"
+            className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
+          />
+        </div>
+
+        {/* Seuil d'Alerte */}
+        <div className="col-span-2 sm:col-span-1">
+          <label className="block text-amber-950 font-extrabold uppercase mb-1 text-[11px]">
+            Seuil Alerte :
+          </label>
+          <input
+            type="number"
+            value={formData.alert_threshold === 0 ? '' : (formData.alert_threshold || '')}
+            onChange={(e) => {
+              const val = e.target.value
+              setFormData(prev => ({ ...prev, alert_threshold: val === '' ? 0 : (parseFloat(val) || 0) }))
+            }}
+            placeholder="ex: 5"
+            className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
+          />
+        </div>
+      </div>
+
       {/* ── 6. STOCK INITIAL ── */}
       <div className="p-3 bg-amber-50 border border-amber-300 rounded-2xl space-y-2">
         <label className="block text-amber-950 font-extrabold uppercase text-[11px]">
@@ -380,7 +450,7 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
                 onChange={(e) => {
                   const val = e.target.value
                   setCartonsCount(val)
-                  const c = parseInt(val) || 0
+                  const c = val === '' ? 0 : (parseInt(val, 10) || 0)
                   const m = formData.multiplier || 1
                   setFormData(prev => ({ ...prev, initial_stock: c * m }))
                 }}
@@ -392,13 +462,14 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
               <label className="block text-amber-800 font-bold text-[10px] mb-0.5">Total Unités calculé :</label>
               <input
                 type="number"
-                value={formData.initial_stock || ''}
+                value={formData.initial_stock === 0 ? '' : (formData.initial_stock || '')}
                 onChange={(e) => {
-                  const st = parseInt(e.target.value) || 0
+                  const val = e.target.value
+                  const st = val === '' ? 0 : (parseInt(val, 10) || 0)
                   setFormData(prev => ({ ...prev, initial_stock: st }))
                   const m = formData.multiplier || 1
                   if (m > 1) {
-                    setCartonsCount(String(Math.floor(st / m)))
+                    setCartonsCount(st > 0 ? String(Math.floor(st / m)) : '')
                   }
                 }}
                 placeholder="ex: 240 unités"
@@ -410,8 +481,11 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
           <div>
             <input
               type="number"
-              value={formData.initial_stock || ''}
-              onChange={(e) => setFormData((prev) => ({ ...prev, initial_stock: parseFloat(e.target.value) || 0 }))}
+              value={formData.initial_stock === 0 ? '' : (formData.initial_stock || '')}
+              onChange={(e) => {
+                const val = e.target.value
+                setFormData(prev => ({ ...prev, initial_stock: val === '' ? 0 : (parseFloat(val) || 0) }))
+              }}
               placeholder="ex: 25 pièces en rayon"
               className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
             />

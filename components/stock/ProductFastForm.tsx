@@ -82,8 +82,11 @@ export const ProductFastForm: React.FC<ProductFastFormProps> = ({
           </label>
           <input
             type="number"
-            value={formData.unit_price || ''}
-            onChange={(e) => setFormData((prev) => ({ ...prev, unit_price: parseFloat(e.target.value) || 0 }))}
+            value={formData.unit_price === 0 ? '' : (formData.unit_price || '')}
+            onChange={(e) => {
+              const val = e.target.value
+              setFormData((prev) => ({ ...prev, unit_price: val === '' ? 0 : (parseFloat(val) || 0) }))
+            }}
             placeholder={isWholesale ? 'ex: 12500' : 'ex: 500'}
             className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
           />
@@ -96,8 +99,11 @@ export const ProductFastForm: React.FC<ProductFastFormProps> = ({
           </label>
           <input
             type="number"
-            value={formData.initial_stock || ''}
-            onChange={(e) => setFormData((prev) => ({ ...prev, initial_stock: parseFloat(e.target.value) || 0 }))}
+            value={formData.initial_stock === 0 ? '' : (formData.initial_stock || '')}
+            onChange={(e) => {
+              const val = e.target.value
+              setFormData((prev) => ({ ...prev, initial_stock: val === '' ? 0 : (parseFloat(val) || 0) }))
+            }}
             placeholder="ex: 10"
             className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
           />

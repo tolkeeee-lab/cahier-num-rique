@@ -41,11 +41,16 @@ export function ProductModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="w-full max-w-lg bg-[#fdfaf2] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/70 backdrop-blur-xs overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="w-full max-w-lg bg-[#fdfaf2] border-2 border-amber-300 rounded-3xl p-4 sm:p-5 shadow-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Entête */}
-        <div className="flex items-center justify-between border-b border-amber-200 pb-3">
+        {/* Entête fixe */}
+        <div className="flex-shrink-0 flex items-center justify-between border-b border-amber-200 pb-3 mb-2">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-700" />
             <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">
@@ -78,36 +83,43 @@ export function ProductModal({
               </div>
             )}
 
-            <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 rounded-lg transition-colors cursor-pointer">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 bg-amber-100/80 hover:bg-amber-200 text-gray-700 hover:text-gray-950 rounded-xl transition-colors cursor-pointer border border-amber-300"
+              title="Fermer la fenêtre"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Formulaire selon mode */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'fast' ? (
-            <ProductFastForm formData={formData} setFormData={setFormData} />
-          ) : (
-            <ProductAdvancedForm formData={formData} setFormData={setFormData} />
-          )}
+        {/* Formulaire avec scroll interne fluide */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto pr-1 sm:pr-1.5 space-y-4 scrollbar-thin">
+            {mode === 'fast' ? (
+              <ProductFastForm formData={formData} setFormData={setFormData} />
+            ) : (
+              <ProductAdvancedForm formData={formData} setFormData={setFormData} />
+            )}
+          </div>
 
-          {/* Boutons d'Action */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-amber-200">
+          {/* Boutons d'Action Fixes en Bas */}
+          <div className="flex-shrink-0 flex items-center justify-end gap-2.5 pt-3 mt-2 border-t border-amber-200 bg-[#fdfaf2]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 transition-colors cursor-pointer"
+              className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-black rounded-xl transition-colors cursor-pointer font-mono"
             >
-              Annuler
+              ✕ Fermer
             </button>
             <button
               type="submit"
               disabled={!formData.name.trim() || saving}
-              className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-md"
+              className="px-5 py-2.5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-black rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-md font-mono"
             >
               <Save className="w-4 h-4" />
-              <span>{saving ? 'Enregistrement...' : 'Sauvegarder'}</span>
+              <span>{saving ? 'Enregistrement...' : 'Sauvegarder le Produit'}</span>
             </button>
           </div>
         </form>
