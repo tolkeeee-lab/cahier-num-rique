@@ -244,18 +244,19 @@ export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
 
   let lotQty = Math.max(0, Math.round(Number(copy.lot_quantity) || 0))
   let lotPr = Math.max(0, Math.round(Number(copy.lot_price) || 0))
-  if (lotQty > 1 && lotPr > 0) {
-    const normalLotValue = price * lotQty
-    if (normalLotValue > 0 && lotPr >= normalLotValue) {
-      lotQty = 0
-      lotPr = 0
-    }
-  } else {
-    lotQty = 0
-    lotPr = 0
-  }
   copy.lot_quantity = lotQty
   copy.lot_price = lotPr
+
+  const explicitTradeType = (copy as any).trade_type
+  if (explicitTradeType) {
+    (copy as any).trade_type = explicitTradeType
+  } else if (lotQty > 1) {
+    (copy as any).trade_type = 'semi_wholesale'
+  } else if (mult > 1 || unitName === 'carton' || unitName === 'sac') {
+    (copy as any).trade_type = 'wholesale'
+  } else {
+    (copy as any).trade_type = 'retail'
+  }
 
   return copy
 }

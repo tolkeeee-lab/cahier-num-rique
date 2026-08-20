@@ -218,6 +218,7 @@ export interface OfflineProduct {
   is_unlimited?: boolean
   lot_quantity?: number
   lot_price?: number
+  trade_type?: 'retail' | 'semi_wholesale' | 'wholesale'
 }
 
 // ─── Clés localStorage ────────────────────────────────────────────────────────

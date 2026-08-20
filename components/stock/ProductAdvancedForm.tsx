@@ -35,6 +35,7 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
   setFormData,
 }) => {
   const [tradeType, setTradeType] = useState<TradeType>(() => {
+    if (formData.trade_type) return formData.trade_type
     if (formData.lot_quantity && formData.lot_quantity > 1) return 'semi_wholesale'
     if ((formData.multiplier && formData.multiplier > 1) || formData.unit === 'carton' || formData.unit === 'sac') {
       return 'wholesale'
@@ -68,18 +69,20 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
   const handleSelectTradeType = (type: TradeType) => {
     setTradeType(type)
     if (type === 'retail') {
-      setFormData(prev => ({ ...prev, multiplier: 1, packaging_name: '', lot_quantity: 0, lot_price: 0 }))
+      setFormData(prev => ({ ...prev, trade_type: 'retail', multiplier: 1, packaging_name: '', lot_quantity: 0, lot_price: 0 }))
     } else if (type === 'semi_wholesale') {
       setFormData(prev => ({
         ...prev,
+        trade_type: 'semi_wholesale',
         multiplier: prev.multiplier > 1 ? prev.multiplier : 6,
         packaging_name: prev.packaging_name || 'pack',
         lot_quantity: prev.lot_quantity || 6,
-        lot_price: prev.lot_price || (prev.unit_price ? prev.unit_price * 6 * 0.9 : 0),
+        lot_price: prev.lot_price || (prev.unit_price ? Math.round(prev.unit_price * 6 * 0.9) : 0),
       }))
     } else if (type === 'wholesale') {
       setFormData(prev => ({
         ...prev,
+        trade_type: 'wholesale',
         multiplier: prev.multiplier > 1 ? prev.multiplier : 24,
         packaging_name: prev.packaging_name || 'carton',
       }))

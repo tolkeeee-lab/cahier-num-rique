@@ -189,7 +189,7 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json()
-    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, created_at } = body
+    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, trade_type, created_at } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Le nom du produit est obligatoire' }, { status: 400 })
@@ -211,6 +211,7 @@ export async function POST(request: Request) {
       is_service: is_service ?? false,
       lot_quantity: lot_quantity ?? 0,
       lot_price: lot_price ?? 0,
+      trade_type: trade_type,
     })
 
     if (created_at) {
@@ -242,7 +243,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json()
-    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price } = body
+    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, trade_type } = body
 
     if (!id && !name) {
       return NextResponse.json({ error: 'ID ou nom du produit manquant' }, { status: 400 })
@@ -279,6 +280,7 @@ export async function PATCH(request: Request) {
     if (is_service !== undefined) updates.is_service = is_service
     if (lot_quantity !== undefined) updates.lot_quantity = lot_quantity
     if (lot_price !== undefined) updates.lot_price = lot_price
+    if (trade_type !== undefined) updates.trade_type = trade_type
 
     updates = sanitizeProductData(updates as any)
 
