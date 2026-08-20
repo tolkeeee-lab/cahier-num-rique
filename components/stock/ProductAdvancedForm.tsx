@@ -65,6 +65,28 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
     return ''
   })
 
+  // Synchronisation lors de l'ouverture d'un produit en mode édition
+  React.useEffect(() => {
+    const currentMult = formData.multiplier || 1
+    if (formData.lot_quantity && formData.lot_quantity > 1) {
+      setTradeType('semi_wholesale')
+    } else if (currentMult > 1 || formData.unit === 'carton' || formData.unit === 'sac') {
+      setTradeType('wholesale')
+    } else {
+      setTradeType('retail')
+    }
+
+    if (currentMult > 1) {
+      setCartonsCount(formData.initial_stock > 0 ? String(Math.floor(formData.initial_stock / currentMult)) : '')
+      setCartonCost(formData.unit_cost > 0 ? String(Math.round(formData.unit_cost * currentMult)) : '')
+      setCartonPrice(formData.unit_price > 0 ? String(Math.round(formData.unit_price * currentMult)) : '')
+    } else {
+      setCartonsCount('')
+      setCartonCost('')
+      setCartonPrice('')
+    }
+  }, [formData.name, formData.unit_price, formData.unit_cost, formData.multiplier, formData.initial_stock, formData.unit, formData.lot_quantity])
+
   const handleSelectTradeType = (type: TradeType) => {
     setTradeType(type)
     if (type === 'retail') {
