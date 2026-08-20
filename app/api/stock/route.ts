@@ -233,7 +233,7 @@ export async function POST(request: Request) {
 }
 
 // ─── PATCH /api/stock ─────────────────────────────────────────────────────────
-// Met à jour un produit existant
+// Met à jour un produit existant (ou l'insère s'il a été créé hors-ligne)
 export async function PATCH(request: Request) {
   const shopId = request.headers.get('x-shop-id') || 'default-shop'
   if (!isSupabaseConfigured()) {
@@ -244,9 +244,15 @@ export async function PATCH(request: Request) {
     const body = await request.json()
     const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price } = body
 
-    if (!id) {
-      return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
+    if (!id && !name) {
+      return NextResponse.json({ error: 'ID ou nom du produit manquant' }, { status: 400 })
     }
+
+    const altShopId = shopId.startsWith('SHOP-')
+      ? shopId.replace(/^SHOP-/i, 'BTQ-')
+      : shopId.startsWith('BTQ-')
+        ? shopId.replace(/^BTQ-/i, 'SHOP-')
+        : shopId
 
     let updates: Record<string, any> = {}
     if (name !== undefined) updates.name = name.trim()
@@ -276,16 +282,83 @@ export async function PATCH(request: Request) {
 
     updates = sanitizeProductData(updates as any)
 
-    const { data, error } = await supabase
-      .from('products')
-      .update(updates)
-      .eq('id', id)
-      .eq('shop_id', shopId)
-      .select()
-      .single()
+    // 1. Tenter une mise à jour directe par ID
+    let updatedProduct: any = null
+    if (id && !id.startsWith('stk_') && !id.startsWith('orphan_')) {
+      const { data, error } = await supabase
+        .from('products')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .maybeSingle()
 
-    if (error) throw error
-    return NextResponse.json({ product: data })
+      if (!error && data) {
+        updatedProduct = data
+      }
+    }
+
+    // 2. Si non trouvé par ID, chercher par nom exact ou canonique pour cette boutique
+    if (!updatedProduct && name) {
+      const canonicalName = normalizeProductName(name)
+      const { data: existingByName } = await supabase
+        .from('products')
+        .select('id')
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .ilike('name', canonicalName)
+        .maybeSingle()
+
+      if (existingByName?.id) {
+        const { data, error } = await supabase
+          .from('products')
+          .update(updates)
+          .eq('id', existingByName.id)
+          .select()
+          .maybeSingle()
+
+        if (!error && data) {
+          updatedProduct = data
+        }
+      }
+    }
+
+    // 3. Si le produit n'existe pas encore dans Supabase (créé en local/offline), on l'insère proprement
+    if (!updatedProduct) {
+      const insertData = {
+        shop_id: shopId,
+        name: normalizeProductName(name || 'Produit'),
+        category: category || 'Divers',
+        unit: unit || 'unité',
+        alert_threshold: alert_threshold ?? 5,
+        initial_stock: initial_stock ?? 0,
+        unit_cost: unit_cost ?? 0,
+        unit_price: unit_price ?? 0,
+        multiplier: multiplier ?? 1,
+        packaging_name: packaging_name || '',
+        is_service: is_service ?? false,
+        lot_quantity: lot_quantity ?? 0,
+        lot_price: lot_price ?? 0,
+        stock_tracked: (initial_stock ?? 0) > 0,
+        created_at: new Date().toISOString(),
+      }
+
+      const { data, error } = await supabase
+        .from('products')
+        .insert(sanitizeProductData(insertData as any))
+        .select()
+        .single()
+
+      if (!error && data) {
+        updatedProduct = data
+      }
+    }
+
+    return NextResponse.json({
+      product: updatedProduct || {
+        ...updates,
+        id: id || `stk_${Date.now()}`,
+        shop_id: shopId,
+      }
+    })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erreur inconnue'
     console.error('[API/stock PATCH]', msg)
