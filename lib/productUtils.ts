@@ -219,20 +219,21 @@ export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
   const mult = Math.max(1, Math.round(Number(copy.multiplier) || 1))
   copy.multiplier = mult
 
-  let price = Math.max(0, Math.round(Number(copy.unit_price) || 0))
-  let cost = Math.max(0, Math.round(Number(copy.unit_cost) || 0))
+  let price = Math.max(0, Number(copy.unit_price) || 0)
+  let cost = Math.max(0, Number(copy.unit_cost) || 0)
 
   if (mult > 1 && price > 0 && cost > price) {
-    cost = Math.round(cost / mult)
+    cost = cost / mult
   }
 
-  const isFakeCost = cost === Math.round(price * 0.6) || cost === Math.round(price * 0.7)
+  const isFakeCost = Math.round(cost) === Math.round(price * 0.6) || Math.round(cost) === Math.round(price * 0.7)
   if (isFakeCost && (!copy.total_in || copy.total_in === 0)) {
     cost = 0
   }
 
-  copy.unit_price = price
-  copy.unit_cost = cost
+  // Précision décimale pour garantir les prix cartons exacts (ex: 10 000 F / 24 sans arrondi 9996 F)
+  copy.unit_price = Math.round(price * 10000) / 10000
+  copy.unit_cost = Math.round(cost * 10000) / 10000
 
   let unitName = (copy.unit || 'unité').trim().toLowerCase()
   const pkgName = (copy.packaging_name || 'carton').trim().toLowerCase()

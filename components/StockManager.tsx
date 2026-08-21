@@ -151,18 +151,33 @@ export function StockManager({
       })
 
       const savedData = res.ok ? await res.json() : null
-      const finalProduct = savedData?.product || {
+      const finalProduct: Product = savedData?.product || {
         ...body,
         id: editingProduct?.id || `stk_${Date.now()}`,
         shop_id: shopId,
+        stock_tracked: true,
+        current_stock: stockVal,
       }
 
-      saveOfflineProduct(shopId, finalProduct)
+      // Mise à jour optimiste immédiate dans la liste affichée
+      setProducts(prev => {
+        const targetId = editingProduct?.id || finalProduct.id
+        const index = prev.findIndex(p => p.id === targetId || (editingProduct && p.name.toLowerCase() === editingProduct.name.toLowerCase()))
+        if (index >= 0) {
+          const next = [...prev]
+          next[index] = { ...next[index], ...finalProduct, current_stock: stockVal }
+          return next
+        }
+        return [finalProduct, ...prev]
+      })
+
+      saveOfflineProduct(shopId, finalProduct as any)
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
       }
 
       setIsProductModalOpen(false)
+      setEditingProduct(null)
       loadStock()
     } catch (err) {
       console.error('Erreur sauvegarde produit:', err)
@@ -299,7 +314,10 @@ export function StockManager({
         <ProductModal
           key={editingProduct ? `edit_${editingProduct.id}` : 'new_product_modal'}
           isOpen={isProductModalOpen}
-          onClose={() => setIsProductModalOpen(false)}
+          onClose={() => {
+            setIsProductModalOpen(false)
+            setEditingProduct(null)
+          }}
           editingItem={editingProduct as any}
           formData={formData}
           setFormData={setFormData}
