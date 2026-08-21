@@ -14,6 +14,7 @@ interface NotebookModalsProps {
   onCloseCashClosingModal: () => void
   showBarcodeScannerModal: boolean
   onCloseBarcodeScannerModal: () => void
+  onBarcodeDetected?: (barcode: string) => void
   showSyscohadaModal: boolean
   onCloseSyscohadaModal: () => void
   showReceiptModal: boolean
@@ -31,6 +32,7 @@ export const NotebookModals: React.FC<NotebookModalsProps> = ({
   onCloseCashClosingModal,
   showBarcodeScannerModal,
   onCloseBarcodeScannerModal,
+  onBarcodeDetected,
   showSyscohadaModal,
   onCloseSyscohadaModal,
   showReceiptModal,
@@ -68,7 +70,9 @@ export const NotebookModals: React.FC<NotebookModalsProps> = ({
           isOpen={showBarcodeScannerModal}
           onClose={onCloseBarcodeScannerModal}
           onDetected={(barcode: string) => {
-            console.log('Code-barres scanné:', barcode)
+            if (onBarcodeDetected) {
+              onBarcodeDetected(barcode)
+            }
             onCloseBarcodeScannerModal()
           }}
         />

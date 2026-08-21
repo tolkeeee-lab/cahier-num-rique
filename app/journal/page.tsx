@@ -38,15 +38,14 @@ import { useSaleCreation } from '@/hooks/useSaleCreation'
 import { useTactileMenu } from '@/hooks/useTactileMenu'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
 import { useInputPipeline, StockConfirmationData, PriceChangeData, WizardPrefill } from '@/hooks/useInputPipeline'
-import { saveOfflineProduct } from '@/lib/offlineDb'
+import { saveOfflineProduct, getOfflineProducts } from '@/lib/offlineDb'
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
-import { getOfflineProducts } from '@/lib/offlineDb'
 import { isEmployeeRole } from '@/lib/roleUtils'
-import { Send, Loader, Zap } from 'lucide-react'
+import { Send, Loader, Zap, ScanLine } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -364,6 +363,25 @@ export default function JournalPage() {
     }
   }
 
+  // Handler pour insertion automatique par code-barres
+  const handleBarcodeDetected = (barcode: string) => {
+    const products = getOfflineProducts(shopManager.shopId) || []
+    const matched = products.find(p => 
+      (p as any).barcode === barcode || 
+      p.id === barcode || 
+      p.name.toLowerCase().includes(barcode.toLowerCase())
+    )
+    if (matched) {
+      const entry = `1 ${matched.name} à ${matched.unit_price}`
+      saleCreation.setInput(prev => prev.trim() ? `${prev}, ${entry}` : entry)
+      setPostItMessage(`✅ Article scanné : ${matched.name} (${matched.unit_price} F)`)
+    } else {
+      const entry = `1 Article #${barcode.slice(-4)}`
+      saleCreation.setInput(prev => prev.trim() ? `${prev}, ${entry}` : entry)
+      setPostItMessage(`🔍 Code scanné : ${barcode}`)
+    }
+  }
+
   // ── Garde SSR / Hydratation ───────────────────────────────────────────────
   if (!mounted) {
     return (
@@ -520,7 +538,7 @@ export default function JournalPage() {
                     <button
                       type="button"
                       onClick={() => setShowTactileMenuModal(true)}
-                      className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 border border-amber-400 text-amber-950 rounded-xl text-xs font-extrabold transition-all shadow-xs flex items-center gap-1 sm:gap-1.5 flex-shrink-0 cursor-pointer hover:scale-[1.02] active:scale-95"
+                      className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 border border-amber-400 text-amber-950 rounded-xl text-xs font-extrabold transition-all shadow-xs flex items-center gap-1 sm:gap-1.5 flex-shrink-0 cursor-pointer hover:scale-[1.02] active:scale-95"
                       title="Ouvrir le menu des raccourcis 1-tap"
                     >
                       <Zap className="w-3.5 h-3.5 fill-amber-950 text-amber-950" />
@@ -530,6 +548,17 @@ export default function JournalPage() {
                           {tactileMenu.menuItems.length}
                         </span>
                       )}
+                    </button>
+
+                    {/* Bouton Scanner Code-barres 1-Tap */}
+                    <button
+                      type="button"
+                      onClick={() => setShowBarcodeScannerModal(true)}
+                      className="px-2 sm:px-2.5 py-1.5 sm:py-2 bg-amber-200/90 hover:bg-amber-300 border border-amber-400 text-amber-950 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 flex-shrink-0 cursor-pointer hover:scale-[1.02] active:scale-95"
+                      title="Scanner un code-barres avec la caméra"
+                    >
+                      <ScanLine className="w-3.5 h-3.5 text-amber-950" />
+                      <span className="hidden md:inline font-mono text-xs">Scanner</span>
                     </button>
 
                     <div className="hidden sm:inline-block font-mono text-xs font-extrabold text-amber-900 flex-shrink-0 min-w-[45px] text-center bg-amber-200/60 px-2 py-1 rounded-lg">
@@ -658,6 +687,7 @@ export default function JournalPage() {
         onCloseCashClosingModal={() => setShowCashClosing(false)}
         showBarcodeScannerModal={showBarcodeScannerModal}
         onCloseBarcodeScannerModal={() => setShowBarcodeScannerModal(false)}
+        onBarcodeDetected={handleBarcodeDetected}
         showSyscohadaModal={showSyscohadaModal}
         onCloseSyscohadaModal={() => setShowSyscohadaModal(false)}
         showReceiptModal={showReceiptModal}
