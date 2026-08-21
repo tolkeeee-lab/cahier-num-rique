@@ -180,6 +180,34 @@ export async function GET(request: Request) {
   }
 }
 
+function filterProductDbColumns(obj: Record<string, any>): Record<string, any> {
+  const allowed = [
+    'shop_id',
+    'name',
+    'category',
+    'unit',
+    'alert_threshold',
+    'initial_stock',
+    'unit_cost',
+    'unit_price',
+    'multiplier',
+    'packaging_name',
+    'is_service',
+    'lot_quantity',
+    'lot_price',
+    'stock_tracked',
+    'tracking_started_at',
+    'created_at',
+  ]
+  const filtered: Record<string, any> = {}
+  for (const key of allowed) {
+    if (obj[key] !== undefined) {
+      filtered[key] = obj[key]
+    }
+  }
+  return filtered
+}
+
 // ─── POST /api/stock ──────────────────────────────────────────────────────────
 // Crée un nouveau produit dans le catalogue
 export async function POST(request: Request) {
@@ -197,7 +225,7 @@ export async function POST(request: Request) {
 
     const canonicalName = normalizeProductName(name)
 
-    const insertData: Record<string, any> = sanitizeProductData({
+    const cleanData: Record<string, any> = sanitizeProductData({
       shop_id: shopId,
       name: canonicalName,
       category: category || 'Général',
@@ -215,8 +243,10 @@ export async function POST(request: Request) {
     })
 
     if (created_at) {
-      insertData.created_at = created_at
+      cleanData.created_at = created_at
     }
+
+    const insertData = filterProductDbColumns(cleanData)
 
     const { data, error } = await supabase
       .from('products')
@@ -225,7 +255,7 @@ export async function POST(request: Request) {
       .single()
 
     if (error) throw error
-    return NextResponse.json({ product: data }, { status: 201 })
+    return NextResponse.json({ product: { ...data, trade_type: cleanData.trade_type } }, { status: 201 })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erreur inconnue'
     console.error('[API/stock POST]', msg)
@@ -283,13 +313,14 @@ export async function PATCH(request: Request) {
     if (trade_type !== undefined) updates.trade_type = trade_type
 
     updates = sanitizeProductData(updates as any)
+    const dbUpdates = filterProductDbColumns(updates)
 
     // 1. Tenter une mise à jour directe par ID
     let updatedProduct: any = null
     if (id && !id.startsWith('stk_') && !id.startsWith('orphan_')) {
       const { data, error } = await supabase
         .from('products')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', id)
         .select()
         .maybeSingle()
@@ -312,7 +343,7 @@ export async function PATCH(request: Request) {
       if (existingByName?.id) {
         const { data, error } = await supabase
           .from('products')
-          .update(updates)
+          .update(dbUpdates)
           .eq('id', existingByName.id)
           .select()
           .maybeSingle()
@@ -343,9 +374,12 @@ export async function PATCH(request: Request) {
         created_at: new Date().toISOString(),
       }
 
+      const cleanInsert = sanitizeProductData(insertData as any)
+      const dbInsert = filterProductDbColumns(cleanInsert)
+
       const { data, error } = await supabase
         .from('products')
-        .insert(sanitizeProductData(insertData as any))
+        .insert(dbInsert)
         .select()
         .single()
 
@@ -355,7 +389,7 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({
-      product: updatedProduct || {
+      product: updatedProduct ? { ...updatedProduct, trade_type: updates.trade_type } : {
         ...updates,
         id: id || `stk_${Date.now()}`,
         shop_id: shopId,

@@ -19,6 +19,7 @@ export const ProductFastForm: React.FC<ProductFastFormProps> = ({
     if (wholesale) {
       setFormData(prev => ({
         ...prev,
+        trade_type: 'wholesale',
         unit: 'carton',
         multiplier: 24,
         packaging_name: 'carton',
@@ -26,6 +27,7 @@ export const ProductFastForm: React.FC<ProductFastFormProps> = ({
     } else {
       setFormData(prev => ({
         ...prev,
+        trade_type: 'retail',
         unit: 'unité',
         multiplier: 1,
         packaging_name: '',

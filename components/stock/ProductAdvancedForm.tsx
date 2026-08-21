@@ -36,8 +36,10 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
 }) => {
   const [tradeType, setTradeType] = useState<TradeType>(() => {
     if (formData.trade_type) return formData.trade_type
-    if (formData.lot_quantity && formData.lot_quantity > 1) return 'semi_wholesale'
-    if ((formData.multiplier && formData.multiplier > 1) || formData.unit === 'carton' || formData.unit === 'sac') {
+    if ((formData.lot_quantity && formData.lot_quantity > 1) || formData.packaging_name === 'pack' || formData.packaging_name === 'fardeau') {
+      return 'semi_wholesale'
+    }
+    if ((formData.multiplier && formData.multiplier > 1) || formData.unit === 'carton' || formData.unit === 'sac' || formData.packaging_name === 'carton' || formData.packaging_name === 'sac') {
       return 'wholesale'
     }
     return 'retail'
