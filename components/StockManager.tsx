@@ -99,9 +99,10 @@ export function StockManager({
 
   const handleOpenEditModal = (p: Product) => {
     setEditingProduct(p)
+    const currentOrInitial = p.current_stock ?? p.initial_stock ?? 0
     setFormData({
       name: p.name,
-      initial_stock: p.initial_stock || 0,
+      initial_stock: currentOrInitial,
       unit_cost: p.unit_cost || 0,
       unit_price: p.unit_price || 0,
       alert_threshold: p.alert_threshold || 5,
@@ -119,10 +120,12 @@ export function StockManager({
   const handleSaveProduct = async () => {
     setSaving(true)
     try {
+      const stockVal = Number(formData.initial_stock) || 0
       const body = {
         id: editingProduct?.id,
         name: formData.name,
-        initial_stock: Number(formData.initial_stock) || 0,
+        initial_stock: stockVal,
+        current_stock: stockVal,
         unit_cost: Number(formData.unit_cost) || 0,
         unit_price: Number(formData.unit_price) || 0,
         alert_threshold: Number(formData.alert_threshold) || 5,

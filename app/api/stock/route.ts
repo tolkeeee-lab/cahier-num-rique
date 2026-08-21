@@ -302,6 +302,12 @@ export async function PATCH(request: Request) {
         updates.stock_tracked = true
         updates.tracking_started_at = new Date().toISOString()
       }
+    } else if (body.current_stock !== undefined) {
+      updates.initial_stock = body.current_stock
+      if (body.current_stock > 0) {
+        updates.stock_tracked = true
+        updates.tracking_started_at = new Date().toISOString()
+      }
     }
     if (body.stock_tracked !== undefined) {
       updates.stock_tracked = body.stock_tracked
