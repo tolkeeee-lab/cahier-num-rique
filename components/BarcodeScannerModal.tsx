@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { QrCode, X, Camera, Check, RefreshCw, Sparkles, Link, AlertCircle } from 'lucide-react'
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
+import { QrCode, X, Camera, Check, RefreshCw, Sparkles, Link, AlertCircle, Zap, ZapOff } from 'lucide-react'
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from '@zxing/library'
 import { formatPrice } from '@/lib/penUtils'
 
 interface Product {
@@ -20,6 +20,25 @@ interface BarcodeScannerModalProps {
   onAssociateBarcode?: (productId: string, barcode: string) => void
 }
 
+// Bip sonore de caisse professionnel
+function playScannerBeep() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(1760, ctx.currentTime) // Note A6 (bip caisse aigu et net)
+    gain.gain.setValueAtTime(0.35, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12)
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.12)
+  } catch {}
+}
+
 export function BarcodeScannerModal({
   isOpen,
   onClose,
@@ -33,99 +52,173 @@ export function BarcodeScannerModal({
   const [isStarting, setIsStarting] = useState(false)
   const [scannedResult, setScannedResult] = useState<string | null>(null)
   const [selectedAssociateProductId, setSelectedAssociateProductId] = useState<string>('')
+  const [torchSupported, setTorchSupported] = useState(false)
+  const [torchOn, setTorchOn] = useState(false)
   
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
-  const scannerContainerId = 'interactive-barcode-scanner'
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
+  const isScanningRef = useRef<boolean>(false)
 
-  // Trouver le produit correspondant s'il existe
+  // Produit correspondant dans la boutique
   const matchedProduct = scannedResult
     ? products.find(p => p.barcode === scannedResult || p.id === scannedResult || p.name.toLowerCase() === scannedResult.toLowerCase())
     : null
 
-  const stopScanner = useCallback(async () => {
-    if (html5QrCodeRef.current) {
-      try {
-        if (html5QrCodeRef.current.isScanning) {
-          await html5QrCodeRef.current.stop()
-        }
-        await html5QrCodeRef.current.clear()
-      } catch (err) {
-        console.warn('[BarcodeScanner] Erreur stop scanner:', err)
-      } finally {
-        html5QrCodeRef.current = null
-        setCameraActive(false)
-      }
+  const stopScanner = useCallback(() => {
+    isScanningRef.current = false
+    
+    // Arrêter le flux caméra
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop())
+      streamRef.current = null
     }
+
+    if (codeReaderRef.current) {
+      try {
+        codeReaderRef.current.reset()
+      } catch {}
+      codeReaderRef.current = null
+    }
+
+    setCameraActive(false)
+    setTorchOn(false)
+    setTorchSupported(false)
   }, [])
 
   const handleScanSuccess = useCallback((decodedText: string) => {
     const code = decodedText.trim()
     if (!code) return
 
+    playScannerBeep()
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate(80) } catch {}
+      try { navigator.vibrate([60, 40, 60]) } catch {}
     }
 
     setScannedResult(code)
     stopScanner()
   }, [stopScanner])
 
+  const toggleTorch = async () => {
+    if (!streamRef.current) return
+    const track = streamRef.current.getVideoTracks()[0]
+    if (!track) return
+
+    try {
+      const newStatus = !torchOn
+      await (track as any).applyConstraints({
+        advanced: [{ torch: newStatus }]
+      })
+      setTorchOn(newStatus)
+    } catch (err) {
+      console.warn('[Torch]', err)
+    }
+  }
+
   const startScanner = useCallback(async () => {
     setCameraError(null)
     setIsStarting(true)
     setScannedResult(null)
 
-    const container = document.getElementById(scannerContainerId)
-    if (!container) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError("Votre navigateur ne supporte pas l'accès direct à la caméra.")
       setIsStarting(false)
       return
     }
 
     try {
-      await stopScanner()
+      stopScanner()
 
-      const html5QrCode = new Html5Qrcode(scannerContainerId, {
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.QR_CODE,
-        ],
-        verbose: false,
-      })
-      html5QrCodeRef.current = html5QrCode
+      // Configuration ZXing
+      const hints = new Map()
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.UPC_A,
+        BarcodeFormat.UPC_E,
+        BarcodeFormat.CODE_128,
+        BarcodeFormat.CODE_39,
+        BarcodeFormat.QR_CODE,
+        BarcodeFormat.ITF,
+        BarcodeFormat.DATA_MATRIX,
+      ])
+      hints.set(DecodeHintType.TRY_HARDER, true)
 
-      const config = {
-        fps: 15,
-        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-          const minEdge = Math.min(viewfinderWidth, viewfinderHeight)
-          return {
-            width: Math.max(160, Math.floor(minEdge * 0.75)),
-            height: Math.max(120, Math.floor(minEdge * 0.55)),
-          }
+      const reader = new BrowserMultiFormatReader(hints, 120)
+      codeReaderRef.current = reader
+
+      // Demande du flux caméra avec autofocus et résolution HD
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
         },
-        aspectRatio: 1.333333,
+        audio: false,
+      })
+
+      streamRef.current = stream
+
+      // Vérifier support de la torche / flash
+      const track = stream.getVideoTracks()[0]
+      if (track) {
+        const capabilities: any = track.getCapabilities ? track.getCapabilities() : {}
+        if (capabilities.torch) {
+          setTorchSupported(true)
+        }
       }
 
-      await html5QrCode.start(
-        { facingMode: 'environment' },
-        config,
-        (decodedText) => {
-          handleScanSuccess(decodedText)
-        },
-        () => {}
-      )
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.setAttribute('playsinline', 'true')
+        await videoRef.current.play()
+      }
 
       setCameraActive(true)
+      isScanningRef.current = true
+
+      // ── MOTEUR 1 : BarcodeDetector Natif (Accélération matérielle iOS/Android) ──
+      if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+        try {
+          const nativeDetector = new (window as any).BarcodeDetector({
+            formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code']
+          })
+
+          const scanNativeLoop = async () => {
+            if (!isScanningRef.current) return
+            if (videoRef.current && videoRef.current.readyState >= 2) {
+              try {
+                const barcodes = await nativeDetector.detect(videoRef.current)
+                if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                  handleScanSuccess(barcodes[0].rawValue)
+                  return
+                }
+              } catch {}
+            }
+            if (isScanningRef.current) {
+              requestAnimationFrame(scanNativeLoop)
+            }
+          }
+          requestAnimationFrame(scanNativeLoop)
+        } catch {}
+      }
+
+      // ── MOTEUR 2 : ZXing Décodeur continu ──
+      if (videoRef.current) {
+        reader.decodeFromStream(stream, videoRef.current, (result) => {
+          if (!isScanningRef.current) return
+          if (result && result.getText()) {
+            handleScanSuccess(result.getText())
+          }
+        })
+      }
+
     } catch (err: any) {
       console.warn('[BarcodeScanner] Erreur démarrage:', err)
       setCameraError(
-        err?.message?.includes('Permission')
-          ? "Permission caméra refusée. Autorisez l'accès à l'appareil photo dans vos réglages."
-          : "Impossible d'activer la caméra. Saisissez le code manuellement ci-dessous."
+        err?.name === 'NotAllowedError' || err?.message?.includes('Permission')
+          ? "Permission caméra refusée. Autorisez l'accès à l'appareil photo dans Safari/Chrome."
+          : "Impossible de lancer la caméra. Vous pouvez saisir le code manuellement ci-dessous."
       )
       setCameraActive(false)
     } finally {
@@ -137,7 +230,7 @@ export function BarcodeScannerModal({
     if (isOpen) {
       const timer = setTimeout(() => {
         startScanner()
-      }, 150)
+      }, 100)
       return () => {
         clearTimeout(timer)
         stopScanner()
@@ -173,20 +266,34 @@ export function BarcodeScannerModal({
         <div className="px-5 py-3.5 border-b border-amber-200 bg-amber-100 flex items-center justify-between text-amber-950 flex-shrink-0">
           <div className="font-bold text-sm flex items-center gap-2">
             <QrCode className="w-5 h-5 text-amber-700" />
-            <span>Scanner Code-Barres de Boutique</span>
+            <span>Scanner Code-Barres & QR</span>
           </div>
-          <button
-            type="button"
-            onClick={() => { stopScanner(); onClose(); }}
-            className="p-1 rounded-full hover:bg-amber-200/60 transition-colors cursor-pointer text-gray-600"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-1.5">
+            {torchSupported && cameraActive && (
+              <button
+                type="button"
+                onClick={toggleTorch}
+                className={`p-1.5 rounded-full transition-colors ${torchOn ? 'bg-amber-400 text-amber-950' : 'bg-amber-200/80 text-amber-800 hover:bg-amber-300'}`}
+                title="Activer la lampe torche"
+              >
+                {torchOn ? <Zap className="w-4 h-4 fill-amber-950" /> : <ZapOff className="w-4 h-4" />}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => { stopScanner(); onClose(); }}
+              className="p-1 rounded-full hover:bg-amber-200/60 transition-colors cursor-pointer text-gray-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-4 space-y-4 overflow-y-auto font-mono text-xs">
           
-          {/* ÉCRAN 1 : Si un code vient d'être détecté avec succès */}
+          {/* ÉCRAN 1 : Résultat du scan détecté */}
           {scannedResult ? (
             <div className="p-4 bg-white border-2 border-emerald-400 rounded-2xl space-y-3.5 shadow-md animate-in fade-in zoom-in-95">
               <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-sm border-b border-emerald-100 pb-2">
@@ -212,10 +319,10 @@ export function BarcodeScannerModal({
                     <span>Article non enregistré sous ce code</span>
                   </div>
                   <p className="text-[11px] text-gray-600 leading-snug">
-                    Vous pouvez insérer cet article dans la vente, ou lui associer un produit existant.
+                    Vous pouvez insérer cet article dans la vente, ou lui associer un produit de votre stock.
                   </p>
 
-                  {/* Associer à un produit existant */}
+                  {/* Lier à un produit existant */}
                   {products.length > 0 && onAssociateBarcode && (
                     <div className="pt-1 flex gap-1.5">
                       <select
@@ -239,7 +346,7 @@ export function BarcodeScannerModal({
                           if (p) onDetected(p.name)
                           onClose()
                         }}
-                        className="px-2.5 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg font-bold text-xs disabled:opacity-40 flex items-center gap-1"
+                        className="px-2.5 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg font-bold text-xs disabled:opacity-40 flex items-center gap-1 cursor-pointer"
                       >
                         <Link className="w-3.5 h-3.5" />
                         <span>Lier</span>
@@ -270,11 +377,30 @@ export function BarcodeScannerModal({
               </div>
             </div>
           ) : (
-            /* ÉCRAN 2 : Viseur Vidéo en cours */
+            /* ÉCRAN 2 : Viseur Caméra en direct */
             <>
-              <div className="relative bg-black rounded-2xl overflow-hidden min-h-[220px] flex items-center justify-center border-2 border-amber-300 shadow-inner">
-                <div id={scannerContainerId} className="w-full h-full" />
+              <div className="relative bg-black rounded-2xl overflow-hidden min-h-[240px] aspect-4/3 flex items-center justify-center border-2 border-amber-300 shadow-inner">
+                <video
+                  ref={videoRef}
+                  className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+                  playsInline
+                  muted
+                />
 
+                {/* Viseur visuel avec laser animé */}
+                {cameraActive && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-4">
+                    <div className="w-64 h-40 border-2 border-amber-400 rounded-2xl bg-amber-400/10 relative flex items-center justify-center shadow-lg overflow-hidden">
+                      {/* Ligne laser balayeuse rouge */}
+                      <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_8px_rgba(239,68,68,1)] animate-pulse" />
+                    </div>
+                    <p className="mt-2 text-[10px] font-bold text-amber-200 bg-black/60 px-2 py-0.5 rounded-full font-mono">
+                      Placez le code-barres dans le cadre
+                    </p>
+                  </div>
+                )}
+
+                {/* Écran d'attente / erreur */}
                 {!cameraActive && (
                   <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-4 text-center text-gray-300 space-y-2.5">
                     {isStarting ? (
