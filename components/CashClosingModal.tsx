@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { CheckCircle2, AlertTriangle, X, Share2, Calculator } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, X, Share2, Calculator, Coins } from 'lucide-react'
 
 interface SaleItem {
   id: string
@@ -29,6 +29,17 @@ export function CashClosingModal({
   shopName = 'Cahier Numérique',
 }: CashClosingModalProps) {
   const [actualCashInput, setActualCashInput] = useState<string>('')
+  const [showBilletage, setShowBilletage] = useState<boolean>(false)
+  const [bills, setBills] = useState<Record<number, number>>({
+    10000: 0,
+    5000: 0,
+    2000: 0,
+    1000: 0,
+    500: 0,
+    200: 0,
+    100: 0,
+    50: 0,
+  })
 
   if (!isOpen) return null
 
@@ -53,11 +64,25 @@ export function CashClosingModal({
   // Fond de caisse théorique net en tiroir
   const theoreticalCash = Math.max(0, cashReceipts - totalExpenses)
 
-  const actualCash = actualCashInput !== '' ? parseInt(actualCashInput) || 0 : theoreticalCash
+  // Parsing robuste des montants (suppression des espaces)
+  const actualCash = actualCashInput !== ''
+    ? (parseFloat(actualCashInput.replace(/\s/g, '')) || 0)
+    : theoreticalCash
+
   const difference = actualCash - theoreticalCash
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fr-FR').format(price) + ' F'
+  }
+
+  // Calcul du billetage
+  const totalBilletage = Object.entries(bills).reduce((sum, [denom, count]) => {
+    return sum + Number(denom) * (count || 0)
+  }, 0)
+
+  const handleApplyBilletage = () => {
+    setActualCashInput(String(totalBilletage))
+    setShowBilletage(false)
   }
 
   const generateWhatsAppReportUrl = () => {
@@ -87,7 +112,7 @@ export function CashClosingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-3 sm:p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs">
       <div className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
@@ -96,7 +121,7 @@ export function CashClosingModal({
             <Calculator className="w-5 h-5 text-amber-700" />
             <span>Clôture de Caisse Journalière (Z)</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-amber-200/60">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-amber-200/60 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -118,7 +143,7 @@ export function CashClosingModal({
             </div>
 
             <div className="flex justify-between items-center py-1 text-amber-800">
-              <span>📝 Ventes Crédit Client (Non encassées)</span>
+              <span>📝 Ventes Crédit Client (Non encaissées)</span>
               <span>{formatPrice(creditSales)}</span>
             </div>
           </div>
@@ -135,18 +160,67 @@ export function CashClosingModal({
           </div>
 
           {/* Saisie Espèces Réelles dans le Tiroir */}
-          <div>
-            <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">
-              Espèces Réelles Comptées dans le Tiroir (FCFA)
-            </label>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-[10px] font-bold text-gray-600 uppercase">
+                Espèces Réelles Comptées (FCFA)
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowBilletage(prev => !prev)}
+                className="text-[11px] font-bold text-amber-900 flex items-center gap-1 hover:underline cursor-pointer"
+              >
+                <Coins className="w-3.5 h-3.5" />
+                <span>{showBilletage ? 'Masquer billetage' : 'Compter mes billets'}</span>
+              </button>
+            </div>
+
             <input
-              type="number"
-              min="0"
-              placeholder={`Par défaut : ${theoreticalCash} F`}
+              type="text"
+              inputMode="numeric"
+              placeholder={`Par défaut : ${theoreticalCash.toLocaleString('fr-FR')} F`}
               value={actualCashInput}
               onChange={e => setActualCashInput(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-amber-500 font-mono"
+              className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-black text-gray-900 outline-none focus:border-amber-500 font-mono shadow-inner"
             />
+
+            {/* Assistant Billetage en 1 clic */}
+            {showBilletage && (
+              <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-2xl space-y-2 animate-in fade-in duration-150">
+                <div className="text-[10px] font-extrabold text-amber-950 uppercase">
+                  💵 Assistant Comptage par Billet / Pièce :
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[10000, 5000, 2000, 1000, 500, 200, 100, 50].map((denom) => (
+                    <div key={denom} className="flex items-center justify-between bg-white p-1.5 rounded-lg border border-amber-200">
+                      <span className="text-[11px] font-bold text-gray-700">{denom.toLocaleString('fr-FR')} F</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={bills[denom] || ''}
+                        onChange={e => {
+                          const val = parseInt(e.target.value, 10) || 0
+                          setBills(prev => ({ ...prev, [denom]: val }))
+                        }}
+                        placeholder="0"
+                        className="w-14 text-right px-1.5 py-0.5 bg-amber-50/50 border border-amber-300 rounded font-black text-xs"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-amber-200 flex items-center justify-between">
+                  <span className="font-bold text-amber-950">Total compté : {formatPrice(totalBilletage)}</span>
+                  <button
+                    type="button"
+                    onClick={handleApplyBilletage}
+                    className="px-3 py-1 bg-amber-900 text-white rounded-lg font-bold text-[11px] hover:bg-amber-950 cursor-pointer"
+                  >
+                    Valider le total
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Analyse de l'Écart */}
@@ -178,7 +252,7 @@ export function CashClosingModal({
           <div className="flex gap-2 pt-2">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+              className="flex-1 py-2.5 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               Fermer
             </button>

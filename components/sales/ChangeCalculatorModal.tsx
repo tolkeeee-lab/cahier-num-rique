@@ -19,7 +19,7 @@ export const ChangeCalculatorModal: React.FC<ChangeCalculatorModalProps> = ({
 
   if (!isOpen) return null
 
-  const given = parseFloat(givenAmount) || 0
+  const given = parseFloat(givenAmount.replace(/\s/g, '')) || 0
   const changeToReturn = Math.max(0, given - totalAmount)
 
   const quickBills = [500, 1000, 2000, 5000, 10000]
@@ -53,21 +53,38 @@ export const ChangeCalculatorModal: React.FC<ChangeCalculatorModalProps> = ({
             Somme Donnée par le Client (FCFA) :
           </label>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             value={givenAmount}
             onChange={(e) => setGivenAmount(e.target.value)}
-            placeholder="ex: 5000"
-            className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-gray-900 font-black focus:outline-none focus:border-amber-500 shadow-inner"
+            placeholder="ex: 5 000"
+            className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-base text-gray-900 font-black focus:outline-none focus:border-amber-500 shadow-inner"
           />
 
-          {/* Raccourcis billets */}
+          {/* Raccourcis billets & Compte Juste */}
           <div className="flex items-center gap-1.5 flex-wrap pt-1">
+            <button
+              type="button"
+              onClick={() => setGivenAmount(String(totalAmount))}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 border border-emerald-700 text-xs font-mono font-black text-white hover:bg-emerald-700 transition-all cursor-pointer shadow-xs"
+            >
+              Compte Juste ({formatPrice(totalAmount)})
+            </button>
+            <button
+              type="button"
+              onClick={() => setGivenAmount(prev => String((parseFloat(prev.replace(/\s/g, '')) || totalAmount) + 500))}
+              className="px-3 py-1.5 rounded-xl bg-amber-200 border border-amber-400 text-xs font-mono font-black text-amber-950 hover:bg-amber-300 transition-all cursor-pointer shadow-xs"
+            >
+              +500 F
+            </button>
             {quickBills.map((bill) => (
               <button
                 key={bill}
                 type="button"
                 onClick={() => setGivenAmount(String(bill))}
-                className="px-3 py-1.5 rounded-xl bg-amber-100 border border-amber-300 text-xs font-mono font-extrabold text-amber-950 hover:bg-amber-200 transition-all cursor-pointer shadow-xs"
+                className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-extrabold transition-all cursor-pointer shadow-xs ${
+                  given === bill ? 'bg-amber-900 text-white border-amber-950 font-black' : 'bg-amber-100 border-amber-300 text-amber-950 hover:bg-amber-200'
+                }`}
               >
                 {formatPrice(bill)}
               </button>
