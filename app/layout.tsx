@@ -30,12 +30,12 @@ export const viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'Cahier Numérique - Gestion de Boutique',
-  description: 'Gérez votre boutique simplement, comme un cahier physique.',
+  title: 'CumuluShop — Plateforme E-Commerce & Vente Intelligente IA',
+  description: 'Plateforme e-commerce intelligente propulsée par l’IA NVIDIA : sourcing de produits gagnants, studio créatif publicitaire, gestion de commandes et caisse.',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Cahier Caisse',
+    title: 'CumuluShop',
   },
   icons: {
     icon: [
