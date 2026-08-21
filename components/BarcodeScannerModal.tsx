@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { QrCode, X, Camera, Check, RefreshCw, Sparkles, Zap, ZapOff, Plus, Minus, Trash2, ShoppingCart, ArrowRight } from 'lucide-react'
+import { QrCode, X, Camera, Check, RefreshCw, Sparkles, Zap, ZapOff, Plus, Minus, Trash2, ShoppingCart, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from '@zxing/library'
 import { formatPrice } from '@/lib/penUtils'
 
@@ -65,12 +65,14 @@ export function BarcodeScannerModal({
 
   // Panier multi-scan en direct
   const [cart, setCart] = useState<ScannedCartItem[]>([])
+  const [lastBippedName, setLastBippedName] = useState<string | null>(null)
 
   // Gestion d'un code-barres inconnu
   const [unknownBarcode, setUnknownBarcode] = useState<string | null>(null)
   const [newProductName, setNewProductName] = useState('')
   const [newProductPrice, setNewProductPrice] = useState('')
   const [selectedExistingId, setSelectedExistingId] = useState('')
+  const [isLookingUpGlobal, setIsLookingUpGlobal] = useState(false)
 
   // Anti-rebond par code pour éviter de biper 10 fois par seconde le même code
   const lastScannedTimeRef = useRef<{ [code: string]: number }>({})
@@ -102,6 +104,11 @@ export function BarcodeScannerModal({
 
   // Ajout / Incrémentation d'un article dans le panier scanné
   const addItemToCart = useCallback((item: { id: string; name: string; unit_price: number; barcode?: string }) => {
+    setLastBippedName(`${item.name} (${formatPrice(item.unit_price)})`)
+    setTimeout(() => {
+      setLastBippedName(null)
+    }, 2500)
+
     setCart(prev => {
       const idx = prev.findIndex(p => p.id === item.id || (p.barcode && item.barcode && p.barcode === item.barcode))
       if (idx >= 0) {
@@ -116,12 +123,15 @@ export function BarcodeScannerModal({
 
   const handleScanSuccess = useCallback((decodedText: string) => {
     const code = decodedText.trim()
-    if (!code) return
+    if (!code || code.length < 4) return
 
-    // Debounce : 1 seconde d'écart minimum pour le même code
+    // Si on est déjà en train de saisir un code inconnu, ignorer les nouveaux scans
+    if (!isScanningRef.current) return
+
+    // Debounce : 1.2 seconde d'écart minimum pour le même code
     const now = Date.now()
     const lastTime = lastScannedTimeRef.current[code] || 0
-    if (now - lastTime < 1000) {
+    if (now - lastTime < 1200) {
       return
     }
     lastScannedTimeRef.current[code] = now
@@ -131,7 +141,7 @@ export function BarcodeScannerModal({
       try { navigator.vibrate([60, 30, 60]) } catch {}
     }
 
-    // Recherche dans les produits existants
+    // Recherche dans les produits existants de la boutique
     const matched = products.find(p => 
       p.barcode === code || 
       p.id === code || 
@@ -146,16 +156,19 @@ export function BarcodeScannerModal({
         barcode: matched.barcode || code,
       })
     } else {
-      // Code inconnu : ouvrir la fiche de création rapide et interroger la base mondiale
+      // Code inconnu : PAUSER immédiatement le scanner pour stabiliser l'écran
+      isScanningRef.current = false
       setUnknownBarcode(code)
       setNewProductName('')
       setNewProductPrice('')
       setSelectedExistingId('')
+      setIsLookingUpGlobal(true)
 
-      // Recherche automatique en arrière-plan dans la base mondiale (Open Food / Products Facts)
+      // Recherche automatique en arrière-plan dans la base mondiale Open Food Facts
       fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`)
         .then(r => r.json())
         .then(data => {
+          setIsLookingUpGlobal(false)
           if (data?.product) {
             const autoName = data.product.product_name || data.product.product_name_fr || data.product.generic_name || data.product.brands
             if (autoName) {
@@ -163,7 +176,9 @@ export function BarcodeScannerModal({
             }
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          setIsLookingUpGlobal(false)
+        })
     }
   }, [addItemToCart, products])
 
@@ -241,7 +256,7 @@ export function BarcodeScannerModal({
       setCameraActive(true)
       isScanningRef.current = true
 
-      // Moteur 1 : BarcodeDetector Natif Matériel
+      // Moteur 1 : BarcodeDetector Natif Matériel (iOS / Android)
       if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
         try {
           const nativeDetector = new (window as any).BarcodeDetector({
@@ -249,7 +264,10 @@ export function BarcodeScannerModal({
           })
 
           const scanNativeLoop = async () => {
-            if (!isScanningRef.current) return
+            if (!isScanningRef.current) {
+              requestAnimationFrame(scanNativeLoop)
+              return
+            }
             if (videoRef.current && videoRef.current.readyState >= 2) {
               try {
                 const barcodes = await nativeDetector.detect(videoRef.current)
@@ -258,9 +276,7 @@ export function BarcodeScannerModal({
                 }
               } catch {}
             }
-            if (isScanningRef.current) {
-              requestAnimationFrame(scanNativeLoop)
-            }
+            requestAnimationFrame(scanNativeLoop)
           }
           requestAnimationFrame(scanNativeLoop)
         } catch {}
@@ -302,6 +318,7 @@ export function BarcodeScannerModal({
       stopScanner()
       setCart([])
       setUnknownBarcode(null)
+      setLastBippedName(null)
     }
   }, [isOpen, startScanner, stopScanner])
 
@@ -371,6 +388,13 @@ export function BarcodeScannerModal({
     }
 
     setUnknownBarcode(null)
+    // Reprendre le scan
+    isScanningRef.current = true
+  }
+
+  const handleDismissUnknown = () => {
+    setUnknownBarcode(null)
+    isScanningRef.current = true
   }
 
   // Saisie manuelle de code-barres
@@ -421,22 +445,40 @@ export function BarcodeScannerModal({
         {/* Corps de la modale */}
         <div className="p-3 sm:p-4 space-y-3 overflow-y-auto flex-1 font-mono text-xs">
           
-          {/* FICHE : Enregistrement rapide si code inconnu */}
+          {/* BANNIÈRE DE BIP SUCCÈS TEMPORAIRE */}
+          {lastBippedName && (
+            <div className="p-2.5 bg-emerald-600 text-white rounded-xl flex items-center justify-between shadow-md animate-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center gap-2 font-bold text-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-200 flex-shrink-0" />
+                <span className="truncate">Ajouté : <strong>{lastBippedName}</strong></span>
+              </div>
+              <span className="text-[10px] bg-emerald-800 px-1.5 py-0.5 rounded font-black">+1</span>
+            </div>
+          )}
+
+          {/* FICHE : Enregistrement rapide si code inconnu (Scanner en pause) */}
           {unknownBarcode && (
             <div className="p-3.5 bg-amber-50 border-2 border-amber-400 rounded-2xl space-y-2.5 shadow-md animate-in fade-in zoom-in-95">
               <div className="flex items-center justify-between border-b border-amber-200 pb-1.5">
                 <div className="flex items-center gap-1.5 text-amber-900 font-extrabold text-xs">
                   <Sparkles className="w-4 h-4 text-amber-600" />
-                  <span>Nouveau Code Scanné : {unknownBarcode}</span>
+                  <span>Nouveau Code : <strong className="font-mono text-amber-950">{unknownBarcode}</strong></span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setUnknownBarcode(null)}
-                  className="text-gray-500 hover:text-gray-900 text-xs font-bold"
+                  onClick={handleDismissUnknown}
+                  className="text-gray-500 hover:text-gray-900 text-xs font-bold cursor-pointer"
                 >
                   Passer ✕
                 </button>
               </div>
+
+              {isLookingUpGlobal && (
+                <div className="flex items-center gap-2 text-[11px] text-amber-700 bg-amber-100/70 p-2 rounded-lg">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Recherche du nom dans la base mondiale...</span>
+                </div>
+              )}
 
               <form onSubmit={handleSaveUnknown} className="space-y-2">
                 {/* Option 1 : Créer Nouveau Produit */}
@@ -472,14 +514,14 @@ export function BarcodeScannerModal({
                 {products.length > 0 && (
                   <div>
                     <label className="block text-[10px] font-bold text-gray-600 uppercase mb-0.5">
-                      Ou choisir un article existant :
+                      Ou lier à un article existant :
                     </label>
                     <select
                       value={selectedExistingId}
                       onChange={e => setSelectedExistingId(e.target.value)}
                       className="w-full px-2 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-gray-900 outline-none"
                     >
-                      <option value="">-- Lier à un produit existant --</option>
+                      <option value="">-- Choisir un produit existant --</option>
                       {products.map(p => (
                         <option key={p.id} value={p.id}>
                           {p.name} ({formatPrice(p.unit_price)})
@@ -501,7 +543,7 @@ export function BarcodeScannerModal({
             </div>
           )}
 
-          {/* Viseur Caméra Réduit & Fluide */}
+          {/* Viseur Caméra */}
           <div className="relative bg-black rounded-2xl overflow-hidden h-[180px] sm:h-[200px] flex items-center justify-center border-2 border-amber-300 shadow-inner">
             <video
               ref={videoRef}
@@ -517,7 +559,7 @@ export function BarcodeScannerModal({
                   <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_8px_rgba(239,68,68,1)] animate-pulse" />
                 </div>
                 <p className="mt-1.5 text-[10px] font-bold text-amber-200 bg-black/60 px-2 py-0.5 rounded-full font-mono">
-                  Bipez vos articles l'un après l'autre
+                  {unknownBarcode ? 'Caméra en pause (Complétez la fiche)' : 'Bipez vos articles l\'un après l\'autre'}
                 </p>
               </div>
             )}
@@ -569,7 +611,7 @@ export function BarcodeScannerModal({
             <div className="flex items-center justify-between border-b border-amber-100 pb-1.5 text-gray-700">
               <div className="flex items-center gap-1.5 font-extrabold text-xs text-amber-950">
                 <ShoppingCart className="w-4 h-4 text-amber-700" />
-                <span>Panier en cours ({totalItemsCount} article{totalItemsCount > 1 ? 's' : ''})</span>
+                <span>Panier ({totalItemsCount} article{totalItemsCount > 1 ? 's' : ''})</span>
               </div>
               <span className="font-mono font-black text-xs text-emerald-800">
                 {formatPrice(totalCartAmount)}
