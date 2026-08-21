@@ -363,24 +363,38 @@ export default function JournalPage() {
     }
   }
 
-  // Handler pour insertion automatique par code-barres
-  const handleBarcodeDetected = (barcodeOrName: string) => {
-    const products = getOfflineProducts(shopManager.shopId) || []
-    const matched = products.find(p => 
-      (p as any).barcode === barcodeOrName || 
-      p.id === barcodeOrName || 
-      p.name.toLowerCase() === barcodeOrName.toLowerCase() ||
-      p.name.toLowerCase().includes(barcodeOrName.toLowerCase())
-    )
-    if (matched) {
-      const entry = `1 ${matched.name} à ${matched.unit_price}`
-      saleCreation.setInput(prev => prev.trim() ? `${prev}, ${entry}` : entry)
-      setPostItMessage(`✅ Article scanné : ${matched.name} (${matched.unit_price} F)`)
-    } else {
-      const entry = `1 ${barcodeOrName}`
-      saleCreation.setInput(prev => prev.trim() ? `${prev}, ${entry}` : entry)
-      setPostItMessage(`🔍 Code scanné : ${barcodeOrName}`)
+  // Handler pour insertion automatique par code-barres (Multi-Scan Panier)
+  const handleBarcodeDetected = (formattedSaleText: string) => {
+    if (!formattedSaleText.trim()) return
+    saleCreation.setInput(prev => prev.trim() ? `${prev}, ${formattedSaleText}` : formattedSaleText)
+    setPostItMessage(`🛒 Articles scannés ajoutés à la vente !`)
+  }
+
+  // Enregistrer un nouveau produit découvert par code-barres
+  const handleSaveNewProduct = async (name: string, price: number, barcode: string) => {
+    const newProd = {
+      id: `stk_${Date.now()}`,
+      shop_id: shopManager.shopId,
+      name,
+      unit_price: price,
+      unit_cost: 0,
+      initial_stock: 0,
+      current_stock: 0,
+      alert_threshold: 5,
+      category: 'Divers',
+      unit: 'unité',
+      barcode,
+      created_at: new Date().toISOString(),
     }
+    saveOfflineProduct(shopManager.shopId, newProd as any)
+    try {
+      await fetch('/api/stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-shop-id': shopManager.shopId },
+        body: JSON.stringify(newProd),
+      })
+    } catch {}
+    setPostItMessage(`📦 Produit enregistré : ${name} (${price} F)`)
   }
 
   // Associer un code-barres à un produit du stock
@@ -700,6 +714,7 @@ export default function JournalPage() {
         onCloseBarcodeScannerModal={() => setShowBarcodeScannerModal(false)}
         onBarcodeDetected={handleBarcodeDetected}
         onAssociateBarcode={handleAssociateBarcode}
+        onSaveNewProduct={handleSaveNewProduct}
         showSyscohadaModal={showSyscohadaModal}
         onCloseSyscohadaModal={() => setShowSyscohadaModal(false)}
         showReceiptModal={showReceiptModal}

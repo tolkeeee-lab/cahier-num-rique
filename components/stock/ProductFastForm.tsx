@@ -191,6 +191,21 @@ export const ProductFastForm: React.FC<ProductFastFormProps> = ({
           </div>
         </div>
       )}
+
+      {/* Code-Barres / EAN */}
+      <div>
+        <label className="block text-amber-950 font-extrabold uppercase mb-1 flex items-center justify-between">
+          <span>Code-Barres / EAN (Optionnel) :</span>
+          <span className="text-[10px] text-amber-700 font-normal">Pour le bip au comptoir</span>
+        </label>
+        <input
+          type="text"
+          value={formData.barcode || ''}
+          onChange={(e) => setFormData((prev) => ({ ...prev, barcode: e.target.value }))}
+          placeholder="ex: 8904406047268 ou bipez avec la douchette"
+          className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-gray-900 font-mono font-bold focus:outline-none focus:border-amber-500 shadow-inner text-xs"
+        />
+      </div>
     </div>
   )
 }

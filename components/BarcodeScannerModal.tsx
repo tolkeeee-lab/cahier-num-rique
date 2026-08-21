@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { QrCode, X, Camera, Check, RefreshCw, Sparkles, Link, AlertCircle, Zap, ZapOff } from 'lucide-react'
+import { QrCode, X, Camera, Check, RefreshCw, Sparkles, Zap, ZapOff, Plus, Minus, Trash2, ShoppingCart, ArrowRight } from 'lucide-react'
 import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from '@zxing/library'
 import { formatPrice } from '@/lib/penUtils'
 
@@ -12,15 +12,24 @@ interface Product {
   barcode?: string
 }
 
+export interface ScannedCartItem {
+  id: string
+  name: string
+  unit_price: number
+  quantity: number
+  barcode?: string
+}
+
 interface BarcodeScannerModalProps {
   isOpen: boolean
   onClose: () => void
-  onDetected: (barcode: string) => void
+  onDetected: (formattedSaleText: string) => void
   products?: Product[]
   onAssociateBarcode?: (productId: string, barcode: string) => void
+  onSaveNewProduct?: (name: string, price: number, barcode: string) => void
 }
 
-// Bip sonore de caisse professionnel
+// Bip sonore net et professionnel de caisse
 function playScannerBeep() {
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
@@ -29,7 +38,7 @@ function playScannerBeep() {
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     osc.type = 'sine'
-    osc.frequency.setValueAtTime(1760, ctx.currentTime) // Note A6 (bip caisse aigu et net)
+    osc.frequency.setValueAtTime(1760, ctx.currentTime) // Note A6
     gain.gain.setValueAtTime(0.35, ctx.currentTime)
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12)
     osc.connect(gain)
@@ -45,30 +54,35 @@ export function BarcodeScannerModal({
   onDetected,
   products = [],
   onAssociateBarcode,
+  onSaveNewProduct,
 }: BarcodeScannerModalProps) {
   const [manualCode, setManualCode] = useState('')
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [isStarting, setIsStarting] = useState(false)
-  const [scannedResult, setScannedResult] = useState<string | null>(null)
-  const [selectedAssociateProductId, setSelectedAssociateProductId] = useState<string>('')
   const [torchSupported, setTorchSupported] = useState(false)
   const [torchOn, setTorchOn] = useState(false)
-  
+
+  // Panier multi-scan en direct
+  const [cart, setCart] = useState<ScannedCartItem[]>([])
+
+  // Gestion d'un code-barres inconnu
+  const [unknownBarcode, setUnknownBarcode] = useState<string | null>(null)
+  const [newProductName, setNewProductName] = useState('')
+  const [newProductPrice, setNewProductPrice] = useState('')
+  const [selectedExistingId, setSelectedExistingId] = useState('')
+
+  // Anti-rebond par code pour éviter de biper 10 fois par seconde le même code
+  const lastScannedTimeRef = useRef<{ [code: string]: number }>({})
+
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
   const isScanningRef = useRef<boolean>(false)
 
-  // Produit correspondant dans la boutique
-  const matchedProduct = scannedResult
-    ? products.find(p => p.barcode === scannedResult || p.id === scannedResult || p.name.toLowerCase() === scannedResult.toLowerCase())
-    : null
-
   const stopScanner = useCallback(() => {
     isScanningRef.current = false
     
-    // Arrêter le flux caméra
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop())
       streamRef.current = null
@@ -86,18 +100,59 @@ export function BarcodeScannerModal({
     setTorchSupported(false)
   }, [])
 
+  // Ajout / Incrémentation d'un article dans le panier scanné
+  const addItemToCart = useCallback((item: { id: string; name: string; unit_price: number; barcode?: string }) => {
+    setCart(prev => {
+      const idx = prev.findIndex(p => p.id === item.id || (p.barcode && item.barcode && p.barcode === item.barcode))
+      if (idx >= 0) {
+        const updated = [...prev]
+        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + 1 }
+        return updated
+      } else {
+        return [...prev, { ...item, quantity: 1 }]
+      }
+    })
+  }, [])
+
   const handleScanSuccess = useCallback((decodedText: string) => {
     const code = decodedText.trim()
     if (!code) return
 
+    // Debounce : 1 seconde d'écart minimum pour le même code
+    const now = Date.now()
+    const lastTime = lastScannedTimeRef.current[code] || 0
+    if (now - lastTime < 1000) {
+      return
+    }
+    lastScannedTimeRef.current[code] = now
+
     playScannerBeep()
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate([60, 40, 60]) } catch {}
+      try { navigator.vibrate([60, 30, 60]) } catch {}
     }
 
-    setScannedResult(code)
-    stopScanner()
-  }, [stopScanner])
+    // Recherche dans les produits existants
+    const matched = products.find(p => 
+      p.barcode === code || 
+      p.id === code || 
+      p.name.toLowerCase() === code.toLowerCase()
+    )
+
+    if (matched) {
+      addItemToCart({
+        id: matched.id,
+        name: matched.name,
+        unit_price: matched.unit_price,
+        barcode: matched.barcode || code,
+      })
+    } else {
+      // Code inconnu : ouvrir la fiche de création rapide
+      setUnknownBarcode(code)
+      setNewProductName('')
+      setNewProductPrice('')
+      setSelectedExistingId('')
+    }
+  }, [addItemToCart, products])
 
   const toggleTorch = async () => {
     if (!streamRef.current) return
@@ -118,7 +173,6 @@ export function BarcodeScannerModal({
   const startScanner = useCallback(async () => {
     setCameraError(null)
     setIsStarting(true)
-    setScannedResult(null)
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setCameraError("Votre navigateur ne supporte pas l'accès direct à la caméra.")
@@ -129,7 +183,6 @@ export function BarcodeScannerModal({
     try {
       stopScanner()
 
-      // Configuration ZXing
       const hints = new Map()
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
         BarcodeFormat.EAN_13,
@@ -144,10 +197,9 @@ export function BarcodeScannerModal({
       ])
       hints.set(DecodeHintType.TRY_HARDER, true)
 
-      const reader = new BrowserMultiFormatReader(hints, 120)
+      const reader = new BrowserMultiFormatReader(hints, 100)
       codeReaderRef.current = reader
 
-      // Demande du flux caméra avec autofocus et résolution HD
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: 'environment' },
@@ -159,7 +211,6 @@ export function BarcodeScannerModal({
 
       streamRef.current = stream
 
-      // Vérifier support de la torche / flash
       const track = stream.getVideoTracks()[0]
       if (track) {
         const capabilities: any = track.getCapabilities ? track.getCapabilities() : {}
@@ -177,7 +228,7 @@ export function BarcodeScannerModal({
       setCameraActive(true)
       isScanningRef.current = true
 
-      // ── MOTEUR 1 : BarcodeDetector Natif (Accélération matérielle iOS/Android) ──
+      // Moteur 1 : BarcodeDetector Natif Matériel
       if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
         try {
           const nativeDetector = new (window as any).BarcodeDetector({
@@ -191,7 +242,6 @@ export function BarcodeScannerModal({
                 const barcodes = await nativeDetector.detect(videoRef.current)
                 if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
                   handleScanSuccess(barcodes[0].rawValue)
-                  return
                 }
               } catch {}
             }
@@ -203,7 +253,7 @@ export function BarcodeScannerModal({
         } catch {}
       }
 
-      // ── MOTEUR 2 : ZXing Décodeur continu ──
+      // Moteur 2 : ZXing Continu
       if (videoRef.current) {
         reader.decodeFromStream(stream, videoRef.current, (result) => {
           if (!isScanningRef.current) return
@@ -237,19 +287,80 @@ export function BarcodeScannerModal({
       }
     } else {
       stopScanner()
-      setScannedResult(null)
+      setCart([])
+      setUnknownBarcode(null)
     }
   }, [isOpen, startScanner, stopScanner])
 
   if (!isOpen) return null
 
-  const handleConfirmInsert = () => {
-    if (scannedResult) {
-      onDetected(scannedResult)
-      onClose()
-    }
+  // Ajuster la quantité dans le panier
+  const updateQty = (id: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQ = item.quantity + delta
+        return newQ > 0 ? { ...item, quantity: newQ } : item
+      }
+      return item
+    }))
   }
 
+  const removeItem = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id))
+  }
+
+  // Valider et insérer tout le panier dans le cahier
+  const handleValidateSale = () => {
+    if (cart.length === 0) return
+
+    // Formater l'écriture propre pour le cahier
+    // ex: "2 Lait Peak à 550, 1 Savon Fanico à 500"
+    const entries = cart.map(item => `${item.quantity} ${item.name} à ${item.unit_price}`)
+    const formattedText = entries.join(', ')
+
+    stopScanner()
+    onDetected(formattedText)
+    onClose()
+  }
+
+  // Sauvegarder un nouveau produit scanné
+  const handleSaveUnknown = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!unknownBarcode) return
+
+    if (selectedExistingId) {
+      // Lier à un produit existant
+      if (onAssociateBarcode) {
+        onAssociateBarcode(selectedExistingId, unknownBarcode)
+      }
+      const prod = products.find(p => p.id === selectedExistingId)
+      if (prod) {
+        addItemToCart({
+          id: prod.id,
+          name: prod.name,
+          unit_price: prod.unit_price,
+          barcode: unknownBarcode,
+        })
+      }
+    } else if (newProductName.trim()) {
+      // Créer un nouveau produit
+      const price = parseFloat(newProductPrice) || 0
+      const newId = `prod_${Date.now()}`
+      if (onSaveNewProduct) {
+        onSaveNewProduct(newProductName.trim(), price, unknownBarcode)
+      }
+      addItemToCart({
+        id: newId,
+        name: newProductName.trim(),
+        unit_price: price,
+        barcode: unknownBarcode,
+      })
+    }
+
+    setUnknownBarcode(null)
+  }
+
+  // Saisie manuelle de code-barres
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (manualCode.trim()) {
@@ -258,15 +369,18 @@ export function BarcodeScannerModal({
     }
   }
 
+  const totalCartAmount = cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0)
+  const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-4 backdrop-blur-xs">
-      <div className="bg-[#fbf9f4] border-2 border-amber-300 rounded-[28px] max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-2 sm:p-4 backdrop-blur-xs">
+      <div className="bg-[#fbf9f4] border-2 border-amber-300 rounded-[28px] max-w-lg w-full max-h-[95vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-amber-200 bg-amber-100 flex items-center justify-between text-amber-950 flex-shrink-0">
+        <div className="px-4 sm:px-5 py-3 border-b border-amber-200 bg-amber-100 flex items-center justify-between text-amber-950 flex-shrink-0">
           <div className="font-bold text-sm flex items-center gap-2">
             <QrCode className="w-5 h-5 text-amber-700" />
-            <span>Scanner Code-Barres & QR</span>
+            <span>Mode Caisse & Multi-Scan</span>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -274,8 +388,8 @@ export function BarcodeScannerModal({
               <button
                 type="button"
                 onClick={toggleTorch}
-                className={`p-1.5 rounded-full transition-colors ${torchOn ? 'bg-amber-400 text-amber-950' : 'bg-amber-200/80 text-amber-800 hover:bg-amber-300'}`}
-                title="Activer la lampe torche"
+                className={`p-1.5 rounded-full transition-colors cursor-pointer ${torchOn ? 'bg-amber-400 text-amber-950' : 'bg-amber-200/80 text-amber-800 hover:bg-amber-300'}`}
+                title="Allumer la lampe torche"
               >
                 {torchOn ? <Zap className="w-4 h-4 fill-amber-950" /> : <ZapOff className="w-4 h-4" />}
               </button>
@@ -291,167 +405,240 @@ export function BarcodeScannerModal({
           </div>
         </div>
 
-        <div className="p-4 space-y-4 overflow-y-auto font-mono text-xs">
+        {/* Corps de la modale */}
+        <div className="p-3 sm:p-4 space-y-3 overflow-y-auto flex-1 font-mono text-xs">
           
-          {/* ÉCRAN 1 : Résultat du scan détecté */}
-          {scannedResult ? (
-            <div className="p-4 bg-white border-2 border-emerald-400 rounded-2xl space-y-3.5 shadow-md animate-in fade-in zoom-in-95">
-              <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-sm border-b border-emerald-100 pb-2">
-                <Sparkles className="w-5 h-5 text-emerald-600" />
-                <span>Code-Barres Bippé avec Succès !</span>
-              </div>
-
-              <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-center space-y-1">
-                <p className="text-[10px] uppercase font-bold text-emerald-900">Numéro scanné</p>
-                <p className="text-base font-black text-emerald-950 font-mono tracking-wider">{scannedResult}</p>
-              </div>
-
-              {matchedProduct ? (
-                <div className="p-3 bg-amber-50 rounded-xl border border-amber-300 space-y-1">
-                  <p className="text-[10px] uppercase font-bold text-amber-800">Article identifié dans le stock</p>
-                  <p className="text-sm font-extrabold text-gray-900">{matchedProduct.name}</p>
-                  <p className="text-xs font-black text-amber-950 font-mono">Prix : {formatPrice(matchedProduct.unit_price)}</p>
+          {/* FICHE : Enregistrement rapide si code inconnu */}
+          {unknownBarcode && (
+            <div className="p-3.5 bg-amber-50 border-2 border-amber-400 rounded-2xl space-y-2.5 shadow-md animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-amber-200 pb-1.5">
+                <div className="flex items-center gap-1.5 text-amber-900 font-extrabold text-xs">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span>Nouveau Code Scanné : {unknownBarcode}</span>
                 </div>
-              ) : (
-                <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 space-y-2">
-                  <div className="flex items-center gap-1.5 text-amber-900 font-bold">
-                    <AlertCircle className="w-4 h-4 text-amber-600" />
-                    <span>Article non enregistré sous ce code</span>
+                <button
+                  type="button"
+                  onClick={() => setUnknownBarcode(null)}
+                  className="text-gray-500 hover:text-gray-900 text-xs font-bold"
+                >
+                  Passer ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveUnknown} className="space-y-2">
+                {/* Option 1 : Créer Nouveau Produit */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-amber-950 uppercase mb-0.5">
+                      Nom de l'article :
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Lait Concentré"
+                      value={newProductName}
+                      onChange={e => setNewProductName(e.target.value)}
+                      autoFocus
+                      className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-gray-900 outline-none"
+                    />
                   </div>
-                  <p className="text-[11px] text-gray-600 leading-snug">
-                    Vous pouvez insérer cet article dans la vente, ou lui associer un produit de votre stock.
-                  </p>
-
-                  {/* Lier à un produit existant */}
-                  {products.length > 0 && onAssociateBarcode && (
-                    <div className="pt-1 flex gap-1.5">
-                      <select
-                        value={selectedAssociateProductId}
-                        onChange={e => setSelectedAssociateProductId(e.target.value)}
-                        className="flex-1 px-2 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-gray-900 outline-none"
-                      >
-                        <option value="">-- Lier à un produit --</option>
-                        {products.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({formatPrice(p.unit_price)})
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        disabled={!selectedAssociateProductId}
-                        onClick={() => {
-                          onAssociateBarcode(selectedAssociateProductId, scannedResult)
-                          const p = products.find(prod => prod.id === selectedAssociateProductId)
-                          if (p) onDetected(p.name)
-                          onClose()
-                        }}
-                        className="px-2.5 py-1.5 bg-amber-800 hover:bg-amber-900 text-white rounded-lg font-bold text-xs disabled:opacity-40 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Link className="w-3.5 h-3.5" />
-                        <span>Lier</span>
-                      </button>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-amber-950 uppercase mb-0.5">
+                      Prix de Vente (F) :
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Ex: 1100"
+                      value={newProductPrice}
+                      onChange={e => setNewProductPrice(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-gray-900 outline-none font-mono"
+                    />
+                  </div>
                 </div>
-              )}
 
-              {/* Actions de confirmation */}
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setScannedResult(null); startScanner(); }}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-800 font-extrabold text-xs transition-all cursor-pointer font-mono"
-                >
-                  Scanner un autre
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleConfirmInsert}
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md font-mono"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Insérer dans la vente</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* ÉCRAN 2 : Viseur Caméra en direct */
-            <>
-              <div className="relative bg-black rounded-2xl overflow-hidden min-h-[240px] aspect-4/3 flex items-center justify-center border-2 border-amber-300 shadow-inner">
-                <video
-                  ref={videoRef}
-                  className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
-                  playsInline
-                  muted
-                />
-
-                {/* Viseur visuel avec laser animé */}
-                {cameraActive && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-4">
-                    <div className="w-64 h-40 border-2 border-amber-400 rounded-2xl bg-amber-400/10 relative flex items-center justify-center shadow-lg overflow-hidden">
-                      {/* Ligne laser balayeuse rouge */}
-                      <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_8px_rgba(239,68,68,1)] animate-pulse" />
-                    </div>
-                    <p className="mt-2 text-[10px] font-bold text-amber-200 bg-black/60 px-2 py-0.5 rounded-full font-mono">
-                      Placez le code-barres dans le cadre
-                    </p>
+                {/* Option 2 : Ou Lier à un produit déjà en stock */}
+                {products.length > 0 && (
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-600 uppercase mb-0.5">
+                      Ou choisir un article existant :
+                    </label>
+                    <select
+                      value={selectedExistingId}
+                      onChange={e => setSelectedExistingId(e.target.value)}
+                      className="w-full px-2 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-gray-900 outline-none"
+                    >
+                      <option value="">-- Lier à un produit existant --</option>
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({formatPrice(p.unit_price)})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
-                {/* Écran d'attente / erreur */}
-                {!cameraActive && (
-                  <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-4 text-center text-gray-300 space-y-2.5">
-                    {isStarting ? (
-                      <>
-                        <RefreshCw className="w-8 h-8 text-amber-400 animate-spin" />
-                        <p className="font-bold text-xs text-amber-200">Activation de la caméra...</p>
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="w-9 h-9 text-amber-500 opacity-80" />
-                        <p className="text-xs text-gray-300 max-w-xs">{cameraError || "Caméra en attente"}</p>
-                        <button
-                          type="button"
-                          onClick={startScanner}
-                          className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
-                        >
-                          Démarrer la caméra
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Saisie manuelle de secours */}
-              <form onSubmit={handleManualSubmit} className="space-y-2 pt-1">
-                <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                  Ou tapez le code manuellement :
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Ex: 6151234567890"
-                    value={manualCode}
-                    onChange={e => setManualCode(e.target.value)}
-                    className="flex-1 px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-amber-500 font-mono shadow-inner"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!manualCode.trim()}
-                    className="px-4 py-2 bg-amber-950 hover:bg-black text-white font-extrabold rounded-xl text-xs transition-all disabled:opacity-40 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Valider</span>
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={!newProductName.trim() && !selectedExistingId}
+                  className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs transition-all disabled:opacity-40 flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Enregistrer & Ajouter au Panier</span>
+                </button>
               </form>
-            </>
+            </div>
           )}
 
+          {/* Viseur Caméra Réduit & Fluide */}
+          <div className="relative bg-black rounded-2xl overflow-hidden h-[180px] sm:h-[200px] flex items-center justify-center border-2 border-amber-300 shadow-inner">
+            <video
+              ref={videoRef}
+              className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+              playsInline
+              muted
+            />
+
+            {/* Viseur laser animé */}
+            {cameraActive && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-2">
+                <div className="w-56 h-28 border-2 border-amber-400 rounded-2xl bg-amber-400/10 relative flex items-center justify-center shadow-lg overflow-hidden">
+                  <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_8px_rgba(239,68,68,1)] animate-pulse" />
+                </div>
+                <p className="mt-1.5 text-[10px] font-bold text-amber-200 bg-black/60 px-2 py-0.5 rounded-full font-mono">
+                  Bipez vos articles l'un après l'autre
+                </p>
+              </div>
+            )}
+
+            {!cameraActive && (
+              <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-4 text-center text-gray-300 space-y-2">
+                {isStarting ? (
+                  <>
+                    <RefreshCw className="w-7 h-7 text-amber-400 animate-spin" />
+                    <p className="font-bold text-xs text-amber-200">Activation de la caméra...</p>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-8 h-8 text-amber-500 opacity-80" />
+                    <p className="text-xs text-gray-300 max-w-xs">{cameraError || "Caméra en attente"}</p>
+                    <button
+                      type="button"
+                      onClick={startScanner}
+                      className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    >
+                      Démarrer la caméra
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Saisie manuelle de secours */}
+          <form onSubmit={handleManualSubmit} className="flex gap-1.5">
+            <input
+              type="text"
+              placeholder="Code-barres manuel..."
+              value={manualCode}
+              onChange={e => setManualCode(e.target.value)}
+              className="flex-1 px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-amber-500 font-mono shadow-inner"
+            />
+            <button
+              type="submit"
+              disabled={!manualCode.trim()}
+              className="px-3 py-1.5 bg-amber-950 hover:bg-black text-white font-extrabold rounded-xl text-xs transition-all disabled:opacity-40 cursor-pointer"
+            >
+              + Biper
+            </button>
+          </form>
+
+          {/* PANIER DE SCAN EN DIRECT */}
+          <div className="bg-white border-2 border-amber-300 rounded-2xl p-3 space-y-2 shadow-xs">
+            <div className="flex items-center justify-between border-b border-amber-100 pb-1.5 text-gray-700">
+              <div className="flex items-center gap-1.5 font-extrabold text-xs text-amber-950">
+                <ShoppingCart className="w-4 h-4 text-amber-700" />
+                <span>Panier en cours ({totalItemsCount} article{totalItemsCount > 1 ? 's' : ''})</span>
+              </div>
+              <span className="font-mono font-black text-xs text-emerald-800">
+                {formatPrice(totalCartAmount)}
+              </span>
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="py-4 text-center text-gray-400 text-[11px] font-sans">
+                Aucun article scanné. Présentez un code-barres devant la caméra pour commencer la vente.
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                {cart.map(item => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between bg-amber-50/70 p-1.5 sm:p-2 rounded-xl border border-amber-200/80"
+                  >
+                    <div className="flex-1 min-w-0 pr-2">
+                      <p className="font-extrabold text-gray-900 text-xs truncate">{item.name}</p>
+                      <p className="text-[10px] text-gray-500 font-mono">
+                        {formatPrice(item.unit_price)} × {item.quantity} = <strong className="text-emerald-900">{formatPrice(item.unit_price * item.quantity)}</strong>
+                      </p>
+                    </div>
+
+                    {/* Contrôles de Quantité */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => updateQty(item.id, -1)}
+                        disabled={item.quantity <= 1}
+                        className="w-6 h-6 rounded-lg bg-white border border-amber-300 flex items-center justify-center text-amber-950 hover:bg-amber-100 font-bold disabled:opacity-30 cursor-pointer"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+
+                      <span className="w-6 text-center font-black font-mono text-xs text-amber-950">
+                        {item.quantity}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => updateQty(item.id, 1)}
+                        className="w-6 h-6 rounded-lg bg-white border border-amber-300 flex items-center justify-center text-amber-950 hover:bg-amber-100 font-bold cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.id)}
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg ml-1 cursor-pointer"
+                        title="Retirer cet article"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
+
+        {/* Footer : Bouton de Validation Globale de la Vente */}
+        <div className="p-3 sm:p-4 bg-amber-100 border-t border-amber-200 flex-shrink-0 flex items-center justify-between gap-3">
+          <div className="text-amber-950 font-mono">
+            <p className="text-[10px] font-bold uppercase text-amber-800">Total à encaisser :</p>
+            <p className="text-sm font-black text-emerald-950">{formatPrice(totalCartAmount)}</p>
+          </div>
+
+          <button
+            type="button"
+            disabled={cart.length === 0}
+            onClick={handleValidateSale}
+            className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-40 cursor-pointer shadow-md font-mono"
+          >
+            <span>Valider la Vente ({totalItemsCount})</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
       </div>
     </div>
   )

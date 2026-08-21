@@ -24,6 +24,7 @@ interface Product {
   packaging_name?: string
   lot_quantity?: number
   lot_price?: number
+  barcode?: string
   trade_type?: 'retail' | 'semi_wholesale' | 'wholesale'
 }
 
@@ -45,6 +46,7 @@ const defaultFormData: StockFormState = {
   packaging_name: '',
   lot_quantity: 0,
   lot_price: 0,
+  barcode: '',
   trade_type: 'retail',
 }
 
@@ -114,6 +116,7 @@ export function StockManager({
       packaging_name: p.packaging_name || '',
       lot_quantity: p.lot_quantity || 0,
       lot_price: p.lot_price || 0,
+      barcode: p.barcode || '',
       trade_type: p.trade_type || (
         (p.lot_quantity && p.lot_quantity > 1) || p.packaging_name === 'pack' || p.packaging_name === 'fardeau'
           ? 'semi_wholesale'
@@ -143,6 +146,7 @@ export function StockManager({
         packaging_name: formData.packaging_name || '',
         lot_quantity: Number(formData.lot_quantity) || 0,
         lot_price: Number(formData.lot_price) || 0,
+        barcode: formData.barcode?.trim() || undefined,
         trade_type: formData.trade_type,
       }
 

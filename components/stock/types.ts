@@ -38,6 +38,7 @@ export interface StockFormState {
   packaging_name: string
   lot_quantity: number
   lot_price: number
+  barcode?: string
   trade_type?: TradeType
 }
 
