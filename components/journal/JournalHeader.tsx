@@ -12,7 +12,8 @@ import {
   Calculator,
   LogOut,
   ChevronDown,
-  MoreVertical
+  MoreVertical,
+  Cloud
 } from 'lucide-react'
 import { formatPrice } from '@/lib/penUtils'
 import { useFeatures } from '@/context/FeatureContext'
@@ -152,6 +153,15 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
               </button>
             )}
 
+            <a
+              href="/ecommerce"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-900 hover:bg-indigo-800 text-sky-200 text-xs font-bold border border-indigo-700 transition-all shadow-2xs"
+              title="Ouvrir CumuluShop (E-Commerce & IA)"
+            >
+              <Cloud className="w-3 h-3 text-sky-400" />
+              <span>CumuluShop</span>
+            </a>
+
             {onOpenBoutiqueAssistant && (
               <button
                 type="button"
@@ -233,6 +243,20 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                       <span>Clôture de Caisse (Z)</span>
                     </button>
                   )}
+
+                  <a
+                    href="/ecommerce"
+                    onClick={() => setShowMobileMenu(false)}
+                    className="w-full text-left px-3 py-2 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/80 text-sky-200 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap border border-indigo-700/60 shadow-xs"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 text-white">
+                      <Cloud className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span>CumuluShop (E-Commerce IA)</span>
+                      <span className="text-[9px] text-sky-300 font-normal">NVIDIA Nemotron 70B</span>
+                    </div>
+                  </a>
 
                   {onOpenBoutiqueAssistant && (
                     <button
