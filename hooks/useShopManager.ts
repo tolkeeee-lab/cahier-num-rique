@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
 export interface Shop {
@@ -17,13 +17,20 @@ export function useShopManager(mappedUser: any) {
   const [newShopName, setNewShopName] = useState('')
   const [newShopActivity, setNewShopActivity] = useState<'boutique' | 'resto' | 'prestations'>('boutique')
 
+  const initializedUserIdRef = useRef<string | null>(null)
+
   useEffect(() => {
+    if (!mappedUser?.id) return
+
+    const uId = mappedUser.id
+    if (initializedUserIdRef.current === uId) {
+      return
+    }
+    initializedUserIdRef.current = uId
+
     let isMounted = true
 
     async function initializeShops() {
-      if (!mappedUser?.id) return
-
-      const uId = mappedUser.id
       const uEmail = (mappedUser.email || '').toLowerCase().trim()
       const uShopId = mappedUser.shop_id || `${uId}-main`
       const isOnline = isSupabaseClientConfigured()
@@ -44,7 +51,7 @@ export function useShopManager(mappedUser: any) {
             const empShop: Shop = {
               id: assignedShopId,
               name: (mappedUser as any)?.shop_name || 'Boutique Assignée',
-              activity: (mappedUser as any)?.activity || 'boutique'
+              activity: (mappedUser as any)?.activity || 'boutique',
             }
             setUserShops([empShop])
             setSelectedShopId(assignedShopId)
@@ -62,28 +69,22 @@ export function useShopManager(mappedUser: any) {
         try {
           const parsed = JSON.parse(stored)
           if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
-            if (JSON.stringify(userShops) !== JSON.stringify(parsed)) {
-              setUserShops(parsed)
-            }
-            if (!selectedShopId) {
-              setSelectedShopId(parsed[0].id)
-            }
+            setUserShops(parsed)
+            setSelectedShopId((prev) => prev || parsed[0].id)
             return
           }
-        } catch { }
+        } catch {}
       }
 
       const userActivity = (mappedUser as any)?.activity || (mappedUser as any)?.user_metadata?.shop_activity || 'boutique'
       const defaultShops: Shop[] = [
-        { id: uShopId, name: (mappedUser as any)?.shop_name || 'Mon Point de Vente', activity: userActivity }
+        { id: uShopId, name: (mappedUser as any)?.shop_name || 'Mon Point de Vente', activity: userActivity },
       ]
-      if (JSON.stringify(userShops) !== JSON.stringify(defaultShops) && isMounted) {
+      if (isMounted) {
         setUserShops(defaultShops)
+        setSelectedShopId((prev) => prev || uShopId)
       }
       localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify(defaultShops))
-      if (!selectedShopId && isMounted) {
-        setSelectedShopId(uShopId)
-      }
     }
 
     initializeShops()
@@ -91,10 +92,10 @@ export function useShopManager(mappedUser: any) {
     return () => {
       isMounted = false
     }
-  }, [mappedUser?.id, mappedUser?.email, mappedUser?.shop_id, selectedShopId])
+  }, [mappedUser?.id, mappedUser?.email, mappedUser?.shop_id])
 
   const shopId = selectedShopId || mappedUser?.shop_id || 'default-shop'
-  const currentShop = userShops.find(s => s.id === shopId)
+  const currentShop = userShops.find((s) => s.id === shopId)
   const shopActivity = currentShop?.activity || (mappedUser as any)?.activity || 'boutique'
 
   const handleCreateShop = () => {
@@ -103,7 +104,7 @@ export function useShopManager(mappedUser: any) {
     const newShopObj: Shop = {
       id: newId,
       name: newShopName.trim(),
-      activity: newShopActivity
+      activity: newShopActivity,
     }
     const updated = [...userShops, newShopObj]
     setUserShops(updated)
@@ -113,21 +114,26 @@ export function useShopManager(mappedUser: any) {
     setShowNewShopModal(false)
   }
 
+  const handleSwitchShop = (id: string) => {
+    setSelectedShopId(id)
+  }
+
   return {
-    shopId,
     selectedShopId,
     setSelectedShopId,
+    shopId,
     userShops,
     setUserShops,
     currentShop,
     shopActivity,
     employeeRole,
     showNewShopModal,
-    setShowNewShopModal,
     newShopName,
-    setNewShopName,
     newShopActivity,
+    setShowNewShopModal,
+    setNewShopName,
     setNewShopActivity,
-    handleCreateShop
+    handleCreateShop,
+    handleSwitchShop,
   }
 }

@@ -297,7 +297,7 @@ export function StockManager({
 
       {isProductModalOpen && (
         <ProductModal
-          key={editingProduct?.id || `new_${Date.now()}`}
+          key={editingProduct ? `edit_${editingProduct.id}` : 'new_product_modal'}
           isOpen={isProductModalOpen}
           onClose={() => setIsProductModalOpen(false)}
           editingItem={editingProduct as any}
