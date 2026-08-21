@@ -364,21 +364,32 @@ export default function JournalPage() {
   }
 
   // Handler pour insertion automatique par code-barres
-  const handleBarcodeDetected = (barcode: string) => {
+  const handleBarcodeDetected = (barcodeOrName: string) => {
     const products = getOfflineProducts(shopManager.shopId) || []
     const matched = products.find(p => 
-      (p as any).barcode === barcode || 
-      p.id === barcode || 
-      p.name.toLowerCase().includes(barcode.toLowerCase())
+      (p as any).barcode === barcodeOrName || 
+      p.id === barcodeOrName || 
+      p.name.toLowerCase() === barcodeOrName.toLowerCase() ||
+      p.name.toLowerCase().includes(barcodeOrName.toLowerCase())
     )
     if (matched) {
       const entry = `1 ${matched.name} à ${matched.unit_price}`
       saleCreation.setInput(prev => prev.trim() ? `${prev}, ${entry}` : entry)
       setPostItMessage(`✅ Article scanné : ${matched.name} (${matched.unit_price} F)`)
     } else {
-      const entry = `1 Article #${barcode.slice(-4)}`
+      const entry = `1 ${barcodeOrName}`
       saleCreation.setInput(prev => prev.trim() ? `${prev}, ${entry}` : entry)
-      setPostItMessage(`🔍 Code scanné : ${barcode}`)
+      setPostItMessage(`🔍 Code scanné : ${barcodeOrName}`)
+    }
+  }
+
+  // Associer un code-barres à un produit du stock
+  const handleAssociateBarcode = (productId: string, barcode: string) => {
+    const products = getOfflineProducts(shopManager.shopId) || []
+    const prod = products.find(p => p.id === productId)
+    if (prod) {
+      saveOfflineProduct(shopManager.shopId, { ...prod, barcode } as any)
+      setPostItMessage(`🔗 Code-barres lié à ${prod.name}`)
     }
   }
 
@@ -688,11 +699,13 @@ export default function JournalPage() {
         showBarcodeScannerModal={showBarcodeScannerModal}
         onCloseBarcodeScannerModal={() => setShowBarcodeScannerModal(false)}
         onBarcodeDetected={handleBarcodeDetected}
+        onAssociateBarcode={handleAssociateBarcode}
         showSyscohadaModal={showSyscohadaModal}
         onCloseSyscohadaModal={() => setShowSyscohadaModal(false)}
         showReceiptModal={showReceiptModal}
         onCloseReceiptModal={() => setShowReceiptModal(false)}
         sales={journalData.allSales}
+        products={getOfflineProducts(shopManager.shopId)}
         currentShopName={shopManager.currentShop?.name || 'Cahier Numérique'}
         receiptSale={receiptSale}
       />
