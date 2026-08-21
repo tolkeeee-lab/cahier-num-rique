@@ -146,11 +146,24 @@ export function BarcodeScannerModal({
         barcode: matched.barcode || code,
       })
     } else {
-      // Code inconnu : ouvrir la fiche de création rapide
+      // Code inconnu : ouvrir la fiche de création rapide et interroger la base mondiale
       setUnknownBarcode(code)
       setNewProductName('')
       setNewProductPrice('')
       setSelectedExistingId('')
+
+      // Recherche automatique en arrière-plan dans la base mondiale (Open Food / Products Facts)
+      fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`)
+        .then(r => r.json())
+        .then(data => {
+          if (data?.product) {
+            const autoName = data.product.product_name || data.product.product_name_fr || data.product.generic_name || data.product.brands
+            if (autoName) {
+              setNewProductName(autoName)
+            }
+          }
+        })
+        .catch(() => {})
     }
   }, [addItemToCart, products])
 
