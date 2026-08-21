@@ -250,9 +250,9 @@ export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
   const explicitTradeType = (copy as any).trade_type
   if (explicitTradeType) {
     (copy as any).trade_type = explicitTradeType
-  } else if (lotQty > 1) {
+  } else if (lotQty > 1 || pkgName === 'pack' || pkgName === 'fardeau') {
     (copy as any).trade_type = 'semi_wholesale'
-  } else if (mult > 1 || unitName === 'carton' || unitName === 'sac') {
+  } else if (mult > 1 || unitName === 'carton' || unitName === 'sac' || pkgName === 'carton' || pkgName === 'sac') {
     (copy as any).trade_type = 'wholesale'
   } else {
     (copy as any).trade_type = 'retail'

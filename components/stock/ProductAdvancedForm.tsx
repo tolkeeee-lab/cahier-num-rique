@@ -71,6 +71,25 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
     return ''
   })
 
+  React.useEffect(() => {
+    if (formData.trade_type) {
+      setTradeType(formData.trade_type)
+    }
+  }, [formData.trade_type])
+
+  React.useEffect(() => {
+    const m = formData.multiplier || 1
+    if (m > 1 && formData.initial_stock > 0) {
+      setCartonsCount(String(Math.floor(formData.initial_stock / m)))
+    }
+    if (m > 1 && formData.unit_cost > 0) {
+      setCartonCost(String(Math.round(formData.unit_cost * m)))
+    }
+    if (m > 1 && formData.unit_price > 0) {
+      setCartonPrice(String(Math.round(formData.unit_price * m)))
+    }
+  }, [formData.multiplier, formData.initial_stock, formData.unit_cost, formData.unit_price])
+
   const handleSelectTradeType = (type: TradeType) => {
     setTradeType(type)
     if (type === 'retail') {

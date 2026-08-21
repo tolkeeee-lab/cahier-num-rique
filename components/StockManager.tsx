@@ -112,7 +112,13 @@ export function StockManager({
       packaging_name: p.packaging_name || '',
       lot_quantity: p.lot_quantity || 0,
       lot_price: p.lot_price || 0,
-      trade_type: p.trade_type || (p.lot_quantity && p.lot_quantity > 1 ? 'semi_wholesale' : (p.multiplier && p.multiplier > 1 ? 'wholesale' : 'retail')),
+      trade_type: p.trade_type || (
+        (p.lot_quantity && p.lot_quantity > 1) || p.packaging_name === 'pack' || p.packaging_name === 'fardeau'
+          ? 'semi_wholesale'
+          : (p.multiplier && p.multiplier > 1) || p.unit === 'carton' || p.unit === 'sac' || p.packaging_name === 'carton' || p.packaging_name === 'sac'
+          ? 'wholesale'
+          : 'retail'
+      ),
     })
     setIsProductModalOpen(true)
   }
