@@ -28,6 +28,7 @@ import { StockWizardModal } from '@/components/journal/StockWizardModal'
 import { StockConfirmationModal } from '@/components/journal/StockConfirmationModal'
 import { PriceChangeDialog } from '@/components/journal/PriceChangeDialog'
 import { EditSaleModal } from '@/components/journal/EditSaleModal'
+import { ReceiptShareModal } from '@/components/sales/ReceiptShareModal'
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 import { useShopManager } from '@/hooks/useShopManager'
@@ -230,6 +231,8 @@ export default function JournalPage() {
   const [showBarcodeScannerModal, setShowBarcodeScannerModal] = useState(false)
   const [showSyscohadaModal, setShowSyscohadaModal] = useState(false)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
+  const [shareReceiptSale, setShareReceiptSale] = useState<any>(null)
+  const [showShareReceiptModal, setShowShareReceiptModal] = useState(false)
 
   // Pipeline interceptions
   const [stockConfirmationData, setStockConfirmationData] = useState<StockConfirmationData | null>(null)
@@ -479,6 +482,7 @@ export default function JournalPage() {
                     sales={journalData.sales}
                     onCrossOutSale={journalData.crossOutSale}
                     onPrintReceipt={(sale) => { setReceiptSale(sale); setShowReceiptModal(true) }}
+                    onShareWhatsAppReceipt={(sale) => { setShareReceiptSale(sale); setShowShareReceiptModal(true) }}
                     onAddArticleToSale={(saleId, clientName) => {
                       setAddingToSaleId(saleId)
                       setAddingToSaleClient(clientName)
@@ -796,6 +800,12 @@ export default function JournalPage() {
         onTapItem={tactileMenu.handleTapItem}
         onDeleteItem={tactileMenu.handleDeleteItem}
         onAddItem={tactileMenu.handleAddItem}
+      />
+      <ReceiptShareModal
+        isOpen={showShareReceiptModal}
+        onClose={() => { setShowShareReceiptModal(false); setShareReceiptSale(null) }}
+        sale={shareReceiptSale}
+        shopName={shopManager.userShops?.find(s => s.id === shopManager.shopId)?.name || 'Ma Boutique'}
       />
     </div>
   )

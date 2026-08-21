@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useMemo } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical } from 'lucide-react'
+import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical, Share2 } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,7 @@ interface NotebookPageProps {
   sales: SaleItem[]
   onCrossOutSale: (saleId: string) => void
   onPrintReceipt?: (sale: SaleItem) => void
+  onShareWhatsAppReceipt?: (sale: SaleItem) => void
   onAddArticleToSale?: (saleId: string, clientName: string) => void
   onEditSale?: (sale: SaleItem) => void
   searchQuery?: string
@@ -101,6 +102,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   sales,
   onCrossOutSale,
   onPrintReceipt,
+  onShareWhatsAppReceipt,
   onAddArticleToSale,
   onEditSale,
   searchQuery = '',
@@ -451,6 +453,20 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                           >
                                             <Edit3 className="w-3.5 h-3.5 text-amber-700" />
                                             <span>Modifier</span>
+                                          </button>
+                                        )}
+
+                                        {onShareWhatsAppReceipt && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setActiveActionMenuSaleId(null)
+                                              onShareWhatsAppReceipt(sale)
+                                            }}
+                                            className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-emerald-50 text-emerald-900 font-bold flex items-center gap-2 transition-colors cursor-pointer"
+                                          >
+                                            <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Reçu WhatsApp (1-Clic)</span>
                                           </button>
                                         )}
 

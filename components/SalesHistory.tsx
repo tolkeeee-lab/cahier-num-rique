@@ -6,6 +6,7 @@ import { SaleItemCard } from '@/components/sales/SaleItemCard'
 import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
 import { DebtRepaymentModal } from '@/components/sales/DebtRepaymentModal'
 import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
+import { ReceiptShareModal } from '@/components/sales/ReceiptShareModal'
 import { exportSalesToCSV, exportSalesToPDF } from '@/lib/exportUtils'
 import { formatPrice } from '@/lib/penUtils'
 
@@ -85,6 +86,7 @@ export function SalesHistory({
 
   const [activeDetailSale, setActiveDetailSale] = useState<Sale | null>(null)
   const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null)
+  const [activeShareSale, setActiveShareSale] = useState<Sale | null>(null)
   const [activeRepaymentSale, setActiveRepaymentSale] = useState<Sale | null>(null)
   const [editingSale, setEditingSale] = useState<Sale | null>(null)
 
@@ -179,6 +181,7 @@ export function SalesHistory({
                       sale={sale}
                       onCrossOut={onSaleCrossedOut}
                       onPrintReceipt={(s) => setActiveReceiptSale(s)}
+                      onShareWhatsApp={(s) => setActiveShareSale(s)}
                       onEdit={(s) => setEditingSale(s)}
                       isEmployee={isEmployee}
                     />
@@ -218,6 +221,15 @@ export function SalesHistory({
           isOpen={!!activeReceiptSale}
           onClose={() => setActiveReceiptSale(null)}
           sale={activeReceiptSale}
+          shopName="Cahier Numérique"
+        />
+      )}
+
+      {activeShareSale && (
+        <ReceiptShareModal
+          isOpen={!!activeShareSale}
+          onClose={() => setActiveShareSale(null)}
+          sale={activeShareSale}
           shopName="Cahier Numérique"
         />
       )}

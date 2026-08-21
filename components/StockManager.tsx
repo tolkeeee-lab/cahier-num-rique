@@ -5,9 +5,10 @@ import { StockAlertBanner } from '@/components/stock/StockAlertBanner'
 import { StockToolbar } from '@/components/stock/StockToolbar'
 import { StockTable } from '@/components/stock/StockTable'
 import { ProductModal } from '@/components/stock/ProductModal'
+import { RestockAdvisorModal } from '@/components/stock/RestockAdvisorModal'
 import { StockFormState } from '@/components/stock/types'
 import { exportSalesToCSV } from '@/lib/exportUtils'
-import { clearOfflineProducts, saveOfflineProduct } from '@/lib/offlineDb'
+import { clearOfflineProducts, saveOfflineProduct, getOfflineSales } from '@/lib/offlineDb'
 
 interface Product {
   id: string
@@ -59,6 +60,7 @@ export function StockManager({
 
   // State pour ProductModal
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState<StockFormState>(defaultFormData)
   const [saving, setSaving] = useState(false)
@@ -296,6 +298,7 @@ export function StockManager({
         onCategoryFilterChange={setCategoryFilter}
         categories={categories}
         onAddProduct={handleOpenAddModal}
+        onOpenRestockAdvisor={() => setIsRestockModalOpen(true)}
         onExportCSV={() => exportSalesToCSV(filteredProducts as any, `Inventaire_Stock_${shopId}`)}
         onClearAllStock={handleClearAllStock}
         hasProducts={products.length > 0}
@@ -326,6 +329,16 @@ export function StockManager({
           orphanPastSales={0}
           deductPastSales={deductPastSales}
           setDeductPastSales={setDeductPastSales}
+        />
+      )}
+
+      {isRestockModalOpen && (
+        <RestockAdvisorModal
+          isOpen={isRestockModalOpen}
+          onClose={() => setIsRestockModalOpen(false)}
+          products={products}
+          sales={getOfflineSales(shopId)}
+          shopName="Ma Boutique"
         />
       )}
     </div>

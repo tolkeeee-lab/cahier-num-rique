@@ -1,7 +1,5 @@
-'use client'
-
 import React from 'react'
-import { Search, Plus, FileSpreadsheet, Trash2 } from 'lucide-react'
+import { Search, Plus, FileSpreadsheet, Trash2, ShoppingBag } from 'lucide-react'
 
 interface StockToolbarProps {
   searchQuery: string
@@ -10,6 +8,7 @@ interface StockToolbarProps {
   onCategoryFilterChange: (cat: string) => void
   categories: string[]
   onAddProduct: () => void
+  onOpenRestockAdvisor?: () => void
   onExportCSV?: () => void
   onClearAllStock?: () => void
   hasProducts?: boolean
@@ -23,6 +22,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
   onCategoryFilterChange,
   categories,
   onAddProduct,
+  onOpenRestockAdvisor,
   onExportCSV,
   onClearAllStock,
   hasProducts = false,
@@ -60,6 +60,19 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
               </option>
             ))}
           </select>
+
+          {/* Conseil Réassort Grossiste */}
+          {onOpenRestockAdvisor && (
+            <button
+              type="button"
+              onClick={onOpenRestockAdvisor}
+              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all shadow-xs cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold"
+              title="Conseil Réapprovisionnement Grossiste"
+            >
+              <ShoppingBag className="w-4 h-4 text-amber-700" />
+              <span className="hidden md:inline">Conseil Réassort</span>
+            </button>
+          )}
 
           {/* Export CSV */}
           {onExportCSV && (

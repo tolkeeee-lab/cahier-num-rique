@@ -1,8 +1,6 @@
-'use client'
-
 import React from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { Printer, Trash2, Edit3, AlertTriangle } from 'lucide-react'
+import { Printer, Trash2, Edit3, AlertTriangle, Share2 } from 'lucide-react'
 
 interface SaleItemCardProps {
   sale: {
@@ -26,6 +24,7 @@ interface SaleItemCardProps {
   }
   onCrossOut?: (saleId: string) => void
   onPrintReceipt?: (sale: any) => void
+  onShareWhatsApp?: (sale: any) => void
   onEdit?: (sale: any) => void
   isEmployee?: boolean
 }
@@ -34,6 +33,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
   sale,
   onCrossOut,
   onPrintReceipt,
+  onShareWhatsApp,
   onEdit,
   isEmployee,
 }) => {
@@ -108,6 +108,17 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
 
           {!isCrossedOut && (
             <div className="flex items-center gap-1">
+              {onShareWhatsApp && (
+                <button
+                  type="button"
+                  onClick={() => onShareWhatsApp(sale)}
+                  className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 transition-colors cursor-pointer"
+                  title="Partager le reçu WhatsApp"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+
               {onPrintReceipt && (
                 <button
                   type="button"
