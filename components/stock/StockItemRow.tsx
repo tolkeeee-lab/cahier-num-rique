@@ -194,10 +194,12 @@ export function StockItemRow({
 
           {/* Seuil + Prix */}
           <div className="flex gap-4 text-[10px] font-mono mb-3 text-gray-500 flex-wrap">
-            {item.stock_tracked && item.unit_cost > 0 && item.unit_cost !== Math.round(item.unit_price * 0.6) && item.unit_cost !== Math.round(item.unit_price * 0.7) ? (
-              <span>Achat: <strong className="text-gray-700">{formatPrice(item.unit_cost)}</strong></span>
-            ) : (
-              <span className="text-gray-400 italic">Achat: Non renseigné</span>
+            {canViewFinancialMargins(userRole) && (
+              item.stock_tracked && item.unit_cost > 0 && item.unit_cost !== Math.round(item.unit_price * 0.6) && item.unit_cost !== Math.round(item.unit_price * 0.7) ? (
+                <span>Achat: <strong className="text-gray-700">{formatPrice(item.unit_cost)}</strong></span>
+              ) : (
+                <span className="text-gray-400 italic">Achat: Non renseigné</span>
+              )
             )}
             {item.unit_price > 0 && <span>Vente: <strong className="text-gray-700">{formatPrice(item.unit_price)}</strong></span>}
             {item.lot_quantity && item.lot_quantity > 1 && item.lot_price && item.lot_price > 0 ? (
@@ -208,11 +210,11 @@ export function StockItemRow({
             {item.multiplier && item.multiplier > 1 && (
               <>
                 <span className="bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
-                  📦 1 {item.packaging_name || 'carton'} = {item.multiplier} {!item.unit || item.unit === 'carton' || item.unit === (item.packaging_name || 'carton') ? 'unitités' : `${item.unit}s`}
+                  📦 1 {item.packaging_name || 'carton'} = {item.multiplier} {!item.unit || item.unit === 'carton' || item.unit === (item.packaging_name || 'carton') ? 'unités' : `${item.unit}s`}
                 </span>
-                {item.unit_cost > 0 && (
+                {canViewFinancialMargins(userRole) && item.unit_cost > 0 && (
                   <span className="text-amber-800 font-bold">
-                    Prix Gros ({item.packaging_name || 'Carton'}): <strong>{formatPrice(Math.round(item.unit_cost * item.multiplier))}</strong>
+                    Coût Achat ({item.packaging_name || 'Carton'}): <strong>{formatPrice(Math.round(item.unit_cost * item.multiplier))}</strong>
                   </span>
                 )}
               </>

@@ -53,7 +53,7 @@ export const StockTable: React.FC<StockTableProps> = ({
               <th className="p-3.5">Produit</th>
               <th className="p-3.5">Catégorie</th>
               <th className="p-3.5 text-center">Stock</th>
-              <th className="p-3.5 text-right">Prix d'Achat</th>
+              {!isEmployee && <th className="p-3.5 text-right">Prix d'Achat</th>}
               <th className="p-3.5 text-right">Prix de Vente</th>
               <th className="p-3.5 text-right">Actions</th>
             </tr>
@@ -116,10 +116,12 @@ export const StockTable: React.FC<StockTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Prix d'Achat */}
-                  <td className="p-3.5 text-right text-gray-700 font-bold">
-                    {formatPrice(prod.unit_cost || 0)}
-                  </td>
+                  {/* Prix d'Achat (Masqué aux employés) */}
+                  {!isEmployee && (
+                    <td className="p-3.5 text-right text-gray-700 font-bold">
+                      {formatPrice(prod.unit_cost || 0)}
+                    </td>
+                  )}
 
                   {/* Prix de Vente */}
                   <td className="p-3.5 text-right font-extrabold text-amber-900">
