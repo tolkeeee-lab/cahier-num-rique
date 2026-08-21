@@ -2,20 +2,28 @@
  * roleUtils.ts — Contrôle des autorisations et rôles utilisateurs
  */
 
-export type UserRole = 'owner' | 'admin' | 'employee' | string
+export type UserRole = 'owner' | 'admin' | 'employee' | string | null
 
 /**
- * Vérifie si l'utilisateur actuel est un employé (caissier).
+ * Vérifie si l'utilisateur actuel est un employé (caissier, vendeur, etc.).
  */
-export function isEmployeeRole(role?: UserRole): boolean {
+export function isEmployeeRole(role?: UserRole | null): boolean {
   if (!role) return false
-  return role.toLowerCase() === 'employee'
+  const r = role.toLowerCase().trim()
+  return r === 'employee' || r === 'caissier' || r === 'vendeur' || r === 'staff' || r === 'serveur' || r === 'commercial'
 }
 
 /**
  * Détermine si le rôle autorise la consultation des prix d'achat grossiste et des marges bénéficiaires.
  */
-export function canViewFinancialMargins(role?: UserRole): boolean {
+export function canViewFinancialMargins(role?: UserRole | null): boolean {
+  return !isEmployeeRole(role)
+}
+
+/**
+ * Détermine si le rôle autorise l'exportation des données et rapports comptables.
+ */
+export function canExportAccountingReports(role?: UserRole | null): boolean {
   return !isEmployeeRole(role)
 }
 
