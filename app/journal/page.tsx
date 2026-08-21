@@ -304,11 +304,11 @@ export default function JournalPage() {
     const parts = text.split(/(?:,|\+|\bet\b)/i)
     const lastPart = parts[parts.length - 1] || ''
     const cleanTerm = lastPart.replace(/^\s*\d+\s*/, '').trim().toLowerCase()
-    if (cleanTerm.length < 1) return []
+    if (cleanTerm.length < 2) return []
 
     return (getOfflineProducts(shopManager.shopId) || [])
-      .filter(p => p.name.toLowerCase().includes(cleanTerm))
-      .slice(0, 5)
+      .filter(p => !(p as any).is_orphan && p.name.toLowerCase().includes(cleanTerm))
+      .slice(0, 4)
       .map(p => ({
         id: p.id,
         name: p.name,
@@ -535,6 +535,11 @@ export default function JournalPage() {
                     <div className="relative flex-grow">
                       <input
                         type="text"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        data-lpignore="true"
                         value={saleCreation.input}
                         onChange={(e) => saleCreation.setInput(e.target.value)}
                         placeholder={pens.find(p => p.id === selectedPen)?.placeholder || 'Écrivez une vente...'}
