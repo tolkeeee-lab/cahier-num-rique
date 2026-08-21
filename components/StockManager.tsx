@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { StockAlertBanner } from '@/components/stock/StockAlertBanner'
 import { StockToolbar } from '@/components/stock/StockToolbar'
 import { StockTable } from '@/components/stock/StockTable'
@@ -64,6 +64,9 @@ export function StockManager({
   const [saving, setSaving] = useState(false)
   const [deductPastSales, setDeductPastSales] = useState(false)
 
+  // Référence anti-rebond pour ajustements de stock sur réseaux instables
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+
   const loadStock = useCallback(async () => {
     try {
       const res = await fetch('/api/stock', {
@@ -81,6 +84,11 @@ export function StockManager({
 
   useEffect(() => {
     loadStock()
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
   }, [loadStock])
 
   const handleOpenAddModal = () => {
@@ -154,29 +162,37 @@ export function StockManager({
     }
   }
 
-  const handleAdjustStock = async (id: string, delta: number) => {
-    const updated = products.map((p) => {
-      if (p.id === id) {
-        const curr = p.current_stock ?? p.initial_stock ?? 0
-        return { ...p, current_stock: Math.max(0, curr + delta) }
-      }
-      return p
-    })
-    setProducts(updated)
+  // Ajustement optimiste fluide avec debounce anti-rebond
+  const handleAdjustStock = useCallback((id: string, delta: number) => {
+    let nextStock = 0
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === id) {
+          const curr = p.current_stock ?? p.initial_stock ?? 0
+          nextStock = Math.max(0, curr + delta)
+          return { ...p, current_stock: nextStock }
+        }
+        return p
+      })
+    )
 
-    try {
-      const p = updated.find((item) => item.id === id)
-      if (p) {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
         await fetch('/api/stock', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
-          body: JSON.stringify({ id, current_stock: p.current_stock }),
+          body: JSON.stringify({ id, current_stock: nextStock }),
         })
+      } catch (err) {
+        console.error('Erreur mise à jour stock:', err)
+        loadStock()
       }
-    } catch (err) {
-      console.error('Erreur mise à jour stock:', err)
-    }
-  }
+    }, 400)
+  }, [shopId, loadStock])
 
   const handleDeleteProduct = async (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id))
@@ -206,31 +222,40 @@ export function StockManager({
     }
   }
 
-  const categories = Array.from(new Set(products.map((p) => p.category || 'Divers')))
+  // ── Valeurs mémorisées (Zero lag sur mobile) ──
+  const categories = useMemo(() => {
+    return Array.from(new Set(products.map((p) => p.category || 'Divers')))
+  }, [products])
 
-  const filteredProducts = products.filter((p) => {
-    if (searchQuery.trim() && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false
-    }
-    if (categoryFilter !== 'TOUT' && (p.category || 'Divers') !== categoryFilter) {
-      return false
-    }
-    if (isLowStockOnly) {
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (searchQuery.trim() && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false
+      }
+      if (categoryFilter !== 'TOUT' && (p.category || 'Divers') !== categoryFilter) {
+        return false
+      }
+      if (isLowStockOnly) {
+        const curr = p.current_stock ?? p.initial_stock ?? 0
+        if (curr > (p.alert_threshold ?? 5)) return false
+      }
+      return true
+    })
+  }, [products, searchQuery, categoryFilter, isLowStockOnly])
+
+  const lowStockCount = useMemo(() => {
+    return products.filter((p) => {
       const curr = p.current_stock ?? p.initial_stock ?? 0
-      if (curr > (p.alert_threshold ?? 5)) return false
-    }
-    return true
-  })
+      return curr > 0 && curr <= (p.alert_threshold ?? 5)
+    }).length
+  }, [products])
 
-  const lowStockCount = products.filter((p) => {
-    const curr = p.current_stock ?? p.initial_stock ?? 0
-    return curr > 0 && curr <= (p.alert_threshold ?? 5)
-  }).length
-
-  const outOfStockCount = products.filter((p) => {
-    const curr = p.current_stock ?? p.initial_stock ?? 0
-    return curr <= 0
-  }).length
+  const outOfStockCount = useMemo(() => {
+    return products.filter((p) => {
+      const curr = p.current_stock ?? p.initial_stock ?? 0
+      return curr <= 0
+    }).length
+  }, [products])
 
   return (
     <div className="space-y-4">
