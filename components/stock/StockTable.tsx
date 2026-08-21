@@ -14,6 +14,11 @@ interface Product {
   unit_price: number
   category?: string
   unit?: string
+  multiplier?: number
+  packaging_name?: string
+  lot_quantity?: number
+  lot_price?: number
+  trade_type?: 'retail' | 'semi_wholesale' | 'wholesale'
 }
 
 interface StockTableProps {

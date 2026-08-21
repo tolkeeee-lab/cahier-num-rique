@@ -18,11 +18,17 @@ export async function GET(request: Request) {
   }
 
   try {
+    const altShopId = shopId.startsWith('SHOP-')
+      ? shopId.replace(/^SHOP-/i, 'BTQ-')
+      : shopId.startsWith('BTQ-')
+        ? shopId.replace(/^BTQ-/i, 'SHOP-')
+        : shopId
+
     // 1. Catalogue des produits
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select('*')
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
       .order('name')
 
     if (productsError) throw productsError
@@ -34,7 +40,7 @@ export async function GET(request: Request) {
         id, type, date, notes, status, created_at,
         sold_articles ( product_name, quantity, unit_price )
       `)
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
     if (salesError) throw salesError
 
