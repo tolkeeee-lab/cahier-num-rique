@@ -24,7 +24,7 @@ export const DebtRepaymentModal: React.FC<DebtRepaymentModalProps> = ({
   if (!isOpen || !sale) return null
 
   const handleConfirm = async () => {
-    const val = parseFloat(repayAmount) || 0
+    const val = parseFloat(repayAmount.replace(/\s/g, '')) || 0
     if (val <= 0) return
 
     setIsSubmitting(true)
@@ -72,24 +72,60 @@ export const DebtRepaymentModal: React.FC<DebtRepaymentModalProps> = ({
               Montant Remboursé (FCFA) :
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={repayAmount}
               onChange={(e) => setRepayAmount(e.target.value)}
-              placeholder={`Max: ${sale.debt}`}
-              className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner"
+              placeholder={`Max: ${sale.debt} F`}
+              className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-base text-gray-900 font-black focus:outline-none focus:border-amber-500 shadow-inner"
             />
+
+            {/* Raccourcis de remboursement */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-2">
+              <button
+                type="button"
+                onClick={() => setRepayAmount(String(sale.debt))}
+                className="px-2.5 py-1 rounded-xl bg-emerald-600 border border-emerald-700 text-white font-black text-[11px] hover:bg-emerald-700 transition-all cursor-pointer shadow-xs"
+              >
+                Tout Solder ({formatPrice(sale.debt)})
+              </button>
+              {[1000, 2000, 5000, 10000].filter(b => b < sale.debt).map(b => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setRepayAmount(String(b))}
+                  className="px-2.5 py-1 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 font-bold text-[11px] hover:bg-amber-200 transition-all cursor-pointer shadow-xs"
+                >
+                  {formatPrice(b)}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
             <label className="block font-extrabold text-amber-950 uppercase mb-1">
-              Note / Mode de Paiement :
+              Mode de Règlement :
             </label>
+            <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+              {['💵 Espèces', '📱 Wave / Mobile Money', '🏦 Virement'].map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setNotes(mode)}
+                  className={`px-2.5 py-1 rounded-xl border text-[10px] font-bold transition-all cursor-pointer shadow-xs ${
+                    notes === mode ? 'bg-amber-900 text-white border-amber-950' : 'bg-white border-amber-300 text-amber-950 hover:bg-amber-100'
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="ex: Cash, Mobile Money..."
-              className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner"
+              placeholder="ex: Espèces, Wave..."
+              className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-xs text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner"
             />
           </div>
         </div>
