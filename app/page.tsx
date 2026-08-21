@@ -38,37 +38,18 @@ export default function LandingPage() {
 
       {/* Navigation */}
       <nav className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between border-b border-gray-800/40 relative z-10">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📓</span>
-            <span className="font-extrabold text-base tracking-widest text-[#f59e0b] uppercase">
-              Cahier Numérique
-            </span>
-          </div>
-
-          <Link
-            href="/cumulushop"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-gradient-to-r from-indigo-900/80 to-cyan-900/80 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>☁️ CumuluShop IA</span>
-          </Link>
+        <div className="flex items-center gap-2">
+          <span className="text-xl">📓</span>
+          <span className="font-extrabold text-base tracking-widest text-[#f59e0b] uppercase">
+            Cahier Numérique
+          </span>
         </div>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/cumulushop"
-            className="sm:hidden px-3 py-1.5 bg-indigo-900 text-cyan-300 text-xs font-bold rounded-lg border border-cyan-500/30"
-          >
-            CumuluShop IA
-          </Link>
-          <Link 
-            href="/journal"
-            className="px-5 py-2.5 bg-gradient-to-r from-[#064e3b] to-[#043c2d] hover:from-[#085a44] hover:to-[#054937] text-[#f59e0b] text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] border border-[#024c34]"
-          >
-            Ouvrir mon Cahier
-          </Link>
-        </div>
+        <Link 
+          href="/journal"
+          className="px-5 py-2.5 bg-gradient-to-r from-[#064e3b] to-[#043c2d] hover:from-[#085a44] hover:to-[#054937] text-[#f59e0b] text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] border border-[#024c34]"
+        >
+          Ouvrir mon Cahier
+        </Link>
       </nav>
 
       {/* Hero Section */}
