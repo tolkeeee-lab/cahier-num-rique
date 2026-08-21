@@ -25,7 +25,7 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#064e3b',
+  themeColor: '#fdfaf2',
   interactiveWidget: 'resizes-content',
 }
 
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   description: 'Gérez votre boutique simplement, comme un cahier physique.',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Cahier Caisse',
   },
   icons: {

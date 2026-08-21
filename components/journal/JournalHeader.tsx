@@ -78,7 +78,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
   }
 
   return (
-    <div className="px-2.5 sm:px-3 py-1.5 border-b border-dashed border-amber-300/60 select-none bg-[#fdfaf2] relative">
+    <div className="px-2.5 sm:px-3 pt-[max(env(safe-area-inset-top),0.375rem)] pb-1.5 border-b border-dashed border-amber-300/60 select-none bg-[#fdfaf2] relative">
       {/* Rangée 1 : App Bar Ultra-Compacte */}
       <div className="flex items-center justify-between gap-1.5 h-8 sm:h-9">
         {/* Titre & Sélecteur Boutique */}

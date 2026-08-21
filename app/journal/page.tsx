@@ -508,7 +508,7 @@ export default function JournalPage() {
 
                 {/* Barre de saisie WhatsApp (FIXE EN BAS) */}
                 {!addingToSaleId && (
-                <div className="flex-shrink-0 pt-1 sm:pt-2 relative z-20">
+                <div className="flex-shrink-0 pt-1 sm:pt-2 pb-[max(env(safe-area-inset-bottom),0.25rem)] sm:pb-0 relative z-20">
                   <form onSubmit={handlePipelineSubmit} className="relative flex items-center gap-1 sm:gap-2 bg-amber-100/50 backdrop-blur-md p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-amber-300/80 shadow-md">
                     <StockSuggestionsBubble
                       suggestions={stockSuggestions}
