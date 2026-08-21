@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "ask-ai": "node scripts/ask_ai.mjs"
+    "ask-ai": "node scripts/ask_ai.mjs",
+    "test-stock": "npx -y tsx scripts/test_stock_flow.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
