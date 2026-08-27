@@ -239,12 +239,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       } catch {}
     }
 
-    // Polling doux de sécurité toutes les 12 secondes
+    // Polling doux de sécurité toutes les 5 secondes (sync employé ↔ propriétaire)
     const pollInterval = setInterval(() => {
       if (isOnline && isMounted) {
         reloadData()
       }
-    }, 12000)
+    }, 5000)
 
     return () => {
       isMounted = false

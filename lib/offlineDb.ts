@@ -36,6 +36,7 @@ export interface OfflineSale {
     category?: string
   }>
   created_at: string
+  updated_at?: string   // Horodatage de la dernière modification (pour résoudre les conflits)
   is_synced: boolean
   sync_error?: string
 }
@@ -289,6 +290,8 @@ export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
       }
     })
   }
+  // Horodatage de création et modification
+  sale.updated_at = new Date().toISOString()
   sales.push(sale)
   writeJson(salesKey(shopId), sales)
   idbSaveSale(sale).catch(() => {})
@@ -302,7 +305,8 @@ export function updateOfflineSale(
   const sales = getOfflineSales(shopId)
   const idx = sales.findIndex((s) => s.id === saleId)
   if (idx !== -1) {
-    sales[idx] = { ...sales[idx], ...patch }
+    // Mettre à jour l'horodatage de modification pour résolution de conflits
+    sales[idx] = { ...sales[idx], ...patch, updated_at: new Date().toISOString() }
     writeJson(salesKey(shopId), sales)
     idbSaveSale(sales[idx]).catch(() => {})
   }
@@ -331,7 +335,15 @@ export function replaceOfflineSales(shopId: string, sales: OfflineSale[]): void 
 }
 
 export function getPendingSync(shopId: string): OfflineSale[] {
-  return getOfflineSales(shopId).filter((s) => s.is_synced === false)
+  // Ventes non synchronisées ET sans erreur précédente (première tentative)
+  return getOfflineSales(shopId).filter((s) => s.is_synced === false && !s.sync_error)
+}
+
+/**
+ * Retourne les ventes dont la synchronisation a échoué (pour retry automatique).
+ */
+export function getSyncErrors(shopId: string): OfflineSale[] {
+  return getOfflineSales(shopId).filter((s) => s.is_synced === false && !!s.sync_error)
 }
 
 export function markAsSynced(shopId: string, saleId: string): void {

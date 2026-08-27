@@ -9,12 +9,14 @@
  * - Écoute le retour en ligne via `isOnline`
  * - Envoie les ventes en attente (`getPendingSync`) à l'API
  * - Marque chaque vente comme `synced` ou `error`
+ * - Retry automatique toutes les 30s pour les ventes en erreur
  * - Met à jour le badge de sync dans l'UI via callbacks
  */
 
 import { useEffect, useRef, useCallback } from 'react'
 import {
   getPendingSync,
+  getSyncErrors,
   markAsSynced,
   markSyncError,
 } from '@/lib/offlineDb'
@@ -40,11 +42,18 @@ export function useOfflineSync({
   // Évite les double-syncs simultanés
   const isSyncing = useRef(false)
 
-  const syncOfflineData = useCallback(async () => {
+  const syncOfflineData = useCallback(async (includeErrors = false) => {
     if (!shopId || !isOnline || isSyncing.current) return
 
+    // On récupère les ventes non synchronisées + les ventes en erreur si retry
     const pending = getPendingSync(shopId)
-    if (pending.length === 0) return
+    const errored = includeErrors ? getSyncErrors(shopId) : []
+
+    // Déduplique : évite de réenvoyer ce qui est déjà dans pending
+    const pendingIds = new Set(pending.map(s => s.id))
+    const toSync = [...pending, ...errored.filter(s => !pendingIds.has(s.id))]
+
+    if (toSync.length === 0) return
 
     isSyncing.current = true
     setSyncStatus('syncing')
@@ -52,7 +61,7 @@ export function useOfflineSync({
     let successCount = 0
     let errorCount = 0
 
-    for (const sale of pending) {
+    for (const sale of toSync) {
       try {
         const response = await fetch('/api/sales', {
           method: 'POST',
@@ -102,6 +111,11 @@ export function useOfflineSync({
       onSyncComplete?.()
       // Réinitialiser le badge après 3s
       setTimeout(() => setSyncStatus('idle'), 3000)
+    } else if (successCount > 0) {
+      // Sync partielle : certaines ont réussi, d'autres non
+      setSyncStatus('success')
+      onSyncComplete?.()
+      setTimeout(() => setSyncStatus('idle'), 3000)
     } else {
       setSyncStatus('error')
       setTimeout(() => setSyncStatus('idle'), 5000)
@@ -112,10 +126,24 @@ export function useOfflineSync({
   useEffect(() => {
     if (isOnline && shopId) {
       // Petit délai pour s'assurer que la connexion est vraiment stable
-      const timer = setTimeout(() => syncOfflineData(), 1500)
+      const timer = setTimeout(() => syncOfflineData(false), 1500)
       return () => clearTimeout(timer)
     }
   }, [isOnline, shopId, syncOfflineData])
 
-  return { syncNow: syncOfflineData }
+  // Retry automatique toutes les 30s pour les ventes bloquées en erreur
+  useEffect(() => {
+    if (!isOnline || !shopId) return
+
+    const retryInterval = setInterval(() => {
+      const errored = getSyncErrors(shopId)
+      if (errored.length > 0) {
+        syncOfflineData(true) // includeErrors = true
+      }
+    }, 30_000)
+
+    return () => clearInterval(retryInterval)
+  }, [isOnline, shopId, syncOfflineData])
+
+  return { syncNow: () => syncOfflineData(true) }
 }
