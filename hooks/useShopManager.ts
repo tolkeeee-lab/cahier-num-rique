@@ -36,18 +36,26 @@ export function useShopManager(mappedUser: any) {
       const isOnline = isSupabaseClientConfigured()
 
       // ── 1. Vérification si l'utilisateur est un Employé assigné à une Boutique Patron ──
-      if (isOnline && uEmail) {
+      if ((mappedUser as any)?.role === 'employee' || (isOnline && uEmail)) {
         try {
-          const { data: empData } = await supabaseClient
-            .from('employees')
-            .select('shop_id, name, role')
-            .eq('email', uEmail)
-            .maybeSingle()
+          let assignedShopId = (mappedUser as any)?.shop_id
+          let assignedRole = (mappedUser as any)?.role || 'employee'
 
-          if (empData?.shop_id && isMounted) {
-            const assignedShopId = empData.shop_id
-            const assignedRole = empData.role || 'employee'
-            setEmployeeRole(assignedRole)
+          if (isOnline && uEmail) {
+            const { data: empData } = await supabaseClient
+              .from('employees')
+              .select('shop_id, name, role')
+              .eq('email', uEmail)
+              .maybeSingle()
+
+            if (empData?.shop_id) {
+              assignedShopId = empData.shop_id
+              if (empData.role) assignedRole = empData.role
+            }
+          }
+
+          if (assignedRole === 'employee' && assignedShopId && isMounted) {
+            setEmployeeRole('employee')
             const empShop: Shop = {
               id: assignedShopId,
               name: (mappedUser as any)?.shop_name || 'Boutique Assignée',
@@ -62,6 +70,7 @@ export function useShopManager(mappedUser: any) {
           console.warn('Erreur vérification rôle employé:', e)
         }
       }
+
 
       // ── 2. Pour le Propriétaire : Chargement des boutiques locales & distantes ──
       const stored = localStorage.getItem(`cahier_user_shops_${uId}`)

@@ -43,3 +43,54 @@ export function matchShopByCode(inputCode: string, shops: Array<{ id: string; na
   return shortMatch ? shortMatch.id : null
 }
 
+import { supabaseClient } from './supabaseClient'
+
+/**
+ * Recherche l'ID réel d'une boutique dans Supabase à partir d'un code court (ex: BTQ-58C54 ou 58C54)
+ */
+export async function findShopIdByCode(inputCode: string): Promise<string> {
+  const raw = inputCode.trim()
+  if (!raw) return 'default-shop'
+  const clean = normalizeShopCode(raw)
+
+  try {
+    // 1. Chercher dans `employees`
+    const { data: empMatch } = await supabaseClient
+      .from('employees')
+      .select('shop_id')
+      .or(`shop_id.eq.${raw},shop_id.ilike.${clean}%,shop_id.ilike.SHOP-${clean}%`)
+      .limit(1)
+
+    if (empMatch && empMatch.length > 0 && empMatch[0].shop_id) {
+      return empMatch[0].shop_id
+    }
+
+    // 2. Chercher dans `products`
+    const { data: prodMatch } = await supabaseClient
+      .from('products')
+      .select('shop_id')
+      .or(`shop_id.eq.${raw},shop_id.ilike.${clean}%,shop_id.ilike.SHOP-${clean}%`)
+      .limit(1)
+
+    if (prodMatch && prodMatch.length > 0 && prodMatch[0].shop_id) {
+      return prodMatch[0].shop_id
+    }
+
+    // 3. Chercher dans `sales`
+    const { data: salesMatch } = await supabaseClient
+      .from('sales')
+      .select('shop_id')
+      .or(`shop_id.eq.${raw},shop_id.ilike.${clean}%,shop_id.ilike.SHOP-${clean}%`)
+      .limit(1)
+
+    if (salesMatch && salesMatch.length > 0 && salesMatch[0].shop_id) {
+      return salesMatch[0].shop_id
+    }
+  } catch (err) {
+    console.warn('Erreur recherche shop_id par code:', err)
+  }
+
+  // Fallback si non trouvé
+  return raw.startsWith('BTQ-') ? raw.replace(/^BTQ-/i, 'SHOP-') : raw
+}
+

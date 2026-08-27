@@ -45,6 +45,7 @@ import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
 import { isEmployeeRole } from '@/lib/roleUtils'
+import { findShopIdByCode } from '@/lib/shopCodeUtils'
 import { Send, Loader, Zap, ScanLine } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -155,12 +156,8 @@ export default function JournalPage() {
         const rawCode = (shopCode || '').trim().toUpperCase()
         if (!rawCode) throw new Error('Le code boutique du propriétaire est obligatoire.')
         
-        // Normaliser le code boutique saisi
-        assignedShopId = rawCode.startsWith('BTQ-')
-          ? rawCode.replace(/^BTQ-/i, 'SHOP-')
-          : rawCode.startsWith('SHOP-')
-            ? rawCode
-            : `SHOP-${rawCode}`
+        // Résoudre l'ID réel de la boutique du patron dans Supabase (ex: BTQ-58C54 -> shop_id exact du patron)
+        assignedShopId = await findShopIdByCode(rawCode)
         assignedShopName = 'Boutique Assignée'
       }
 
@@ -180,20 +177,21 @@ export default function JournalPage() {
         if (error) throw error
 
         if (data.user) {
-          // Si employé, insérer automatiquement dans la table `employees` de la boutique du patron
-          if (role === 'employee' && assignedShopId) {
-            try {
-              await supabaseClient.from('employees').insert([
-                {
-                  id: data.user.id,
-                  shop_id: assignedShopId,
-                  name: cleanName,
-                  email: cleanEmail,
-                  role: 'employee',
-                  status: 'active'
-                }
-              ])
-            } catch {}
+          // Inscrire le rôle et la boutique dans la table `employees` de Supabase
+          const targetShopId = role === 'employee' ? assignedShopId : data.user.id
+          try {
+            await supabaseClient.from('employees').upsert([
+              {
+                id: data.user.id,
+                shop_id: targetShopId,
+                name: cleanName,
+                email: cleanEmail,
+                role: role,
+                status: 'active'
+              }
+            ], { onConflict: 'id' })
+          } catch (e) {
+            console.warn('Erreur insertion employés/patron:', e)
           }
 
           localStorage.removeItem('cahier_logged_out_flag')
@@ -219,6 +217,7 @@ export default function JournalPage() {
       setAuthLoading(false)
     }
   }
+
 
 
   const handleMagicLink = async (email: string) => {
