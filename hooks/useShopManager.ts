@@ -118,6 +118,51 @@ export function useShopManager(mappedUser: any) {
     setSelectedShopId(id)
   }
 
+  const handleUpdateShopProfile = async (data: { shopName: string; activity: string; phone?: string; address?: string }) => {
+    if (!mappedUser?.id) return
+
+    const targetShopId = shopId || `${mappedUser.id}-main`
+
+    // 1. Mettre à jour dans la liste des boutiques
+    const updatedShops = userShops.map((s) => {
+      if (s.id === targetShopId) {
+        return { ...s, name: data.shopName, activity: data.activity }
+      }
+      return s
+    })
+
+    if (!updatedShops.some(s => s.id === targetShopId)) {
+      updatedShops.push({ id: targetShopId, name: data.shopName, activity: data.activity })
+    }
+
+    setUserShops(updatedShops)
+    localStorage.setItem(`cahier_user_shops_${mappedUser.id}`, JSON.stringify(updatedShops))
+
+    // 2. Mettre à jour téléphone & adresse dans localStorage
+    if (data.phone !== undefined) {
+      localStorage.setItem(`cahier_shop_phone_${targetShopId}`, data.phone)
+    }
+    if (data.address !== undefined) {
+      localStorage.setItem(`cahier_shop_address_${targetShopId}`, data.address)
+    }
+
+    // 3. Si Supabase est actif, sauvegarder dans les user_metadata Supabase
+    if (isSupabaseClientConfigured()) {
+      try {
+        await supabaseClient.auth.updateUser({
+          data: {
+            shop_name: data.shopName,
+            shop_activity: data.activity,
+            phone: data.phone,
+            address: data.address,
+          }
+        })
+      } catch (e) {
+        console.warn('Erreur mise à jour metadata Supabase:', e)
+      }
+    }
+  }
+
   return {
     selectedShopId,
     setSelectedShopId,
@@ -135,5 +180,7 @@ export function useShopManager(mappedUser: any) {
     setNewShopActivity,
     handleCreateShop,
     handleSwitchShop,
+    handleUpdateShopProfile,
   }
 }
+

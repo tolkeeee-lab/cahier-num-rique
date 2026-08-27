@@ -28,6 +28,8 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
   const [isSaving, setIsSaving] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  const [savedMessage, setSavedMessage] = useState<string | null>(null)
+
   const shortCode = formatShortShopCode(shopId)
 
   const handleCopyCode = () => {
@@ -41,8 +43,11 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
     if (!onSaveProfile) return
 
     setIsSaving(true)
+    setSavedMessage(null)
     try {
       await onSaveProfile({ shopName: name, activity, phone, address })
+      setSavedMessage('Profil de la boutique enregistré avec succès ! ✅')
+      setTimeout(() => setSavedMessage(null), 3500)
     } catch (err) {
       console.error('Erreur sauvegarde profil boutique:', err)
     } finally {
@@ -52,7 +57,15 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="bg-white/90 p-5 rounded-2xl border border-amber-300/80 space-y-4 shadow-sm">
+      {savedMessage && (
+        <div className="p-3 rounded-xl bg-green-50 border border-green-300 text-green-800 text-xs font-mono font-bold flex items-center gap-2">
+          <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+          <span>{savedMessage}</span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between border-b border-amber-200 pb-3 flex-wrap gap-2">
+
         <div className="flex items-center gap-2">
           <Store className="w-5 h-5 text-amber-700" />
           <h4 className="text-sm font-extrabold text-gray-900">Profil du Point de Vente</h4>

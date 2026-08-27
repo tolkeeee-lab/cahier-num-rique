@@ -770,8 +770,11 @@ export default function JournalPage() {
                   shopId={shopManager.shopId}
                   shopName={shopManager.currentShop?.name || 'Ma Boutique'}
                   activity={shopManager.shopActivity}
+                  phone={(mappedUser as any)?.user_metadata?.phone || (mappedUser as any)?.phone || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_phone_${shopManager.shopId}`) || '' : '')}
+                  address={(mappedUser as any)?.user_metadata?.address || (mappedUser as any)?.address || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_address_${shopManager.shopId}`) || '' : '')}
                   userEmail={mappedUser?.email}
                   userShops={shopManager.userShops}
+                  onSaveProfile={shopManager.handleUpdateShopProfile}
                   onResetData={() => {
                     journalData.reloadData()
                   }}
@@ -782,6 +785,7 @@ export default function JournalPage() {
                   onInviteEmployee={handleInviteEmployee}
                   onRemoveEmployee={handleRemoveEmployee}
                 />
+
               </div>
             )}
             {activeTab === 'shopping' && (
