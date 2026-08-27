@@ -41,34 +41,36 @@ export const AuthSignupForm: React.FC<AuthSignupFormProps> = ({
       )}
 
       {/* Sélecteur de rôle : Propriétaire ou Employé */}
-      <div>
-        <label className="block text-gray-300 font-bold uppercase mb-1.5">
+      <div className="space-y-1.5">
+        <label className="block text-gray-300 font-bold uppercase text-[11px]">
           Je crée un compte en tant que :
         </label>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => setRole('owner')}
-            className={`py-2.5 px-3 rounded-xl border flex items-center justify-center gap-1.5 font-bold transition-all cursor-pointer ${
+            className={`py-3 px-3 rounded-2xl border flex flex-col items-center justify-center gap-1 font-extrabold transition-all cursor-pointer ${
               role === 'owner'
-                ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-md ring-1 ring-amber-500/30'
-                : 'bg-[#141210] border-gray-800 text-gray-400 hover:text-gray-200'
+                ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-lg ring-2 ring-amber-500/40 scale-[1.02]'
+                : 'bg-[#141210] border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-700'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Propriétaire</span>
+            <ShieldCheck className="w-5 h-5 text-amber-400" />
+            <span>👑 Propriétaire</span>
+            <span className="text-[9px] font-normal text-gray-400">Créer mon commerce</span>
           </button>
           <button
             type="button"
             onClick={() => setRole('employee')}
-            className={`py-2.5 px-3 rounded-xl border flex items-center justify-center gap-1.5 font-bold transition-all cursor-pointer ${
+            className={`py-3 px-3 rounded-2xl border flex flex-col items-center justify-center gap-1 font-extrabold transition-all cursor-pointer ${
               role === 'employee'
-                ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-md ring-1 ring-amber-500/30'
-                : 'bg-[#141210] border-gray-800 text-gray-400 hover:text-gray-200'
+                ? 'bg-amber-500/25 border-amber-500 text-amber-300 shadow-lg ring-2 ring-amber-500/50 scale-[1.02]'
+                : 'bg-[#141210] border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-700'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>Employé / Vendeur</span>
+            <Users className="w-5 h-5 text-amber-400" />
+            <span>👔 Employé / Vendeur</span>
+            <span className="text-[9px] font-normal text-gray-400">J'ai un Code Boutique</span>
           </button>
         </div>
       </div>
@@ -146,26 +148,27 @@ export const AuthSignupForm: React.FC<AuthSignupFormProps> = ({
         </div>
       ) : (
         /* Si Employé : Code Boutique du Propriétaire */
-        <div>
-          <label className="block text-[#f59e0b] font-bold uppercase mb-1">
-            Code Boutique du Propriétaire :
+        <div className="p-3 bg-amber-500/10 border border-amber-500/40 rounded-2xl space-y-1.5">
+          <label className="block text-[#f59e0b] font-extrabold uppercase text-xs flex items-center gap-1.5">
+            <Key className="w-4 h-4 text-[#f59e0b]" />
+            <span>Code Boutique du Propriétaire :</span>
           </label>
           <div className="relative">
-            <Key className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#f59e0b]" />
             <input
               type="text"
               value={shopCode}
               onChange={(e) => setShopCode(e.target.value.toUpperCase())}
               placeholder="ex: BTQ-58C54"
               required
-              className="w-full pl-9 pr-3 py-2.5 bg-[#141210] border border-[#f59e0b]/50 rounded-xl text-[#f59e0b] font-bold placeholder-gray-500 focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-2.5 bg-[#141210] border border-[#f59e0b]/60 rounded-xl text-[#f59e0b] font-mono font-black text-sm tracking-wider placeholder-gray-600 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/30"
             />
           </div>
-          <p className="text-[10px] text-gray-400 mt-1">
-            Demandez ce code à votre patron/gérant (il le trouve dans ses Réglages).
+          <p className="text-[10px] text-amber-300/80 font-mono">
+            📌 Demandez ce code à votre patron/gérant (il le trouve dans ses Réglages).
           </p>
         </div>
       )}
+
 
       {/* Bouton de création */}
       <button
