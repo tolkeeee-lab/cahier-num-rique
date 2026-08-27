@@ -14,7 +14,7 @@ interface EmployeeRoleManagerProps {
   employees: Employee[]
   shopId?: string
   shopName?: string
-  onInviteEmployee?: (name: string, email: string, role: string) => Promise<void>
+  onInviteEmployee?: (name: string, email: string, role: string) => Promise<any>
   onRemoveEmployee?: (id: string) => Promise<void>
 }
 
@@ -41,8 +41,9 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
     setIsSubmitting(true)
     setFeedback(null)
     try {
+      let data: any = null
       if (onInviteEmployee) {
-        await onInviteEmployee(name, email, roleInput)
+        data = await onInviteEmployee(name, email, roleInput)
       } else {
         const res = await fetch('/api/employees', {
           method: 'POST',
@@ -53,10 +54,18 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
           },
           body: JSON.stringify({ name, email, role: roleInput })
         })
-        const data = await res.json()
+        data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'invitation')
       }
-      setFeedback({ type: 'success', msg: `Invitation enregistrée pour ${email} ✅` })
+
+      if (data?.inviteSent) {
+        setFeedback({ type: 'success', msg: `Employé ajouté & e-mail d'invitation envoyé à ${email} 📩 (Vérifiez les Spams / Indésirables !)` })
+      } else if (data?.inviteError) {
+        setFeedback({ type: 'success', msg: `Employé ajouté au système ✅ (${data.inviteError})` })
+      } else {
+        setFeedback({ type: 'success', msg: `Employé ajouté pour ${email} ✅ (Vérifiez les Spams / Indésirables)` })
+      }
+
       setNameInput('')
       setEmailInput('')
     } catch (err: any) {

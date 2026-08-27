@@ -280,6 +280,7 @@ export default function JournalPage() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Erreur inconnue')
     await fetchEmployees()
+    return data
   }
 
   const handleRemoveEmployee = async (id: string) => {
