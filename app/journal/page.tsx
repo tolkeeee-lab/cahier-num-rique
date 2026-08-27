@@ -534,6 +534,13 @@ export default function JournalPage() {
     )
   }
 
+  // ── Protection d'accès aux onglets pour les employés ────────────────────────
+  useEffect(() => {
+    if (isEmployeeRole(effectiveRole) && (activeTab === 'analytics' || activeTab === 'settings')) {
+      setActiveTab('cahier')
+    }
+  }, [effectiveRole, activeTab])
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="h-screen w-screen max-h-screen max-w-screen bg-[#141210] text-[#1e1a18] font-sans p-0 sm:p-2 md:p-2.5 lg:p-3 antialiased flex flex-col justify-between overflow-hidden select-none">
@@ -572,6 +579,7 @@ export default function JournalPage() {
               activity={shopManager.shopActivity}
               shops={shopManager.userShops}
               selectedShopId={shopManager.shopId}
+              userRole={effectiveRole}
               onSelectShopId={(id) => shopManager.setSelectedShopId(id)}
               onOpenNewShopModal={() => shopManager.setShowNewShopModal(true)}
               soldeDuJour={journalData.soldeDuJour}
@@ -594,8 +602,14 @@ export default function JournalPage() {
 
           {/* Onglets (FIXES) */}
           <div className="flex-shrink-0 z-10">
-            <JournalTabs activeTab={activeTab} onTabChange={setActiveTab} activity={shopManager.shopActivity} />
+            <JournalTabs
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              activity={shopManager.shopActivity}
+              userRole={effectiveRole}
+            />
           </div>
+
 
           {/* Corps principal — Hauteur Maximisée */}
           <div className="p-1 sm:p-2 md:p-2.5 flex-1 min-h-0 flex flex-col justify-between overflow-hidden space-y-1">

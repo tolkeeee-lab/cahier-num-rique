@@ -15,12 +15,15 @@ import {
 import { useFeatures } from '@/context/FeatureContext'
 import { getActivityLabels } from '@/lib/activityLabels'
 
+import { canViewExecutiveDashboard, canAccessAdminSettings } from '@/lib/roleUtils'
+
 export type JournalTab = 'cahier' | 'history' | 'stock' | 'dettes' | 'shopping' | 'demandes' | 'analytics' | 'particulier' | 'settings'
 
 interface JournalTabsProps {
   activeTab: JournalTab
   onTabChange: (tab: JournalTab) => void
   activity: string
+  userRole?: string | null
   pendingDebtsCount?: number
   pendingRequestsCount?: number
 }
@@ -29,6 +32,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
   activeTab,
   onTabChange,
   activity,
+  userRole,
   pendingDebtsCount = 0,
   pendingRequestsCount = 0,
 }) => {
@@ -78,7 +82,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
       id: 'analytics' as JournalTab,
       label: 'Comptabilité & Bilan',
       icon: BarChart3,
-      show: features.enableAnalytics,
+      show: features.enableAnalytics && canViewExecutiveDashboard(userRole),
     },
     {
       id: 'particulier' as JournalTab,
@@ -90,9 +94,10 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
       id: 'settings' as JournalTab,
       label: 'Réglages',
       icon: Settings,
-      show: true,
+      show: canAccessAdminSettings(userRole),
     },
   ].filter(t => t.show)
+
 
   return (
     <nav className="bg-[#f5eea5]/20 border-b border-amber-300/60 px-2 sm:px-3 pt-1 flex items-center gap-1 overflow-x-auto scrollbar-none select-none">

@@ -18,12 +18,15 @@ import { formatPrice } from '@/lib/penUtils'
 import { useFeatures } from '@/context/FeatureContext'
 import { getActivityLabels } from '@/lib/activityLabels'
 
+import { canAccessAdminSettings, isEmployeeRole } from '@/lib/roleUtils'
+
 interface JournalHeaderProps {
   user: any
   currentShopName: string
   activity: string
   shops?: Array<{ id: string; name: string; activity: string }>
   selectedShopId?: string
+  userRole?: string | null
   onSelectShopId?: (id: string) => void
   onOpenNewShopModal?: () => void
   soldeDuJour?: number
@@ -47,7 +50,9 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
   activity,
   shops = [],
   selectedShopId,
+  userRole,
   onSelectShopId,
+
   onOpenNewShopModal,
   tiroirCaisse = 0,
   argentDehors = 0,
@@ -103,9 +108,11 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                   {s.name} ({getActivityBadge(s.activity)})
                 </option>
               ))}
-              <option value="ADD_NEW_SHOP" className="bg-white text-amber-800 font-bold">
-                + Nouvelle Boutique...
-              </option>
+              {!isEmployeeRole(userRole) && (
+                <option value="ADD_NEW_SHOP" className="bg-white text-amber-800 font-bold">
+                  + Nouvelle Boutique...
+                </option>
+              )}
             </select>
             <ChevronDown className="w-3 h-3 text-amber-800 absolute right-1 pointer-events-none" />
           </div>
@@ -187,14 +194,17 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
           </div>
 
           {/* Paramètres & Menu Mobile */}
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            className="p-1 sm:p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 transition-colors shadow-2xs"
-            title="Paramètres"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
+          {canAccessAdminSettings(userRole) && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="p-1 sm:p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 transition-colors shadow-2xs"
+              title="Paramètres"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          )}
+
 
           {/* Menu d'actions secondaires sur mobile */}
           <div className="sm:hidden">
