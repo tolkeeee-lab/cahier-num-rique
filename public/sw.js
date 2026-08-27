@@ -1,6 +1,6 @@
 /* Service Worker PWA Robust Offline Shell — Cahier Numérique */
 
-const CACHE_NAME = 'cahier-pwa-v16'
+const CACHE_NAME = 'cahier-pwa-v17'
 const STATIC_ASSETS = [
   '/',
   '/journal',
@@ -106,20 +106,19 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 3. Fichiers statiques Next.js (/_next/static/, JS, CSS, images, polices)
-  // Stale-While-Revalidate + Cache First pour la réactivité offline
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
-            const responseClone = networkResponse.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone))
-          }
-          return networkResponse
-        })
-        .catch(() => cachedResponse)
-
-      return cachedResponse || fetchPromise
+    caches.match(event.request).then(async (cachedResponse) => {
+      if (cachedResponse) return cachedResponse
+      try {
+        const networkResponse = await fetch(event.request)
+        if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
+          const responseClone = networkResponse.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone))
+        }
+        return networkResponse
+      } catch (err) {
+        return new Response('', { status: 408, statusText: 'Request Failed' })
+      }
     })
   )
 })
