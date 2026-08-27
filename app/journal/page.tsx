@@ -294,13 +294,20 @@ export default function JournalPage() {
   const [editingSale, setEditingSale] = useState<any | null>(null)
   const [showTactileMenuModal, setShowTactileMenuModal] = useState(false)
 
-  // ── Hooks métier ───────────────────────────────────────────────────────────
   const shopManager = useShopManager(mappedUser)
   const effectiveRole = shopManager.employeeRole || mappedUser?.role || 'owner'
   const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopManager.shopId)
   const journalData = useJournalData(shopManager.shopId, isOnline)
 
+  // ── Protection d'accès aux onglets pour les employés ────────────────────────
+  useEffect(() => {
+    if (isEmployeeRole(effectiveRole) && (activeTab === 'analytics' || activeTab === 'settings')) {
+      setActiveTab('cahier')
+    }
+  }, [effectiveRole, activeTab])
+
   // ── Gestion des Employés ───────────────────────────────────────────────────
+
   const [employees, setEmployees] = useState<any[]>([])
 
   const fetchEmployees = async () => {
@@ -534,14 +541,8 @@ export default function JournalPage() {
     )
   }
 
-  // ── Protection d'accès aux onglets pour les employés ────────────────────────
-  useEffect(() => {
-    if (isEmployeeRole(effectiveRole) && (activeTab === 'analytics' || activeTab === 'settings')) {
-      setActiveTab('cahier')
-    }
-  }, [effectiveRole, activeTab])
-
   // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <div className="h-screen w-screen max-h-screen max-w-screen bg-[#141210] text-[#1e1a18] font-sans p-0 sm:p-2 md:p-2.5 lg:p-3 antialiased flex flex-col justify-between overflow-hidden select-none">
 
