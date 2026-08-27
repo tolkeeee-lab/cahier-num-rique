@@ -7,7 +7,7 @@ import { AuthSignupForm } from './auth/AuthSignupForm'
 
 export interface AuthScreenProps {
   onLogin?: (email: string, password?: string) => Promise<void>
-  onSignup?: (name: string, email: string, password?: string, shopName?: string) => Promise<void>
+  onSignup?: (name: string, email: string, password?: string, shopName?: string, role?: 'owner' | 'employee', shopCode?: string) => Promise<void>
   onMagicLink?: (email: string) => Promise<void>
   onBypass?: (role?: any) => void
   onLoginSuccess?: (usr?: any) => void

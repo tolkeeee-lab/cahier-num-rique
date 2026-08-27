@@ -134,30 +134,81 @@ export default function JournalPage() {
     }
   }
 
-  const handleSignup = async (name: string, email: string, password?: string, shopName?: string) => {
+  const handleSignup = async (
+    name: string,
+    email: string,
+    password?: string,
+    shopName?: string,
+    role: 'owner' | 'employee' = 'owner',
+    shopCode?: string
+  ) => {
     setAuthLoading(true)
     setAuthError(null)
     try {
+      const cleanEmail = email.trim().toLowerCase()
+      const cleanName = name.trim()
+
+      let assignedShopId = ''
+      let assignedShopName = shopName?.trim() || 'Mon Point de Vente'
+
+      if (role === 'employee') {
+        const rawCode = (shopCode || '').trim().toUpperCase()
+        if (!rawCode) throw new Error('Le code boutique du propriétaire est obligatoire.')
+        
+        // Normaliser le code boutique saisi
+        assignedShopId = rawCode.startsWith('BTQ-')
+          ? rawCode.replace(/^BTQ-/i, 'SHOP-')
+          : rawCode.startsWith('SHOP-')
+            ? rawCode
+            : `SHOP-${rawCode}`
+        assignedShopName = 'Boutique Assignée'
+      }
+
       if (isConfigured && password) {
         const { data, error } = await supabaseClient.auth.signUp({
-          email: email.trim(),
+          email: cleanEmail,
           password,
           options: {
             data: {
-              full_name: name,
-              shop_name: shopName || 'Mon Point de Vente',
-              role: 'owner',
+              full_name: cleanName,
+              shop_name: assignedShopName,
+              shop_id: assignedShopId || undefined,
+              role: role,
             }
           }
         })
         if (error) throw error
+
         if (data.user) {
+          // Si employé, insérer automatiquement dans la table `employees` de la boutique du patron
+          if (role === 'employee' && assignedShopId) {
+            try {
+              await supabaseClient.from('employees').insert([
+                {
+                  id: data.user.id,
+                  shop_id: assignedShopId,
+                  name: cleanName,
+                  email: cleanEmail,
+                  role: 'employee',
+                  status: 'active'
+                }
+              ])
+            } catch {}
+          }
+
           localStorage.removeItem('cahier_logged_out_flag')
           localStorage.setItem('cahier_last_active_user', JSON.stringify(data.user))
           setUser(data.user)
         }
       } else {
-        const localUser = { id: email.replace(/[^a-zA-Z0-9]/g, '_'), email, name, role: 'owner', shop_name: shopName }
+        const localUser = {
+          id: cleanEmail.replace(/[^a-zA-Z0-9]/g, '_'),
+          email: cleanEmail,
+          name: cleanName,
+          role,
+          shop_id: assignedShopId || undefined,
+          shop_name: assignedShopName
+        }
         localStorage.removeItem('cahier_logged_out_flag')
         localStorage.setItem('cahier_last_active_user', JSON.stringify(localUser))
         setUser(localUser)
@@ -168,6 +219,7 @@ export default function JournalPage() {
       setAuthLoading(false)
     }
   }
+
 
   const handleMagicLink = async (email: string) => {
     setAuthLoading(true)

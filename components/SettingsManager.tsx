@@ -46,6 +46,7 @@ export function SettingsManager({
     <div className="space-y-6">
       {/* Profil de la boutique */}
       <ShopProfileSettings
+        shopId={shopId}
         shopName={shopName}
         activity={activity}
         phone={phone}
