@@ -45,7 +45,7 @@ import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
 import { isEmployeeRole } from '@/lib/roleUtils'
-import { findShopIdByCode } from '@/lib/shopCodeUtils'
+import { findShopIdByCode, formatShortShopCode } from '@/lib/shopCodeUtils'
 import { Send, Loader, Zap, ScanLine } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -177,13 +177,15 @@ export default function JournalPage() {
         if (error) throw error
 
         if (data.user) {
-          // Inscrire le rôle et la boutique dans la table `employees` de Supabase
+          // Inscrire le rôle, la boutique et le code dans la table `employees` de Supabase
           const targetShopId = role === 'employee' ? assignedShopId : data.user.id
+          const shortCode = formatShortShopCode(targetShopId)
           try {
             await supabaseClient.from('employees').upsert([
               {
                 id: data.user.id,
                 shop_id: targetShopId,
+                shop_code: shortCode,
                 name: cleanName,
                 email: cleanEmail,
                 role: role,
@@ -306,7 +308,32 @@ export default function JournalPage() {
     }
   }, [effectiveRole, activeTab])
 
+  // ── Enregistrement auto du Propriétaire dans employees pour le Code Boutique ─
+  useEffect(() => {
+    if (!isConfigured || !mappedUser?.id || mappedUser?.role === 'employee') return
+
+    const ownerShopId = shopManager.shopId || mappedUser.shop_id || mappedUser.id
+    const shortCode = formatShortShopCode(ownerShopId)
+
+    supabaseClient
+      .from('employees')
+      .upsert([
+        {
+          id: mappedUser.id,
+          shop_id: ownerShopId,
+          shop_code: shortCode,
+          name: mappedUser.name || 'Propriétaire',
+          email: (mappedUser.email || '').toLowerCase().trim(),
+          role: 'owner',
+          status: 'active'
+        }
+      ], { onConflict: 'id' })
+      .then(() => {})
+      .catch(() => {})
+  }, [isConfigured, mappedUser?.id, mappedUser?.role, shopManager.shopId, mappedUser?.name, mappedUser?.email])
+
   // ── Gestion des Employés ───────────────────────────────────────────────────
+
 
   const [employees, setEmployees] = useState<any[]>([])
 

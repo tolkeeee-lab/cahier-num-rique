@@ -232,6 +232,7 @@ $$ LANGUAGE plpgsql;
 CREATE TABLE IF NOT EXISTS public.employees (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_id VARCHAR(255) NOT NULL,
+  shop_code VARCHAR(50),
   user_id UUID,
   email VARCHAR(255),
   name VARCHAR(255) NOT NULL,
@@ -242,8 +243,12 @@ CREATE TABLE IF NOT EXISTS public.employees (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS shop_code VARCHAR(50);
+
 CREATE INDEX IF NOT EXISTS idx_employees_shop ON public.employees(shop_id);
+CREATE INDEX IF NOT EXISTS idx_employees_code ON public.employees(shop_code);
 CREATE INDEX IF NOT EXISTS idx_employees_email ON public.employees(email);
+
 
 DROP TRIGGER IF EXISTS update_employees_updated_at ON public.employees;
 CREATE TRIGGER update_employees_updated_at BEFORE UPDATE ON public.employees

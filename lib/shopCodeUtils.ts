@@ -52,35 +52,37 @@ export async function findShopIdByCode(inputCode: string): Promise<string> {
   const raw = inputCode.trim()
   if (!raw) return 'default-shop'
   const clean = normalizeShopCode(raw)
+  const formatted = raw.toUpperCase().startsWith('BTQ-') ? raw.toUpperCase() : `BTQ-${clean}`
 
   try {
-    // 1. Chercher dans `employees`
+    // 1. Chercher dans `employees` par `shop_code` ou `shop_id`
     const { data: empMatch } = await supabaseClient
       .from('employees')
-      .select('shop_id')
-      .or(`shop_id.eq.${raw},shop_id.ilike.${clean}%,shop_id.ilike.SHOP-${clean}%`)
-      .limit(1)
+      .select('shop_id, shop_code')
+      .or(`shop_code.eq.${formatted},shop_code.ilike.%${clean}%,shop_id.eq.${raw},shop_id.ilike.%${clean}%`)
+      .limit(5)
 
-    if (empMatch && empMatch.length > 0 && empMatch[0].shop_id) {
-      return empMatch[0].shop_id
+    if (empMatch && empMatch.length > 0) {
+      const match = empMatch.find(e => e.shop_id) || empMatch[0]
+      if (match?.shop_id) return match.shop_id
     }
 
-    // 2. Chercher dans `products`
+    // 2. Chercher dans `products` par shop_id
     const { data: prodMatch } = await supabaseClient
       .from('products')
       .select('shop_id')
-      .or(`shop_id.eq.${raw},shop_id.ilike.${clean}%,shop_id.ilike.SHOP-${clean}%`)
+      .or(`shop_id.eq.${raw},shop_id.ilike.%${clean}%`)
       .limit(1)
 
     if (prodMatch && prodMatch.length > 0 && prodMatch[0].shop_id) {
       return prodMatch[0].shop_id
     }
 
-    // 3. Chercher dans `sales`
+    // 3. Chercher dans `sales` par shop_id
     const { data: salesMatch } = await supabaseClient
       .from('sales')
       .select('shop_id')
-      .or(`shop_id.eq.${raw},shop_id.ilike.${clean}%,shop_id.ilike.SHOP-${clean}%`)
+      .or(`shop_id.eq.${raw},shop_id.ilike.%${clean}%`)
       .limit(1)
 
     if (salesMatch && salesMatch.length > 0 && salesMatch[0].shop_id) {
@@ -93,4 +95,5 @@ export async function findShopIdByCode(inputCode: string): Promise<string> {
   // Fallback si non trouvé
   return raw.startsWith('BTQ-') ? raw.replace(/^BTQ-/i, 'SHOP-') : raw
 }
+
 
