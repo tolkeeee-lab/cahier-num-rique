@@ -12,7 +12,9 @@ interface Employee {
 
 interface EmployeeRoleManagerProps {
   employees: Employee[]
-  onInviteEmployee?: (email: string, role: string) => Promise<void>
+  shopId?: string
+  shopName?: string
+  onInviteEmployee?: (name: string, email: string, role: string) => Promise<void>
   onRemoveEmployee?: (id: string) => Promise<void>
 }
 
@@ -21,20 +23,43 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
   onInviteEmployee,
   onRemoveEmployee,
 }) => {
+  const [nameInput, setNameInput] = useState('')
   const [emailInput, setEmailInput] = useState('')
   const [roleInput, setRoleInput] = useState<'admin' | 'employee'>('employee')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!emailInput.trim() || !onInviteEmployee) return
+    const email = emailInput.trim()
+    if (!email) return
+
+    const name = nameInput.trim() || email.split('@')[0]
 
     setIsSubmitting(true)
+    setFeedback(null)
     try {
-      await onInviteEmployee(emailInput.trim(), roleInput)
+      if (onInviteEmployee) {
+        await onInviteEmployee(name, email, roleInput)
+      } else {
+        const res = await fetch('/api/employees', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId || 'default-shop',
+            'x-shop-name': shopName || 'Ma Boutique'
+          },
+          body: JSON.stringify({ name, email, role: roleInput })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'invitation')
+      }
+      setFeedback({ type: 'success', msg: `Invitation enregistrée pour ${email} ✅` })
+      setNameInput('')
       setEmailInput('')
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur invitation:', err)
+      setFeedback({ type: 'error', msg: err?.message || 'Erreur lors de l\'invitation' })
     } finally {
       setIsSubmitting(false)
     }
@@ -48,30 +73,49 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
       </div>
 
       {/* Formulaire d'invitation */}
-      <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2">
-        <input
-          type="email"
-          value={emailInput}
-          onChange={(e) => setEmailInput(e.target.value)}
-          placeholder="Adresse e-mail de l'employé..."
-          className="flex-grow px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-bold placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner"
-        />
-        <select
-          value={roleInput}
-          onChange={(e) => setRoleInput(e.target.value as 'admin' | 'employee')}
-          className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
-        >
-          <option value="employee">Vendeur / Employé</option>
-          <option value="admin">Gérant / Admin</option>
-        </select>
-        <button
-          type="submit"
-          disabled={!emailInput.trim() || isSubmitting}
-          className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 text-xs font-extrabold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Inviter</span>
-        </button>
+      <form onSubmit={handleInvite} className="flex flex-col gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            placeholder="Prénom et nom de l'employé (optionnel)..."
+            className="flex-grow px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-bold placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="email"
+            value={emailInput}
+            onChange={(e) => setEmailInput(e.target.value)}
+            placeholder="Adresse e-mail de l'employé (obligatoire)..."
+            required
+            className="flex-grow px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-bold placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner"
+          />
+          <select
+            value={roleInput}
+            onChange={(e) => setRoleInput(e.target.value as 'admin' | 'employee')}
+            className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
+          >
+            <option value="employee">Vendeur / Employé</option>
+            <option value="admin">Gérant / Admin</option>
+          </select>
+          <button
+            type="submit"
+            disabled={!emailInput.trim() || isSubmitting}
+            className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 text-xs font-extrabold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>{isSubmitting ? 'Envoi...' : 'Inviter'}</span>
+          </button>
+        </div>
+        {feedback && (
+          <p className={`text-xs font-bold px-3 py-1.5 rounded-lg ${
+            feedback.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          }`}>
+            {feedback.msg}
+          </p>
+        )}
       </form>
 
       {/* Liste de l'équipe */}

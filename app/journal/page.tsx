@@ -249,6 +249,54 @@ export default function JournalPage() {
   const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopManager.shopId)
   const journalData = useJournalData(shopManager.shopId, isOnline)
 
+  // ── Gestion des Employés ───────────────────────────────────────────────────
+  const [employees, setEmployees] = useState<any[]>([])
+
+  const fetchEmployees = async () => {
+    if (!shopManager.shopId) return
+    try {
+      const res = await fetch('/api/employees', { headers: { 'x-shop-id': shopManager.shopId } })
+      const data = await res.json()
+      if (res.ok) setEmployees(data.employees || [])
+    } catch (err) {
+      console.error('Erreur chargement employés:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchEmployees()
+  }, [shopManager.shopId])
+
+  const handleInviteEmployee = async (name: string, email: string, role: string) => {
+    const res = await fetch('/api/employees', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-shop-id': shopManager.shopId,
+        'x-shop-name': shopManager.currentShop?.name || 'Ma Boutique'
+      },
+      body: JSON.stringify({ name, email, role })
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Erreur inconnue')
+    await fetchEmployees()
+  }
+
+  const handleRemoveEmployee = async (id: string) => {
+    if (!confirm('Voulez-vous vraiment retirer cet employé ?')) return
+    try {
+      const res = await fetch(`/api/employees?id=${id}`, {
+        method: 'DELETE',
+        headers: { 'x-shop-id': shopManager.shopId }
+      })
+      if (!res.ok) throw new Error('Erreur de suppression')
+      await fetchEmployees()
+    } catch (err) {
+      console.error('Erreur:', err)
+      alert('Impossible de supprimer cet employé')
+    }
+  }
+
   // Synchronisation automatique au retour en ligne
   useOfflineSync({
     shopId: shopManager.shopId,
@@ -677,6 +725,9 @@ export default function JournalPage() {
                   onUpdateShopActivity={(sId, act) => {
                     shopManager.setUserShops(shopManager.userShops.map(s => s.id === sId ? { ...s, activity: act } : s))
                   }}
+                  employees={employees}
+                  onInviteEmployee={handleInviteEmployee}
+                  onRemoveEmployee={handleRemoveEmployee}
                 />
               </div>
             )}

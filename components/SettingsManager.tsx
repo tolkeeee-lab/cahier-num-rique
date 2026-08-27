@@ -23,7 +23,7 @@ export interface SettingsManagerProps {
   employees?: Employee[]
   onSaveProfile?: (data: { shopName: string; activity: string; phone: string; address: string }) => Promise<void>
   onUpdateShopActivity?: (shopId: string, activity: string) => void
-  onInviteEmployee?: (email: string, role: string) => Promise<void>
+  onInviteEmployee?: (name: string, email: string, role: string) => Promise<void>
   onRemoveEmployee?: (id: string) => Promise<void>
   onExportBackup?: () => void
   onResetData?: () => void
