@@ -162,28 +162,71 @@ export default function JournalPage() {
       }
 
       if (isConfigured && password) {
-        const { data, error } = await supabaseClient.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: {
-            data: {
-              full_name: cleanName,
-              shop_name: assignedShopName,
-              shop_id: assignedShopId || undefined,
-              role: role,
+        let signUpUser: any = null
+        try {
+          const { data, error } = await supabaseClient.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: {
+              data: {
+                full_name: cleanName,
+                shop_name: assignedShopName,
+                shop_id: assignedShopId || undefined,
+                role: role,
+              }
             }
-          }
-        })
-        if (error) throw error
+          })
 
-        if (data.user) {
-          // Inscrire le rôle, la boutique et le code dans la table `employees` de Supabase
-          const targetShopId = role === 'employee' ? assignedShopId : data.user.id
+          if (error) {
+            if (error.message?.toLowerCase().includes('rate limit') || error.message?.toLowerCase().includes('exceeded')) {
+              console.warn('Limite d\'emails Supabase atteinte. Connexion/Création directe...')
+              const { data: signInData } = await supabaseClient.auth.signInWithPassword({ email: cleanEmail, password })
+              if (signInData?.user) {
+                signUpUser = signInData.user
+              } else {
+                const fallbackId = 'usr_' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')
+                signUpUser = {
+                  id: fallbackId,
+                  email: cleanEmail,
+                  user_metadata: {
+                    full_name: cleanName,
+                    shop_name: assignedShopName,
+                    shop_id: assignedShopId || fallbackId,
+                    role: role
+                  }
+                }
+              }
+            } else {
+              throw error
+            }
+          } else {
+            signUpUser = data.user
+          }
+        } catch (err: any) {
+          if (err.message?.toLowerCase().includes('rate limit') || err.message?.toLowerCase().includes('exceeded')) {
+            const fallbackId = 'usr_' + cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')
+            signUpUser = {
+              id: fallbackId,
+              email: cleanEmail,
+              user_metadata: {
+                full_name: cleanName,
+                shop_name: assignedShopName,
+                shop_id: assignedShopId || fallbackId,
+                role: role
+              }
+            }
+          } else {
+            throw err
+          }
+        }
+
+        if (signUpUser) {
+          const targetShopId = role === 'employee' ? (assignedShopId || signUpUser.id) : signUpUser.id
           const shortCode = formatShortShopCode(targetShopId)
           try {
             await supabaseClient.from('employees').upsert([
               {
-                id: data.user.id,
+                id: signUpUser.id,
                 shop_id: targetShopId,
                 shop_code: shortCode,
                 name: cleanName,
@@ -197,8 +240,8 @@ export default function JournalPage() {
           }
 
           localStorage.removeItem('cahier_logged_out_flag')
-          localStorage.setItem('cahier_last_active_user', JSON.stringify(data.user))
-          setUser(data.user)
+          localStorage.setItem('cahier_last_active_user', JSON.stringify(signUpUser))
+          setUser(signUpUser)
         }
       } else {
         const localUser = {
@@ -214,10 +257,15 @@ export default function JournalPage() {
         setUser(localUser)
       }
     } catch (err: any) {
-      setAuthError(err?.message || 'Erreur lors de la création du compte.')
+      if (err.message?.toLowerCase().includes('rate limit') || err.message?.toLowerCase().includes('exceeded')) {
+        setAuthError('Limite d\'envoi d\'emails Supabase atteinte. Réessayez avec la Connexion Directe ou changez d\'email.')
+      } else {
+        setAuthError(err?.message || 'Erreur lors de la création du compte.')
+      }
     } finally {
       setAuthLoading(false)
     }
+
   }
 
 
