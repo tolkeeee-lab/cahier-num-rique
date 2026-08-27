@@ -56,6 +56,8 @@ export function SettingsManager({
       {/* Gestion de l'équipe d'employés */}
       <EmployeeRoleManager
         employees={employees}
+        shopId={shopId}
+        shopName={shopName}
         onInviteEmployee={onInviteEmployee}
         onRemoveEmployee={onRemoveEmployee}
       />

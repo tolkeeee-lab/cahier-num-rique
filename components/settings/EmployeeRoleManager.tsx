@@ -20,6 +20,8 @@ interface EmployeeRoleManagerProps {
 
 export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
   employees,
+  shopId,
+  shopName,
   onInviteEmployee,
   onRemoveEmployee,
 }) => {
