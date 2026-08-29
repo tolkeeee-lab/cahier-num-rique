@@ -139,10 +139,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               console.warn('Erreur sync ventes en attente:', syncErr)
             }
 
-            // 2. En mode en ligne, Supabase est la SEULE vérité officielle.
-            // On conserve uniquement les ventes Supabase + les ventes encore en attente de sync.
-            const offlineUnsyncedOnly = getOfflineSales(shopId).filter(s => s.is_synced === false)
-            const rawCombined = [...mappedSales, ...offlineUnsyncedOnly]
+            // 2. Fusion sécurisée : Supabase est la vérité pour les ventes connues,
+            // mais on inclut TOUJOURS les ventes locales dont l'ID n'est pas encore arrivé dans Supabase
+            // (race condition entre la sauvegarde et la prochaine requête Supabase)
+            const supabaseIds = new Set(mappedSales.map(s => s.id))
+            const offlineNotYetInCloud = getOfflineSales(shopId).filter(s => s.id && !supabaseIds.has(s.id))
+            const rawCombined = [...mappedSales, ...offlineNotYetInCloud]
 
             const seenIds = new Set<string>()
             const combinedSales: Sale[] = []
