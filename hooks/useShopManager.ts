@@ -51,11 +51,13 @@ export function useShopManager(mappedUser: any) {
           let assignedShopName = (mappedUser as any)?.shop_name || 'Boutique Assignée'
 
           if (isOnline && uEmail) {
-            const { data: empRows } = await supabaseClient
+            const { data: empRows, error: empErr } = await supabaseClient
               .from('employees')
-              .select('id, shop_id, name, role, shop_code, created_at')
+              .select('id, shop_id, name, role, created_at')
               .eq('email', uEmail)
               .order('created_at', { ascending: false })
+
+            if (empErr) console.warn('[ShopManager] employees query error:', empErr.message)
 
             if (empRows && empRows.length > 0) {
               // 1. Chercher d'abord une ligne qui possède un VRAI UUID (ex: 58c54b4a-4d32-4686-971e-b5f87985...)
