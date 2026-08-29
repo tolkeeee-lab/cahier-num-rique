@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
-import { isRealUuid, findShopIdByCode } from '@/lib/shopCodeUtils'
+import { isRealUuid, findShopIdByCode, formatShortShopCode } from '@/lib/shopCodeUtils'
 import { migrateOfflineShopSales } from '@/lib/offlineDb'
 
 export interface Shop {
