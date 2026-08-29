@@ -227,7 +227,6 @@ export default function JournalPage() {
 
         if (signUpUser) {
           const targetShopId = role === 'employee' ? (assignedShopId || signUpUser.id) : signUpUser.id
-          const shortCode = formatShortShopCode(targetShopId)
           try {
             // Nettoyer toute invitation précédente résiduelle pour cet e-mail pour éviter les doublons
             await supabaseClient.from('employees').delete().eq('email', cleanEmail)
@@ -374,7 +373,6 @@ export default function JournalPage() {
     if (!isConfigured || !mappedUser?.id || mappedUser?.role === 'employee') return
 
     const ownerShopId = shopManager.shopId || mappedUser.shop_id || mappedUser.id
-    const shortCode = formatShortShopCode(ownerShopId)
 
     const syncOwner = async () => {
       try {
