@@ -36,29 +36,45 @@ export function useShopManager(mappedUser: any) {
       const isOnline = isSupabaseClientConfigured()
 
       // ── 1. Vérification si l'utilisateur est un Employé assigné à une Boutique Patron ──
-      if ((mappedUser as any)?.role === 'employee' || (isOnline && uEmail)) {
+      const isEmployeeFromMeta = (mappedUser as any)?.role === 'employee'
+
+      if (isEmployeeFromMeta || (isOnline && uEmail)) {
         try {
           let assignedShopId = (mappedUser as any)?.shop_id
           let assignedRole = (mappedUser as any)?.role || 'employee'
+          let assignedShopName = (mappedUser as any)?.shop_name || 'Boutique Assignée'
 
           if (isOnline && uEmail) {
             const { data: empData } = await supabaseClient
               .from('employees')
-              .select('shop_id, name, role')
+              .select('shop_id, name, role, shop_code')
               .eq('email', uEmail)
               .maybeSingle()
 
             if (empData?.shop_id) {
               assignedShopId = empData.shop_id
               if (empData.role) assignedRole = empData.role
+
+              // Tenter d'obtenir le nom de la boutique du patron si possible
+              const { data: ownerData } = await supabaseClient
+                .from('employees')
+                .select('name, email')
+                .eq('shop_id', empData.shop_id)
+                .eq('role', 'owner')
+                .limit(1)
+                .maybeSingle()
+
+              if (ownerData?.name) {
+                assignedShopName = `Boutique de ${ownerData.name}`
+              }
             }
           }
 
-          if (assignedRole === 'employee' && assignedShopId && isMounted) {
+          if ((assignedRole === 'employee' || isEmployeeFromMeta) && assignedShopId && isMounted) {
             setEmployeeRole('employee')
             const empShop: Shop = {
               id: assignedShopId,
-              name: (mappedUser as any)?.shop_name || 'Boutique Assignée',
+              name: assignedShopName,
               activity: (mappedUser as any)?.activity || 'boutique',
             }
             setUserShops([empShop])
@@ -70,6 +86,7 @@ export function useShopManager(mappedUser: any) {
           console.warn('Erreur vérification rôle employé:', e)
         }
       }
+
 
 
       // ── 2. Pour le Propriétaire : Chargement des boutiques locales & distantes ──

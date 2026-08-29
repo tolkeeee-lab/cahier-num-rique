@@ -302,14 +302,19 @@ export default function JournalPage() {
   const mappedUser = useMemo(() => {
     if (!user) return null
     const meta = user.user_metadata || {}
+    // IMPORTANT: user.role dans Supabase Auth vaut toujours "authenticated".
+    // Le rôle applicatif ('owner' ou 'employee') se trouve dans user_metadata.role ou user.app_role.
+    const rawRole = meta.role || user.app_role || (user.role && user.role !== 'authenticated' ? user.role : null) || 'owner'
     return {
       id: user.id,
       email: user.email,
       name: meta.full_name || user.full_name || 'Utilisateur',
-      role: meta.role || user.role || 'owner',
+      role: rawRole,
       shop_id: meta.shop_id || user.shop_id || user.id || 'default-shop',
+      shop_name: meta.shop_name || user.shop_name,
     }
   }, [user])
+
 
   // ── Onglets & UI locale ────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<JournalTab>('cahier')
