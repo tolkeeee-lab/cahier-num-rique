@@ -81,6 +81,16 @@ export function useShopManager(mappedUser: any) {
                 assignedShopId = bestRow.shop_id
                 if (bestRow.role) assignedRole = bestRow.role
 
+                if (isRealUuid(bestRow.shop_id)) {
+                  // Re-lier dans Supabase toute vente, produit ou dette inséré sous le code court littéral
+                  const shortCode = formatShortShopCode(bestRow.shop_id)
+                  if (shortCode && shortCode !== bestRow.shop_id) {
+                    await supabaseClient.from('sales').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
+                    await supabaseClient.from('products').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
+                    await supabaseClient.from('debts').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
+                  }
+                }
+
                 // Tenter d'obtenir le nom de la boutique du patron
                 const { data: ownerData } = await supabaseClient
                   .from('employees')
@@ -89,6 +99,7 @@ export function useShopManager(mappedUser: any) {
                   .eq('role', 'owner')
                   .limit(1)
                   .maybeSingle()
+
 
                 if (ownerData?.name) {
                   assignedShopName = `Boutique de ${ownerData.name}`
