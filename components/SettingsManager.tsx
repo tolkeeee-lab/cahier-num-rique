@@ -18,10 +18,12 @@ export interface SettingsManagerProps {
   activity?: string
   phone?: string
   address?: string
+  country?: string
+  city?: string
   userEmail?: string
   userShops?: any[]
   employees?: Employee[]
-  onSaveProfile?: (data: { shopName: string; activity: string; phone: string; address: string }) => Promise<void>
+  onSaveProfile?: (data: { shopName: string; activity: string; phone: string; address: string; country: string; city: string }) => Promise<void>
   onUpdateShopActivity?: (shopId: string, activity: string) => void
   onInviteEmployee?: (name: string, email: string, role: string) => Promise<any>
   onRemoveEmployee?: (id: string) => Promise<void>
@@ -35,6 +37,8 @@ export function SettingsManager({
   activity = 'Commerce général',
   phone = '',
   address = '',
+  country = 'BJ',
+  city = '',
   employees = [],
   onSaveProfile,
   onInviteEmployee,
@@ -51,8 +55,11 @@ export function SettingsManager({
         activity={activity}
         phone={phone}
         address={address}
+        country={country}
+        city={city}
         onSaveProfile={onSaveProfile}
       />
+
 
       {/* Gestion de l'équipe d'employés */}
       <EmployeeRoleManager

@@ -10,7 +10,9 @@ interface ShopProfileSettingsProps {
   activity: string
   phone: string
   address: string
-  onSaveProfile?: (data: { shopName: string; activity: string; phone: string; address: string }) => Promise<void>
+  country?: string
+  city?: string
+  onSaveProfile?: (data: { shopName: string; activity: string; phone: string; address: string; country: string; city: string }) => Promise<void>
 }
 
 export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
@@ -19,12 +21,16 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
   activity: initialActivity,
   phone: initialPhone,
   address: initialAddress,
+  country: initialCountry = 'BJ',
+  city: initialCity = '',
   onSaveProfile,
 }) => {
   const [name, setName] = useState(initialName)
   const [activity, setActivity] = useState(initialActivity)
   const [phone, setPhone] = useState(initialPhone)
   const [address, setAddress] = useState(initialAddress)
+  const [country, setCountry] = useState(initialCountry || 'BJ')
+  const [city, setCity] = useState(initialCity || '')
   const [isSaving, setIsSaving] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -45,8 +51,8 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
     setIsSaving(true)
     setSavedMessage(null)
     try {
-      await onSaveProfile({ shopName: name, activity, phone, address })
-      setSavedMessage('Profil de la boutique enregistré avec succès ! ✅')
+      await onSaveProfile({ shopName: name, activity, phone, address, country, city })
+      setSavedMessage('Profil et localisation enregistrés avec succès ! ✅')
       setTimeout(() => setSavedMessage(null), 3500)
     } catch (err) {
       console.error('Erreur sauvegarde profil boutique:', err)
@@ -68,7 +74,7 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
 
         <div className="flex items-center gap-2">
           <Store className="w-5 h-5 text-amber-700" />
-          <h4 className="text-sm font-extrabold text-gray-900">Profil du Point de Vente</h4>
+          <h4 className="text-sm font-extrabold text-gray-900">Profil & Localisation du Point de Vente</h4>
         </div>
 
         {/* Badge Code Boutique pour le propriétaire */}
@@ -99,6 +105,38 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
         </div>
 
         <div>
+          <label className="block text-amber-950 font-bold uppercase mb-1">Pays d'implantation :</label>
+          <select
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner cursor-pointer"
+          >
+            <option value="BJ">🇧🇯 Bénin (BJ)</option>
+            <option value="CI">🇨🇮 Côte d'Ivoire (CI)</option>
+            <option value="SN">🇸🇳 Sénégal (SN)</option>
+            <option value="TG">🇹🇬 Togo (TG)</option>
+            <option value="ML">🇲🇱 Mali (ML)</option>
+            <option value="BF">🇧🇫 Burkina Faso (BF)</option>
+            <option value="NE">🇳🇪 Niger (NE)</option>
+            <option value="CM">🇨🇲 Cameroun (CM)</option>
+            <option value="GN">🇬🇳 Guinée (GN)</option>
+            <option value="FR">🇫🇷 France (FR)</option>
+            <option value="OTHER">🌍 Autre pays</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-amber-950 font-bold uppercase mb-1">Ville / Commune :</label>
+          <input
+            type="text"
+            placeholder="ex: Cotonou, Abidjan, Dakar..."
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner"
+          />
+        </div>
+
+        <div>
           <label className="block text-amber-950 font-bold uppercase mb-1">Secteur d'activité :</label>
           <select
             value={activity}
@@ -123,7 +161,7 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
         </div>
 
         <div>
-          <label className="block text-amber-950 font-bold uppercase mb-1">Adresse / Ville :</label>
+          <label className="block text-amber-950 font-bold uppercase mb-1">Adresse physique / Quartier :</label>
           <input
             type="text"
             value={address}
@@ -132,6 +170,7 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
           />
         </div>
       </div>
+
 
       <div className="flex justify-end pt-2">
         <button

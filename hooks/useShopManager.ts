@@ -7,11 +7,13 @@ import { isRealUuid, findShopIdByCode, formatShortShopCode } from '@/lib/shopCod
 import { migrateOfflineShopSales } from '@/lib/offlineDb'
 
 export interface Shop {
-
   id: string
   name: string
   activity: string
+  country?: string
+  city?: string
 }
+
 
 export function useShopManager(mappedUser: any) {
   const [selectedShopId, setSelectedShopId] = useState<string>('')
@@ -220,35 +222,39 @@ export function useShopManager(mappedUser: any) {
     setSelectedShopId(id)
   }
 
-  const handleUpdateShopProfile = async (data: { shopName: string; activity: string; phone?: string; address?: string }) => {
+  const handleUpdateShopProfile = async (data: { shopName: string; activity: string; phone?: string; address?: string; country?: string; city?: string }) => {
     if (!mappedUser?.id) return
 
     const targetShopId = shopId || mappedUser.shop_id || mappedUser.id
+    const targetCountry = data.country || 'BJ'
+    const targetCity = data.city || ''
 
     // 1. Mettre à jour dans la liste des boutiques
     let updatedShops = userShops.map((s) => {
       if (s.id === targetShopId || s.id === selectedShopId || userShops.length === 1) {
-        return { ...s, name: data.shopName, activity: data.activity }
+        return { ...s, name: data.shopName, activity: data.activity, country: targetCountry, city: targetCity }
       }
       return s
     })
 
     if (!updatedShops.some(s => s.id === targetShopId)) {
-      updatedShops.push({ id: targetShopId, name: data.shopName, activity: data.activity })
+      updatedShops.push({ id: targetShopId, name: data.shopName, activity: data.activity, country: targetCountry, city: targetCity })
     }
 
     setUserShops(updatedShops)
     localStorage.setItem(`cahier_user_shops_${mappedUser.id}`, JSON.stringify(updatedShops))
 
-    // 2. Mettre à jour téléphone & adresse dans localStorage
+    // 2. Mettre à jour téléphone, adresse, pays & ville dans localStorage
     if (data.phone !== undefined) {
       localStorage.setItem(`cahier_shop_phone_${targetShopId}`, data.phone)
     }
     if (data.address !== undefined) {
       localStorage.setItem(`cahier_shop_address_${targetShopId}`, data.address)
     }
+    localStorage.setItem(`cahier_shop_country_${targetShopId}`, targetCountry)
+    localStorage.setItem(`cahier_shop_city_${targetShopId}`, targetCity)
 
-    // 3. Si Supabase est actif, sauvegarder dans user_metadata ET dans public.employees
+    // 3. Si Supabase est actif, sauvegarder dans user_metadata, employees ET public.shops
     if (isSupabaseClientConfigured()) {
       try {
         await supabaseClient.auth.updateUser({
@@ -257,6 +263,8 @@ export function useShopManager(mappedUser: any) {
             shop_activity: data.activity,
             phone: data.phone,
             address: data.address,
+            country: targetCountry,
+            city: targetCity,
           }
         })
 
@@ -276,6 +284,8 @@ export function useShopManager(mappedUser: any) {
               activity: data.activity,
               phone: data.phone,
               address: data.address,
+              country: targetCountry,
+              city: targetCity,
               shop_code: formatShortShopCode(targetShopId),
               updated_at: new Date().toISOString(),
             }
@@ -286,6 +296,7 @@ export function useShopManager(mappedUser: any) {
       }
     }
   }
+
 
 
 

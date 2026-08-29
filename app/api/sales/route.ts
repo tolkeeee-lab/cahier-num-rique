@@ -125,7 +125,12 @@ export async function POST(request: NextRequest) {
           }))
           const { error: artErr } = await supabase.from('sold_articles').insert(soldArticlesRecords)
           if (artErr) console.warn('Erreur insertion sold_articles:', artErr)
+
+          const reqCountry = request.headers.get('x-shop-country') || body.country || 'BJ'
+          const reqCity = request.headers.get('x-shop-city') || body.city || null
+          await feedMarketKnowledge(parsedData.articles, type, shopId, reqCountry, reqCity)
         }
+
       }
     } else {
       const localSales = getLocalDb()

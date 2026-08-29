@@ -151,11 +151,32 @@ export function useSaleCreation({
               subtotal: (a.quantite || 1) * (a.prix_unitaire || 0),
             }))
             await supabaseClient.from('sold_articles').insert(articlesRecords)
+
+            // Alimenter la base d'intelligence de marché avec le vrai pays & la vraie ville de la boutique
+            const shopCountry = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_country_${shopId}`) || 'BJ') : 'BJ'
+            const shopCity = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_city_${shopId}`) || '') : ''
+
+            for (const art of parsed.articles) {
+              if (art.nom && (art.prix_unitaire || 0) > 0) {
+                try {
+                  await supabaseClient.rpc('update_market_knowledge', {
+                    p_product_name: art.nom.toLowerCase(),
+                    p_unit_price: saleRecord.type === 'cash_in' || saleRecord.type === 'sale_credit' ? art.prix_unitaire : 0,
+                    p_unit_cost: saleRecord.type === 'purchase_cash' || saleRecord.type === 'purchase_credit' ? art.prix_unitaire : 0,
+                    p_country: shopCountry,
+                    p_city: shopCity || null,
+                  })
+                } catch {}
+              }
+            }
           }
           onSaleCreated()
           return
         }
       }
+
+      const shopCountry = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_country_${shopId}`) || 'BJ') : 'BJ'
+      const shopCity = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_city_${shopId}`) || '') : ''
 
       // Fallback via API route serveur
       const response = await fetch('/api/sales', {
@@ -163,6 +184,8 @@ export function useSaleCreation({
         headers: {
           'Content-Type': 'application/json',
           'x-shop-id': shopId,
+          'x-shop-country': shopCountry,
+          'x-shop-city': shopCity,
         },
         body: JSON.stringify({
           text,
@@ -170,8 +193,11 @@ export function useSaleCreation({
           penColor: activePen,
           pen_color: activePen,
           shop_id: shopId,
+          country: shopCountry,
+          city: shopCity,
         }),
       })
+
 
       if (response.ok) {
         onSaleCreated()
