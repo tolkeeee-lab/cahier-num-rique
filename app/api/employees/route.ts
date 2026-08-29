@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
+import { formatShortShopCode } from '@/lib/shopCodeUtils'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   return url && !url.includes('placeholder') && key && !key.includes('placeholder')
 }
+
 
 // GET /api/employees
 // Récupère la liste des employés associés à une boutique
@@ -81,10 +83,12 @@ export async function POST(request: NextRequest) {
           {
             id: randomUUID(),
             shop_id: shopId,
+            shop_code: formatShortShopCode(shopId),
             name: cleanName,
             email: cleanEmail,
             role: role || 'employee',
             created_at: new Date().toISOString()
+
           }
         ])
         .select()

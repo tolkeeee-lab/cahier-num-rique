@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
+import { isRealUuid, findShopIdByCode } from '@/lib/shopCodeUtils'
+
 export interface Shop {
   id: string
   name: string
@@ -45,30 +47,53 @@ export function useShopManager(mappedUser: any) {
           let assignedShopName = (mappedUser as any)?.shop_name || 'Boutique Assignée'
 
           if (isOnline && uEmail) {
-            const { data: empData } = await supabaseClient
+            const { data: empRows } = await supabaseClient
               .from('employees')
-              .select('shop_id, name, role, shop_code')
+              .select('id, shop_id, name, role, shop_code, created_at')
               .eq('email', uEmail)
-              .maybeSingle()
+              .order('created_at', { ascending: false })
 
-            if (empData?.shop_id) {
-              assignedShopId = empData.shop_id
-              if (empData.role) assignedRole = empData.role
+            if (empRows && empRows.length > 0) {
+              // 1. Chercher d'abord une ligne qui possède un VRAI UUID (ex: 58c54b4a-4d32-4686-971e-b5f87985...)
+              let bestRow = empRows.find(r => isRealUuid(r.shop_id)) || empRows[0]
 
-              // Tenter d'obtenir le nom de la boutique du patron si possible
-              const { data: ownerData } = await supabaseClient
-                .from('employees')
-                .select('name, email')
-                .eq('shop_id', empData.shop_id)
-                .eq('role', 'owner')
-                .limit(1)
-                .maybeSingle()
+              // 2. Si shop_id est un code court (ex: BTQ-58C54), le résoudre en UUID réel du patron
+              if (bestRow?.shop_id && !isRealUuid(bestRow.shop_id)) {
+                const resolvedRealUuid = await findShopIdByCode(bestRow.shop_id)
+                if (isRealUuid(resolvedRealUuid)) {
+                  bestRow.shop_id = resolvedRealUuid
+                  supabaseClient.from('employees').update({ shop_id: resolvedRealUuid }).eq('id', bestRow.id).then(() => {})
+                }
+              }
 
-              if (ownerData?.name) {
-                assignedShopName = `Boutique de ${ownerData.name}`
+              // 3. Nettoyer les doublons de lignes temporaires inutiles
+              if (empRows.length > 1 && isRealUuid(bestRow.shop_id)) {
+                const junkRows = empRows.filter(r => r.id !== bestRow.id && !isRealUuid(r.shop_id))
+                for (const junk of junkRows) {
+                  supabaseClient.from('employees').delete().eq('id', junk.id).then(() => {})
+                }
+              }
+
+              if (bestRow?.shop_id) {
+                assignedShopId = bestRow.shop_id
+                if (bestRow.role) assignedRole = bestRow.role
+
+                // Tenter d'obtenir le nom de la boutique du patron
+                const { data: ownerData } = await supabaseClient
+                  .from('employees')
+                  .select('name, email')
+                  .eq('shop_id', bestRow.shop_id)
+                  .eq('role', 'owner')
+                  .limit(1)
+                  .maybeSingle()
+
+                if (ownerData?.name) {
+                  assignedShopName = `Boutique de ${ownerData.name}`
+                }
               }
             }
           }
+
 
           if ((assignedRole === 'employee' || isEmployeeFromMeta) && assignedShopId && isMounted) {
             setEmployeeRole('employee')

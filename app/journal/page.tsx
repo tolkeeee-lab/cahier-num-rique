@@ -224,6 +224,9 @@ export default function JournalPage() {
           const targetShopId = role === 'employee' ? (assignedShopId || signUpUser.id) : signUpUser.id
           const shortCode = formatShortShopCode(targetShopId)
           try {
+            // Nettoyer toute invitation précédente résiduelle pour cet e-mail pour éviter les doublons
+            await supabaseClient.from('employees').delete().eq('email', cleanEmail)
+
             await supabaseClient.from('employees').upsert([
               {
                 id: signUpUser.id,
@@ -238,6 +241,7 @@ export default function JournalPage() {
           } catch (e) {
             console.warn('Erreur insertion employés/patron:', e)
           }
+
 
           localStorage.removeItem('cahier_logged_out_flag')
           localStorage.setItem('cahier_last_active_user', JSON.stringify(signUpUser))
