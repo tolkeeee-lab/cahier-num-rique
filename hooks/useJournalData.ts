@@ -60,11 +60,25 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
       try {
         if (isSupabaseClientConfigured() && isOnline) {
-          const { data, error } = await supabaseClient
+          // Requête principale avec les articles détaillés
+          let { data, error } = await supabaseClient
             .from('sales')
             .select('*, sold_articles(*)')
             .eq('shop_id', shopId)
             .order('created_at', { ascending: false })
+
+          // Si la jointure sold_articles échoue (400 / table inaccessible),
+          // on retente sans la jointure — la source de TOUS les doublons et 400
+          if (error) {
+            console.warn('[Journal] Jointure sold_articles échouée, nouvelle tentative sans:', error.message)
+            const fallback = await supabaseClient
+              .from('sales')
+              .select('*')
+              .eq('shop_id', shopId)
+              .order('created_at', { ascending: false })
+            data = fallback.data
+            error = fallback.error
+          }
 
           if (!error && data && isMounted) {
             const mappedSales: Sale[] = data.map((item: any) => ({
