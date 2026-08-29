@@ -236,7 +236,6 @@ export default function JournalPage() {
               {
                 id: signUpUser.id,
                 shop_id: targetShopId,
-                shop_code: shortCode,
                 name: cleanName,
                 email: cleanEmail,
                 role: role,
@@ -385,7 +384,6 @@ export default function JournalPage() {
             {
               id: mappedUser.id,
               shop_id: ownerShopId,
-              shop_code: shortCode,
               name: mappedUser.name || 'Propriétaire',
               email: (mappedUser.email || '').toLowerCase().trim(),
               role: 'owner',

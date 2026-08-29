@@ -83,12 +83,10 @@ export async function POST(request: NextRequest) {
           {
             id: randomUUID(),
             shop_id: shopId,
-            shop_code: formatShortShopCode(shopId),
             name: cleanName,
             email: cleanEmail,
             role: role || 'employee',
             created_at: new Date().toISOString()
-
           }
         ])
         .select()
