@@ -69,7 +69,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             const mappedSales: Sale[] = data.map((item: any) => ({
               id: item.id,
               shop_id: item.shop_id || shopId,
-              date: item.date,
+              date: (item.date || '').split('T')[0] || today,
               time: item.time || '00:00',
               client: item.client_name || 'Client anonyme',
               articles: (item.sold_articles || []).map((art: any) => ({
@@ -89,13 +89,55 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               is_synced: true,
             }))
 
-            // Récupérer toutes les écritures locales existantes
+            // Tenter de pousser les ventes locales en attente vers Supabase
+            try {
+              const offlineSales = getOfflineSales(shopId)
+              const unsynced = offlineSales.filter(s => s.is_synced === false)
+              if (unsynced.length > 0) {
+                for (const uSale of unsynced) {
+                  const saleRecord = {
+                    id: uSale.id,
+                    shop_id: shopId,
+                    created_at: uSale.created_at || new Date().toISOString(),
+                    date: (uSale.date || '').split('T')[0] || today,
+                    time: uSale.time || '00:00',
+                    type: uSale.type || 'cash_in',
+                    notes: uSale.notes || '',
+                    total_amount: Number(uSale.total) || 0,
+                    paid_amount: Number(uSale.paid) || 0,
+                    debt_amount: Number(uSale.debt) || 0,
+                    client_name: uSale.client || 'Client',
+                    status: uSale.status || 'paid',
+                    category: uSale.category || 'Général',
+                    pen_color: uSale.pen_color || 'blue',
+                  }
+                  const { error: sErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
+                  if (!sErr) {
+                    if (uSale.articles && uSale.articles.length > 0) {
+                      const arts = uSale.articles.map(a => ({
+                        sale_id: uSale.id,
+                        product_name: a.name,
+                        quantity: a.quantity,
+                        unit_price: a.unit_price,
+                        subtotal: a.quantity * a.unit_price,
+                      }))
+                      await supabaseClient.from('sold_articles').upsert(arts)
+                    }
+                    uSale.is_synced = true
+                  }
+                }
+                replaceOfflineSales(shopId, offlineSales)
+              }
+            } catch (syncErr) {
+              console.warn('Erreur sync ventes en attente:', syncErr)
+            }
+
+            // Récupérer toutes les écritures locales à jour
             const localSales = getOfflineSales(shopId)
             const rawCombined = [...mappedSales, ...localSales]
             
-            // Déduplication par ID et par signature unique
+            // Déduplication fiable uniquement par ID unique
             const seenIds = new Set<string>()
-            const seenKeys = new Set<string>()
             const combinedSales: Sale[] = []
 
             for (const s of rawCombined) {
@@ -108,10 +150,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
                 unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
               }))
 
+              const saleDate = (s.date || '').split('T')[0] || today
+
               const cleanSale: Sale = {
                 id: s.id,
                 shop_id: s.shop_id || shopId,
-                date: s.date,
+                date: saleDate,
                 time: s.time || '00:00',
                 client: s.client || (s as any).client_name || 'Client anonyme',
                 articles: cleanArticles,
@@ -127,9 +171,6 @@ export function useJournalData(shopId: string, isOnline: boolean) {
                 is_synced: s.is_synced ?? true,
               }
 
-              const dedupKey = `${cleanSale.date}_${cleanSale.time}_${cleanSale.total}_${(cleanSale.notes || '').trim().toLowerCase()}`
-              if (seenKeys.has(dedupKey)) continue
-              seenKeys.add(dedupKey)
               combinedSales.push(cleanSale)
             }
 
@@ -173,6 +214,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       } catch (err) {
         console.warn('Erreur chargement Supabase, repli offline:', err)
       }
+
 
       if (isMounted) {
         const offlineSales = getOfflineSales(shopId)
