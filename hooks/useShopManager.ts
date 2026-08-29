@@ -62,7 +62,7 @@ export function useShopManager(mappedUser: any) {
                 const resolvedRealUuid = await findShopIdByCode(bestRow.shop_id)
                 if (isRealUuid(resolvedRealUuid)) {
                   bestRow.shop_id = resolvedRealUuid
-                  supabaseClient.from('employees').update({ shop_id: resolvedRealUuid }).eq('id', bestRow.id).then(() => {})
+                  await supabaseClient.from('employees').update({ shop_id: resolvedRealUuid }).eq('id', bestRow.id)
                 }
               }
 
@@ -70,9 +70,10 @@ export function useShopManager(mappedUser: any) {
               if (empRows.length > 1 && isRealUuid(bestRow.shop_id)) {
                 const junkRows = empRows.filter(r => r.id !== bestRow.id && !isRealUuid(r.shop_id))
                 for (const junk of junkRows) {
-                  supabaseClient.from('employees').delete().eq('id', junk.id).then(() => {})
+                  await supabaseClient.from('employees').delete().eq('id', junk.id)
                 }
               }
+
 
               if (bestRow?.shop_id) {
                 assignedShopId = bestRow.shop_id

@@ -129,11 +129,16 @@ export default function JournalPage() {
         setUser(localUser)
       }
     } catch (err: any) {
-      setAuthError(err?.message || 'Erreur de connexion. Vérifiez vos identifiants.')
+      if (err.message?.toLowerCase().includes('email not confirmed')) {
+        setAuthError('📧 E-mail non confirmé. Veuillez valider le lien reçu par e-mail, ou cliquez sur "Connexion sans mot de passe (Magic Link)" ci-dessous.')
+      } else {
+        setAuthError(err?.message || 'Erreur de connexion. Vérifiez vos identifiants.')
+      }
     } finally {
       setAuthLoading(false)
     }
   }
+
 
   const handleSignup = async (
     name: string,
@@ -372,22 +377,26 @@ export default function JournalPage() {
     const ownerShopId = shopManager.shopId || mappedUser.shop_id || mappedUser.id
     const shortCode = formatShortShopCode(ownerShopId)
 
-    supabaseClient
-      .from('employees')
-      .upsert([
-        {
-          id: mappedUser.id,
-          shop_id: ownerShopId,
-          shop_code: shortCode,
-          name: mappedUser.name || 'Propriétaire',
-          email: (mappedUser.email || '').toLowerCase().trim(),
-          role: 'owner',
-          status: 'active'
-        }
-      ], { onConflict: 'id' })
-      .then(() => {})
-      .catch(() => {})
+    const syncOwner = async () => {
+      try {
+        await supabaseClient
+          .from('employees')
+          .upsert([
+            {
+              id: mappedUser.id,
+              shop_id: ownerShopId,
+              shop_code: shortCode,
+              name: mappedUser.name || 'Propriétaire',
+              email: (mappedUser.email || '').toLowerCase().trim(),
+              role: 'owner',
+              status: 'active'
+            }
+          ], { onConflict: 'id' })
+      } catch (e) {}
+    }
+    syncOwner()
   }, [isConfigured, mappedUser?.id, mappedUser?.role, shopManager.shopId, mappedUser?.name, mappedUser?.email])
+
 
   // ── Gestion des Employés ───────────────────────────────────────────────────
 
