@@ -229,6 +229,36 @@ const clientsKey = (shopId: string) => `cahier_offline_clients_${shopId}`
 const suppliersKey = (shopId: string) => `cahier_offline_suppliers_${shopId}`
 const productsKey = (shopId: string) => `cahier_offline_products_${shopId}`
 
+/**
+ * Migre les ventes et produits d'une ancienne clé d'identifiant boutique (ex: BTQ-58C54) vers l'UUID réel
+ */
+export function migrateOfflineShopSales(oldShopId: string, newShopId: string): void {
+  if (!oldShopId || !newShopId || oldShopId === newShopId) return
+
+  try {
+    const oldSalesKey = salesKey(oldShopId)
+    const oldSales = readJson<OfflineSale[]>(oldSalesKey, [])
+    if (oldSales.length > 0) {
+      const newSalesKey = salesKey(newShopId)
+      const currentNewSales = readJson<OfflineSale[]>(newSalesKey, [])
+      const combined = [...currentNewSales]
+
+      for (const s of oldSales) {
+        const updatedSale = { ...s, shop_id: newShopId, is_synced: false }
+        if (!combined.some(c => c.id === s.id)) {
+          combined.push(updatedSale)
+        }
+      }
+
+      writeJson(newSalesKey, combined)
+      localStorage.removeItem(oldSalesKey)
+    }
+  } catch (e) {
+    console.warn('[offlineDb] Erreur migration ventes boutique:', e)
+  }
+}
+
+
 // ─── Utilitaires ─────────────────────────────────────────────────────────────
 
 function readJson<T>(key: string, fallback: T): T {

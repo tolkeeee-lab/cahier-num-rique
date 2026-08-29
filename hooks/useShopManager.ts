@@ -4,8 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
 import { isRealUuid, findShopIdByCode } from '@/lib/shopCodeUtils'
+import { migrateOfflineShopSales } from '@/lib/offlineDb'
 
 export interface Shop {
+
   id: string
   name: string
   activity: string
@@ -95,8 +97,20 @@ export function useShopManager(mappedUser: any) {
             }
           }
 
+          if (assignedShopId && !isRealUuid(assignedShopId) && isOnline) {
+            const oldId = assignedShopId
+            const resolved = await findShopIdByCode(assignedShopId)
+            if (isRealUuid(resolved)) {
+              migrateOfflineShopSales(oldId, resolved)
+              assignedShopId = resolved
+            }
+          }
 
           if ((assignedRole === 'employee' || isEmployeeFromMeta) && assignedShopId && isMounted) {
+            const previousId = (mappedUser as any)?.shop_id
+            if (previousId && previousId !== assignedShopId) {
+              migrateOfflineShopSales(previousId, assignedShopId)
+            }
             setEmployeeRole('employee')
             const empShop: Shop = {
               id: assignedShopId,
@@ -108,6 +122,7 @@ export function useShopManager(mappedUser: any) {
             localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify([empShop]))
             return
           }
+
         } catch (e) {
           console.warn('Erreur vérification rôle employé:', e)
         }
@@ -121,8 +136,17 @@ export function useShopManager(mappedUser: any) {
         try {
           const parsed = JSON.parse(stored)
           if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
-            setUserShops(parsed)
-            setSelectedShopId((prev) => prev || parsed[0].id)
+            // Mettre à jour les boutiques en résolvant les codes courts éventuels
+            const resolvedShops = await Promise.all(parsed.map(async (s: Shop) => {
+              if (s.id && !isRealUuid(s.id) && isOnline) {
+                const realId = await findShopIdByCode(s.id)
+                if (isRealUuid(realId)) return { ...s, id: realId }
+              }
+              return s
+            }))
+            setUserShops(resolvedShops)
+            setSelectedShopId((prev) => prev || resolvedShops[0].id)
+            localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify(resolvedShops))
             return
           }
         } catch {}
