@@ -5,7 +5,7 @@ import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 import { isSupabaseConfigured, getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
 import { parseTextWithOpenAI, ParsedSale } from '@/lib/sales/openAiSaleParser'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
-import { fetchSalesHistory } from '@/lib/sales/salesRepository'
+import { fetchSalesHistory, feedMarketKnowledge } from '@/lib/sales/salesRepository'
 
 export async function POST(request: NextRequest) {
   try {
