@@ -5,10 +5,30 @@
 -- ============================================================
 
 -- ─────────────────────────────────────────────────────────────
+-- 000 — Table des Boutiques (Shops)
+-- ─────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.shops (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID,
+  name VARCHAR(255) NOT NULL DEFAULT 'Mon Point de Vente',
+  shop_code VARCHAR(50),
+  activity VARCHAR(100) DEFAULT 'boutique',
+  phone VARCHAR(50),
+  address TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shops_owner ON public.shops(owner_id);
+CREATE INDEX IF NOT EXISTS idx_shops_code ON public.shops(shop_code);
+
+-- ─────────────────────────────────────────────────────────────
 -- 001 — Tables de base
 -- ─────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.sales (
+
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_name VARCHAR(255) NOT NULL DEFAULT 'Client anonyme',
   date DATE NOT NULL,

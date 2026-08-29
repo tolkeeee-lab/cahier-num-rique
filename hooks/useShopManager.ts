@@ -91,19 +91,34 @@ export function useShopManager(mappedUser: any) {
                   }
                 }
 
-                // Tenter d'obtenir le nom de la boutique du patron
-                const { data: ownerData } = await supabaseClient
-                  .from('employees')
-                  .select('name, email')
-                  .eq('shop_id', bestRow.shop_id)
-                  .eq('role', 'owner')
-                  .limit(1)
-                  .maybeSingle()
+                // Tenter d'obtenir le nom officiel depuis public.shops
+                try {
+                  const { data: sRow } = await supabaseClient
+                    .from('shops')
+                    .select('name')
+                    .eq('id', bestRow.shop_id)
+                    .maybeSingle()
 
+                  if (sRow?.name) {
+                    assignedShopName = sRow.name
+                  }
+                } catch {}
 
-                if (ownerData?.name) {
-                  assignedShopName = `Boutique de ${ownerData.name}`
+                // Fallback : obtenir le nom du patron via employees
+                if (!assignedShopName || assignedShopName === 'Boutique Assignée') {
+                  const { data: ownerData } = await supabaseClient
+                    .from('employees')
+                    .select('name, email')
+                    .eq('shop_id', bestRow.shop_id)
+                    .eq('role', 'owner')
+                    .limit(1)
+                    .maybeSingle()
+
+                  if (ownerData?.name) {
+                    assignedShopName = `Boutique de ${ownerData.name}`
+                  }
                 }
+
               }
             }
           }
@@ -250,11 +265,28 @@ export function useShopManager(mappedUser: any) {
           .from('employees')
           .update({ name: data.shopName })
           .eq('id', mappedUser.id)
+
+        // Sauvegarder/mettre à jour dans la table officielle public.shops si elle existe
+        try {
+          await supabaseClient.from('shops').upsert([
+            {
+              id: targetShopId,
+              owner_id: mappedUser.id,
+              name: data.shopName,
+              activity: data.activity,
+              phone: data.phone,
+              address: data.address,
+              shop_code: formatShortShopCode(targetShopId),
+              updated_at: new Date().toISOString(),
+            }
+          ], { onConflict: 'id' })
+        } catch {}
       } catch (e) {
         console.warn('Erreur mise à jour metadata Supabase:', e)
       }
     }
   }
+
 
 
   return {
