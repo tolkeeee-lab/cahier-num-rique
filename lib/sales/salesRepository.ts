@@ -6,7 +6,7 @@ export async function feedMarketKnowledge(
   articles: Array<{ nom: string; prix_unitaire: number; [key: string]: any }>,
   transactionType: string,
   _shopId: string,
-  country: string = 'CI',
+  country: string = 'BJ',
   city: string | null = null
 ) {
   if (!isSupabaseConfigured()) return
@@ -24,11 +24,12 @@ export async function feedMarketKnowledge(
       p_product_name: name.toLowerCase(),
       p_unit_price: isSale ? price : 0,
       p_unit_cost: isPurchase ? price : 0,
-      p_country: country || 'CI',
+      p_country: country || 'BJ',
       p_city: city || null
     })
   }
 }
+
 
 export function getLocalSales(dateParam: string | null, shopId: string): any[] {
   const salesDatabase = getLocalDb()

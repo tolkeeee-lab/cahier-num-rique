@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS market_knowledge (
   product_name TEXT NOT NULL,
 
   -- Géolocalisation optionnelle (pays/ville pour segmentation)
-  country TEXT NOT NULL DEFAULT 'CI',
+  country TEXT NOT NULL DEFAULT 'BJ',
+
   city TEXT,
 
   -- Statistiques agrégées (JAMAIS de shop_id = anonymat garanti)
@@ -61,7 +62,8 @@ CREATE OR REPLACE FUNCTION update_market_knowledge(
   p_product_name TEXT,
   p_unit_price   NUMERIC DEFAULT 0,
   p_unit_cost    NUMERIC DEFAULT 0,
-  p_country      TEXT    DEFAULT 'CI',
+  p_country      TEXT    DEFAULT 'BJ',
+
   p_city         TEXT    DEFAULT NULL
 ) RETURNS void
 LANGUAGE plpgsql

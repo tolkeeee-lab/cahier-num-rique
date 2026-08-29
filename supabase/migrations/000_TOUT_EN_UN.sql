@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS public.market_knowledge (
   observation_count INTEGER DEFAULT 0,
   last_seen_price INTEGER DEFAULT 0,
   last_seen_cost INTEGER DEFAULT 0,
-  country VARCHAR(10) DEFAULT 'CI',
+  country VARCHAR(10) DEFAULT 'BJ',
   city VARCHAR(100),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -169,7 +169,7 @@ ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS avg_unit_cost INTEG
 ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS observation_count INTEGER DEFAULT 0;
 ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS last_seen_price INTEGER DEFAULT 0;
 ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS last_seen_cost INTEGER DEFAULT 0;
-ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS country VARCHAR(10) DEFAULT 'CI';
+ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS country VARCHAR(10) DEFAULT 'BJ';
 ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS city VARCHAR(100);
 
 -- Initialiser product_name_normalized pour les lignes existantes
@@ -197,9 +197,10 @@ CREATE OR REPLACE FUNCTION update_market_knowledge(
   p_product_name TEXT,
   p_unit_price INTEGER,
   p_unit_cost INTEGER,
-  p_country TEXT DEFAULT 'CI',
+  p_country TEXT DEFAULT 'BJ',
   p_city TEXT DEFAULT NULL
 )
+
 RETURNS VOID AS $$
 DECLARE
   existing_record RECORD;
