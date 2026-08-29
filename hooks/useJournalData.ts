@@ -89,7 +89,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               is_synced: true,
             }))
 
-            // Tenter de pousser les ventes locales en attente vers Supabase
+            // 1. Tenter de pousser les ventes locales en attente (is_synced === false) vers Supabase
             try {
               const offlineSales = getOfflineSales(shopId)
               const unsynced = offlineSales.filter(s => s.is_synced === false)
@@ -124,19 +124,26 @@ export function useJournalData(shopId: string, isOnline: boolean) {
                       await supabaseClient.from('sold_articles').upsert(arts)
                     }
                     uSale.is_synced = true
+                    // Ajouter aux ventes mappées si elle manquait
+                    if (!mappedSales.some(ms => ms.id === uSale.id)) {
+                      mappedSales.push({
+                        ...uSale,
+                        date: (uSale.date || '').split('T')[0] || today,
+                        is_synced: true,
+                      } as any)
+                    }
                   }
                 }
-                replaceOfflineSales(shopId, offlineSales)
               }
             } catch (syncErr) {
               console.warn('Erreur sync ventes en attente:', syncErr)
             }
 
-            // Récupérer toutes les écritures locales à jour
-            const localSales = getOfflineSales(shopId)
-            const rawCombined = [...mappedSales, ...localSales]
-            
-            // Déduplication fiable uniquement par ID unique
+            // 2. En mode en ligne, Supabase est la SEULE vérité officielle.
+            // On conserve uniquement les ventes Supabase + les ventes encore en attente de sync.
+            const offlineUnsyncedOnly = getOfflineSales(shopId).filter(s => s.is_synced === false)
+            const rawCombined = [...mappedSales, ...offlineUnsyncedOnly]
+
             const seenIds = new Set<string>()
             const combinedSales: Sale[] = []
 
@@ -173,6 +180,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
               combinedSales.push(cleanSale)
             }
+
 
             combinedSales.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
 

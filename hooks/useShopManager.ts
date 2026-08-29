@@ -110,16 +110,19 @@ export function useShopManager(mappedUser: any) {
                 if (!assignedShopName || assignedShopName === 'Boutique Assignée') {
                   const { data: ownerData } = await supabaseClient
                     .from('employees')
-                    .select('name, email')
+                    .select('name, shop_name, email')
                     .eq('shop_id', bestRow.shop_id)
                     .eq('role', 'owner')
                     .limit(1)
                     .maybeSingle()
 
-                  if (ownerData?.name) {
+                  if ((ownerData as any)?.shop_name) {
+                    assignedShopName = (ownerData as any).shop_name
+                  } else if (ownerData?.name) {
                     assignedShopName = `Boutique de ${ownerData.name}`
                   }
                 }
+
 
               }
             }
