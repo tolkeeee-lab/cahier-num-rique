@@ -93,7 +93,7 @@ export function useShopManager(mappedUser: any) {
                   }
                 }
 
-                // Tenter d'obtenir le nom officiel depuis public.shops
+                // PRIORITÉ 1 : nom officiel depuis la table public.shops
                 try {
                   const { data: sRow } = await supabaseClient
                     .from('shops')
@@ -106,21 +106,31 @@ export function useShopManager(mappedUser: any) {
                   }
                 } catch {}
 
-                // Fallback : obtenir le nom du patron via employees
+                // PRIORITÉ 2 : nom depuis la table employees de la boutique (patron)
                 if (!assignedShopName || assignedShopName === 'Boutique Assignée') {
-                  const { data: ownerData } = await supabaseClient
-                    .from('employees')
-                    .select('name, shop_name, email')
-                    .eq('shop_id', bestRow.shop_id)
-                    .eq('role', 'owner')
-                    .limit(1)
-                    .maybeSingle()
+                  try {
+                    const { data: ownerData } = await supabaseClient
+                      .from('employees')
+                      .select('name, shop_name, email')
+                      .eq('shop_id', bestRow.shop_id)
+                      .eq('role', 'owner')
+                      .limit(1)
+                      .maybeSingle()
 
-                  if ((ownerData as any)?.shop_name) {
-                    assignedShopName = (ownerData as any).shop_name
-                  } else if (ownerData?.name) {
-                    assignedShopName = `Boutique de ${ownerData.name}`
-                  }
+                    if ((ownerData as any)?.shop_name) {
+                      assignedShopName = (ownerData as any).shop_name
+                    } else if (ownerData?.name) {
+                      assignedShopName = `Boutique de ${ownerData.name}`
+                    }
+                  } catch {}
+                }
+
+                // PRIORITÉ 3 : nom dans localStorage (mis à jour lors de la sauvegarde du profil)
+                if (!assignedShopName || assignedShopName === 'Boutique Assignée') {
+                  const lsName = typeof window !== 'undefined'
+                    ? localStorage.getItem(`cahier_shop_name_${bestRow.shop_id}`)
+                    : null
+                  if (lsName) assignedShopName = lsName
                 }
 
 
@@ -248,6 +258,7 @@ export function useShopManager(mappedUser: any) {
     localStorage.setItem(`cahier_user_shops_${mappedUser.id}`, JSON.stringify(updatedShops))
 
     // 2. Mettre à jour téléphone, adresse, pays & ville dans localStorage
+    localStorage.setItem(`cahier_shop_name_${targetShopId}`, data.shopName)
     if (data.phone !== undefined) {
       localStorage.setItem(`cahier_shop_phone_${targetShopId}`, data.phone)
     }
@@ -274,7 +285,7 @@ export function useShopManager(mappedUser: any) {
         // Mettre à jour la fiche patron dans employees pour que les employés voient le nouveau nom
         await supabaseClient
           .from('employees')
-          .update({ name: data.shopName })
+          .update({ name: data.shopName, shop_name: data.shopName } as any)
           .eq('id', mappedUser.id)
 
         // Sauvegarder/mettre à jour dans la table officielle public.shops si elle existe

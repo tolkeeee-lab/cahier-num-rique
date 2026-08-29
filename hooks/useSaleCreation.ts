@@ -16,6 +16,7 @@ import { getTodayDateString } from '@/lib/dateUtils'
 import {
   generateOfflineId,
   saveOfflineSale,
+  markAsSynced,
   OfflineSale,
 } from '@/lib/offlineDb'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
@@ -142,6 +143,9 @@ export function useSaleCreation({
 
         const { error: insertErr } = await supabaseClient.from('sales').insert([saleRecord])
         if (!insertErr) {
+          // ✅ Marquer la vente locale comme synchronisée
+          markAsSynced(shopId, localSaleId)
+
           if (parsed?.articles && parsed.articles.length > 0) {
             const articlesRecords = parsed.articles.map((a: any) => ({
               sale_id: localSaleId,
@@ -152,7 +156,7 @@ export function useSaleCreation({
             }))
             await supabaseClient.from('sold_articles').insert(articlesRecords)
 
-            // Alimenter la base d'intelligence de marché avec le vrai pays & la vraie ville de la boutique
+            // Intelligence de marché avec le vrai pays & la vraie ville de la boutique
             const shopCountry = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_country_${shopId}`) || 'BJ') : 'BJ'
             const shopCity = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_city_${shopId}`) || '') : ''
 
@@ -200,6 +204,8 @@ export function useSaleCreation({
 
 
       if (response.ok) {
+        // ✅ Marquer la vente locale comme synchronisée via l'API route
+        markAsSynced(shopId, localSaleId)
         onSaleCreated()
       }
     } catch {

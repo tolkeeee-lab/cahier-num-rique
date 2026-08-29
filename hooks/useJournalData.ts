@@ -6,6 +6,7 @@ import {
   getOfflineSales,
   saveOfflineSale,
   replaceOfflineSales,
+  markAsSynced,
   OfflineSale,
 } from '@/lib/offlineDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -123,8 +124,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
                       }))
                       await supabaseClient.from('sold_articles').upsert(arts)
                     }
-                    uSale.is_synced = true
-                    // Ajouter aux ventes mappées si elle manquait
+                    // ✅ Marquer proprement comme synchronisé dans localStorage
+                    markAsSynced(shopId, uSale.id)
+                    // Ajouter aux ventes mappées si elle manquait dans le résultat Supabase
                     if (!mappedSales.some(ms => ms.id === uSale.id)) {
                       mappedSales.push({
                         ...uSale,
@@ -291,12 +293,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       } catch {}
     }
 
-    // Polling doux de sécurité toutes les 5 secondes (sync employé ↔ propriétaire)
+    // Polling doux de sécurité toutes les 10 secondes (sync employé ↔ propriétaire)
     const pollInterval = setInterval(() => {
       if (isOnline && isMounted) {
         reloadData()
       }
-    }, 5000)
+    }, 10000)
 
     return () => {
       isMounted = false
