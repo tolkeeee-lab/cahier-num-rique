@@ -197,11 +197,11 @@ export function useShopManager(mappedUser: any) {
   const handleUpdateShopProfile = async (data: { shopName: string; activity: string; phone?: string; address?: string }) => {
     if (!mappedUser?.id) return
 
-    const targetShopId = shopId || `${mappedUser.id}-main`
+    const targetShopId = shopId || mappedUser.shop_id || mappedUser.id
 
     // 1. Mettre à jour dans la liste des boutiques
-    const updatedShops = userShops.map((s) => {
-      if (s.id === targetShopId) {
+    let updatedShops = userShops.map((s) => {
+      if (s.id === targetShopId || s.id === selectedShopId || userShops.length === 1) {
         return { ...s, name: data.shopName, activity: data.activity }
       }
       return s
@@ -222,7 +222,7 @@ export function useShopManager(mappedUser: any) {
       localStorage.setItem(`cahier_shop_address_${targetShopId}`, data.address)
     }
 
-    // 3. Si Supabase est actif, sauvegarder dans les user_metadata Supabase
+    // 3. Si Supabase est actif, sauvegarder dans user_metadata ET dans public.employees
     if (isSupabaseClientConfigured()) {
       try {
         await supabaseClient.auth.updateUser({
@@ -233,11 +233,18 @@ export function useShopManager(mappedUser: any) {
             address: data.address,
           }
         })
+
+        // Mettre à jour la fiche patron dans employees pour que les employés voient le nouveau nom
+        await supabaseClient
+          .from('employees')
+          .update({ name: data.shopName })
+          .eq('id', mappedUser.id)
       } catch (e) {
         console.warn('Erreur mise à jour metadata Supabase:', e)
       }
     }
   }
+
 
   return {
     selectedShopId,
