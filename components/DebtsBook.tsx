@@ -50,6 +50,7 @@ export function DebtsBook({
       }
     } catch (err: any) {
       console.warn('Erreur API dettes, repli sur calcul local offline:', err)
+      if (onError) onError(err.message)
     }
 
     // ─── FUSION AVEC LES VENTES LOCALES (NON SYNCHRONISÉES OU OFFLINE) ───
