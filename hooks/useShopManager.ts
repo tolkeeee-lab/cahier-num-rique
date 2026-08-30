@@ -113,7 +113,7 @@ export function useShopManager(mappedUser: any) {
                   try {
                     const { data: ownerData } = await supabaseClient
                       .from('employees')
-                      .select('name, shop_name, email')
+                      .select('name, email')
                       .eq('shop_id', bestRow.shop_id)
                       .eq('role', 'owner')
                       .limit(1)
