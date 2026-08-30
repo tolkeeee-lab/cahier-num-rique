@@ -68,11 +68,11 @@ export async function findShopIdByCode(inputCode: string): Promise<string> {
   const formattedUpper = `BTQ-${clean.toUpperCase()}`
 
   try {
-    // 1. Chercher dans `employees` par `shop_code` ou `shop_id`
+    // 1. Chercher dans `employees` par `shop_id`
     const { data: empMatches } = await supabaseClient
       .from('employees')
-      .select('shop_id, shop_code, role')
-      .or(`shop_code.ilike.${formattedUpper},shop_code.ilike.%${clean}%,shop_id.ilike.${clean}%,shop_id.ilike.%${clean}%`)
+      .select('shop_id, role')
+      .ilike('shop_id', `${clean}%`)
       .limit(20)
 
     if (empMatches && empMatches.length > 0) {
