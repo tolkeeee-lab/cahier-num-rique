@@ -284,10 +284,10 @@ export function useShopManager(mappedUser: any) {
           }
         })
 
-        // Mettre à jour la fiche patron dans employees pour que les employés voient le nouveau nom
+        // Mettre à jour la fiche patron dans employees
         await supabaseClient
           .from('employees')
-          .update({ name: data.shopName, shop_name: data.shopName } as any)
+          .update({ name: data.shopName })
           .eq('id', mappedUser.id)
 
         // Sauvegarder/mettre à jour dans la table officielle public.shops si elle existe
