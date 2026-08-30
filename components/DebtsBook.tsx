@@ -19,6 +19,7 @@ interface Debt {
 
 export interface DebtsBookProps {
   shopId?: string
+  sales?: any[]
   onSettleDebt?: (debtId: string, amount: number) => Promise<void>
   onRefreshTotals?: () => void
   onError?: (err: string) => void
@@ -26,6 +27,7 @@ export interface DebtsBookProps {
 
 export function DebtsBook({
   shopId = 'default-shop',
+  sales,
   onSettleDebt,
   onRefreshTotals,
   onError,
@@ -44,12 +46,61 @@ export function DebtsBook({
       if (res.ok) {
         const data = await res.json()
         setDebts(data.debts || [])
+        return
       }
     } catch (err: any) {
-      console.error('Erreur chargement dettes:', err)
-      if (onError) onError(err.message)
+      console.warn('Erreur API dettes, repli sur calcul local offline:', err)
     }
-  }, [shopId, onError])
+
+    // ─── REPLI OFFLINE LOCAL ───
+    if (sales && sales.length > 0) {
+      const offlineDebts: Debt[] = []
+      
+      // Clients
+      const clientSales = sales.filter((s) => s.status !== 'crossed_out' && (s.type === 'sale_credit' || s.type === 'payment_client'))
+      const clientNames = Array.from(new Set(clientSales.map(s => s.client_name).filter(Boolean)))
+      
+      clientNames.forEach(name => {
+        const cSales = clientSales.filter(s => s.client_name === name)
+        const owed = cSales.filter(s => s.type === 'sale_credit').reduce((sum, s) => sum + (s.debt_amount ?? s.total_amount ?? 0), 0)
+        const paid = cSales.filter(s => s.type === 'payment_client').reduce((sum, s) => sum + (s.paid_amount ?? s.total_amount ?? 0), 0)
+        const balance = Math.max(0, owed - paid)
+        
+        offlineDebts.push({
+          id: `local-client-${name}`,
+          client_name: name as string,
+          amount_owed: balance,
+          paid_amount: paid,
+          debt_type: 'client',
+          status: balance <= 0 ? 'settled' : 'pending',
+          created_at: new Date().toISOString()
+        })
+      })
+
+      // Fournisseurs
+      const suppSales = sales.filter((s) => s.status !== 'crossed_out' && (s.type === 'purchase_credit' || s.type === 'payment_supplier'))
+      const suppNames = Array.from(new Set(suppSales.map(s => s.client_name).filter(Boolean)))
+
+      suppNames.forEach(name => {
+        const sSales = suppSales.filter(s => s.client_name === name)
+        const owed = sSales.filter(s => s.type === 'purchase_credit').reduce((sum, s) => sum + (s.debt_amount ?? s.total_amount ?? 0), 0)
+        const paid = sSales.filter(s => s.type === 'payment_supplier').reduce((sum, s) => sum + (s.paid_amount ?? s.total_amount ?? 0), 0)
+        const balance = Math.max(0, owed - paid)
+
+        offlineDebts.push({
+          id: `local-supp-${name}`,
+          client_name: name as string,
+          amount_owed: balance,
+          paid_amount: paid,
+          debt_type: 'supplier',
+          status: balance <= 0 ? 'settled' : 'pending',
+          created_at: new Date().toISOString()
+        })
+      })
+
+      setDebts(offlineDebts)
+    }
+  }, [shopId, sales])
 
   useEffect(() => {
     loadDebts()

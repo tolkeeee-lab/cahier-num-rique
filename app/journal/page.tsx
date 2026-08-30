@@ -844,7 +844,7 @@ export default function JournalPage() {
             )}
             {activeTab === 'dettes' && (
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <DebtsBook shopId={shopManager.shopId} onRefreshTotals={journalData.reloadData} onError={setPostItMessage} />
+                <DebtsBook shopId={shopManager.shopId} sales={journalData.allSales} onRefreshTotals={journalData.reloadData} onError={setPostItMessage} />
               </div>
             )}
             {activeTab === 'stock' && (

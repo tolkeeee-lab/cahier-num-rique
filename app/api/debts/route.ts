@@ -112,12 +112,15 @@ export async function GET(request: NextRequest) {
             .eq('shop_id', shopId)
             .in('type', ['sale_credit', 'payment_client'])
 
-          // Regrouper par client
-          const clientNames = Array.from(new Set((debts || []).map(d => d.client_name)))
+          // Regrouper par client (à la fois depuis 'debts' et depuis 'sales')
+          const debtClients = (debts || []).map(d => d.client_name)
+          const salesClients = (sales || []).filter(s => s.client_name).map(s => s.client_name)
+          const clientNames = Array.from(new Set([...debtClients, ...salesClients]))
+
           const list = clientNames.map(name => {
             const clientDebts = (debts || []).filter(d => d.client_name === name)
-            const totalOwed = clientDebts.reduce((sum, d) => sum + d.amount_owed, 0)
-            const totalPaid = clientDebts.reduce((sum, d) => sum + d.paid_amount, 0)
+            const legacyOwed = clientDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
+            const legacyPaid = clientDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
             
             const history = (sales || [])
               .filter(s => s.client_name === name && s.status !== 'crossed_out')
@@ -128,18 +131,33 @@ export async function GET(request: NextRequest) {
                 description: s.type === 'sale_credit' ? `Achat à crédit: ${s.notes || 'Articles divers'}` : 'Remboursement crédit',
                 amount: s.type === 'sale_credit' ? s.debt_amount : -s.paid_amount
               }))
+            
+            // Calculer la balance à partir des ventes
+            const salesOwed = history.reduce((sum, h) => sum + (h.amount > 0 ? h.amount : 0), 0)
+            const salesPaid = history.reduce((sum, h) => sum + (h.amount < 0 ? Math.abs(h.amount) : 0), 0)
+
+            const totalAmountOwed = (legacyOwed - legacyPaid) + (salesOwed - salesPaid)
 
             return {
               id: clientDebts[0]?.id || randomUUID(),
               name,
-              amount: totalOwed - totalPaid,
-              paid: totalPaid,
-              status: (totalOwed - totalPaid) === 0 ? 'paid' : 'pending',
+              amount: totalAmountOwed,
+              paid: legacyPaid + salesPaid,
+              status: totalAmountOwed <= 0 ? 'paid' : 'pending',
               history
             }
           })
 
-          return NextResponse.json({ clients: list })
+          const clientsWithFlags = list.map(c => ({
+            id: c.id,
+            client_name: c.name,
+            amount_owed: c.amount,
+            paid_amount: c.paid,
+            status: c.status,
+            history: c.history,
+            debt_type: 'client'
+          }))
+          return NextResponse.json({ debts: clientsWithFlags })
         } catch (e) {
           console.error('Erreur Supabase Clients, repli local:', e)
         }
@@ -147,7 +165,16 @@ export async function GET(request: NextRequest) {
 
       // Repli Local en mémoire
       const list = getLocalClients(shopId)
-      return NextResponse.json({ clients: list })
+      const clientsWithFlags = list.map((c: any) => ({
+        id: c.id,
+        client_name: c.name,
+        amount_owed: c.amount,
+        paid_amount: c.paid,
+        status: c.status,
+        history: c.history,
+        debt_type: 'client'
+      }))
+      return NextResponse.json({ debts: clientsWithFlags })
     }
   } catch (error) {
     console.error('Erreur API GET debts:', error)
