@@ -270,8 +270,9 @@ export function useShopManager(mappedUser: any) {
     localStorage.setItem(`cahier_shop_country_${targetShopId}`, targetCountry)
     localStorage.setItem(`cahier_shop_city_${targetShopId}`, targetCity)
 
-    // 3. Si Supabase est actif, sauvegarder dans user_metadata, employees ET public.shops
+    // 3. Si Supabase est actif, sauvegarder dans les différentes tables indépendamment
     if (isSupabaseClientConfigured()) {
+      // a) Mise à jour Metadata (Auth)
       try {
         await supabaseClient.auth.updateUser({
           data: {
@@ -283,32 +284,38 @@ export function useShopManager(mappedUser: any) {
             city: targetCity,
           }
         })
+      } catch (e) {
+        console.warn('[ShopManager] Erreur updateUser:', e)
+      }
 
-        // Mettre à jour la fiche patron dans employees
+      // b) Mise à jour Employees
+      try {
         await supabaseClient
           .from('employees')
           .update({ name: data.shopName })
           .eq('id', mappedUser.id)
-
-        // Sauvegarder/mettre à jour dans la table officielle public.shops si elle existe
-        try {
-          await supabaseClient.from('shops').upsert([
-            {
-              id: targetShopId,
-              owner_id: mappedUser.id,
-              name: data.shopName,
-              activity: data.activity,
-              phone: data.phone,
-              address: data.address,
-              country: targetCountry,
-              city: targetCity,
-              shop_code: formatShortShopCode(targetShopId),
-              updated_at: new Date().toISOString(),
-            }
-          ], { onConflict: 'id' })
-        } catch {}
       } catch (e) {
-        console.warn('Erreur mise à jour metadata Supabase:', e)
+        console.warn('[ShopManager] Erreur update employees:', e)
+      }
+
+      // c) Mise à jour Shops
+      try {
+        await supabaseClient.from('shops').upsert([
+          {
+            id: targetShopId,
+            owner_id: mappedUser.id,
+            name: data.shopName,
+            activity: data.activity,
+            phone: data.phone,
+            address: data.address,
+            country: targetCountry,
+            city: targetCity,
+            shop_code: formatShortShopCode(targetShopId),
+            updated_at: new Date().toISOString(),
+          }
+        ], { onConflict: 'id' })
+      } catch (e) {
+        console.warn('[ShopManager] Erreur upsert shops:', e)
       }
     }
   }
