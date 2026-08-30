@@ -238,7 +238,6 @@ export default function JournalPage() {
                 name: cleanName,
                 email: cleanEmail,
                 role: role,
-                status: 'active'
               }
             ], { onConflict: 'id' })
           } catch (e) {
@@ -385,7 +384,6 @@ export default function JournalPage() {
               name: mappedUser.name || 'Propriétaire',
               email: (mappedUser.email || '').toLowerCase().trim(),
               role: 'owner',
-              status: 'active'
             }
           ], { onConflict: 'id' })
       } catch (e) {}
