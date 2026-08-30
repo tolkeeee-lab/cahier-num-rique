@@ -39,66 +39,65 @@ export function DebtsBook({
   const [activeRepayDebt, setActiveRepayDebt] = useState<Debt | null>(null)
 
   const loadDebts = useCallback(async () => {
+    let apiDebts: Debt[] = []
     try {
       const res = await fetch('/api/debts', {
         headers: { 'x-shop-id': shopId },
       })
       if (res.ok) {
         const data = await res.json()
-        setDebts(data.debts || [])
-        return
+        apiDebts = data.debts || []
       }
     } catch (err: any) {
       console.warn('Erreur API dettes, repli sur calcul local offline:', err)
     }
 
-    // ─── REPLI OFFLINE LOCAL ───
+    // ─── FUSION AVEC LES VENTES LOCALES (NON SYNCHRONISÉES OU OFFLINE) ───
     if (sales && sales.length > 0) {
-      const offlineDebts: Debt[] = []
+      const mergedDebts = [...apiDebts]
       
-      // Clients
-      const clientSales = sales.filter((s) => s.status !== 'crossed_out' && (s.type === 'sale_credit' || s.type === 'payment_client'))
-      const clientNames = Array.from(new Set(clientSales.map(s => s.client_name).filter(Boolean)))
-      
-      clientNames.forEach(name => {
-        const cSales = clientSales.filter(s => s.client_name === name)
-        const owed = cSales.filter(s => s.type === 'sale_credit').reduce((sum, s) => sum + (s.debt_amount ?? s.total_amount ?? 0), 0)
-        const paid = cSales.filter(s => s.type === 'payment_client').reduce((sum, s) => sum + (s.paid_amount ?? s.total_amount ?? 0), 0)
-        const balance = Math.max(0, owed - paid)
+      // On ne prend que les ventes qui n'ont pas encore été synchronisées avec l'API
+      const unsyncedSales = sales.filter(s => s.status !== 'crossed_out' && s.is_synced === false)
+
+      const processSales = (filteredSales: any[], type: 'client' | 'supplier') => {
+        const names = Array.from(new Set(filteredSales.map(s => s.client_name || s.client).filter(Boolean)))
         
-        offlineDebts.push({
-          id: `local-client-${name}`,
-          client_name: name as string,
-          amount_owed: balance,
-          paid_amount: paid,
-          debt_type: 'client',
-          status: balance <= 0 ? 'settled' : 'pending',
-          created_at: new Date().toISOString()
+        names.forEach(name => {
+          const sSales = filteredSales.filter(s => s.client_name === name || s.client === name)
+          const owed = sSales.filter(s => s.type === (type === 'client' ? 'sale_credit' : 'purchase_credit')).reduce((sum, s) => sum + (s.debt ?? s.total ?? 0), 0)
+          const paid = sSales.filter(s => s.type === (type === 'client' ? 'payment_client' : 'payment_supplier')).reduce((sum, s) => sum + (s.paid ?? s.total ?? 0), 0)
+          
+          const existingIdx = mergedDebts.findIndex(d => d.client_name === name && d.debt_type === type)
+          if (existingIdx >= 0) {
+            mergedDebts[existingIdx].amount_owed += owed
+            mergedDebts[existingIdx].paid_amount = (mergedDebts[existingIdx].paid_amount || 0) + paid
+            const newBalance = mergedDebts[existingIdx].amount_owed - (mergedDebts[existingIdx].paid_amount || 0)
+            mergedDebts[existingIdx].status = newBalance <= 0 ? 'settled' : 'pending'
+          } else {
+            const balance = Math.max(0, owed - paid)
+            mergedDebts.push({
+              id: `local-${type}-${name}`,
+              client_name: name as string,
+              amount_owed: balance,
+              paid_amount: paid,
+              debt_type: type,
+              status: balance <= 0 ? 'settled' : 'pending',
+              created_at: new Date().toISOString()
+            })
+          }
         })
-      })
+      }
 
-      // Fournisseurs
-      const suppSales = sales.filter((s) => s.status !== 'crossed_out' && (s.type === 'purchase_credit' || s.type === 'payment_supplier'))
-      const suppNames = Array.from(new Set(suppSales.map(s => s.client_name).filter(Boolean)))
+      const clientSales = unsyncedSales.filter(s => s.type === 'sale_credit' || s.type === 'payment_client')
+      processSales(clientSales, 'client')
 
-      suppNames.forEach(name => {
-        const sSales = suppSales.filter(s => s.client_name === name)
-        const owed = sSales.filter(s => s.type === 'purchase_credit').reduce((sum, s) => sum + (s.debt_amount ?? s.total_amount ?? 0), 0)
-        const paid = sSales.filter(s => s.type === 'payment_supplier').reduce((sum, s) => sum + (s.paid_amount ?? s.total_amount ?? 0), 0)
-        const balance = Math.max(0, owed - paid)
+      const suppSales = unsyncedSales.filter(s => s.type === 'purchase_credit' || s.type === 'payment_supplier')
+      processSales(suppSales, 'supplier')
 
-        offlineDebts.push({
-          id: `local-supp-${name}`,
-          client_name: name as string,
-          amount_owed: balance,
-          paid_amount: paid,
-          debt_type: 'supplier',
-          status: balance <= 0 ? 'settled' : 'pending',
-          created_at: new Date().toISOString()
-        })
-      })
-
-      setDebts(offlineDebts)
+      // Mettre à jour l'état final
+      setDebts(mergedDebts)
+    } else {
+      setDebts(apiDebts)
     }
   }, [shopId, sales])
 
