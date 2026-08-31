@@ -457,6 +457,7 @@ export default function JournalPage() {
     shopId: shopManager.shopId,
     selectedPen,
     onSaleCreated: journalData.reloadData,
+    onError: setPostItMessage,
   })
 
   const tactileMenu = useTactileMenu({

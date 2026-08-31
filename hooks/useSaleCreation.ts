@@ -53,6 +53,7 @@ export function useSaleCreation({
   selectedPen,
   onSaleCreated,
   onAfterSale,
+  onError,
 }: UseSaleCreationOptions): UseSaleCreationReturn {
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -207,9 +208,11 @@ export function useSaleCreation({
         // ✅ Marquer la vente locale comme synchronisée via l'API route
         markAsSynced(shopId, localSaleId)
         onSaleCreated()
+      } else {
+        if (onError) onError('⚠️ Sauvegardé hors-ligne, en attente de réseau.')
       }
     } catch {
-      // Silencieux — la vente est déjà préservée dans le localStorage
+      if (onError) onError('⚠️ Pas de réseau. Vente sauvegardée localement.')
     }
   }
 
