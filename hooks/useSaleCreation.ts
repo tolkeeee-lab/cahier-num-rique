@@ -116,6 +116,30 @@ export function useSaleCreation({
     }
 
     saveOfflineSale(shopId, sale)
+
+    // Vérification du stock après vente (Stylo Bleu ou Jaune)
+    if (activePen === 'blue' || activePen === 'yellow') {
+      const { getOfflineProducts } = require('@/lib/offlineDb')
+      const offlineStock = getOfflineProducts(shopId) || []
+      const warnings: string[] = []
+      
+      for (const art of sale.articles || []) {
+        const stockItem = offlineStock.find((p: any) => p.name.toLowerCase().trim() === (art.name || '').toLowerCase().trim())
+        if (stockItem) {
+          const currentStock = stockItem.current_stock ?? stockItem.initial_stock ?? 0
+          if (currentStock <= 0) {
+            warnings.push(`⚠️ Le produit "${art.name}" est déjà en rupture de stock (0).`)
+          } else if (currentStock - (art.quantity || 1) <= 0) {
+            warnings.push(`⚠️ Attention : Le stock de "${art.name}" est maintenant épuisé.`)
+          }
+        }
+      }
+      
+      if (warnings.length > 0) {
+        setPostItWarning(warnings.join('\n'))
+      }
+    }
+
     return sale
   }
 
