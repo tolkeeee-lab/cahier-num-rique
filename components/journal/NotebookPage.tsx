@@ -399,14 +399,34 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                               </span>
                             ) : (
                               (() => {
-                                const isExpense = sale.pen_color === 'red' || sale.pen_color === 'green' || sale.pen_color === 'purple' || sale.type === 'cash_out' || sale.type === 'purchase_cash' || sale.type === 'purchase_credit' || sale.type === 'payment_supplier' || (sale.type === 'cash_adjustment' && ((sale.notes || '').toLowerCase().includes('retrait') || sale.pen_color === 'red'))
+                                let badgeClass = 'bg-gray-100 text-gray-800 border-gray-200'
+                                let prefix = ''
+                                
+                                if (sale.pen_color === 'blue' || sale.type === 'sale' || sale.type === 'cash_in' || sale.type === 'payment_client') {
+                                  // Rentrée d'argent (Vente cash, Remboursement client)
+                                  badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  prefix = '+'
+                                } else if (sale.pen_color === 'yellow' || sale.type === 'sale_credit') {
+                                  // Vente à crédit (Créance)
+                                  badgeClass = 'bg-amber-50 text-amber-800 border-amber-200'
+                                  prefix = '+' // On met un plus pour marquer la valeur créée
+                                } else if (sale.pen_color === 'red' || sale.type === 'cash_out' || sale.type === 'payment_supplier' || (sale.type === 'cash_adjustment' && ((sale.notes || '').toLowerCase().includes('retrait') || sale.pen_color === 'red'))) {
+                                  // Sortie d'argent (Dépense, Remboursement fournisseur)
+                                  badgeClass = 'bg-rose-50 text-rose-800 border-rose-200'
+                                  prefix = '-'
+                                } else if (sale.pen_color === 'green' || sale.type === 'purchase_cash') {
+                                  // Achat Stock Cash (Sortie d'argent)
+                                  badgeClass = 'bg-rose-50 text-rose-800 border-rose-200' // Rouge car l'argent sort de la caisse
+                                  prefix = '-'
+                                } else if (sale.pen_color === 'purple' || sale.type === 'purchase_credit') {
+                                  // Achat Crédit (Dette fournisseur, l'argent reste en caisse)
+                                  badgeClass = 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
+                                  prefix = '' // Pas de signe car pas d'impact immédiat sur la caisse
+                                }
+
                                 return (
-                                  <span className={`text-xs sm:text-sm font-extrabold px-2 py-0.2 rounded-lg font-mono ${
-                                    isExpense
-                                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                      : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                  }`}>
-                                    {isExpense ? `-${formatPrice(sale.total)}` : `+${formatPrice(sale.total)}`}
+                                  <span className={`text-xs sm:text-sm font-extrabold px-2 py-0.2 rounded-lg font-mono border ${badgeClass}`}>
+                                    {prefix}{formatPrice(sale.total)}
                                   </span>
                                 )
                               })()
