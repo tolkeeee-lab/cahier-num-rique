@@ -5,7 +5,8 @@ import { DebtSummaryCards } from '@/components/debts/DebtSummaryCards'
 import { DebtFilterBar } from '@/components/debts/DebtFilterBar'
 import { DebtItemCard } from '@/components/debts/DebtItemCard'
 import { DebtRepaymentModal } from '@/components/sales/DebtRepaymentModal'
-
+import { saveOfflineSale, generateOfflineId } from '@/lib/offlineDb'
+import { getTodayDateString } from '@/lib/dateUtils'
 interface Debt {
   id: string
   client_name: string
@@ -65,8 +66,8 @@ export function DebtsBook({
         
         names.forEach(name => {
           const sSales = filteredSales.filter(s => s.client_name === name || s.client === name)
-          const owed = sSales.filter(s => s.type === (type === 'client' ? 'sale_credit' : 'purchase_credit')).reduce((sum, s) => sum + (s.debt ?? s.total ?? 0), 0)
-          const paid = sSales.filter(s => s.type === (type === 'client' ? 'payment_client' : 'payment_supplier')).reduce((sum, s) => sum + (s.paid ?? s.total ?? 0), 0)
+          const owed = sSales.filter(s => s.type === (type === 'client' ? 'sale_credit' : 'purchase_credit')).reduce((sum, s) => sum + (s.debt_amount ?? s.debt ?? s.total_amount ?? s.total ?? 0), 0)
+          const paid = sSales.filter(s => s.type === (type === 'client' ? 'payment_client' : 'payment_supplier')).reduce((sum, s) => sum + (s.paid_amount ?? s.paid ?? s.total_amount ?? s.total ?? 0), 0)
           
           const existingIdx = mergedDebts.findIndex(d => d.client_name === name && d.debt_type === type)
           if (existingIdx >= 0) {
@@ -107,17 +108,50 @@ export function DebtsBook({
   }, [loadDebts])
 
   const handleConfirmRepayment = async (debtId: string, amount: number) => {
+    const debt = debts.find((d) => d.id === debtId)
+    if (!debt) return
+
+    const isSupplier = debt.debt_type === 'supplier'
+    const newSale = {
+      id: generateOfflineId(),
+      shop_id: shopId,
+      date: getTodayDateString(),
+      time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      client_name: debt.client_name,
+      total_amount: amount,
+      paid_amount: amount,
+      debt_amount: 0,
+      status: 'paid',
+      type: isSupplier ? 'payment_supplier' : 'payment_client',
+      pen_color: isSupplier ? 'red' : 'blue',
+      notes: isSupplier ? 'Remboursement fournisseur' : 'Remboursement',
+      created_at: new Date().toISOString(),
+      articles: [],
+      is_synced: false
+    }
+
+    // Sauvegarde OFFLINE instantanée !
+    saveOfflineSale(shopId, newSale as any)
+
+    // Si on avait une callback depuis le parent, on l'appelle
     if (onSettleDebt) {
       await onSettleDebt(debtId, amount)
     } else {
+      // Sinon, on tente de synchroniser silencieusement en arrière-plan avec l'API route correcte
       try {
         await fetch('/api/debts', {
-          method: 'PATCH',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
-          body: JSON.stringify({ id: debtId, amount }),
+          body: JSON.stringify({ 
+            name: debt.client_name, 
+            amount, 
+            type: isSupplier ? 'supplier' : 'client', 
+            action: 'pay' 
+          }),
         })
       } catch (e) {
-        console.error('Erreur règlement dette:', e)
+        console.warn('Règlement conservé en local (hors ligne):', e)
+        if (onError) onError('⚠️ Paiement sauvegardé hors-ligne.')
       }
     }
     loadDebts()
