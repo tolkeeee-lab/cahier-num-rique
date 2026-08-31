@@ -170,7 +170,7 @@ export function DebtsBook({
     
     // Forcer la mise à jour immédiate de l'état local avant même que le parent ne recharge
     const currentOffline = JSON.parse(localStorage.getItem(`offline_sales_${shopId}`) || '[]')
-    const combinedSales = [...sales.filter(s => s.id !== newSale.id), ...currentOffline]
+    const combinedSales = [...(sales || []).filter(s => s.id !== newSale.id), ...currentOffline]
     
     // On rappelle loadDebts qui va fusionner avec combinedSales
     loadDebts(combinedSales)
