@@ -403,25 +403,25 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                 let prefix = ''
                                 
                                 if (sale.pen_color === 'blue' || sale.type === 'sale' || sale.type === 'cash_in' || sale.type === 'payment_client') {
-                                  // Rentrée d'argent (Vente cash, Remboursement client)
-                                  badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  // Rentrée d'argent (Vente cash) - Couleur Bleue, avec +
+                                  badgeClass = 'bg-blue-50 text-blue-800 border-blue-200'
                                   prefix = '+'
                                 } else if (sale.pen_color === 'yellow' || sale.type === 'sale_credit') {
-                                  // Vente à crédit (Créance)
+                                  // Vente à crédit - Couleur Jaune/Ambre, SANS SIGNE
                                   badgeClass = 'bg-amber-50 text-amber-800 border-amber-200'
-                                  prefix = '+' // On met un plus pour marquer la valeur créée
+                                  prefix = ''
                                 } else if (sale.pen_color === 'red' || sale.type === 'cash_out' || sale.type === 'payment_supplier' || (sale.type === 'cash_adjustment' && ((sale.notes || '').toLowerCase().includes('retrait') || sale.pen_color === 'red'))) {
-                                  // Sortie d'argent (Dépense, Remboursement fournisseur)
+                                  // Sortie d'argent (Dépense) - Couleur Rouge, avec -
                                   badgeClass = 'bg-rose-50 text-rose-800 border-rose-200'
                                   prefix = '-'
                                 } else if (sale.pen_color === 'green' || sale.type === 'purchase_cash') {
-                                  // Achat Stock Cash (Sortie d'argent)
-                                  badgeClass = 'bg-rose-50 text-rose-800 border-rose-200' // Rouge car l'argent sort de la caisse
+                                  // Achat Stock Cash - Couleur Verte, avec - (car l'argent sort)
+                                  badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                   prefix = '-'
                                 } else if (sale.pen_color === 'purple' || sale.type === 'purchase_credit') {
-                                  // Achat Crédit (Dette fournisseur, l'argent reste en caisse)
+                                  // Achat Crédit - Couleur Violette, SANS SIGNE
                                   badgeClass = 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
-                                  prefix = '' // Pas de signe car pas d'impact immédiat sur la caisse
+                                  prefix = ''
                                 }
 
                                 return (
