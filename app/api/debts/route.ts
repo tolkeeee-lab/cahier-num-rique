@@ -276,98 +276,11 @@ export async function POST(request: NextRequest) {
         if (sError) throw sError
 
         if (type === 'client') {
-          if (action === 'pay') {
-            // Mettre à jour les dettes existantes (rembourser)
-            // Trouver les dettes non payées pour ce client
-            const { data: debts } = await supabase
-              .from('debts')
-              .select('*')
-              .eq('client_name', name)
-              .eq('shop_id', shopId)
-              .eq('status', 'pending')
-
-            let remainingPayment = amount
-            for (const debt of (debts || [])) {
-              if (remainingPayment <= 0) break
-              const debtRemaining = debt.amount_owed - debt.paid_amount
-              const paymentToApply = Math.min(remainingPayment, debtRemaining)
-              const newPaidAmount = debt.paid_amount + paymentToApply
-              const newStatus = newPaidAmount >= debt.amount_owed ? 'paid' : 'pending'
-
-              await supabase
-                .from('debts')
-                .update({ paid_amount: newPaidAmount, status: newStatus })
-                .eq('id', debt.id)
-                .eq('shop_id', shopId)
-
-              remainingPayment -= paymentToApply
-            }
-          } else {
-            // Ajouter une nouvelle dette
-            await supabase
-              .from('debts')
-              .insert([
-                {
-                  id: randomUUID(),
-                  sale_id: saleId,
-                  shop_id: shopId,
-                  client_name: name,
-                  amount_owed: amount,
-                  status: 'pending',
-                  created_at: now.toISOString()
-                }
-              ])
-          }
+          // Les opérations clients sont désormais uniquement gérées via la table 'sales'
+          // L'endpoint GET aggrège automatiquement les anciennes dettes et les nouvelles ventes.
         } else if (type === 'supplier') {
-          // Insérer la transaction grossiste
-          await supabase
-            .from('supplier_transactions')
-            .insert([
-              {
-                id: randomUUID(),
-                shop_id: shopId,
-                supplier_name: name,
-                amount: action === 'credit' ? amount : -amount,
-                description: text,
-                created_at: now.toISOString()
-              }
-            ])
-
-          // Mettre à jour le solde global grossiste
-          const { data: sDebt } = await supabase
-            .from('supplier_debts')
-            .select('*')
-            .eq('supplier_name', name)
-            .eq('shop_id', shopId)
-            .single()
-
-          if (sDebt) {
-            const diff = action === 'credit' ? amount : -amount
-            const newOwed = sDebt.amount_owed + diff
-            const newPaid = sDebt.paid_amount + (action === 'pay' ? amount : 0)
-            await supabase
-              .from('supplier_debts')
-              .update({
-                amount_owed: Math.max(0, newOwed),
-                paid_amount: newPaid,
-                status: newOwed <= 0 ? 'paid' : 'pending'
-              })
-              .eq('supplier_name', name)
-              .eq('shop_id', shopId)
-          } else {
-            await supabase
-              .from('supplier_debts')
-              .insert([
-                {
-                  id: randomUUID(),
-                  shop_id: shopId,
-                  supplier_name: name,
-                  amount_owed: action === 'credit' ? amount : 0,
-                  paid_amount: action === 'pay' ? amount : 0,
-                  status: action === 'credit' ? 'pending' : 'paid'
-                }
-              ])
-          }
+          // Les opérations fournisseurs sont désormais uniquement gérées via la table 'sales'
+          // L'endpoint GET aggrège automatiquement les anciennes dettes et les nouvelles ventes.
         }
 
       } catch (e) {

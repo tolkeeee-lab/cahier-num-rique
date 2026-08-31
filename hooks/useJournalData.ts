@@ -350,6 +350,13 @@ export function useJournalData(shopId: string, isOnline: boolean) {
           clientDebts += s.debt
         }
       }
+      
+      // Déduire les paiements des dettes correspondantes
+      if (type === 'payment_client') {
+        clientDebts -= s.paid || s.total || 0
+      } else if (type === 'payment_supplier') {
+        supplierDebts -= s.paid || s.total || 0
+      }
     })
 
     todays.forEach(s => {
