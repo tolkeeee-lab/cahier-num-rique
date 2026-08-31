@@ -39,6 +39,7 @@ export function SettingsManager({
   address = '',
   country = 'BJ',
   city = '',
+  userEmail,
   employees = [],
   onSaveProfile,
   onInviteEmployee,
@@ -46,8 +47,32 @@ export function SettingsManager({
   onExportBackup,
   onResetData,
 }: SettingsManagerProps) {
+  const isAdminUser = userEmail === 'tolkeeee@gmail.com' || userEmail === 'tolkeeeee@gmail.com' || userEmail === 'admin@cahier.com' || userEmail?.endsWith('@cahier.admin')
+
   return (
     <div className="space-y-6">
+      {/* Mode Super Admin (Caché pour les autres) */}
+      {isAdminUser && (
+        <div className="bg-purple-50 p-6 rounded-2xl border border-purple-200 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-lg font-bold text-purple-900 flex items-center">
+                <span className="text-xl mr-2">👑</span> Mode Super Admin
+              </h2>
+              <p className="text-sm text-purple-700">
+                Vous avez des privilèges globaux. Accédez au tableau de bord administrateur.
+              </p>
+            </div>
+            <a 
+              href="/admin" 
+              className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm flex items-center gap-2 whitespace-nowrap"
+            >
+              Ouvrir le Panel
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Profil de la boutique */}
       <ShopProfileSettings
         shopId={shopId}
