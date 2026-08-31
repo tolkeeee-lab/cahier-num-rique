@@ -398,13 +398,18 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                 💡 Demande
                               </span>
                             ) : (
-                              <span className={`text-xs sm:text-sm font-extrabold px-2 py-0.2 rounded-lg font-mono ${
-                                sale.pen_color === 'red'
-                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                              }`}>
-                                {sale.pen_color === 'red' ? `-${formatPrice(sale.total)}` : `+${formatPrice(sale.total)}`}
-                              </span>
+                              (() => {
+                                const isExpense = sale.pen_color === 'red' || sale.pen_color === 'green' || sale.pen_color === 'purple' || sale.type === 'cash_out' || sale.type === 'purchase_cash' || sale.type === 'purchase_credit' || sale.type === 'payment_supplier' || (sale.type === 'cash_adjustment' && ((sale.notes || '').toLowerCase().includes('retrait') || sale.pen_color === 'red'))
+                                return (
+                                  <span className={`text-xs sm:text-sm font-extrabold px-2 py-0.2 rounded-lg font-mono ${
+                                    isExpense
+                                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                      : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                  }`}>
+                                    {isExpense ? `-${formatPrice(sale.total)}` : `+${formatPrice(sale.total)}`}
+                                  </span>
+                                )
+                              })()
                             )}
 
                             {!isCrossedOut && (
