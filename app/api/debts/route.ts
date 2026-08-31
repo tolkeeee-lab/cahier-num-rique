@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
+export const dynamic = 'force-dynamic'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 
 const isSupabaseConfigured = () => {
