@@ -39,7 +39,7 @@ export function DebtsBook({
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'settled'>('pending')
   const [activeRepayDebt, setActiveRepayDebt] = useState<Debt | null>(null)
 
-  const loadDebts = useCallback(async () => {
+  const loadDebts = useCallback(async (currentSales?: any[]) => {
     let apiDebts: Debt[] = []
     try {
       const res = await fetch('/api/debts', {
@@ -51,16 +51,18 @@ export function DebtsBook({
         apiDebts = data.debts || []
       }
     } catch (err: any) {
-      console.warn('Erreur API dettes, repli sur calcul local offline:', err)
+      console.error('Erreur loadDebts', err)
       if (onError) onError(err.message)
     }
 
+    const salesToMerge = currentSales || sales
+
     // ─── FUSION AVEC LES VENTES LOCALES (NON SYNCHRONISÉES OU OFFLINE) ───
-    if (sales && sales.length > 0) {
+    if (salesToMerge && salesToMerge.length > 0) {
       const mergedDebts = [...apiDebts]
       
       // On ne prend que les ventes qui n'ont pas encore été synchronisées avec l'API
-      const unsyncedSales = sales.filter(s => s.status !== 'crossed_out' && s.is_synced === false)
+      const unsyncedSales = salesToMerge.filter(s => s.status !== 'crossed_out' && s.is_synced === false)
 
       const processSales = (filteredSales: any[], type: 'client' | 'supplier') => {
         const names = Array.from(new Set(filteredSales.map(s => s.client_name || s.client).filter(Boolean)))
@@ -137,9 +139,9 @@ export function DebtsBook({
     if (onSettleDebt) {
       await onSettleDebt(debtId, amount)
     } else {
-      // Sinon, on tente de synchroniser silencieusement en arrière-plan avec l'API route correcte
+      // Sinon, on tente de synchroniser silencieusement avec l'API
       try {
-        await fetch('/api/debts', {
+        const res = await fetch('/api/debts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
           body: JSON.stringify({ 
@@ -149,12 +151,29 @@ export function DebtsBook({
             action: 'pay' 
           }),
         })
-      } catch (e) {
-        console.warn('Règlement conservé en local (hors ligne):', e)
-        if (onError) onError('⚠️ Paiement sauvegardé hors-ligne.')
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          // Si l'API refuse (ex: fonds insuffisants), on supprime la vente hors ligne qu'on vient de créer
+          const currentOffline = JSON.parse(localStorage.getItem(`offline_sales_${shopId}`) || '[]')
+          localStorage.setItem(`offline_sales_${shopId}`, JSON.stringify(currentOffline.filter((s: any) => s.id !== newSale.id)))
+          throw new Error(errData.error || 'Erreur lors du paiement')
+        } else {
+           // Marquer comme synchronisé si succès
+           const currentOffline = JSON.parse(localStorage.getItem(`offline_sales_${shopId}`) || '[]')
+           localStorage.setItem(`offline_sales_${shopId}`, JSON.stringify(currentOffline.map((s: any) => s.id === newSale.id ? { ...s, is_synced: true } : s)))
+        }
+      } catch (e: any) {
+        console.warn('Règlement erreur ou conservé en local:', e)
+        if (onError) onError(e.message || '⚠️ Paiement sauvegardé hors-ligne.')
       }
     }
-    loadDebts()
+    
+    // Forcer la mise à jour immédiate de l'état local avant même que le parent ne recharge
+    const currentOffline = JSON.parse(localStorage.getItem(`offline_sales_${shopId}`) || '[]')
+    const combinedSales = [...sales.filter(s => s.id !== newSale.id), ...currentOffline]
+    
+    // On rappelle loadDebts qui va fusionner avec combinedSales
+    loadDebts(combinedSales)
     if (onRefreshTotals) onRefreshTotals()
   }
 
