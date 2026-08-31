@@ -44,6 +44,7 @@ export function DebtsBook({
     try {
       const res = await fetch('/api/debts', {
         headers: { 'x-shop-id': shopId },
+        cache: 'no-store'
       })
       if (res.ok) {
         const data = await res.json()
@@ -117,10 +118,10 @@ export function DebtsBook({
       shop_id: shopId,
       date: getTodayDateString(),
       time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      client_name: debt.client_name,
-      total_amount: amount,
-      paid_amount: amount,
-      debt_amount: 0,
+      client: debt.client_name,
+      total: amount,
+      paid: amount,
+      debt: 0,
       status: 'paid',
       type: isSupplier ? 'payment_supplier' : 'payment_client',
       pen_color: isSupplier ? 'red' : 'blue',

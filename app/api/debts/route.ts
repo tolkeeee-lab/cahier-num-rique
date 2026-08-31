@@ -48,80 +48,20 @@ export async function GET(request: NextRequest) {
     const shopId = request.headers.get('x-shop-id') || 'default-shop'
 
     if (type === 'supplier') {
-      // 1. Liste des grossistes (fournisseurs)
+      // Logic for explicit supplier request (maybe used elsewhere, keep it)
       if (isSupabaseConfigured()) {
         try {
-          const { data: debts, error: dError } = await supabase
-            .from('supplier_debts')
-            .select('*')
-            .eq('shop_id', shopId)
-            .order('supplier_name', { ascending: true })
+          const { data: debts } = await supabase.from('supplier_debts').select('*').eq('shop_id', shopId).order('supplier_name', { ascending: true })
+          const { data: sales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier'])
 
-          if (dError) throw dError
+          const debtSuppliers = (debts || []).map(d => d.supplier_name)
+          const salesSuppliers = (sales || []).filter(s => s.client_name).map(s => s.client_name)
+          const supplierNames = Array.from(new Set([...debtSuppliers, ...salesSuppliers]))
 
-          // Récupérer l'historique des engagements
-          const { data: txs } = await supabase
-            .from('supplier_transactions')
-            .select('*')
-            .eq('shop_id', shopId)
-            .order('created_at', { ascending: false })
-
-          const list = (debts || []).map((d: any) => ({
-            id: d.id,
-            name: d.supplier_name,
-            amount: d.amount_owed,
-            paid: d.paid_amount,
-            status: d.status,
-            history: (txs || [])
-              .filter((t: any) => t.supplier_name === d.supplier_name)
-              .map((t: any) => ({
-                id: t.id,
-                date: new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t.created_at)),
-                time: new Date(t.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Porto-Novo' }),
-                description: t.description,
-                amount: t.amount
-              }))
-          }))
-
-          return NextResponse.json({ suppliers: list })
-        } catch (e) {
-          console.error('Erreur Supabase Grossistes, repli local:', e)
-        }
-      }
-
-      // Repli Local en mémoire
-      const list = getLocalSuppliers(shopId)
-      return NextResponse.json({ suppliers: list })
-
-    } else {
-      // 2. Liste des clients débiteurs
-      if (isSupabaseConfigured()) {
-        try {
-          // Récupérer toutes les dettes clients
-          const { data: debts, error: dError } = await supabase
-            .from('debts')
-            .select('*')
-            .eq('shop_id', shopId)
-            .order('client_name', { ascending: true })
-
-          if (dError) throw dError
-
-          // Récupérer toutes les ventes à crédit et remboursements associés à ces clients
-          const { data: sales } = await supabase
-            .from('sales')
-            .select('*')
-            .eq('shop_id', shopId)
-            .in('type', ['sale_credit', 'payment_client'])
-
-          // Regrouper par client (à la fois depuis 'debts' et depuis 'sales')
-          const debtClients = (debts || []).map(d => d.client_name)
-          const salesClients = (sales || []).filter(s => s.client_name).map(s => s.client_name)
-          const clientNames = Array.from(new Set([...debtClients, ...salesClients]))
-
-          const list = clientNames.map(name => {
-            const clientDebts = (debts || []).filter(d => d.client_name === name)
-            const legacyOwed = clientDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
-            const legacyPaid = clientDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
+          const list = supplierNames.map(name => {
+            const supplierDebts = (debts || []).filter(d => d.supplier_name === name)
+            const legacyOwed = supplierDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
+            const legacyPaid = supplierDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
             
             const history = (sales || [])
               .filter(s => s.client_name === name && s.status !== 'crossed_out')
@@ -129,18 +69,16 @@ export async function GET(request: NextRequest) {
                 id: s.id,
                 date: s.date,
                 time: s.time,
-                description: s.type === 'sale_credit' ? `Achat à crédit: ${s.notes || 'Articles divers'}` : 'Remboursement crédit',
-                amount: s.type === 'sale_credit' ? s.debt_amount : -s.paid_amount
+                description: s.type === 'purchase_credit' ? `Achat à crédit: ${s.notes || 'Articles divers'}` : 'Remboursement fournisseur',
+                amount: s.type === 'purchase_credit' ? s.debt_amount : -s.paid_amount
               }))
             
-            // Calculer la balance à partir des ventes
             const salesOwed = history.reduce((sum, h) => sum + (h.amount > 0 ? h.amount : 0), 0)
             const salesPaid = history.reduce((sum, h) => sum + (h.amount < 0 ? Math.abs(h.amount) : 0), 0)
-
             const totalAmountOwed = (legacyOwed - legacyPaid) + (salesOwed - salesPaid)
 
             return {
-              id: clientDebts[0]?.id || randomUUID(),
+              id: supplierDebts[0]?.id || randomUUID(),
               name,
               amount: totalAmountOwed,
               paid: legacyPaid + salesPaid,
@@ -148,35 +86,97 @@ export async function GET(request: NextRequest) {
               history
             }
           })
-
-          const clientsWithFlags = list.map(c => ({
-            id: c.id,
-            client_name: c.name,
-            amount_owed: c.amount,
-            paid_amount: c.paid,
-            status: c.status,
-            history: c.history,
-            debt_type: 'client'
-          }))
-          return NextResponse.json({ debts: clientsWithFlags })
+          return NextResponse.json({ suppliers: list })
         } catch (e) {
-          console.error('Erreur Supabase Clients, repli local:', e)
+          console.error('Erreur Supabase Grossistes:', e)
         }
       }
-
-      // Repli Local en mémoire
-      const list = getLocalClients(shopId)
-      const clientsWithFlags = list.map((c: any) => ({
-        id: c.id,
-        client_name: c.name,
-        amount_owed: c.amount,
-        paid_amount: c.paid,
-        status: c.status,
-        history: c.history,
-        debt_type: 'client'
-      }))
-      return NextResponse.json({ debts: clientsWithFlags })
+      return NextResponse.json({ suppliers: getLocalSuppliers(shopId) })
     }
+
+    // Default: return BOTH clients and suppliers for DebtsBook.tsx
+    let allDebts: any[] = []
+    
+    if (isSupabaseConfigured()) {
+      try {
+        // --- CLIENTS ---
+        const { data: cDebts } = await supabase.from('debts').select('*').eq('shop_id', shopId)
+        const { data: cSales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['sale_credit', 'payment_client'])
+        
+        const cNames = Array.from(new Set([...(cDebts || []).map(d => d.client_name), ...(cSales || []).filter(s => s.client_name).map(s => s.client_name)]))
+        
+        const clientList = cNames.map(name => {
+          const clientDebts = (cDebts || []).filter(d => d.client_name === name)
+          const legacyOwed = clientDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
+          const legacyPaid = clientDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
+          
+          const history = (cSales || []).filter(s => s.client_name === name && s.status !== 'crossed_out').map(s => ({
+            id: s.id, date: s.date, time: s.time,
+            description: s.type === 'sale_credit' ? `Achat à crédit: ${s.notes || 'Articles divers'}` : 'Remboursement crédit',
+            amount: s.type === 'sale_credit' ? s.debt_amount : -s.paid_amount
+          }))
+          const salesOwed = history.reduce((sum, h) => sum + (h.amount > 0 ? h.amount : 0), 0)
+          const salesPaid = history.reduce((sum, h) => sum + (h.amount < 0 ? Math.abs(h.amount) : 0), 0)
+          const totalAmountOwed = (legacyOwed - legacyPaid) + (salesOwed - salesPaid)
+
+          return {
+            id: clientDebts[0]?.id || randomUUID(),
+            client_name: name,
+            amount_owed: totalAmountOwed,
+            paid_amount: legacyPaid + salesPaid,
+            status: totalAmountOwed <= 0 ? 'paid' : 'pending',
+            history,
+            debt_type: 'client'
+          }
+        })
+        allDebts.push(...clientList)
+
+        // --- SUPPLIERS ---
+        const { data: sDebts } = await supabase.from('supplier_debts').select('*').eq('shop_id', shopId)
+        const { data: sSales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier'])
+        
+        const sNames = Array.from(new Set([...(sDebts || []).map(d => d.supplier_name), ...(sSales || []).filter(s => s.client_name).map(s => s.client_name)]))
+        
+        const supplierList = sNames.map(name => {
+          const supplierDebts = (sDebts || []).filter(d => d.supplier_name === name)
+          const legacyOwed = supplierDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
+          const legacyPaid = supplierDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
+          
+          const history = (sSales || []).filter(s => s.client_name === name && s.status !== 'crossed_out').map(s => ({
+            id: s.id, date: s.date, time: s.time,
+            description: s.type === 'purchase_credit' ? `Achat à crédit: ${s.notes || 'Articles divers'}` : 'Remboursement fournisseur',
+            amount: s.type === 'purchase_credit' ? s.debt_amount : -s.paid_amount
+          }))
+          const salesOwed = history.reduce((sum, h) => sum + (h.amount > 0 ? h.amount : 0), 0)
+          const salesPaid = history.reduce((sum, h) => sum + (h.amount < 0 ? Math.abs(h.amount) : 0), 0)
+          const totalAmountOwed = (legacyOwed - legacyPaid) + (salesOwed - salesPaid)
+
+          return {
+            id: supplierDebts[0]?.id || randomUUID(),
+            client_name: name,
+            amount_owed: totalAmountOwed,
+            paid_amount: legacyPaid + salesPaid,
+            status: totalAmountOwed <= 0 ? 'paid' : 'pending',
+            history,
+            debt_type: 'supplier'
+          }
+        })
+        allDebts.push(...supplierList)
+
+        return NextResponse.json({ debts: allDebts })
+      } catch (e) {
+        console.error('Erreur Supabase ALL Debts:', e)
+      }
+    }
+
+    // Local fallback
+    const localClients = getLocalClients(shopId).map((c: any) => ({
+      id: c.id, client_name: c.name, amount_owed: c.amount, paid_amount: c.paid, status: c.status, history: c.history, debt_type: 'client'
+    }))
+    const localSuppliers = getLocalSuppliers(shopId).map((c: any) => ({
+      id: c.id, client_name: c.name, amount_owed: c.amount, paid_amount: c.paid, status: c.status, history: c.history, debt_type: 'supplier'
+    }))
+    return NextResponse.json({ debts: [...localClients, ...localSuppliers] })
   } catch (error) {
     console.error('Erreur API GET debts:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
