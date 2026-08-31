@@ -34,6 +34,7 @@ export interface UseSaleCreationOptions {
   selectedPen: string
   onSaleCreated: () => void          // Appelé après chaque vente pour rafraîchir l'affichage
   onAfterSale?: (total: number) => void  // Optionnel : pour le calculateur de monnaie
+  onError?: (msg: string) => void
 }
 
 export interface UseSaleCreationReturn {
