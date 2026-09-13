@@ -127,10 +127,10 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   const filteredSales = useMemo(() => {
     return sales.filter((s) => {
       // Filtre par catégorie de stylo cliqué
-      if (activeFilter === 'blue' && !(s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit')) return false
-      if (activeFilter === 'red' && !(s.pen_color === 'red' || s.type === 'cash_out')) return false
-      if (activeFilter === 'green' && !(s.pen_color === 'green' || s.type === 'stock_cash')) return false
-      if (activeFilter === 'purple' && !(s.pen_color === 'purple' || s.type === 'stock_credit')) return false
+      if (activeFilter === 'blue' && !(s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale' || s.type === 'sale_cash' || s.type === 'payment_client')) return false
+      if (activeFilter === 'red' && !(s.pen_color === 'red' || s.type === 'cash_out' || s.type === 'payment_supplier' || s.type === 'stock_damage')) return false
+      if (activeFilter === 'green' && !(s.pen_color === 'green' || s.type === 'purchase_cash' || s.type === 'stock_cash')) return false
+      if (activeFilter === 'purple' && !(s.pen_color === 'purple' || s.type === 'purchase_credit' || s.type === 'stock_credit')) return false
       if (activeFilter === 'yellow' && !(s.pen_color === 'yellow' || s.type === 'sale_credit')) return false
 
       if (!searchQuery.trim()) return true

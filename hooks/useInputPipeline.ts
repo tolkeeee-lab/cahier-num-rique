@@ -243,7 +243,7 @@ export function resolveTransactionPricesFromCatalog(
 
     let unitPrice = isPurchase
       ? (packMatch ? product.unit_cost * (product.multiplier || 1) : product.unit_cost)
-      : product.unit_price
+      : (packMatch ? product.unit_price * (product.multiplier || 1) : product.unit_price)
     if (!unitPrice || unitPrice <= 0) return null
 
     const textOut = packMatch
@@ -304,7 +304,7 @@ export function resolveTransactionPricesFromCatalog(
       if (product) {
         let unitPrice = isPurchase
           ? (packMatch ? product.unit_cost * (product.multiplier || 1) : product.unit_cost)
-          : product.unit_price
+          : (packMatch ? product.unit_price * (product.multiplier || 1) : product.unit_price)
         if (unitPrice && unitPrice > 0) {
           const textOut = packMatch
             ? `${qty} ${packMatch[1]} de ${product.name} à ${unitPrice}`

@@ -5,7 +5,7 @@ import { DebtSummaryCards } from '@/components/debts/DebtSummaryCards'
 import { DebtFilterBar } from '@/components/debts/DebtFilterBar'
 import { DebtItemCard } from '@/components/debts/DebtItemCard'
 import { DebtRepaymentModal } from '@/components/sales/DebtRepaymentModal'
-import { saveOfflineSale, generateOfflineId } from '@/lib/offlineDb'
+import { saveOfflineSale, generateOfflineId, getOfflineSales, markAsSynced, OfflineSale } from '@/lib/offlineDb'
 import { getTodayDateString } from '@/lib/dateUtils'
 interface Debt {
   id: string
@@ -65,14 +65,15 @@ export function DebtsBook({
       const unsyncedSales = salesToMerge.filter(s => s.status !== 'crossed_out' && s.is_synced === false)
 
       const processSales = (filteredSales: any[], type: 'client' | 'supplier') => {
-        const names = Array.from(new Set(filteredSales.map(s => s.client_name || s.client).filter(Boolean)))
+        const names = Array.from(new Set(filteredSales.map(s => (s.client_name || s.client || '').trim()).filter(Boolean)))
         
         names.forEach(name => {
-          const sSales = filteredSales.filter(s => s.client_name === name || s.client === name)
+          const lowerName = name.toLowerCase()
+          const sSales = filteredSales.filter(s => (s.client_name || s.client || '').toLowerCase().trim() === lowerName)
           const owed = sSales.filter(s => s.type === (type === 'client' ? 'sale_credit' : 'purchase_credit')).reduce((sum, s) => sum + (s.debt_amount ?? s.debt ?? s.total_amount ?? s.total ?? 0), 0)
           const paid = sSales.filter(s => s.type === (type === 'client' ? 'payment_client' : 'payment_supplier')).reduce((sum, s) => sum + (s.paid_amount ?? s.paid ?? s.total_amount ?? s.total ?? 0), 0)
           
-          const existingIdx = mergedDebts.findIndex(d => d.client_name === name && d.debt_type === type)
+          const existingIdx = mergedDebts.findIndex(d => (d.client_name || '').toLowerCase().trim() === lowerName && d.debt_type === type)
           if (existingIdx >= 0) {
             mergedDebts[existingIdx].amount_owed = mergedDebts[existingIdx].amount_owed + owed - paid
             mergedDebts[existingIdx].paid_amount = (mergedDebts[existingIdx].paid_amount || 0) + paid
@@ -103,76 +104,73 @@ export function DebtsBook({
     } else {
       setDebts(apiDebts)
     }
-  }, [shopId, sales])
+  }, [shopId, sales, onError])
 
   useEffect(() => {
     loadDebts()
   }, [loadDebts])
 
-  const handleConfirmRepayment = async (debtId: string, amount: number) => {
-    const debt = debts.find((d) => d.id === debtId)
-    if (!debt) return
+  const handleConfirmRepayment = async (repayAmount: number, customNotes?: string) => {
+    if (!activeRepayDebt) return
 
+    const debt = activeRepayDebt
     const isSupplier = debt.debt_type === 'supplier'
-    const newSale = {
-      id: generateOfflineId(),
+    const today = getTodayDateString()
+    const now = new Date()
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const saleId = generateOfflineId()
+
+    const newSale: OfflineSale = {
+      id: saleId,
       shop_id: shopId,
-      date: getTodayDateString(),
-      time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      date: today,
+      time: time,
+      type: isSupplier ? 'payment_supplier' : 'payment_client',
       client: debt.client_name,
-      total: amount,
-      paid: amount,
+      total: repayAmount,
+      paid: repayAmount,
       debt: 0,
       status: 'paid',
-      type: isSupplier ? 'payment_supplier' : 'payment_client',
+      notes: customNotes || (isSupplier
+        ? `Remboursement dette fournisseur (${debt.client_name})`
+        : `Remboursement dette client (${debt.client_name})`),
       pen_color: isSupplier ? 'red' : 'blue',
-      notes: isSupplier ? 'Remboursement fournisseur' : 'Remboursement',
-      created_at: new Date().toISOString(),
       articles: [],
-      is_synced: false
+      is_synced: false,
+      created_at: now.toISOString(),
     }
 
-    // Sauvegarde OFFLINE instantanée !
-    saveOfflineSale(shopId, newSale as any)
+    saveOfflineSale(shopId, newSale)
 
-    // Si on avait une callback depuis le parent, on l'appelle
-    if (onSettleDebt) {
-      await onSettleDebt(debtId, amount)
-    } else {
-      // Sinon, on tente de synchroniser silencieusement avec l'API
-      try {
-        const res = await fetch('/api/debts', {
+    try {
+      if (onSettleDebt) {
+        await onSettleDebt(debt.id, repayAmount)
+        markAsSynced(shopId, saleId)
+      } else {
+        const response = await fetch('/api/sales', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
-          body: JSON.stringify({ 
-            name: debt.client_name, 
-            amount, 
-            type: isSupplier ? 'supplier' : 'client', 
-            action: 'pay' 
+          body: JSON.stringify({
+            overrideData: newSale,
+            type: newSale.type,
+            penColor: newSale.pen_color,
           }),
         })
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}))
-          // Si l'API refuse (ex: fonds insuffisants), on supprime la vente hors ligne qu'on vient de créer
-          const currentOffline = JSON.parse(localStorage.getItem(`offline_sales_${shopId}`) || '[]')
-          localStorage.setItem(`offline_sales_${shopId}`, JSON.stringify(currentOffline.filter((s: any) => s.id !== newSale.id)))
-          throw new Error(errData.error || 'Erreur lors du paiement')
-        } else {
-           // Marquer comme synchronisé si succès
-           const currentOffline = JSON.parse(localStorage.getItem(`offline_sales_${shopId}`) || '[]')
-           localStorage.setItem(`offline_sales_${shopId}`, JSON.stringify(currentOffline.map((s: any) => s.id === newSale.id ? { ...s, is_synced: true } : s)))
+        if (response.ok) {
+          markAsSynced(shopId, saleId)
         }
-      } catch (e: any) {
-        console.warn('Règlement erreur ou conservé en local:', e)
-        if (onError) onError(e.message || '⚠️ Paiement sauvegardé hors-ligne.')
       }
+    } catch (e) {
+      console.warn('Mode hors-ligne : remboursement enregistré localement')
     }
-    
-    // Forcer la mise à jour immédiate de l'état local avant même que le parent ne recharge
-    const currentOffline = JSON.parse(localStorage.getItem(`offline_sales_${shopId}`) || '[]')
-    const combinedSales = [...(sales || []).filter(s => s.id !== newSale.id), ...currentOffline]
-    
-    // On rappelle loadDebts qui va fusionner avec combinedSales
+
+    setActiveRepayDebt(null)
+
+    const currentOffline = getOfflineSales(shopId)
+    const combinedSales = [
+      ...currentOffline,
+      ...(sales || []).filter((s) => !currentOffline.some((o) => o.id === s.id)),
+    ]
     loadDebts(combinedSales)
     if (onRefreshTotals) onRefreshTotals()
   }
@@ -186,18 +184,20 @@ export function DebtsBook({
       if (debtTypeFilter === 'supplier' && !isSupp) return false
       if (debtTypeFilter === 'client' && isSupp) return false
     }
-    if (statusFilter !== 'all' && d.status !== statusFilter) {
-      return false
+    if (statusFilter !== 'all') {
+      const isSettled = d.status === 'settled' || (d as any).status === 'paid'
+      if (statusFilter === 'settled' && !isSettled) return false
+      if (statusFilter === 'pending' && isSettled) return false
     }
     return true
   })
 
   const totalClientDebts = debts
-    .filter((d) => d.status === 'pending' && d.debt_type !== 'supplier')
+    .filter((d) => (d.status === 'pending' && (d as any).status !== 'paid') && d.debt_type !== 'supplier')
     .reduce((sum, d) => sum + (d.amount_owed || 0), 0)
 
   const totalSupplierDebts = debts
-    .filter((d) => d.status === 'pending' && d.debt_type === 'supplier')
+    .filter((d) => (d.status === 'pending' && (d as any).status !== 'paid') && d.debt_type === 'supplier')
     .reduce((sum, d) => sum + (d.amount_owed || 0), 0)
 
   return (
@@ -241,7 +241,7 @@ export function DebtsBook({
             client: activeRepayDebt.client_name,
             debt: activeRepayDebt.amount_owed,
           }}
-          onConfirmRepayment={(id, amount) => handleConfirmRepayment(id, amount)}
+          onConfirmRepayment={async (_id, amount, notes) => handleConfirmRepayment(amount, notes)}
         />
       )}
     </div>

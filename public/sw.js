@@ -1,12 +1,15 @@
 /* Service Worker PWA Robust Offline Shell — Cahier Numérique */
 
-const CACHE_NAME = 'cahier-pwa-v23'
+const CACHE_NAME = 'cahier-pwa-v24'
 const STATIC_ASSETS = [
   '/',
   '/journal',
   '/manifest.json',
   '/manifest.webmanifest',
   '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/apple-touch-icon.png',
 ]
 
 // Installation : Pre-caching robuste asset par asset avec Promise.allSettled

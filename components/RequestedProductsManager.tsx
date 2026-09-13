@@ -2,14 +2,17 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Share2, Sparkles, Check, Search, Send } from 'lucide-react'
 import { formatCurrency } from '@/lib/currencyUtils'
 import { recordRequestedProductInStorage, RequestedProduct } from '@/lib/requestedProductsUtils'
+import { getOfflineSales } from '@/lib/offlineDb'
 
 interface RequestedProductsManagerProps {
   shopId: string
   userRole?: string
+  sales?: any[]
 }
 
 export function RequestedProductsManager({
-  shopId
+  shopId,
+  sales
 }: RequestedProductsManagerProps) {
   const [items, setItems] = useState<RequestedProduct[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -28,13 +31,58 @@ export function RequestedProductsManager({
   useEffect(() => {
     try {
       const stored = localStorage.getItem(storageKey)
-      if (stored) {
-        setItems(JSON.parse(stored))
-      } else {
-        setItems([])
+      const localItems: RequestedProduct[] = stored ? JSON.parse(stored) : []
+
+      // Fusionner avec les ventes de type 'client_request' (patron ↔ employé)
+      const salesSource = sales || getOfflineSales(shopId)
+      const requestSales = salesSource.filter((s: any) => s.type === 'client_request' && s.status !== 'crossed_out')
+
+      const mergedMap = new Map<string, RequestedProduct>()
+      for (const item of localItems) {
+        mergedMap.set(item.name.toLowerCase().trim(), { ...item })
       }
+
+      // Grouper les demandes provenant des ventes pour obtenir le décompte réel
+      const saleCountMap = new Map<string, { count: number; lastSale: any; lastPrice?: number }>()
+      for (const s of requestSales) {
+        const art = s.articles?.[0]
+        const prodName = (art?.name || s.notes || '').replace(/^(demande|client demande|manque|demande client)\s*:?\s*/i, '').trim()
+        if (!prodName) continue
+        const key = prodName.toLowerCase()
+        const current = saleCountMap.get(key) || { count: 0, lastSale: s, lastPrice: art?.unit_price }
+        current.count += 1
+        current.lastSale = s
+        if (art?.unit_price) current.lastPrice = art.unit_price
+        saleCountMap.set(key, current)
+      }
+
+      for (const [key, { count, lastSale, lastPrice }] of saleCountMap.entries()) {
+        const art = lastSale.articles?.[0]
+        const prodName = (art?.name || lastSale.notes || '').replace(/^(demande|client demande|manque|demande client)\s*:?\s*/i, '').trim()
+        const existing = mergedMap.get(key)
+        if (existing) {
+          existing.requestCount = Math.max(existing.requestCount, count)
+          if (!existing.estimatedPrice && lastPrice) existing.estimatedPrice = lastPrice
+        } else {
+          mergedMap.set(key, {
+            id: lastSale.id || `req_${Date.now()}`,
+            name: prodName.charAt(0).toUpperCase() + prodName.slice(1),
+            category: lastSale.category || 'Alimentation',
+            requestCount: count,
+            estimatedPrice: lastPrice || undefined,
+            notes: lastSale.notes,
+            date: lastSale.date || new Date().toISOString().slice(0, 10),
+            status: 'pending'
+          })
+        }
+      }
+
+
+      const mergedList = Array.from(mergedMap.values())
+      setItems(mergedList)
+      localStorage.setItem(storageKey, JSON.stringify(mergedList))
     } catch { }
-  }, [storageKey])
+  }, [storageKey, sales, shopId])
 
   const saveItems = (updated: RequestedProduct[]) => {
     setItems(updated)

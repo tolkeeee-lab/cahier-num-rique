@@ -48,20 +48,20 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
     switch (penId) {
       case 'blue':
         return validSales
-          .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit' || s.type === 'sale')
-          .reduce((sum, s) => sum + (s.total || 0), 0)
+          .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale' || s.type === 'sale_cash' || s.type === 'payment_client')
+          .reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
       case 'red':
         return validSales
-          .filter(s => s.pen_color === 'red' || s.type === 'cash_out')
-          .reduce((sum, s) => sum + (s.total || 0), 0)
+          .filter(s => s.pen_color === 'red' || s.type === 'cash_out' || s.type === 'payment_supplier' || s.type === 'stock_damage')
+          .reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
       case 'green':
         return validSales
-          .filter(s => s.pen_color === 'green' || s.type === 'stock_cash')
-          .reduce((sum, s) => sum + (s.total || 0), 0)
+          .filter(s => s.pen_color === 'green' || s.type === 'purchase_cash' || s.type === 'stock_cash')
+          .reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
       case 'purple':
         return validSales
-          .filter(s => s.pen_color === 'purple' || s.type === 'stock_credit')
-          .reduce((sum, s) => sum + (s.total || 0), 0)
+          .filter(s => s.pen_color === 'purple' || s.type === 'purchase_credit' || s.type === 'stock_credit')
+          .reduce((sum, s) => sum + (s.total || s.debt || 0), 0)
       case 'yellow':
         return validSales
           .filter(s => s.pen_color === 'yellow' || s.type === 'sale_credit')

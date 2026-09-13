@@ -531,13 +531,22 @@ export default function JournalPage() {
     saleCreation.setInput(prefix ? `${prefix}, ${entry}` : entry)
   }
 
-  // ── Horloge ────────────────────────────────────────────────────────────────
+  // ── Horloge & Écouteurs globaux ──────────────────────────────────────────
   useEffect(() => {
     const update = () => setCurrentTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
     update()
     const t = setInterval(update, 30000)
-    return () => clearInterval(t)
-  }, [])
+
+    const handleSaleCreated = () => {
+      journalData.reloadData()
+    }
+    window.addEventListener('cahier_sale_created', handleSaleCreated)
+
+    return () => {
+      clearInterval(t)
+      window.removeEventListener('cahier_sale_created', handleSaleCreated)
+    }
+  }, [journalData])
 
   const pens = getPens(shopManager.shopActivity)
 
@@ -598,6 +607,11 @@ export default function JournalPage() {
     const prod = products.find(p => p.id === productId)
     if (prod) {
       saveOfflineProduct(shopManager.shopId, { ...prod, barcode } as any)
+      fetch('/api/stock', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-shop-id': shopManager.shopId },
+        body: JSON.stringify({ id: productId, barcode }),
+      }).catch(() => {})
       setPostItMessage(`🔗 Code-barres lié à ${prod.name}`)
     }
   }
@@ -892,12 +906,20 @@ export default function JournalPage() {
             )}
             {activeTab === 'shopping' && (
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <ShoppingListManager shopId={shopManager.shopId} />
+                <ShoppingListManager
+                  shopId={shopManager.shopId}
+                  onConvertToStockPurchase={async (text: string) => {
+                    saleCreation.setInput(text)
+                    setSelectedPen('green')
+                    setActiveTab('cahier')
+                    setPostItMessage('🛒 Bon de commande transféré dans le cahier (Stylo Vert Stock) !')
+                  }}
+                />
               </div>
             )}
             {activeTab === 'demandes' && (
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <RequestedProductsManager shopId={shopManager.shopId} />
+                <RequestedProductsManager shopId={shopManager.shopId} sales={journalData.allSales} />
               </div>
             )}
             {activeTab === 'particulier' && (
@@ -1040,6 +1062,32 @@ export default function JournalPage() {
         onComplete={async (product) => {
           const qty = wizardPrefill?.quantity || 1
           const isUnit = product.packaging === 'unité'
+          const mult = product.multiplier || 1
+          const unitCost = isUnit ? product.purchasePrice : Math.round(product.purchasePrice / mult)
+
+          // 1. Enregistrer le nouveau produit directement dans le catalogue stock
+          const newProductItem = {
+            id: `stk_${Date.now()}`,
+            shop_id: shopManager.shopId,
+            name: product.name,
+            category: product.category || 'Général',
+            unit: product.unit || 'unité',
+            alert_threshold: product.alertThreshold || 5,
+            initial_stock: 0,
+            unit_cost: unitCost,
+            unit_price: product.salePrice,
+            multiplier: mult,
+            packaging_name: product.packaging || 'unité',
+            created_at: new Date().toISOString(),
+          }
+          saveOfflineProduct(shopManager.shopId, newProductItem as any)
+          fetch('/api/stock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-shop-id': shopManager.shopId },
+            body: JSON.stringify(newProductItem),
+          }).catch(() => {})
+
+          // 2. Enregistrer l'opération d'approvisionnement dans le cahier
           const text = isUnit
             ? `stock de ${qty} ${product.name} à ${product.purchasePrice} prix de vente à l'unité ${product.salePrice}`
             : `stock de ${qty} ${product.packaging} de ${product.name} de ${product.multiplier} ${product.unit} à ${product.purchasePrice} prix de vente à l'unité ${product.salePrice}`

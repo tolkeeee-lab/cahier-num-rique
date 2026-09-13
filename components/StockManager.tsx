@@ -6,9 +6,11 @@ import { StockToolbar } from '@/components/stock/StockToolbar'
 import { StockTable } from '@/components/stock/StockTable'
 import { ProductModal } from '@/components/stock/ProductModal'
 import { RestockAdvisorModal } from '@/components/stock/RestockAdvisorModal'
+import { ProductMergeModal } from '@/components/stock/ProductMergeModal'
 import { StockFormState } from '@/components/stock/types'
 import { exportSalesToCSV } from '@/lib/exportUtils'
-import { clearOfflineProducts, saveOfflineProduct, getOfflineSales } from '@/lib/offlineDb'
+import { clearOfflineProducts, saveOfflineProduct, deleteOfflineProduct, getOfflineSales, getOfflineProducts, replaceOfflineProducts } from '@/lib/offlineDb'
+import { findDuplicateCandidates } from '@/lib/productUtils'
 
 interface Product {
   id: string
@@ -26,6 +28,8 @@ interface Product {
   lot_price?: number
   barcode?: string
   trade_type?: 'retail' | 'semi_wholesale' | 'wholesale'
+  shop_id?: string
+  stock_tracked?: boolean
 }
 
 interface StockManagerProps {
@@ -63,6 +67,9 @@ export function StockManager({
   // State pour ProductModal
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false)
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
+  const [activePairIndex, setActivePairIndex] = useState(0)
+  const [merging, setMerging] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState<StockFormState>(defaultFormData)
   const [saving, setSaving] = useState(false)
@@ -78,11 +85,24 @@ export function StockManager({
       })
       if (res.ok) {
         const data = await res.json()
-        setProducts(data.products || [])
+        const prods = data.products || []
+        setProducts(prods)
+        if (prods.length > 0) {
+          replaceOfflineProducts(shopId, prods as any)
+        }
+        return
       }
+      // Si la réponse n'est pas ok, repli sur le cache local
+      const local = getOfflineProducts(shopId)
+      if (local && local.length > 0) setProducts(local as any)
     } catch (err: any) {
-      console.error('Erreur chargement stock:', err)
-      if (onError) onError(err.message)
+      console.warn('Erreur chargement stock distant, repli sur le stockage local:', err)
+      const local = getOfflineProducts(shopId)
+      if (local && local.length > 0) {
+        setProducts(local as any)
+      } else if (onError) {
+        onError(err.message)
+      }
     }
   }, [shopId, onError])
 
@@ -150,14 +170,7 @@ export function StockManager({
         trade_type: formData.trade_type,
       }
 
-      const res = await fetch('/api/stock', {
-        method: editingProduct ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
-        body: JSON.stringify(body),
-      })
-
-      const savedData = res.ok ? await res.json() : null
-      const finalProduct: Product = savedData?.product || {
+      const finalProduct: Product = {
         ...body,
         id: editingProduct?.id || `stk_${Date.now()}`,
         shop_id: shopId,
@@ -165,7 +178,10 @@ export function StockManager({
         current_stock: stockVal,
       }
 
-      // Mise à jour optimiste immédiate dans la liste affichée
+      // 1. Sauvegarde locale immédiate (Offline-First garanti même sans réseau)
+      saveOfflineProduct(shopId, finalProduct as any)
+
+      // 2. Mise à jour optimiste immédiate dans la liste affichée
       setProducts(prev => {
         const targetId = editingProduct?.id || finalProduct.id
         const index = prev.findIndex(p => p.id === targetId || (editingProduct && p.name.toLowerCase() === editingProduct.name.toLowerCase()))
@@ -177,14 +193,29 @@ export function StockManager({
         return [finalProduct, ...prev]
       })
 
-      saveOfflineProduct(shopId, finalProduct as any)
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
       }
 
       setIsProductModalOpen(false)
       setEditingProduct(null)
-      loadStock()
+
+      // 3. Synchronisation serveur en arrière-plan si réseau disponible
+      try {
+        const res = await fetch('/api/stock', {
+          method: editingProduct ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+          body: JSON.stringify(body),
+        })
+        if (res.ok) {
+          const savedData = await res.json()
+          if (savedData?.product) {
+            saveOfflineProduct(shopId, savedData.product as any)
+          }
+        }
+      } catch (netErr) {
+        console.warn('Mode hors-ligne : produit enregistré localement, synchronisation en attente.', netErr)
+      }
     } catch (err) {
       console.error('Erreur sauvegarde produit:', err)
     } finally {
@@ -206,6 +237,12 @@ export function StockManager({
       })
     )
 
+    // Sauvegarde immédiate dans le cache local
+    const targetProd = products.find(p => p.id === id)
+    if (targetProd) {
+      saveOfflineProduct(shopId, { ...targetProd, current_stock: nextStock } as any)
+    }
+
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
     }
@@ -218,21 +255,21 @@ export function StockManager({
           body: JSON.stringify({ id, current_stock: nextStock }),
         })
       } catch (err) {
-        console.error('Erreur mise à jour stock:', err)
-        loadStock()
+        console.warn('Mode hors-ligne : ajustement stock enregistré localement.', err)
       }
     }, 400)
-  }, [shopId, loadStock])
+  }, [shopId, products])
 
   const handleDeleteProduct = async (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id))
+    deleteOfflineProduct(shopId, id)
     try {
       await fetch(`/api/stock?id=${id}`, {
         method: 'DELETE',
         headers: { 'x-shop-id': shopId },
       })
     } catch (err) {
-      console.error('Erreur suppression produit:', err)
+      console.error('Erreur suppression produit distante:', err)
     }
   }
 
@@ -287,6 +324,53 @@ export function StockManager({
     }).length
   }, [products])
 
+  const duplicatePairs = useMemo(() => {
+    return findDuplicateCandidates(products.map(p => ({ id: p.id, name: p.name, category: p.category })))
+  }, [products])
+
+  const handleMergeProducts = async (sourceId: string, targetId: string) => {
+    setMerging(true)
+    try {
+      // 1. Consolidation locale immédiate (Offline-First garanti)
+      const sourceProd = products.find(p => p.id === sourceId)
+      const targetProd = products.find(p => p.id === targetId)
+      if (sourceProd && targetProd) {
+        const combinedStock = (targetProd.current_stock ?? targetProd.initial_stock ?? 0) + (sourceProd.current_stock ?? sourceProd.initial_stock ?? 0)
+        saveOfflineProduct(shopId, { ...targetProd, current_stock: combinedStock } as any)
+        deleteOfflineProduct(shopId, sourceId)
+        setProducts(prev => prev.filter(p => p.id !== sourceId).map(p => p.id === targetId ? { ...p, current_stock: combinedStock } : p))
+      }
+
+      // 2. Synchronisation distante
+      try {
+        const res = await fetch('/api/stock/merge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+          body: JSON.stringify({ sourceProductId: sourceId, targetProductId: targetId }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          console.warn('Sync fusion serveur échouée ou hors-ligne:', err?.error)
+        }
+      } catch (netErr) {
+        console.warn('Mode hors-ligne : fusion effectuée localement.', netErr)
+      }
+
+      await loadStock()
+      if (activePairIndex + 1 < duplicatePairs.length) {
+        setActivePairIndex(prev => prev + 1)
+      } else {
+        setIsMergeModalOpen(false)
+        setActivePairIndex(0)
+      }
+    } catch (err: any) {
+      console.error('Erreur fusion doublons:', err)
+      if (onError) onError(err.message)
+    } finally {
+      setMerging(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <StockAlertBanner
@@ -307,6 +391,11 @@ export function StockManager({
         onClearAllStock={handleClearAllStock}
         hasProducts={products.length > 0}
         isEmployee={isEmployee}
+        duplicateCount={duplicatePairs.length}
+        onOpenMergeModal={() => {
+          setActivePairIndex(0)
+          setIsMergeModalOpen(true)
+        }}
       />
 
       <StockTable
@@ -343,6 +432,17 @@ export function StockManager({
           products={products}
           sales={getOfflineSales(shopId)}
           shopName="Ma Boutique"
+        />
+      )}
+
+      {isMergeModalOpen && (
+        <ProductMergeModal
+          isOpen={isMergeModalOpen}
+          onClose={() => setIsMergeModalOpen(false)}
+          duplicatePairs={duplicatePairs}
+          activePairIndex={activePairIndex}
+          merging={merging}
+          onMergeProducts={handleMergeProducts}
         />
       )}
     </div>

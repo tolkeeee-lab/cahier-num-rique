@@ -110,7 +110,7 @@ export function generateSyscohadaJournal(sales: any[]): DoubleEntryRow[] {
     if (totalAmount <= 0) return
 
     // 1. Vente Cash (Stylo Bleu) -> Débit 5711 Caisse / Crédit 7011 Ventes
-    if (type === 'cash_in') {
+    if (type === 'cash_in' || type === 'sale' || type === 'sale_cash') {
       journal.push({
         id: `${sale.id}_1`,
         date: dateStr,
@@ -161,39 +161,146 @@ export function generateSyscohadaJournal(sales: any[]): DoubleEntryRow[] {
         penColor
       })
     }
-    // 4. Achat à Crédit Grossiste (Stylo Violet) -> Débit 6011 Achats / Crédit 4011 Fournisseurs
+    // 4. Achat à Crédit Grossiste (Stylo Violet) -> Débit 6011 Achats / Crédit 4011 Fournisseurs + Débit 6011 / Crédit 5711 si acompte cash
     else if (type === 'purchase_credit') {
+      const remainingDebt = debtAmount > 0 ? debtAmount : (totalAmount - paidAmount)
+      if (remainingDebt > 0) {
+        journal.push({
+          id: `${sale.id}_1`,
+          date: dateStr,
+          time: timeStr,
+          pieceRef,
+          description: `Achat Crédit Fournisseur (${clientName}) : ${notesStr}`,
+          debitAccountCode: '6011',
+          debitAccountLabel: SYSCOHADA_ACCOUNTS['6011'].label,
+          creditAccountCode: '4011',
+          creditAccountLabel: SYSCOHADA_ACCOUNTS['4011'].label,
+          amount: remainingDebt,
+          category: sale.category || 'Dette Fournisseur',
+          penColor
+        })
+      }
+      if (paidAmount > 0) {
+        journal.push({
+          id: `${sale.id}_2`,
+          date: dateStr,
+          time: timeStr,
+          pieceRef,
+          description: `Acompte Cash Fournisseur (${clientName}) : ${notesStr}`,
+          debitAccountCode: '6011',
+          debitAccountLabel: SYSCOHADA_ACCOUNTS['6011'].label,
+          creditAccountCode: '5711',
+          creditAccountLabel: SYSCOHADA_ACCOUNTS['5711'].label,
+          amount: paidAmount,
+          category: sale.category || 'Acompte Fournisseur',
+          penColor
+        })
+      }
+    }
+    // 5. Vente à Crédit Client (Stylo Jaune) -> Débit 4111 Clients / Crédit 7011 Ventes + Débit 5711 / Crédit 7011 si acompte cash
+    else if (type === 'sale_credit') {
+      const remainingDebt = debtAmount > 0 ? debtAmount : (totalAmount - paidAmount)
+      if (remainingDebt > 0) {
+        journal.push({
+          id: `${sale.id}_1`,
+          date: dateStr,
+          time: timeStr,
+          pieceRef,
+          description: `Vente Crédit Client (${clientName}) : ${notesStr}`,
+          debitAccountCode: '4111',
+          debitAccountLabel: SYSCOHADA_ACCOUNTS['4111'].label,
+          creditAccountCode: '7011',
+          creditAccountLabel: SYSCOHADA_ACCOUNTS['7011'].label,
+          amount: remainingDebt,
+          category: sale.category || 'Crédit Client',
+          penColor
+        })
+      }
+      if (paidAmount > 0) {
+        journal.push({
+          id: `${sale.id}_2`,
+          date: dateStr,
+          time: timeStr,
+          pieceRef,
+          description: `Acompte Cash Client (${clientName}) : ${notesStr}`,
+          debitAccountCode: '5711',
+          debitAccountLabel: SYSCOHADA_ACCOUNTS['5711'].label,
+          creditAccountCode: '7011',
+          creditAccountLabel: SYSCOHADA_ACCOUNTS['7011'].label,
+          amount: paidAmount,
+          category: sale.category || 'Acompte Client',
+          penColor
+        })
+      }
+    }
+    // 6. Règlement Dette Client -> Débit 5711 Caisse / Crédit 4111 Clients
+    else if (type === 'payment_client') {
       journal.push({
         id: `${sale.id}_1`,
         date: dateStr,
         time: timeStr,
         pieceRef,
-        description: `Achat Crédit Fournisseur (${clientName}) : ${notesStr}`,
-        debitAccountCode: '6011',
-        debitAccountLabel: SYSCOHADA_ACCOUNTS['6011'].label,
-        creditAccountCode: '4011',
-        creditAccountLabel: SYSCOHADA_ACCOUNTS['4011'].label,
-        amount: debtAmount || totalAmount,
-        category: sale.category || 'Dette Fournisseur',
+        description: `Encaissement Dette Client (${clientName}) : ${notesStr}`,
+        debitAccountCode: '5711',
+        debitAccountLabel: SYSCOHADA_ACCOUNTS['5711'].label,
+        creditAccountCode: '4111',
+        creditAccountLabel: SYSCOHADA_ACCOUNTS['4111'].label,
+        amount: paidAmount || totalAmount,
+        category: sale.category || 'Règlement Client',
         penColor
       })
     }
-    // 5. Vente à Crédit Client (Stylo Jaune) -> Débit 4111 Clients / Crédit 7011 Ventes
-    else if (type === 'sale_credit') {
+    // 7. Règlement Dette Grossiste -> Débit 4011 Fournisseurs / Crédit 5711 Caisse
+    else if (type === 'payment_supplier') {
       journal.push({
         id: `${sale.id}_1`,
         date: dateStr,
         time: timeStr,
         pieceRef,
-        description: `Vente Crédit Client (${clientName}) : ${notesStr}`,
-        debitAccountCode: '4111',
-        debitAccountLabel: SYSCOHADA_ACCOUNTS['4111'].label,
-        creditAccountCode: '7011',
-        creditAccountLabel: SYSCOHADA_ACCOUNTS['7011'].label,
-        amount: debtAmount || totalAmount,
-        category: sale.category || 'Crédit Client',
+        description: `Règlement Fournisseur (${clientName}) : ${notesStr}`,
+        debitAccountCode: '4011',
+        debitAccountLabel: SYSCOHADA_ACCOUNTS['4011'].label,
+        creditAccountCode: '5711',
+        creditAccountLabel: SYSCOHADA_ACCOUNTS['5711'].label,
+        amount: paidAmount || totalAmount,
+        category: sale.category || 'Paiement Fournisseur',
         penColor
       })
+    }
+    // 8. Ajustement de Caisse
+    else if (type === 'cash_adjustment') {
+      const isRetrait = notesStr.toLowerCase().includes('retrait') || notesStr.toLowerCase().includes('sortie')
+      if (isRetrait) {
+        journal.push({
+          id: `${sale.id}_1`,
+          date: dateStr,
+          time: timeStr,
+          pieceRef,
+          description: `Retrait Espèces : ${notesStr}`,
+          debitAccountCode: '6581',
+          debitAccountLabel: SYSCOHADA_ACCOUNTS['6581'].label,
+          creditAccountCode: '5711',
+          creditAccountLabel: SYSCOHADA_ACCOUNTS['5711'].label,
+          amount: totalAmount,
+          category: 'Caisse',
+          penColor
+        })
+      } else {
+        journal.push({
+          id: `${sale.id}_1`,
+          date: dateStr,
+          time: timeStr,
+          pieceRef,
+          description: `Apport Espèces : ${notesStr}`,
+          debitAccountCode: '5711',
+          debitAccountLabel: SYSCOHADA_ACCOUNTS['5711'].label,
+          creditAccountCode: '7011',
+          creditAccountLabel: SYSCOHADA_ACCOUNTS['7011'].label,
+          amount: totalAmount,
+          category: 'Caisse',
+          penColor
+        })
+      }
     }
   })
 
@@ -226,19 +333,32 @@ export function calculateSyscohadaSMT(sales: any[]): SyscohadaSMTSummary {
     const notes = sale.notes || ''
     const category = sale.category || ''
 
-    if (type === 'cash_in') {
+    if (type === 'cash_in' || type === 'sale' || type === 'sale_cash') {
       chiffreAffaires701 += total
-      soldeCaisse571 += paid
+      soldeCaisse571 += (paid > 0 ? paid : total)
     } else if (type === 'sale_credit') {
       chiffreAffaires701 += total
       soldeCaisse571 += paid
       creancesClients411 += debt
+    } else if (type === 'payment_client') {
+      const amt = (paid > 0 ? paid : total)
+      soldeCaisse571 += amt
+      creancesClients411 = Math.max(0, creancesClients411 - amt)
+    } else if (type === 'payment_supplier') {
+      const amt = (paid > 0 ? paid : total)
+      soldeCaisse571 -= amt
+      dettesFournisseurs401 = Math.max(0, dettesFournisseurs401 - amt)
+    } else if (type === 'stock_damage') {
+      autresCharges658 += total
     } else if (type === 'purchase_cash' || type === 'stock_cash') {
       achatsMarchandises601 += total
       soldeCaisse571 -= total
     } else if (type === 'purchase_credit') {
       achatsMarchandises601 += total
       dettesFournisseurs401 += debt
+      if (paid > 0) {
+        soldeCaisse571 -= paid
+      }
     } else if (type === 'cash_out') {
       soldeCaisse571 -= total
       const exp = getSyscohadaExpenseAccount(notes, category)

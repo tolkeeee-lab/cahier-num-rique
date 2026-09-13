@@ -92,8 +92,10 @@ export function AnalyticsDashboard({
     }
 
     if (period === '7days') {
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      return validSales.filter(s => new Date(s.date) >= sevenDaysAgo)
+      const sevenDaysAgo = new Date(now)
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      const cutoffStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(sevenDaysAgo)
+      return validSales.filter(s => s.date >= cutoffStr)
     }
 
     if (period === 'month') {
@@ -111,8 +113,10 @@ export function AnalyticsDashboard({
     const now = new Date()
     const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
     const todays = sales.filter(s => s.date === todayStr && s.status !== 'crossed_out')
-    const totalCash = todays.filter(s => s.type === 'cash_in').reduce((sum, s) => sum + (s.total || 0), 0)
-    const count = todays.filter(s => s.type === 'cash_in' || s.type === 'sale_credit').length
+    const totalCash = todays
+      .filter(s => ['cash_in', 'sale', 'sale_cash', 'payment_client'].includes(s.type) || s.pen_color === 'blue' || (s.type === 'sale_credit' && (s.paid || 0) > 0))
+      .reduce((sum, s) => sum + (s.paid || (s.type === 'sale_credit' ? 0 : s.total) || 0), 0)
+    const count = todays.filter(s => ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type) || s.pen_color === 'blue' || s.pen_color === 'yellow').length
     return { totalCash, count }
   }, [sales])
 

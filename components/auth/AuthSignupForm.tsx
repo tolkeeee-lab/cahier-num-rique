@@ -56,7 +56,7 @@ export const AuthSignupForm: React.FC<AuthSignupFormProps> = ({
             }`}
           >
             <ShieldCheck className="w-5 h-5 text-amber-400" />
-            <span>👑 Propriétaire</span>
+            <span>Propriétaire</span>
             <span className="text-[9px] font-normal text-gray-400">Créer mon commerce</span>
           </button>
           <button
@@ -69,7 +69,7 @@ export const AuthSignupForm: React.FC<AuthSignupFormProps> = ({
             }`}
           >
             <Users className="w-5 h-5 text-amber-400" />
-            <span>👔 Employé / Vendeur</span>
+            <span>Employé / Vendeur</span>
             <span className="text-[9px] font-normal text-gray-400">J'ai un Code Boutique</span>
           </button>
         </div>

@@ -44,21 +44,40 @@ export async function POST(request: Request) {
     const effectiveUnitCost = inputUnitCost > 0 ? inputUnitCost : (product.unit_cost || 0)
 
     // Calcul de l'impact financier en caisse :
-    // - Un simple ajustement d'inventaire (inventaire physique) N'IMPACTE PAS le tiroir cash (0 F)
+    // - Un ajustement d'inventaire ou une casse N'AJOUTE PAS d'argent au tiroir cash
     // - Un achat réel d'approvisionnement déduit le montant réel (unit_cost * qté)
-    // - Une casse/perte enregistre la valeur d'achat du produit perdu
-    let calculatedAmount = 0
-    if (reason === 'inventory_correction') {
-      calculatedAmount = 0
-    } else if (type === 'in') {
-      calculatedAmount = effectiveUnitCost * quantity
-    } else {
-      calculatedAmount = (reason === 'damage' || reason === 'personal_use')
-        ? effectiveUnitCost * quantity
-        : (product.unit_price || 0) * quantity
-    }
+    // - Une casse/perte enregistre la valeur pour traçabilité mais paid_amount = 0
+    let calculatedTotal = 0
+    let calculatedPaid = 0
+    let saleType = 'stock_adjustment'
+    let penColor = 'blue'
 
-    const saleType = type === 'in' ? 'stock_cash' : 'cash_in'
+    if (reason === 'inventory_correction') {
+      calculatedTotal = 0
+      calculatedPaid = 0
+      saleType = 'stock_adjustment'
+      penColor = 'blue'
+    } else if (type === 'in') {
+      calculatedTotal = effectiveUnitCost * quantity
+      calculatedPaid = calculatedTotal
+      saleType = 'purchase_cash'
+      penColor = 'green'
+    } else if (reason === 'damage') {
+      calculatedTotal = effectiveUnitCost * quantity
+      calculatedPaid = 0
+      saleType = 'stock_damage'
+      penColor = 'red'
+    } else if (reason === 'personal_use') {
+      calculatedTotal = effectiveUnitCost * quantity
+      calculatedPaid = 0
+      saleType = 'personal_use'
+      penColor = 'purple'
+    } else {
+      calculatedTotal = (product.unit_price || 0) * quantity
+      calculatedPaid = 0
+      saleType = 'stock_adjustment'
+      penColor = 'blue'
+    }
 
     // 2. Créer l'écriture dans sales
     const { data: sale, error: saleErr } = await supabase
@@ -68,12 +87,12 @@ export async function POST(request: Request) {
         client_name: fullNotes,
         date: todayStr,
         time: timeStr,
-        total_amount: calculatedAmount,
-        paid_amount: calculatedAmount,
+        total_amount: calculatedTotal,
+        paid_amount: calculatedPaid,
         debt_amount: 0,
         status: 'paid',
         type: saleType,
-        pen_color: type === 'in' ? 'green' : 'black',
+        pen_color: penColor,
         notes: fullNotes,
       })
       .select()
@@ -85,24 +104,29 @@ export async function POST(request: Request) {
     const { error: articleErr } = await supabase
       .from('sold_articles')
       .insert({
+        shop_id: shopId,
         sale_id: sale.id,
         product_id: product.id,
         product_name: product.name,
         product_name_canonical: product.name,
         quantity: quantity,
         unit_price: type === 'in' ? effectiveUnitCost : (product.unit_price || 0),
-        subtotal: calculatedAmount,
+        subtotal: calculatedTotal,
       })
 
     if (articleErr) throw articleErr
 
-    // 4. Mettre à jour la quantité globale en stock du produit
+    // 4. Mettre à jour la quantité globale en stock du produit et réinitialiser tracking_started_at
+    // pour éviter que les calculs automatiques ne déduisent ou n'ajoutent une seconde fois l'opération
     const currentVal = product.initial_stock || 0
     const newStockVal = type === 'in' ? currentVal + quantity : Math.max(0, currentVal - quantity)
+    const saleCreatedAt = sale.created_at || new Date().toISOString()
+    const trackingTime = new Date(new Date(saleCreatedAt).getTime() + 1000).toISOString()
 
     const updatePayload: any = {
       initial_stock: Math.max(0, newStockVal),
-      updated_at: new Date().toISOString()
+      tracking_started_at: trackingTime,
+      updated_at: new Date().toISOString(),
     }
 
     if (effectiveUnitCost > 0) {
@@ -113,6 +137,7 @@ export async function POST(request: Request) {
       .from('products')
       .update(updatePayload)
       .eq('id', product.id)
+      .eq('shop_id', shopId)
 
     return NextResponse.json({
       success: true,

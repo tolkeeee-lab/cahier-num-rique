@@ -157,22 +157,30 @@ export function ReceiptPrinterModal({
             </div>
 
             {/* Totaux & Paiement */}
-            <div className="py-2 border-b border-dashed border-black space-y-1 text-[11px]">
-              <div className="flex justify-between font-bold text-sm">
-                <span>TOTAL :</span>
-                <span>{formatPrice(sale.total)}</span>
-              </div>
-              <div className="flex justify-between text-gray-800">
-                <span>Montant Payé :</span>
-                <span>{formatPrice(sale.paid || 0)}</span>
-              </div>
-              {sale.debt > 0 && (
-                <div className="flex justify-between font-bold text-red-700 bg-red-50 p-1 rounded-sm mt-1">
-                  <span>RESTANT DÛ (DETTE) :</span>
-                  <span>{formatPrice(sale.debt)}</span>
+            {(() => {
+              const debtAmount = (sale.debt !== undefined && sale.debt !== null)
+                ? Number(sale.debt)
+                : Math.max(0, (sale.total || 0) - (sale.paid || 0))
+              return (
+                <div className="py-2 border-b border-dashed border-black space-y-1 text-[11px]">
+                  <div className="flex justify-between font-bold text-sm">
+                    <span>TOTAL :</span>
+                    <span>{formatPrice(sale.total)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-800">
+                    <span>Montant Payé :</span>
+                    <span>{formatPrice(sale.paid || 0)}</span>
+                  </div>
+                  {debtAmount > 0 && (
+                    <div className="flex justify-between font-bold text-red-700 bg-red-50 p-1 rounded-sm mt-1">
+                      <span>RESTANT DÛ (DETTE) :</span>
+                      <span>{formatPrice(debtAmount)}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              )
+            })()}
+
 
             {/* Pied de page */}
             <div className="text-center pt-3 text-[9px] text-gray-600 space-y-0.5">

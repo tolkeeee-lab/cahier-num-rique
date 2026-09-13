@@ -41,10 +41,10 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
   const validSales = sales.filter(s => s.status !== 'crossed_out')
 
   // Calculs détaillés
-  const blueSales = validSales.filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit')
-  const redSales = validSales.filter(s => s.pen_color === 'red' || s.type === 'cash_out')
-  const greenSales = validSales.filter(s => s.pen_color === 'green' || s.type === 'stock_cash')
-  const purpleSales = validSales.filter(s => s.pen_color === 'purple' || s.type === 'stock_credit')
+  const blueSales = validSales.filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale' || s.type === 'sale_cash' || s.type === 'payment_client')
+  const redSales = validSales.filter(s => s.pen_color === 'red' || s.type === 'cash_out' || s.type === 'payment_supplier' || s.type === 'stock_damage')
+  const greenSales = validSales.filter(s => s.pen_color === 'green' || s.type === 'purchase_cash' || s.type === 'stock_cash')
+  const purpleSales = validSales.filter(s => s.pen_color === 'purple' || s.type === 'purchase_credit' || s.type === 'stock_credit')
   const yellowSales = validSales.filter(s => s.pen_color === 'yellow' || s.type === 'sale_credit')
 
   const blueTotal = blueSales.reduce((sum, s) => sum + (s.total || 0), 0)

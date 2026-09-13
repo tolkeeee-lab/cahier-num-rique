@@ -68,6 +68,17 @@ export async function findShopIdByCode(inputCode: string): Promise<string> {
   const formattedUpper = `BTQ-${clean.toUpperCase()}`
 
   try {
+    // 0. Priorité 0 : Chercher d'abord dans la table officielle `shops`
+    const { data: shopMatches } = await supabaseClient
+      .from('shops')
+      .select('id')
+      .ilike('id', `${clean}%`)
+      .limit(1)
+
+    if (shopMatches && shopMatches.length > 0 && isRealUuid(shopMatches[0].id)) {
+      return shopMatches[0].id
+    }
+
     // 1. Chercher dans `employees` par `shop_id`
     const { data: empMatches } = await supabaseClient
       .from('employees')

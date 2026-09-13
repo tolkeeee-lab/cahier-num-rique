@@ -220,6 +220,8 @@ export interface OfflineProduct {
   lot_quantity?: number
   lot_price?: number
   trade_type?: 'retail' | 'semi_wholesale' | 'wholesale'
+  is_synced?: boolean
+  sync_error?: string
 }
 
 // ─── Clés localStorage ────────────────────────────────────────────────────────
@@ -236,6 +238,7 @@ export function migrateOfflineShopSales(oldShopId: string, newShopId: string): v
   if (!oldShopId || !newShopId || oldShopId === newShopId) return
 
   try {
+    // 1. Migration des Ventes
     const oldSalesKey = salesKey(oldShopId)
     const oldSales = readJson<OfflineSale[]>(oldSalesKey, [])
     if (oldSales.length > 0) {
@@ -253,8 +256,88 @@ export function migrateOfflineShopSales(oldShopId: string, newShopId: string): v
       writeJson(newSalesKey, combined)
       localStorage.removeItem(oldSalesKey)
     }
+
+    // 2. Migration des Produits
+    const oldProdKey = productsKey(oldShopId)
+    const oldProds = readJson<OfflineProduct[]>(oldProdKey, [])
+    if (oldProds.length > 0) {
+      const newProdKey = productsKey(newShopId)
+      const currentNewProds = readJson<OfflineProduct[]>(newProdKey, [])
+      const combinedProds = [...currentNewProds]
+
+      for (const p of oldProds) {
+        const updatedProd = { ...p, shop_id: newShopId }
+        if (!combinedProds.some(c => c.id === p.id || c.name.toLowerCase().trim() === p.name.toLowerCase().trim())) {
+          combinedProds.push(updatedProd)
+        }
+      }
+
+      writeJson(newProdKey, combinedProds)
+      localStorage.removeItem(oldProdKey)
+    }
+
+    // 3. Migration des Dettes Clients
+    const oldClientKey = clientsKey(oldShopId)
+    const oldClients = readJson<OfflineDebt[]>(oldClientKey, [])
+    if (oldClients.length > 0) {
+      const newClientKey = clientsKey(newShopId)
+      const currentNewClients = readJson<OfflineDebt[]>(newClientKey, [])
+      const combinedClients = [...currentNewClients]
+
+      for (const c of oldClients) {
+        if (!combinedClients.some(cur => cur.client_name?.toLowerCase().trim() === c.client_name?.toLowerCase().trim())) {
+          combinedClients.push(c)
+        }
+      }
+
+      writeJson(newClientKey, combinedClients)
+      localStorage.removeItem(oldClientKey)
+    }
+
+    // 4. Migration des Dettes Fournisseurs
+    const oldSupplierKey = suppliersKey(oldShopId)
+    const oldSuppliers = readJson<OfflineDebt[]>(oldSupplierKey, [])
+    if (oldSuppliers.length > 0) {
+      const newSupplierKey = suppliersKey(newShopId)
+      const currentNewSuppliers = readJson<OfflineDebt[]>(newSupplierKey, [])
+      const combinedSuppliers = [...currentNewSuppliers]
+
+      for (const sup of oldSuppliers) {
+        if (!combinedSuppliers.some(cur => cur.client_name?.toLowerCase().trim() === sup.client_name?.toLowerCase().trim())) {
+          combinedSuppliers.push(sup)
+        }
+      }
+
+      writeJson(newSupplierKey, combinedSuppliers)
+      localStorage.removeItem(oldSupplierKey)
+    }
+
+    // 5. Migration des Clés Unitaires & Listes de la Boutique
+    const singleKeysToMigrate = [
+      'cahier_currency',
+      'cahier_shopping_list',
+      'cahier_requested_products',
+      'cahier_tactile_menu',
+      'cahier_tactile_excluded',
+      'cahier_analytics_widgets',
+      'cahier_shop_name',
+      'cahier_shop_phone',
+      'cahier_shop_address',
+      'cahier_shop_country',
+      'cahier_shop_city',
+    ]
+
+    for (const prefix of singleKeysToMigrate) {
+      const oldKey = `${prefix}_${oldShopId}`
+      const newKey = `${prefix}_${newShopId}`
+      const val = localStorage.getItem(oldKey)
+      if (val !== null && !localStorage.getItem(newKey)) {
+        localStorage.setItem(newKey, val)
+      }
+      localStorage.removeItem(oldKey)
+    }
   } catch (e) {
-    console.warn('[offlineDb] Erreur migration ventes boutique:', e)
+    console.warn('[offlineDb] Erreur migration collections boutique:', e)
   }
 }
 
@@ -482,6 +565,9 @@ export function clearOfflineProducts(shopId: string): void {
 
 export function saveOfflineProduct(shopId: string, product: OfflineProduct): void {
   const cleanProduct = sanitizeProductData(product as any)
+  if (cleanProduct.is_synced === undefined) {
+    cleanProduct.is_synced = !cleanProduct.id.startsWith('stk_')
+  }
   const products = getOfflineProducts(shopId)
   const idx = products.findIndex((p) => p.id === cleanProduct.id)
   if (idx !== -1) {
@@ -493,12 +579,35 @@ export function saveOfflineProduct(shopId: string, product: OfflineProduct): voi
   idbSaveProduct(cleanProduct).catch(() => {})
 }
 
+export function getPendingOfflineProducts(shopId: string): OfflineProduct[] {
+  return getOfflineProducts(shopId).filter((p) => p.is_synced === false || p.id.startsWith('stk_'))
+}
+
+export function markProductAsSynced(shopId: string, oldId: string, serverProduct: any): void {
+  const products = getOfflineProducts(shopId)
+  const updatedProduct = sanitizeProductData({ ...serverProduct, is_synced: true, sync_error: undefined })
+  const idx = products.findIndex((p) => p.id === oldId || p.name.toLowerCase().trim() === updatedProduct.name.toLowerCase().trim())
+  if (idx !== -1) {
+    products[idx] = updatedProduct
+  } else {
+    products.push(updatedProduct)
+  }
+  writeJson(productsKey(shopId), products)
+  idbSaveProduct(updatedProduct).catch(() => {})
+  if (oldId !== updatedProduct.id) {
+    idbDeleteProduct(oldId).catch(() => {})
+  }
+}
+
 export function deleteOfflineProduct(shopId: string, productId: string, productName?: string): void {
-  const products = getOfflineProducts(shopId).filter((p) => p.id !== productId)
+  const normName = productName ? productName.toLowerCase().trim() : null
+  const products = getOfflineProducts(shopId).filter(
+    (p) => p.id !== productId && (!normName || p.name.toLowerCase().trim() !== normName)
+  )
   writeJson(productsKey(shopId), products)
   idbDeleteProduct(productId).catch(() => {})
 
-  const targetName = productName || (productId.startsWith('orphan_') || productId.startsWith('stk_') ? productId.replace(/^(orphan_|stk_)/, '') : null)
+  const targetName = productName || (productId.startsWith('orphan_') ? productId.replace(/^orphan_/, '') : null)
   if (targetName) {
     const targetKey = targetName.toLowerCase().trim()
     const sales = getOfflineSales(shopId)
@@ -527,8 +636,8 @@ export function computeOfflineStock(
 
   for (const sale of sales) {
     if (sale.status === 'crossed_out') continue
-    const isIn = sale.type === 'purchase_cash' || sale.type === 'purchase_credit' || sale.type === 'stock_cash'
-    const isOut = sale.type === 'cash_in' || sale.type === 'sale_credit'
+    const isIn = sale.type === 'purchase_cash' || sale.type === 'purchase_credit' || sale.type === 'stock_cash' || sale.type === 'stock_in'
+    const isOut = sale.type === 'cash_in' || sale.type === 'sale_credit' || sale.type === 'sale' || sale.type === 'sale_cash' || sale.type === 'stock_damage' || sale.type === 'personal_use'
     if (!isIn && !isOut) continue
 
     for (const article of sale.articles) {

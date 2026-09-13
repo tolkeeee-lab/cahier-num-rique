@@ -122,7 +122,7 @@ export function ShoppingListManager({
         categoryFilter={categoryFilter}
         onCategoryFilterChange={setCategoryFilter}
         onSendWhatsApp={handleSendWhatsApp}
-        onConvertToStockPurchase={onConvertToStockPurchase ? () => onConvertToStockPurchase(items.map(it => `${it.quantity} ${it.name} à ${it.unitCost}`).join(', ')) : undefined}
+        onConvertToStockPurchase={onConvertToStockPurchase ? () => onConvertToStockPurchase(items.map(it => it.unitCost > 0 ? `${it.quantity} ${it.name} à ${it.unitCost}` : `${it.quantity} ${it.name}`).join(', ')) : undefined}
       />
 
       {/* Formulaire rapide d'ajout */}

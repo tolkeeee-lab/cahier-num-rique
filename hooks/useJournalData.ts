@@ -6,12 +6,12 @@ import {
   getOfflineSales,
   saveOfflineSale,
   replaceOfflineSales,
-  markAsSynced,
   OfflineSale,
 } from '@/lib/offlineDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
+import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
 
 export interface Sale {
   id: string
@@ -104,56 +104,8 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               is_synced: true,
             }))
 
-            // 1. Tenter de pousser les ventes locales en attente (is_synced === false) vers Supabase
-            try {
-              const offlineSales = getOfflineSales(shopId)
-              const unsynced = offlineSales.filter(s => s.is_synced === false)
-              if (unsynced.length > 0) {
-                for (const uSale of unsynced) {
-                  const saleRecord = {
-                    id: uSale.id,
-                    shop_id: shopId,
-                    created_at: uSale.created_at || new Date().toISOString(),
-                    date: (uSale.date || '').split('T')[0] || today,
-                    time: uSale.time || '00:00',
-                    type: uSale.type || 'cash_in',
-                    notes: uSale.notes || '',
-                    total_amount: Number(uSale.total) || 0,
-                    paid_amount: Number(uSale.paid) || 0,
-                    debt_amount: Number(uSale.debt) || 0,
-                    client_name: uSale.client || 'Client',
-                    status: uSale.status || 'paid',
-                    category: uSale.category || 'Général',
-                    pen_color: uSale.pen_color || 'blue',
-                  }
-                  const { error: sErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
-                  if (!sErr) {
-                    if (uSale.articles && uSale.articles.length > 0) {
-                      const arts = uSale.articles.map(a => ({
-                        sale_id: uSale.id,
-                        product_name: a.name,
-                        quantity: a.quantity,
-                        unit_price: a.unit_price,
-                        subtotal: a.quantity * a.unit_price,
-                      }))
-                      await supabaseClient.from('sold_articles').upsert(arts)
-                    }
-                    // ✅ Marquer proprement comme synchronisé dans localStorage
-                    markAsSynced(shopId, uSale.id)
-                    // Ajouter aux ventes mappées si elle manquait dans le résultat Supabase
-                    if (!mappedSales.some(ms => ms.id === uSale.id)) {
-                      mappedSales.push({
-                        ...uSale,
-                        date: (uSale.date || '').split('T')[0] || today,
-                        is_synced: true,
-                      } as any)
-                    }
-                  }
-                }
-              }
-            } catch (syncErr) {
-              console.warn('Erreur sync ventes en attente:', syncErr)
-            }
+            // NOTE: La synchronisation des ventes en attente est EXCLUSIVEMENT gérée par useOfflineSync.
+            // Ne pas pousser les ventes ici pour éviter les doublons et les race conditions.
 
             // 2. Fusion sécurisée : Supabase est la vérité pour les ventes connues,
             // mais on inclut TOUJOURS les ventes locales dont l'ID n'est pas encore arrivé dans Supabase
@@ -307,12 +259,13 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       } catch {}
     }
 
-    // Polling doux de sécurité toutes les 10 secondes (sync employé ↔ propriétaire)
+    // Polling de secours doux (120s) — uniquement si Realtime Supabase est indisponible
+    // Le Realtime Channel ci-dessus est la méthode principale de sync multi-appareils.
     const pollInterval = setInterval(() => {
-      if (isOnline && isMounted) {
+      if (isOnline && isMounted && !channel) {
         reloadData()
       }
-    }, 10000)
+    }, 120_000)
 
     return () => {
       isMounted = false
@@ -333,15 +286,8 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       if (s.status === 'crossed_out') return
       const type = s.type
 
-      if (type === 'cash_in' || type === 'payment_client' || type === 'sale') {
-        cash += s.paid
-      } else if (type === 'cash_out' || type === 'purchase_cash' || type === 'payment_supplier') {
-        cash -= s.total
-      } else if (type === 'cash_adjustment') {
-        const isRetrait = (s.notes || '').toLowerCase().includes('retrait') || s.pen_color === 'red'
-        if (isRetrait) cash -= s.paid || s.total
-        else cash += s.paid || s.total
-      }
+      // Calcul unifié du tiroir-caisse (gestion apports, retraits, ventes, dépenses, règlements)
+      cash += getItemCashDelta(s)
 
       if (s.debt > 0) {
         if (type === 'purchase_credit' || s.pen_color === 'purple') {

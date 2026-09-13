@@ -66,11 +66,18 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
       category: string
     }> = {}
 
+    let clientSalesCount = 0
+
     sales.forEach(sale => {
       if (sale.status === 'crossed_out') return
 
-      totalCash += sale.paid
-      totalCreditDehors += sale.debt
+      const isClientSale = ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(sale.type) || sale.pen_color === 'blue' || sale.pen_color === 'yellow'
+      if (!isClientSale) return
+
+      clientSalesCount += 1
+      const debtAmount = sale.debt ?? Math.max(0, (sale.total || 0) - (sale.paid || 0))
+      totalCash += (sale.type === 'sale_credit' ? (sale.paid || 0) : (sale.total || sale.paid || 0))
+      totalCreditDehors += debtAmount
 
       if (sale.articles && sale.articles.length > 0) {
         sale.articles.forEach(art => {
@@ -99,7 +106,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
 
     const totalRevenue = totalCash + totalCreditDehors
     const totalQuantitySold = productList.reduce((acc, curr) => acc + curr.totalQuantity, 0)
-    const averageBasket = sales.length > 0 ? Math.round(totalRevenue / sales.length) : 0
+    const averageBasket = clientSalesCount > 0 ? Math.round(totalRevenue / clientSalesCount) : 0
     const topProduct = productList[0] || null
 
     // Catégories

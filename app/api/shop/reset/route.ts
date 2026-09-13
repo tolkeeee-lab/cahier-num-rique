@@ -12,16 +12,24 @@ export async function POST(request: Request) {
     }
 
     if (isSupabaseConfigured()) {
-      // 1. Supprimer les ventes et leurs articles
+      // 1. Nettoyer sold_articles pour les ventes de cette boutique
+      const { data: sales } = await supabase.from('sales').select('id').eq('shop_id', shopId)
+      if (sales && sales.length > 0) {
+        const saleIds = sales.map(s => s.id)
+        await supabase.from('sold_articles').delete().in('sale_id', saleIds)
+      }
+
+      // 2. Supprimer les ventes
       await supabase.from('sales').delete().eq('shop_id', shopId)
 
-      // 2. Supprimer le catalogue de stock
+      // 3. Supprimer le catalogue de stock
       await supabase.from('products').delete().eq('shop_id', shopId)
 
-      // 3. Supprimer les créances et dettes
+      // 4. Supprimer les créances clients et dettes grossistes
       await supabase.from('debts').delete().eq('shop_id', shopId)
+      await supabase.from('supplier_debts').delete().eq('shop_id', shopId)
 
-      // 4. Supprimer les clôtures de caisse
+      // 5. Supprimer les clôtures de caisse
       await supabase.from('cash_closings').delete().eq('shop_id', shopId)
     }
 

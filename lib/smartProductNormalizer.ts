@@ -111,7 +111,12 @@ export function getCanonicalProductName(rawName: string): string {
   if (CANONICAL_DICTIONARY[clean]) return CANONICAL_DICTIONARY[clean]
 
   for (const key of Object.keys(CANONICAL_DICTIONARY)) {
-    if (clean === key || clean.startsWith(key + ' ') || clean.endsWith(' ' + key)) {
+    if (clean === key) {
+      return CANONICAL_DICTIONARY[key]
+    }
+    // Nettoyage des préfixes génériques ("bouteille de flag") ou suffixes de contenance ("flag 600ml")
+    const noiseRegex = new RegExp(`^(?:bouteille|canette|pack|carton|sac|boite|verre)?\\s*(?:de\\s+)?${key}(?:\\s*(?:600|600ml|33cl|50cl|1l|1\\.5l|2l|pm|gm))?$`, 'i')
+    if (noiseRegex.test(clean)) {
       return CANONICAL_DICTIONARY[key]
     }
   }

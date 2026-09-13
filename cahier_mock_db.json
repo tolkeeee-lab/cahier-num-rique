@@ -120,5 +120,21 @@
       }
     ],
     "created_at": "2026-07-22T23:35:57.763Z"
+  },
+  {
+    "id": "933dc9d2-8a25-44bf-981c-9e9346210ecb",
+    "shop_id": "b76d8edf-c023-4a53-a983-2221aefb9144",
+    "date": "2026-09-12",
+    "time": "06:20",
+    "client_name": "Moussa",
+    "total_amount": 2000,
+    "paid_amount": 2000,
+    "debt_amount": 0,
+    "status": "paid",
+    "type": "payment_client",
+    "pen_color": "blue",
+    "notes": "Remboursement",
+    "created_at": "2026-09-12T05:20:56.910Z",
+    "articles": []
   }
 ]

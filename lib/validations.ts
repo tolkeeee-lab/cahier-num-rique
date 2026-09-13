@@ -13,7 +13,7 @@ export const saleInputSchema = z.object({
   articles: z.array(
     z.object({
       name: z.string(),
-      quantity: z.number().min(1),
+      quantity: z.number().positive('La quantité doit être supérieure à 0'),
       unit_price: z.number().min(0),
       category: z.string().optional(),
     })

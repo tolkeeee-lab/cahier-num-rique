@@ -1,5 +1,5 @@
 import React from 'react'
-import { Search, Plus, FileSpreadsheet, Trash2, ShoppingBag } from 'lucide-react'
+import { Search, Plus, FileSpreadsheet, Trash2, ShoppingBag, GitMerge } from 'lucide-react'
 
 interface StockToolbarProps {
   searchQuery: string
@@ -13,6 +13,8 @@ interface StockToolbarProps {
   onClearAllStock?: () => void
   hasProducts?: boolean
   isEmployee?: boolean
+  duplicateCount?: number
+  onOpenMergeModal?: () => void
 }
 
 export const StockToolbar: React.FC<StockToolbarProps> = ({
@@ -27,6 +29,8 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
   onClearAllStock,
   hasProducts = false,
   isEmployee = false,
+  duplicateCount = 0,
+  onOpenMergeModal,
 }) => {
   return (
     <div className="bg-white/90 p-3.5 rounded-2xl border border-amber-300/80 space-y-3 mb-4 shadow-sm">
@@ -71,6 +75,19 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
             >
               <ShoppingBag className="w-4 h-4 text-amber-700" />
               <span className="hidden md:inline">Conseil Réassort</span>
+            </button>
+          )}
+
+          {/* Fusionner les doublons détectés */}
+          {duplicateCount > 0 && onOpenMergeModal && !isEmployee && (
+            <button
+              type="button"
+              onClick={onOpenMergeModal}
+              className="p-2 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 transition-all shadow-xs cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold animate-pulse"
+              title={`${duplicateCount} doublon(s) potentiel(s) détecté(s)`}
+            >
+              <GitMerge className="w-4 h-4 text-purple-700" />
+              <span className="hidden sm:inline">{duplicateCount} doublon{duplicateCount > 1 ? 's' : ''}</span>
             </button>
           )}
 

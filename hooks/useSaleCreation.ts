@@ -17,6 +17,7 @@ import {
   generateOfflineId,
   saveOfflineSale,
   markAsSynced,
+  getOfflineProducts,
   OfflineSale,
 } from '@/lib/offlineDb'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
@@ -106,7 +107,7 @@ export function useSaleCreation({
       total: isClientRequest ? 0 : (parsed.total_facture || 0),
       paid: isClientRequest ? 0 : (parsed.montant_paye || 0),
       debt: isClientRequest ? 0 : (parsed.montant_dette || 0),
-      status: 'paid',
+      status: (!isClientRequest && (parsed.montant_dette || 0) > 0 && (type === 'sale_credit' || type === 'purchase_credit')) ? 'debt' : 'paid',
       type,
       pen_color: activePen,
       notes: text,
@@ -119,7 +120,6 @@ export function useSaleCreation({
 
     // Vérification du stock après vente (Stylo Bleu ou Jaune)
     if (activePen === 'blue' || activePen === 'yellow') {
-      const { getOfflineProducts } = require('@/lib/offlineDb')
       const offlineStock = getOfflineProducts(shopId) || []
       const warnings: string[] = []
       
@@ -147,6 +147,22 @@ export function useSaleCreation({
   const syncWithApi = async (text: string, localSaleId: string, penOverride?: string) => {
     const activePen = penOverride || selectedPen
     try {
+      const reqMatch = parseRequestedProductFromNotebookText(text.trim())
+      const isClientRequest = !['blue', 'yellow'].includes(activePen) && !!(reqMatch && reqMatch.isRequestedProduct)
+
+      let syncType: OfflineSale['type'] = 'cash_in'
+      if (isClientRequest) {
+        syncType = 'client_request'
+      } else if (activePen === 'red') {
+        syncType = 'cash_out'
+      } else if (activePen === 'green') {
+        syncType = 'purchase_cash'
+      } else if (activePen === 'purple') {
+        syncType = 'purchase_credit'
+      } else if (activePen === 'yellow') {
+        syncType = 'sale_credit'
+      }
+
       if (isSupabaseClientConfigured()) {
         const parsed = parseTextLocally(text, activePen)
         const now = new Date()
@@ -156,43 +172,57 @@ export function useSaleCreation({
           created_at: now.toISOString(),
           date: getTodayDateString(),
           time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-          type: activePen === 'red' ? 'cash_out' : activePen === 'green' ? 'purchase_cash' : activePen === 'purple' ? 'purchase_credit' : activePen === 'yellow' ? 'sale_credit' : 'cash_in',
+          type: syncType,
           notes: text,
-          total_amount: parsed?.total_facture || 0,
-          paid_amount: parsed?.montant_paye || 0,
-          debt_amount: parsed?.montant_dette || 0,
-          client_name: parsed?.nom_client || 'Client',
-          status: parsed?.montant_dette && parsed.montant_dette > 0 ? 'debt' : 'paid',
-          category: parsed?.categorie || 'Général',
+          total_amount: isClientRequest ? 0 : (parsed?.total_facture || 0),
+          paid_amount: isClientRequest ? 0 : (parsed?.montant_paye || 0),
+          debt_amount: isClientRequest ? 0 : (parsed?.montant_dette || 0),
+          client_name: isClientRequest ? 'Demande Client' : (parsed?.nom_client || 'Client'),
+          status: (!isClientRequest && parsed?.montant_dette && parsed.montant_dette > 0) ? 'debt' : 'paid',
+          category: isClientRequest ? 'Demande Client' : (parsed?.categorie || 'Général'),
           pen_color: activePen,
         }
 
-        const { error: insertErr } = await supabaseClient.from('sales').insert([saleRecord])
+        const { error: insertErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
         if (!insertErr) {
           // ✅ Marquer la vente locale comme synchronisée
           markAsSynced(shopId, localSaleId)
 
-          if (parsed?.articles && parsed.articles.length > 0) {
-            const articlesRecords = parsed.articles.map((a: any) => ({
-              sale_id: localSaleId,
-              product_name: a.nom || a.name,
-              quantity: a.quantite || a.quantity,
-              unit_price: a.prix_unitaire || a.unit_price,
-              subtotal: (a.quantite || 1) * (a.prix_unitaire || 0),
-            }))
+          const articlesToSync = isClientRequest
+            ? [{ nom: reqMatch?.cleanName || 'Produit demandé', quantite: 1, prix_unitaire: reqMatch?.price || 0 }]
+            : (parsed?.articles || [])
+
+          if (articlesToSync.length > 0) {
+            // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de réémission
+            await supabaseClient.from('sold_articles').delete().eq('sale_id', localSaleId)
+
+            const articlesRecords = articlesToSync.map((a: any) => {
+              const qty = Number(a.quantite || a.quantity || 1)
+              const price = Number(a.prix_unitaire || a.unit_price || 0)
+              return {
+                sale_id: localSaleId,
+                shop_id: shopId,
+                product_name: a.nom || a.name || 'Article',
+                quantity: qty,
+                unit_price: price,
+                subtotal: qty * price,
+              }
+            })
             await supabaseClient.from('sold_articles').insert(articlesRecords)
 
             // Intelligence de marché avec le vrai pays & la vraie ville de la boutique
             const shopCountry = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_country_${shopId}`) || 'BJ') : 'BJ'
             const shopCity = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_city_${shopId}`) || '') : ''
 
-            for (const art of parsed.articles) {
-              if (art.nom && (art.prix_unitaire || 0) > 0) {
+            for (const art of articlesToSync) {
+              const artName = art.nom || (art as any).name
+              const artPrice = art.prix_unitaire || (art as any).unit_price || 0
+              if (artName && artPrice > 0 && !isClientRequest) {
                 try {
                   await supabaseClient.rpc('update_market_knowledge', {
-                    p_product_name: art.nom.toLowerCase(),
-                    p_unit_price: saleRecord.type === 'cash_in' || saleRecord.type === 'sale_credit' ? art.prix_unitaire : 0,
-                    p_unit_cost: saleRecord.type === 'purchase_cash' || saleRecord.type === 'purchase_credit' ? art.prix_unitaire : 0,
+                    p_product_name: artName.toLowerCase(),
+                    p_unit_price: saleRecord.type === 'cash_in' || saleRecord.type === 'sale_credit' ? artPrice : 0,
+                    p_unit_cost: saleRecord.type === 'purchase_cash' || saleRecord.type === 'purchase_credit' ? artPrice : 0,
                     p_country: shopCountry,
                     p_city: shopCity || null,
                   })
@@ -218,6 +248,10 @@ export function useSaleCreation({
           'x-shop-city': shopCity,
         },
         body: JSON.stringify({
+          id: localSaleId,
+          created_at: new Date().toISOString(),
+          date: new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()),
+          time: new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(new Date()),
           text,
           raw_text: text,
           penColor: activePen,

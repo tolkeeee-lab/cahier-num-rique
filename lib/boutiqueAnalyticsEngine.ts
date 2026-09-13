@@ -8,6 +8,22 @@ export interface AnalyticsAnswer {
   data?: any
 }
 
+export function isPureSale(s: any): boolean {
+  if (s.status === 'crossed_out') return false
+  const type = s.type || ''
+  if (['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(type)) return true
+  if (s.pen_color === 'blue' || s.pen_color === 'yellow' || s.pen === 'blue' || s.pen === 'yellow') return true
+  return false
+}
+
+export function isPureExpense(s: any): boolean {
+  if (s.status === 'crossed_out') return false
+  const type = s.type || ''
+  if (['cash_out', 'purchase_cash', 'stock_cash', 'payment_supplier'].includes(type)) return true
+  if (s.pen_color === 'red' || s.pen_color === 'green' || s.pen === 'red' || s.pen === 'green') return true
+  return false
+}
+
 /**
  * Analyse une question posée en langage naturel par le commerçant et produit une réponse instantanée.
  */
@@ -30,8 +46,8 @@ export function answerBoutiqueQuestion(
 
   // 1. QUESTION : "Combien j'ai gagné aujourd'hui ?" / "Bénéfice aujourd'hui"
   if (q.includes('gagné aujourd') || q.includes('bénéfice aujourd') || q.includes('profit aujourd')) {
-    const todaySales = sales.filter(s => s.date === todayStr && s.pen_color !== 'red')
-    const todayExpenses = sales.filter(s => s.date === todayStr && s.pen_color === 'red')
+    const todaySales = sales.filter(s => s.date === todayStr && isPureSale(s))
+    const todayExpenses = sales.filter(s => s.date === todayStr && isPureExpense(s))
 
     const totalCa = todaySales.reduce((sum, s) => sum + (s.total || 0), 0)
     const totalExp = todayExpenses.reduce((sum, s) => sum + (s.total || 0), 0)
@@ -62,7 +78,7 @@ export function answerBoutiqueQuestion(
 
   // 2. QUESTION : "Combien j'ai vendu ce mois / le mois passé ?"
   if (q.includes('mois pass') || q.includes('mois dernier') || q.includes('le mois passé')) {
-    const lastMonthSales = sales.filter(s => s.date.startsWith(lastMonthPrefix) && s.pen_color !== 'red')
+    const lastMonthSales = sales.filter(s => s.date.startsWith(lastMonthPrefix) && isPureSale(s))
     const lastMonthCa = lastMonthSales.reduce((sum, s) => sum + (s.total || 0), 0)
     const nbVentes = lastMonthSales.length
 
@@ -79,7 +95,7 @@ export function answerBoutiqueQuestion(
   }
 
   if (q.includes('ce mois') || q.includes('mois ci') || q.includes('mois en cours')) {
-    const thisMonthSales = sales.filter(s => s.date.startsWith(thisMonthPrefix) && s.pen_color !== 'red')
+    const thisMonthSales = sales.filter(s => s.date.startsWith(thisMonthPrefix) && isPureSale(s))
     const thisMonthCa = thisMonthSales.reduce((sum, s) => sum + (s.total || 0), 0)
 
     return {
@@ -124,7 +140,7 @@ export function answerBoutiqueQuestion(
       let productUnit = 'unités'
 
       sales.forEach(s => {
-        if (s.pen_color === 'red') return
+        if (!isPureSale(s)) return
         s.articles?.forEach((art: any) => {
           if (art.name.toLowerCase().includes(searchTerm)) {
             totalQty += Number(art.quantity) || 0
@@ -160,7 +176,7 @@ export function answerBoutiqueQuestion(
     if (lowStockItems.length === 0) {
       return {
         question,
-        answer: `🎉 Bonne nouvelle ! Aucun produit n'est actuellement en rupture de stock.`,
+        answer: `Bonne nouvelle ! Aucun produit n'est actuellement en rupture de stock.`,
         type: 'stock'
       }
     }
@@ -169,14 +185,14 @@ export function answerBoutiqueQuestion(
 
     return {
       question,
-      answer: `⚠️ Vous avez **${lowStockItems.length} produit(s)** en alerte ou en rupture de stock :`,
+      answer: `Vous avez **${lowStockItems.length} produit(s)** en alerte ou en rupture de stock :`,
       details: itemsList,
       type: 'stock'
     }
   }
 
   // 6. QUESTION GÉNÉRALE : Totaux généraux aujourd'hui
-  const todaySales = sales.filter(s => s.date === todayStr && s.pen_color !== 'red')
+  const todaySales = sales.filter(s => s.date === todayStr && isPureSale(s))
   const todayCa = todaySales.reduce((sum, s) => sum + (s.total || 0), 0)
 
   return {
@@ -305,12 +321,38 @@ export function calculateCategoryCashboxBreakdown(
     const paid = sale.paid_amount ?? sale.paid ?? 0
     const debt = sale.debt_amount ?? sale.debt ?? 0
 
-    if (type === 'cash_out') {
+    if (type === 'payment_client') {
+      const amt = paid > 0 ? paid : total
+      breakdown.totalCash += amt
+      return
+    }
+
+    if (type === 'payment_supplier') {
+      const amt = paid > 0 ? paid : total
+      breakdown.totalCash -= amt
+      return
+    }
+
+    if (type === 'purchase_credit') {
       const catText = `${sale.category || ''} ${sale.notes || ''}`
-      if (isBoissonCategory(catText)) breakdown.boissons.expenses += total
-      else if (isPrestationCategory(catText)) breakdown.services.expenses += total
-      else if (isRestoCategory(catText)) breakdown.resto.expenses += total
-      else breakdown.divers.expenses += total
+      if (paid > 0) {
+        breakdown.totalCash -= paid
+      }
+      if (isBoissonCategory(catText)) breakdown.boissons.debt += debt
+      else if (isPrestationCategory(catText)) breakdown.services.debt += debt
+      else if (isRestoCategory(catText)) breakdown.resto.debt += debt
+      else breakdown.divers.debt += debt
+      return
+    }
+
+    if (type === 'cash_out' || type === 'purchase_cash' || type === 'stock_cash' || sale.pen_color === 'red' || sale.pen_color === 'green') {
+      const catText = `${sale.category || ''} ${sale.notes || ''}`
+      const amt = total > 0 ? total : paid
+      breakdown.totalCash -= amt
+      if (isBoissonCategory(catText)) breakdown.boissons.expenses += amt
+      else if (isPrestationCategory(catText)) breakdown.services.expenses += amt
+      else if (isRestoCategory(catText)) breakdown.resto.expenses += amt
+      else breakdown.divers.expenses += amt
       return
     }
 
@@ -334,7 +376,8 @@ export function calculateCategoryCashboxBreakdown(
     }
 
     // Vente ou Vente à crédit
-    if (type === 'cash_in' || type === 'sale_credit') {
+    const isSale = type === 'cash_in' || type === 'sale' || type === 'sale_cash' || type === 'sale_credit' || sale.pen_color === 'blue' || sale.pen_color === 'yellow'
+    if (isSale) {
       breakdown.totalCa += total
       breakdown.totalCash += paid
 

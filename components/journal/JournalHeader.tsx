@@ -75,10 +75,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
 
   const getActivityBadge = (act: string) => {
     switch (act) {
-      case 'resto': return '🍲 Resto'
-      case 'prestations': return '✂️ Service'
-      case 'particulier': return '🏠 Foyer'
-      default: return '📦 Boutique'
+      case 'resto': return 'Resto'
+      case 'prestations': return 'Prestations'
+      case 'particulier': return 'Foyer'
+      default: return 'Boutique'
     }
   }
 
@@ -88,8 +88,8 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
       <div className="flex items-center justify-between gap-1.5 h-8 sm:h-9">
         {/* Titre & Sélecteur Boutique */}
         <div className="flex items-center gap-1.5 min-w-0">
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-br from-[#f59e0b] to-[#d97706] flex items-center justify-center shadow-xs text-xs font-bold text-[#141210] flex-shrink-0">
-            📖
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-br from-[#f59e0b] to-[#d97706] flex items-center justify-center shadow-xs flex-shrink-0 text-amber-950">
+            <BookText className="w-3.5 h-3.5" strokeWidth={2} />
           </div>
           <div className="relative inline-flex items-center bg-amber-100/90 border border-amber-300 rounded-xl px-2 py-0.5 text-xs font-bold text-amber-950 max-w-[170px] sm:max-w-[260px] shadow-2xs">
             <select
@@ -105,7 +105,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             >
               {shops.map((s) => (
                 <option key={s.id} value={s.id} className="bg-white text-gray-900 font-sans">
-                  {s.name} ({getActivityBadge(s.activity)})
+                  {s.name} · {getActivityBadge(s.activity)}
                 </option>
               ))}
               {!isEmployeeRole(userRole) && (

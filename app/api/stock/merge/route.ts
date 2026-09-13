@@ -2,8 +2,17 @@ import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { stockMergeSchema, validatePayload } from '@/lib/validations'
 
+const isSupabaseConfigured = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  return url && !url.includes('placeholder') && key && !key.includes('placeholder')
+}
+
 export async function POST(request: Request) {
   const shopId = request.headers.get('x-shop-id') || 'default-shop'
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json({ error: 'Base de données distante non configurée' }, { status: 503 })
+  }
   try {
     const rawBody = await request.json()
     const validation = validatePayload(stockMergeSchema, rawBody)
@@ -39,7 +48,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Produit cible introuvable' }, { status: 404 })
     }
 
-    // 2. Mettre à jour les articles vendus (sold_articles) associés au nom ou à l'ID source
+    // 2. Mettre à jour les articles vendus (sold_articles) associés au nom ou à l'ID source pour cette boutique
     const { error: updateArticlesErr } = await supabase
       .from('sold_articles')
       .update({
@@ -47,6 +56,7 @@ export async function POST(request: Request) {
         product_name: targetProduct.name,
         product_name_canonical: targetProduct.name,
       })
+      .eq('shop_id', shopId)
       .or(`product_id.eq.${sourceProduct.id},product_name.ilike.${sourceProduct.name}`)
 
     if (updateArticlesErr) {
@@ -62,6 +72,7 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', targetProduct.id)
+      .eq('shop_id', shopId)
       .select()
       .single()
 
@@ -72,6 +83,7 @@ export async function POST(request: Request) {
       .from('products')
       .delete()
       .eq('id', sourceProduct.id)
+      .eq('shop_id', shopId)
 
     if (deleteSourceErr) throw deleteSourceErr
 

@@ -19,6 +19,8 @@ import {
   getSyncErrors,
   markAsSynced,
   markSyncError,
+  getPendingOfflineProducts,
+  markProductAsSynced,
 } from '@/lib/offlineDb'
 import type { SyncStatus } from '@/hooks/useNetworkStatus'
 
@@ -52,8 +54,9 @@ export function useOfflineSync({
     // Déduplique : évite de réenvoyer ce qui est déjà dans pending
     const pendingIds = new Set(pending.map(s => s.id))
     const toSync = [...pending, ...errored.filter(s => !pendingIds.has(s.id))]
+    const pendingProducts = getPendingOfflineProducts(shopId)
 
-    if (toSync.length === 0) return
+    if (toSync.length === 0 && pendingProducts.length === 0) return
 
     isSyncing.current = true
     setSyncStatus('syncing')
@@ -61,6 +64,30 @@ export function useOfflineSync({
     let successCount = 0
     let errorCount = 0
 
+    // 1. Synchronisation des Produits créés ou modifiés hors-ligne
+    for (const prod of pendingProducts) {
+      try {
+        const response = await fetch('/api/stock', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId,
+          },
+          body: JSON.stringify(prod),
+        })
+        if (response.ok) {
+          const resData = await response.json()
+          if (resData?.product) {
+            markProductAsSynced(shopId, prod.id, resData.product)
+            successCount++
+          }
+        }
+      } catch (err) {
+        console.warn('[OfflineSync] Erreur sync produit hors-ligne:', prod.name, err)
+      }
+    }
+
+    // 2. Synchronisation des Ventes hors-ligne
     for (const sale of toSync) {
       try {
         const response = await fetch('/api/sales', {
@@ -71,11 +98,19 @@ export function useOfflineSync({
             'x-shop-activity': shopActivity,
           },
           body: JSON.stringify({
+            id: sale.id,
+            created_at: sale.created_at,
+            date: sale.date,
+            time: sale.time,
+            type: sale.type,
+            category: sale.category,
             text: sale.notes || '',
             raw_text: sale.notes || '',
             penColor: sale.pen_color || 'blue',
             pen_color: sale.pen_color || 'blue',
             overrideData: {
+              type: sale.type,
+              category: sale.category,
               articles: (sale.articles || []).map((a: any) => ({
                 name: a.name || a.nom,
                 quantity: a.quantity || a.quantite,

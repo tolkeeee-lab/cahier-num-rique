@@ -156,11 +156,13 @@ export function parseTextLocally(text: string, penColor: string): ParsedSale {
   }
 
   let nomClient = "Client anonyme"
-  const clientRegex = /(?:pour|de|client|grossiste|fournisseur|a)\s+([A-Za-z]+)/i
-  const clientMatch = text.match(clientRegex)
-  if (clientMatch) {
-    nomClient = clientMatch[1].trim()
-    nomClient = nomClient.charAt(0).toUpperCase() + nomClient.slice(1)
+  const explicitClientMatch = text.match(/(?:client|grossiste|fournisseur)\s*[:=]?\s*([A-Za-zÀ-ÿ]+)/i)
+  const pourClientMatch = text.match(/(?:^|\s)pour\s+([A-Za-zÀ-ÿ]{2,})\b/i)
+  const clientCandidate = explicitClientMatch ? explicitClientMatch[1].trim() : (pourClientMatch ? pourClientMatch[1].trim() : null)
+  const reservedWords = new Set(['stock', 'achat', 'recette', 'vente', 'carton', 'boite', 'boîte', 'sac', 'pack', 'demande', 'reste', 'dette', 'credit', 'crédit', 'total', 'loyer', 'transport', 'lui', 'moi', 'elle', 'eux', 'ce', 'cet', 'cette', 'un', 'une', 'des', 'le', 'la', 'les', 'du'])
+
+  if (clientCandidate && !reservedWords.has(clientCandidate.toLowerCase())) {
+    nomClient = clientCandidate.charAt(0).toUpperCase() + clientCandidate.slice(1).toLowerCase()
   }
 
   let montantPaye = totalFacture

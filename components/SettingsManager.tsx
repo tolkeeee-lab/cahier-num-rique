@@ -1,6 +1,5 @@
-'use client'
-
 import React from 'react'
+import { Shield } from 'lucide-react'
 import { ShopProfileSettings } from '@/components/settings/ShopProfileSettings'
 import { EmployeeRoleManager } from '@/components/settings/EmployeeRoleManager'
 import { DataExportBackupSettings } from '@/components/settings/DataExportBackupSettings'
@@ -56,8 +55,9 @@ export function SettingsManager({
         <div className="bg-purple-50 p-6 rounded-2xl border border-purple-200 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h2 className="text-lg font-bold text-purple-900 flex items-center">
-                <span className="text-xl mr-2">👑</span> Mode Super Admin
+              <h2 className="text-lg font-bold text-purple-900 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-purple-700" />
+                <span>Mode Super Admin</span>
               </h2>
               <p className="text-sm text-purple-700">
                 Vous avez des privilèges globaux. Accédez au tableau de bord administrateur.

@@ -3,12 +3,12 @@ import { getTodayDateString } from '@/lib/dateUtils'
 
 export const CATEGORIES = [
   'Général',
-  '🥤 Boissons',
-  '🥤 Boissons & Bar',
-  '🍲 Cuisiné / Plats',
-  '☕ Cafétéria / Ptis-dej',
-  '🥬 Matières Premières / Ingrédients',
-  '✂️ Prestations & Services',
+  'Boissons',
+  'Boissons & Bar',
+  'Cuisiné / Plats',
+  'Cafétéria / Ptis-dej',
+  'Matières Premières / Ingrédients',
+  'Prestations & Services',
   'Alimentation',
   'Hygiène',
   'Autre',

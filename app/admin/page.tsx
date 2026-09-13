@@ -79,7 +79,9 @@ export default function SuperAdminPage() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     const email = adminEmail.trim().toLowerCase()
-    if ((email === 'admin@cahier.com' || email === 'tolkeeee@gmail.com' || email === 'tolkeeeee@gmail.com') && adminPassword === 'admin2026') {
+    const validPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin2026'
+    const allowedAdmins = ['admin@cahier.com', 'tolkeeee@gmail.com', 'tolkeeeee@gmail.com']
+    if (allowedAdmins.includes(email) && adminPassword === validPassword) {
       loadAdminData(email)
     } else {
       setError('Identifiants administrateur incorrects.')

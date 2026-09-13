@@ -193,25 +193,13 @@ export function useTactileMenu({
     }
   }, [input, setInput])
 
-  // ── Supprimer définitivement un article du menu ────────────────────────────
+  // ── Masquer un article du menu tactile (sans détruire le stock en inventaire) ──
   const handleDeleteItem = useCallback(async (id: string, name: string) => {
-    if (!window.confirm(`Masquer "${name}" définitivement du menu tactile ?`)) return
+    if (!window.confirm(`Masquer "${name}" du menu tactile rapide ?`)) return
 
     addToExcluded(shopId, name)
     setMenuItems(prev => prev.filter(item => item.id !== id))
-
-    // Supprimer de la DB uniquement si c'est un vrai ID (pas généré localement)
-    if (id && !id.startsWith('stk_') && !id.startsWith('orphan_') && !id.startsWith('menu_custom_')) {
-      try {
-        await fetch(`/api/stock?id=${id}`, {
-          method: 'DELETE',
-          headers: { 'x-shop-id': shopId, 'x-shop-activity': shopActivity },
-        })
-      } catch {
-        // Non bloquant
-      }
-    }
-  }, [shopId, shopActivity])
+  }, [shopId])
 
   // ── Ajouter rapidement un nouveau produit au menu depuis le journal ────────
   const handleAddItem = useCallback(async (name: string, price: number, category: string) => {

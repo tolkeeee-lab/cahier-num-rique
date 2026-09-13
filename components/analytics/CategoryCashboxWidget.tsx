@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp } from 'lucide-react'
 import { calculateCategoryCashboxBreakdown, CategoryCashboxGroup } from '@/lib/boutiqueAnalyticsEngine'
-import { generateOfflineId, saveOfflineSale } from '@/lib/offlineDb'
+import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
 
 interface CategoryCashboxWidgetProps {
   sales: any[]
@@ -101,26 +101,36 @@ export function CategoryCashboxWidget({
     saveOfflineSale(sId, localSale)
 
     try {
-      await fetch('/api/sales', {
+      const res = await fetch('/api/sales', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-shop-id': sId,
         },
         body: JSON.stringify({
+          id: localSale.id,
+          created_at: localSale.created_at,
+          date: dateStr,
+          time: timeStr,
           shop_id: sId,
+          type: 'cash_adjustment',
           pen_color: isPositive ? 'purple' : 'red',
           raw_text: noteText,
-          parsed: {
-            articles: [{ nom: noteText, quantite: 1, prix_unitaire: absAmount }],
-            total_facture: absAmount,
-            montant_paye: absAmount,
-            montant_dette: 0,
-            nom_client: `Caisse ${adjustingGroup.name}`,
-            type: 'cash_adjustment'
+          text: noteText,
+          overrideData: {
+            articles: [{ name: noteText, quantity: 1, unit_price: absAmount }],
+            total_amount: absAmount,
+            paid_amount: absAmount,
+            debt_amount: 0,
+            client_name: `Caisse ${adjustingGroup.name}`,
+            type: 'cash_adjustment',
+            category: adjustingGroup.name,
           }
         })
       })
+      if (res.ok) {
+        markAsSynced(sId, localSale.id)
+      }
     } catch (err) {
       console.warn('Sauvegarde réseau échouée, conservé en local:', err)
     } finally {

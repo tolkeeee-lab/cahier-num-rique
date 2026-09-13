@@ -54,39 +54,46 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let type = 'cash_in'
-    if (color === 'red') type = 'cash_out'
-    else if (color === 'green') type = 'purchase_cash'
-    else if (color === 'purple') type = 'purchase_credit'
-    else if (color === 'yellow') type = 'sale_credit'
+    let type = body.type || overrideData?.type || ''
+    if (!type) {
+      type = 'cash_in'
+      if (color === 'red') type = 'cash_out'
+      else if (color === 'green') type = 'purchase_cash'
+      else if (color === 'purple') type = 'purchase_credit'
+      else if (color === 'yellow') type = 'sale_credit'
 
-    const lowercaseText = text.trim().toLowerCase()
-    const isDemandeClient = /^(demande|client demande|demande client|manque|besoin|réclamation|reclamation)\b/i.test(lowercaseText)
+      const lowercaseText = text.trim().toLowerCase()
+      const isDemandeClient = /^(demande|client demande|demande client|manque|besoin|réclamation|reclamation)\b/i.test(lowercaseText)
 
-    if (isDemandeClient) {
-      type = 'client_request'
-      if (parsedData) {
-        parsedData.total_facture = 0
-        parsedData.montant_paye = 0
-        parsedData.montant_dette = 0
-        parsedData.nom_client = "Demande Client"
-        parsedData.categorie = "Demande Client"
-      }
-    } else if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
-      if (type === 'cash_in' || type === 'sale_credit') {
-        type = 'purchase_cash'
+      if (isDemandeClient) {
+        type = 'client_request'
+        if (parsedData) {
+          parsedData.total_facture = 0
+          parsedData.montant_paye = 0
+          parsedData.montant_dette = 0
+          parsedData.nom_client = "Demande Client"
+          parsedData.categorie = "Demande Client"
+        }
+      } else if (lowercaseText.startsWith('stock') || lowercaseText.startsWith('achat')) {
+        if (type === 'cash_in' || type === 'sale_credit') {
+          type = 'purchase_cash'
+        }
       }
     }
 
     const now = new Date()
-    const dateStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
-    const timeStr = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(now)
-    const saleId = randomUUID()
+    const dateStr = body.date || new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+    const timeStr = body.time || new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(now)
+    const saleId = body.id || randomUUID()
+    const createdAtStr = body.created_at || now.toISOString()
+
+    const calculatedDebt = parsedData?.montant_dette ?? overrideData?.debt_amount ?? 0
+    const resolvedStatus = body.status || overrideData?.status || ((calculatedDebt > 0 && (type === 'sale_credit' || type === 'purchase_credit')) ? 'debt' : 'paid')
 
     const saleRecord = {
       id: saleId,
       shop_id: shopId,
-      created_at: now.toISOString(),
+      created_at: createdAtStr,
       date: dateStr,
       time: timeStr,
       type,
@@ -94,10 +101,10 @@ export async function POST(request: NextRequest) {
       notes: text,
       total_amount: parsedData?.total_facture || 0,
       paid_amount: parsedData?.montant_paye || 0,
-      debt_amount: parsedData?.montant_dette || 0,
+      debt_amount: calculatedDebt,
       client_name: parsedData?.nom_client || 'Client',
-      status: parsedData?.montant_dette && parsedData.montant_dette > 0 ? 'debt' : 'paid',
-      category: parsedData?.categorie || 'Général',
+      status: resolvedStatus,
+      category: body.category || overrideData?.category || parsedData?.categorie || 'Général',
       pen_color: color,
     }
 
@@ -109,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     // Sauvegarde Supabase ou DB Locale
     if (isSupabaseConfigured() && supabase) {
-      const { error: saleErr } = await supabase.from('sales').insert([saleRecord])
+      const { error: saleErr } = await supabase.from('sales').upsert([saleRecord], { onConflict: 'id' })
       if (saleErr) {
         console.error('Erreur Supabase, bascule locale :', saleErr)
         const localSales = getLocalDb()
@@ -117,12 +124,21 @@ export async function POST(request: NextRequest) {
         saveLocalDb(localSales)
       } else {
         if (parsedData?.articles && parsedData.articles.length > 0) {
-          const soldArticlesRecords = parsedData.articles.map((a: any) => ({
-            sale_id: saleId,
-            product_name: a.nom || a.name,
-            quantity: a.quantite || a.quantity,
-            unit_price: a.prix_unitaire || a.unit_price,
-          }))
+          // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de retry
+          await supabase.from('sold_articles').delete().eq('sale_id', saleId)
+
+          const soldArticlesRecords = parsedData.articles.map((a: any) => {
+            const qty = a.quantite || a.quantity || 1;
+            const price = a.prix_unitaire || a.unit_price || 0;
+            return {
+              sale_id: saleId,
+              shop_id: shopId,
+              product_name: a.nom || a.name,
+              quantity: qty,
+              unit_price: price,
+              subtotal: qty * price
+            };
+          })
           const { error: artErr } = await supabase.from('sold_articles').insert(soldArticlesRecords)
           if (artErr) console.warn('Erreur insertion sold_articles:', artErr)
 
@@ -145,10 +161,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function HEAD() {
+  return new NextResponse(null, { status: 200 })
+}
+
 export async function GET(request: NextRequest) {
   try {
     const shopId = request.headers.get('x-shop-id') || 'default-shop'
-    const sales = await fetchSalesHistory(null, shopId)
+    const dateParam = request.nextUrl.searchParams.get('date')
+    const sales = await fetchSalesHistory(dateParam === 'all' ? null : dateParam, shopId)
     const cashDrawer = await getCurrentCash(shopId)
     return NextResponse.json({ sales, cashDrawer })
   } catch (err: any) {
@@ -159,6 +180,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
+    const shopId = request.headers.get('x-shop-id') || body.shop_id || 'default-shop'
     const { id, action, text, penColor, articles, clientName, category } = body
 
     if (!id) {
@@ -200,6 +222,7 @@ export async function PATCH(request: NextRequest) {
 
           const newSoldArticles = parsed.articles.map(a => ({
             sale_id: id,
+            shop_id: currentSale.shop_id || shopId,
             product_name: a.nom,
             quantity: a.quantite,
             unit_price: a.prix_unitaire,
@@ -263,6 +286,7 @@ export async function PATCH(request: NextRequest) {
             await supabase.from('sold_articles').insert(
               updatedArticles.map((a: any) => ({
                 sale_id: id,
+                shop_id: currentSale.shop_id || shopId,
                 product_name: a.name || a.nom,
                 quantity: a.quantity || a.quantite,
                 unit_price: a.unit_price || a.prix_unitaire,

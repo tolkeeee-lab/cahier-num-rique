@@ -36,6 +36,7 @@ export async function purgeShopData(shopId: string, options: PurgeOptions): Prom
       localStorage.removeItem(`cahier_offline_suppliers_${shopId}`)
       if (isOnline) {
         try { await supabaseClient.from('debts').delete().eq('shop_id', shopId) } catch {}
+        try { await supabaseClient.from('supplier_debts').delete().eq('shop_id', shopId) } catch {}
       }
     }
 
@@ -61,6 +62,7 @@ export async function purgeShopData(shopId: string, options: PurgeOptions): Prom
     // 6. Raccourcis Tactiles 1-Tap
     if (options.deleteTactileMenu) {
       localStorage.removeItem(`cahier_tactile_menu_${shopId}`)
+      localStorage.removeItem(`cahier_tactile_excluded_${shopId}`)
     }
 
     return {

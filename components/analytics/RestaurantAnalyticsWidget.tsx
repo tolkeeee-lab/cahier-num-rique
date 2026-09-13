@@ -43,6 +43,9 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
     sales.forEach(s => {
       if (s.status === 'crossed_out') return
 
+      const isClientSale = ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type) || s.pen_color === 'blue' || s.pen_color === 'yellow'
+      if (!isClientSale) return
+
       if (s.articles && s.articles.length > 0) {
         s.articles.forEach(art => {
           const nameLower = art.name.toLowerCase()

@@ -76,8 +76,10 @@ export function ShopAccountingReport({
     }
 
     if (period === '7days') {
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      return valid.filter(s => new Date(s.date) >= sevenDaysAgo)
+      const sevenDaysAgo = new Date(now)
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      const cutoffStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(sevenDaysAgo)
+      return valid.filter(s => s.date >= cutoffStr)
     }
 
     if (period === 'month') {
@@ -99,24 +101,30 @@ export function ShopAccountingReport({
     const expenseCategoryMap: Record<string, number> = {}
 
     filteredSales.forEach(s => {
-      // 1. Dépenses d'exploitation (Stylo Rouge)
-      if (s.pen_color === 'red' || s.type === 'cash_out') {
+      // 1. Dépenses d'exploitation & Règlements Fournisseurs
+      if (s.pen_color === 'red' || s.type === 'cash_out' || s.type === 'payment_supplier') {
         const amt = s.total || s.paid || 0
         totalGeneralExpenses += amt
-        const cat = s.category || 'Charges diverses'
+        const cat = s.category || (s.type === 'payment_supplier' ? 'Règlements Fournisseurs' : 'Charges diverses')
         expenseCategoryMap[cat] = (expenseCategoryMap[cat] || 0) + amt
         return
       }
 
-      // 2. Achats de Marchandises / Stock (Stylo Vert)
-      if (s.pen_color === 'green' || s.type === 'purchase_cash') {
-        const amt = s.total || s.paid || 0
+      // 2. Achats de Marchandises / Stock (Cash ou Crédit Grossiste)
+      if (s.pen_color === 'green' || s.pen_color === 'purple' || s.type === 'purchase_cash' || s.type === 'purchase_credit' || s.type === 'stock_cash') {
+        const amt = s.total || s.paid || s.debt || 0
         totalStockPurchases += amt
         expenseCategoryMap['Achats Marchandises'] = (expenseCategoryMap['Achats Marchandises'] || 0) + amt
         return
       }
 
-      // 3. Ventes (Stylo Bleu / Violet / Jaune)
+      // 3. Encaissements de créances clients (Règlement dette)
+      if (s.type === 'payment_client') {
+        totalCashReceived += (s.paid || s.total || 0)
+        return
+      }
+
+      // 4. Ventes Clients (Cash ou Crédit)
       if (s.type !== 'client_request') {
         totalSalesCa += (s.total || 0)
         totalCashReceived += (s.paid || 0)
@@ -127,7 +135,8 @@ export function ShopAccountingReport({
     // Coût estimé des marchandises vendues (COGS)
     let costOfGoodsSold = 0
     filteredSales.forEach(s => {
-      if (s.pen_color !== 'red' && s.pen_color !== 'green' && s.type !== 'client_request') {
+      const isClientSale = ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type) || s.pen_color === 'blue' || s.pen_color === 'yellow'
+      if (isClientSale && s.type !== 'client_request' && s.type !== 'payment_client') {
         s.articles?.forEach(art => {
           const prod = products.find(p => p.name.toLowerCase().trim() === art.name.toLowerCase().trim())
           const unitCost = prod?.unit_cost || 0
@@ -212,7 +221,7 @@ export function ShopAccountingReport({
         </div>
 
         {/* Boutons de Période */}
-        <div className="flex items-center gap-1 bg-amber-100/80 p-1 rounded-xl border border-amber-300 font-mono text-xs w-full sm:w-auto overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1 bg-amber-100/80 p-1 rounded-xl border border-amber-300 font-mono text-xs w-full sm:w-auto flex-wrap sm:flex-nowrap">
           <button
             type="button"
             onClick={() => setPeriod('all')}
@@ -220,7 +229,7 @@ export function ShopAccountingReport({
               period === 'all' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
             }`}
           >
-            🏛️ À Vie (Depuis création)
+            Tout
           </button>
           <button
             type="button"
@@ -229,7 +238,7 @@ export function ShopAccountingReport({
               period === 'month' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
             }`}
           >
-            📅 Ce Mois
+            Ce Mois
           </button>
           <button
             type="button"
@@ -238,7 +247,7 @@ export function ShopAccountingReport({
               period === '7days' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
             }`}
           >
-            📆 7 Jours
+            7 Jours
           </button>
           <button
             type="button"
@@ -247,7 +256,7 @@ export function ShopAccountingReport({
               period === 'today' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
             }`}
           >
-            ☀️ Aujourd'hui
+            Aujourd&apos;hui
           </button>
         </div>
       </div>

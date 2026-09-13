@@ -53,8 +53,8 @@ export async function GET(request: Request) {
 
     for (const sale of salesData || []) {
       if (sale.status === 'crossed_out') continue
-      const isIn = ['purchase_cash', 'purchase_credit'].includes(sale.type)
-      const isOut = ['cash_in', 'sale_credit'].includes(sale.type)
+      const isIn = ['purchase_cash', 'purchase_credit', 'stock_cash', 'stock_in'].includes(sale.type)
+      const isOut = ['cash_in', 'sale_credit', 'sale', 'sale_cash', 'stock_damage', 'personal_use'].includes(sale.type)
       if (!isIn && !isOut) continue
 
       for (const article of (sale.sold_articles as any[] | null) || []) {
@@ -113,8 +113,8 @@ export async function GET(request: Request) {
         if (!stockTracked) return false
         if (trackingStart === 0) return true
         const mTime = m.created_at ? new Date(m.created_at).getTime() : new Date(m.date).getTime()
-        // Conserver les mouvements postérieurs à la date d'activation du suivi (moins 1 minute de marge)
-        return mTime >= trackingStart - 60000
+        // Conserver les mouvements strictement postérieurs à la consolidation
+        return mTime > trackingStart
       })
 
       // Recalculer les totaux d'entrées et de sorties après filtrage
@@ -188,6 +188,7 @@ export async function GET(request: Request) {
 
 function filterProductDbColumns(obj: Record<string, any>): Record<string, any> {
   const allowed = [
+    'id',
     'shop_id',
     'name',
     'category',
@@ -203,6 +204,7 @@ function filterProductDbColumns(obj: Record<string, any>): Record<string, any> {
     'lot_price',
     'stock_tracked',
     'tracking_started_at',
+    'barcode',
     'created_at',
   ]
   const filtered: Record<string, any> = {}
@@ -223,7 +225,7 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json()
-    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, trade_type, created_at } = body
+    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, trade_type, barcode, created_at } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Le nom du produit est obligatoire' }, { status: 400 })
@@ -246,6 +248,7 @@ export async function POST(request: Request) {
       lot_quantity: lot_quantity ?? 0,
       lot_price: lot_price ?? 0,
       trade_type: trade_type,
+      barcode: barcode?.trim() || undefined,
     })
 
     if (created_at) {
@@ -254,11 +257,18 @@ export async function POST(request: Request) {
 
     const insertData = filterProductDbColumns(cleanData)
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('products')
       .insert(insertData)
       .select()
       .single()
+
+    if (error && (error.message?.includes('barcode') || (error as any).details?.includes('barcode'))) {
+      delete insertData.barcode
+      const retry = await supabase.from('products').insert(insertData).select().single()
+      data = retry.data
+      error = retry.error
+    }
 
     if (error) throw error
     return NextResponse.json({ product: { ...data, trade_type: cleanData.trade_type } }, { status: 201 })
@@ -279,7 +289,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json()
-    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, trade_type } = body
+    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, trade_type, barcode } = body
 
     if (!id && !name) {
       return NextResponse.json({ error: 'ID ou nom du produit manquant' }, { status: 400 })
@@ -323,6 +333,7 @@ export async function PATCH(request: Request) {
     if (lot_quantity !== undefined) updates.lot_quantity = lot_quantity
     if (lot_price !== undefined) updates.lot_price = lot_price
     if (trade_type !== undefined) updates.trade_type = trade_type
+    if (barcode !== undefined) updates.barcode = barcode?.trim() || null
 
     updates = sanitizeProductData(updates as any)
     const dbUpdates = filterProductDbColumns(updates)
@@ -431,10 +442,9 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const targetName = productName || (id && (id.startsWith('orphan_') || id.startsWith('stk_')) ? id.replace(/^(orphan_|stk_)/, '') : null)
-
-    // 1. Traitement des articles orphelins (qui n'existent que dans l'historique des ventes)
-    if (targetName) {
+    // 1. Cas d'un article orphelin (historique de vente sans fiche produit dans le catalogue)
+    if (id && id.startsWith('orphan_')) {
+      const orphanName = id.replace(/^orphan_/, '')
       const { data: shopSales } = await supabase
         .from('sales')
         .select('id')
@@ -446,42 +456,69 @@ export async function DELETE(request: Request) {
           .from('sold_articles')
           .delete()
           .in('sale_id', saleIds)
-          .ilike('product_name', targetName)
+          .ilike('product_name', orphanName)
       }
       return NextResponse.json({ success: true })
     }
 
-    // 2. Traitement des produits enregistrés en table products
+    // 2. Traitement d'un produit du catalogue (par son ID ou son Nom)
+    let productToDelete: any = null
+
     if (id) {
       const { data: prod } = await supabase
         .from('products')
-        .select('name')
+        .select('*')
         .eq('id', id)
-        .single()
+        .eq('shop_id', shopId)
+        .maybeSingle()
+      
+      productToDelete = prod
+    }
 
-      const { error } = await supabase
+    if (!productToDelete && productName) {
+      const { data: prodByName } = await supabase
+        .from('products')
+        .select('*')
+        .ilike('name', productName.trim())
+        .eq('shop_id', shopId)
+        .maybeSingle()
+
+      productToDelete = prodByName
+    }
+
+    // Si le produit existe dans la table products, on le supprime
+    if (productToDelete?.id) {
+      const { error: deleteProdErr } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productToDelete.id)
+        .eq('shop_id', shopId)
+
+      if (deleteProdErr) throw deleteProdErr
+    } else if (id && !id.startsWith('stk_')) {
+      // Tentative directe par ID au cas où
+      await supabase
         .from('products')
         .delete()
         .eq('id', id)
         .eq('shop_id', shopId)
+    }
 
-      if (error) throw error
+    // 3. Purger les sold_articles associés au produit pour cette boutique
+    const nameToPurge = productToDelete?.name || productName
+    if (nameToPurge) {
+      const { data: shopSales } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('shop_id', shopId)
 
-      const nameToPurge = prod?.name
-      if (nameToPurge) {
-        const { data: shopSales } = await supabase
-          .from('sales')
-          .select('id')
-          .eq('shop_id', shopId)
-
-        const saleIds = (shopSales || []).map(s => s.id)
-        if (saleIds.length > 0) {
-          await supabase
-            .from('sold_articles')
-            .delete()
-            .in('sale_id', saleIds)
-            .ilike('product_name', nameToPurge)
-        }
+      const saleIds = (shopSales || []).map(s => s.id)
+      if (saleIds.length > 0) {
+        await supabase
+          .from('sold_articles')
+          .delete()
+          .in('sale_id', saleIds)
+          .ilike('product_name', nameToPurge)
       }
     }
 

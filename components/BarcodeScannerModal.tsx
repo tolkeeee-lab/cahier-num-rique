@@ -264,10 +264,7 @@ export function BarcodeScannerModal({
           })
 
           const scanNativeLoop = async () => {
-            if (!isScanningRef.current) {
-              requestAnimationFrame(scanNativeLoop)
-              return
-            }
+            if (!isScanningRef.current) return
             if (videoRef.current && videoRef.current.readyState >= 2) {
               try {
                 const barcodes = await nativeDetector.detect(videoRef.current)
@@ -276,7 +273,9 @@ export function BarcodeScannerModal({
                 }
               } catch {}
             }
-            requestAnimationFrame(scanNativeLoop)
+            if (isScanningRef.current) {
+              requestAnimationFrame(scanNativeLoop)
+            }
           }
           requestAnimationFrame(scanNativeLoop)
         } catch {}

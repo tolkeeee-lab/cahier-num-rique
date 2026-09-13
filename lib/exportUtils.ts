@@ -1,4 +1,5 @@
 import { getTodayDateString } from './dateUtils'
+import { generateSyscohadaJournal } from './syscohadaEngine'
 
 export interface SaleExportItem {
   id: string
@@ -10,6 +11,7 @@ export interface SaleExportItem {
   debt: number
   status: string
   type: string
+  pen_color?: string
   notes?: string
   articles?: Array<{
     name: string
@@ -86,7 +88,7 @@ export function generateWhatsAppPerformanceReport(
   periodLabel: string = 'Cette Période',
   shopName: string = 'Cahier Numérique'
 ): string {
-  const validSales = sales.filter(s => s.status !== 'crossed_out' && (s.type === 'cash_in' || s.type === 'sale_credit'))
+  const validSales = sales.filter(s => s.status !== 'crossed_out' && ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type))
   const totalRevenue = validSales.reduce((sum, s) => sum + s.total, 0)
   const totalPaid = validSales.reduce((sum, s) => sum + s.paid, 0)
   const totalDebt = validSales.reduce((sum, s) => sum + s.debt, 0)
@@ -150,9 +152,16 @@ export function exportSalesToPDF(
   }
 
   const validSales = sales.filter(s => s.status !== 'crossed_out')
-  const totalRevenue = validSales.reduce((sum, s) => sum + (s.total || 0), 0)
-  const totalPaid = validSales.reduce((sum, s) => sum + (s.paid || 0), 0)
-  const totalDebt = validSales.reduce((sum, s) => sum + (s.debt || 0), 0)
+  
+  // Ventes pures (chiffre d'affaires réel)
+  const pureSales = validSales.filter(s => ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type) || s.pen_color === 'blue' || s.pen_color === 'yellow')
+  const totalRevenue = pureSales.reduce((sum, s) => sum + (s.total || 0), 0)
+  const totalPaid = pureSales.reduce((sum, s) => sum + (s.paid || 0), 0)
+  const totalDebt = pureSales.reduce((sum, s) => sum + (s.debt || 0), 0)
+
+  // Dépenses & Achats de marchandises
+  const pureExpenses = validSales.filter(s => ['cash_out', 'purchase_cash', 'payment_supplier'].includes(s.type) || s.pen_color === 'red' || s.pen_color === 'green')
+  const totalExpenses = pureExpenses.reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
 
   const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(p) + ' FCFA'
   const todayStr = new Date().toLocaleDateString('fr-FR')
@@ -214,7 +223,7 @@ export function exportSalesToPDF(
       <body>
         <div class="header">
           <div>
-            <div class="shop-title">📊 RAPPORT FINANCIER & D'ACTIVITÉ</div>
+            <div class="shop-title">RAPPORT FINANCIER & D'ACTIVITÉ</div>
             <div style="color: #4b5563; margin-top: 2px;">Commerce : <strong>${shopName}</strong> | Période : <strong>${periodLabel}</strong></div>
           </div>
           <div style="text-align: right; color: #6b7280; font-size: 11px;">
@@ -229,12 +238,16 @@ export function exportSalesToPDF(
             <div class="kpi-value" style="color: #111827;">${formatPrice(totalRevenue)}</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-title">Encaissements Cash</div>
+            <div class="kpi-title">Encaissements Ventes</div>
             <div class="kpi-value" style="color: #166534;">${formatPrice(totalPaid)}</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-title">Crédits / Dettes Client</div>
+            <div class="kpi-title">Crédits Client</div>
             <div class="kpi-value" style="color: #991b1b;">${formatPrice(totalDebt)}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Dépenses & Achats</div>
+            <div class="kpi-value" style="color: #b45309;">${formatPrice(totalExpenses)}</div>
           </div>
         </div>
 
@@ -279,9 +292,18 @@ export function generateWhatsAppHouseholdReport(
   foyerName: string = 'Mon Foyer'
 ): string {
   const validSales = sales.filter(s => s.status !== 'crossed_out')
-  const revenueMonth = validSales.filter(s => s.type === 'cash_in' || s.notes?.includes('blue') || s.notes?.includes('revenu')).reduce((sum, s) => sum + (s.total || 0), 0)
-  const depenseMonth = validSales.filter(s => s.type === 'expense' || s.notes?.includes('red') || s.notes?.includes('dépense')).reduce((sum, s) => sum + (s.total || 0), 0)
-  const reserveMonth = validSales.filter(s => s.type === 'stock_purchase' || s.notes?.includes('green') || s.notes?.includes('réserve')).reduce((sum, s) => sum + (s.total || 0), 0)
+  const revenueMonth = validSales
+    .filter(s => ['cash_in', 'sale', 'sale_cash', 'payment_client'].includes(s.type) || s.pen_color === 'blue' || s.notes?.toLowerCase().includes('revenu'))
+    .reduce((sum, s) => sum + (s.paid || s.total || 0), 0)
+
+  const depenseMonth = validSales
+    .filter(s => ['cash_out', 'expense', 'payment_supplier'].includes(s.type) || s.pen_color === 'red' || s.notes?.toLowerCase().includes('dépense'))
+    .reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
+
+  const reserveMonth = validSales
+    .filter(s => ['purchase_cash', 'purchase_credit', 'stock_cash', 'stock_purchase'].includes(s.type) || s.pen_color === 'green' || s.notes?.toLowerCase().includes('réserve'))
+    .reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
+
   const bilan = revenueMonth - depenseMonth - reserveMonth
 
   const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(p) + ' F'
@@ -310,7 +332,6 @@ export function exportSyscohadaJournalCSV(
   periodLabel: string = 'Toutes_les_ventes',
   shopName: string = 'Cahier_Numerique'
 ) {
-  const { generateSyscohadaJournal } = require('./syscohadaEngine')
   const journal = generateSyscohadaJournal(sales)
 
   if (journal.length === 0) {

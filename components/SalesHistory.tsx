@@ -9,6 +9,8 @@ import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
 import { ReceiptShareModal } from '@/components/sales/ReceiptShareModal'
 import { exportSalesToCSV, exportSalesToPDF } from '@/lib/exportUtils'
 import { formatPrice } from '@/lib/penUtils'
+import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
+import { getTodayDateString } from '@/lib/dateUtils'
 
 function formatLongDateFr(dateStr?: string): string {
   if (!dateStr) return 'Date inconnue'
@@ -75,7 +77,6 @@ import { EditSaleModal } from '@/components/journal/EditSaleModal'
 export function SalesHistory({
   sales,
   onSaleCrossedOut,
-  onAddArticle,
   onUpdateSale,
   shopId = 'default-shop',
   isEmployee = false,
@@ -125,8 +126,56 @@ export function SalesHistory({
   }, [filteredSales])
 
   const handleConfirmRepayment = async (saleId: string, amount: number, notes: string) => {
-    if (onAddArticle) {
-      await onAddArticle(saleId, `Paiement dette: ${amount} FCFA ${notes ? `(${notes})` : ''}`)
+    const target = sales.find(s => s.id === saleId)
+    const clientName = target?.client || 'Client'
+    const newSaleId = generateOfflineId()
+    const now = new Date()
+    const isSupplier = target?.type === 'purchase_credit' || target?.pen_color === 'purple'
+
+    const repaymentSale: any = {
+      id: newSaleId,
+      shop_id: shopId,
+      date: getTodayDateString(),
+      time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      client: clientName,
+      total: amount,
+      paid: amount,
+      debt: 0,
+      status: 'paid',
+      type: isSupplier ? 'payment_supplier' : 'payment_client',
+      pen_color: isSupplier ? 'red' : 'blue',
+      notes: notes || (isSupplier ? `Remboursement fournisseur: ${clientName}` : `Règlement dette: ${clientName}`),
+      category: 'Règlement Dette',
+      created_at: now.toISOString(),
+      articles: [],
+      is_synced: false
+    }
+
+    saveOfflineSale(shopId, repaymentSale)
+
+    try {
+      await fetch('/api/debts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+        body: JSON.stringify({
+          id: newSaleId,
+          date: repaymentSale.date,
+          time: repaymentSale.time,
+          created_at: repaymentSale.created_at,
+          name: clientName,
+          amount,
+          type: isSupplier ? 'supplier' : 'client',
+          action: 'pay',
+          description: repaymentSale.notes,
+        })
+      })
+      markAsSynced(shopId, newSaleId)
+    } catch (e) {
+      console.warn('Règlement sauvegardé hors-ligne:', e)
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
     }
   }
 
