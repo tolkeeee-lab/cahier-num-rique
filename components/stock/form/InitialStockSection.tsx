@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { Package } from 'lucide-react'
 import { StockFormState, TradeType } from '../types'
 
 interface InitialStockSectionProps {
@@ -70,9 +71,11 @@ export const InitialStockSection: React.FC<InitialStockSectionProps> = ({
             </div>
           </div>
 
-          {/* Aide visuelle calcul automatique */}
           <div className="p-2 bg-white border border-amber-300 rounded-xl text-amber-950 font-mono text-xs flex items-center justify-between">
-            <span className="font-bold text-gray-700">📦 Calcul du stock :</span>
+            <span className="font-bold text-gray-700 flex items-center gap-1">
+              <Package className="w-3.5 h-3.5 text-amber-800" />
+              <span>Calcul du stock :</span>
+            </span>
             <span className="font-black text-amber-900">
               {cartonsCount ? `${cartonsCount} ${formData.packaging_name || 'carton(s)'} × ${formData.multiplier || 1} = ` : ''}
               <span className="text-emerald-800 font-extrabold">{formData.initial_stock || 0} {formData.unit || 'pièces'}</span>

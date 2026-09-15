@@ -52,7 +52,7 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
     setSavedMessage(null)
     try {
       await onSaveProfile({ shopName: name, activity, phone, address, country, city })
-      setSavedMessage('Profil et localisation enregistrés avec succès ! ✅')
+      setSavedMessage('Profil et localisation enregistrés avec succès !')
       setTimeout(() => setSavedMessage(null), 3500)
     } catch (err) {
       console.error('Erreur sauvegarde profil boutique:', err)

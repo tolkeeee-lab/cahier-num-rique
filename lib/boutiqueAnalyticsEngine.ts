@@ -78,7 +78,7 @@ export function answerBoutiqueQuestion(
 
   // 2. QUESTION : "Combien j'ai vendu ce mois / le mois passé ?"
   if (q.includes('mois pass') || q.includes('mois dernier') || q.includes('le mois passé')) {
-    const lastMonthSales = sales.filter(s => s.date.startsWith(lastMonthPrefix) && isPureSale(s))
+    const lastMonthSales = sales.filter(s => (s.date || '').startsWith(lastMonthPrefix) && isPureSale(s))
     const lastMonthCa = lastMonthSales.reduce((sum, s) => sum + (s.total || 0), 0)
     const nbVentes = lastMonthSales.length
 
@@ -95,7 +95,7 @@ export function answerBoutiqueQuestion(
   }
 
   if (q.includes('ce mois') || q.includes('mois ci') || q.includes('mois en cours')) {
-    const thisMonthSales = sales.filter(s => s.date.startsWith(thisMonthPrefix) && isPureSale(s))
+    const thisMonthSales = sales.filter(s => (s.date || '').startsWith(thisMonthPrefix) && isPureSale(s))
     const thisMonthCa = thisMonthSales.reduce((sum, s) => sum + (s.total || 0), 0)
 
     return {

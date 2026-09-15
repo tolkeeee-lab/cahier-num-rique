@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import { Utensils, GlassWater, TrendingUp, DollarSign, Share2 } from 'lucide-react'
+import { Utensils, GlassWater, TrendingUp, DollarSign, Share2, Scale, Trophy, UtensilsCrossed, Beer } from 'lucide-react'
 import { generateWhatsAppPerformanceReport } from '@/lib/exportUtils'
 
 interface Sale {
@@ -37,6 +37,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
     let totalBar = 0
     let totalPlatsServis = 0
     let totalBoissonsServies = 0
+    let clientSalesCount = 0
 
     const itemMap: Record<string, { name: string; qty: number; revenue: number; isBar: boolean }> = {}
 
@@ -45,6 +46,8 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
 
       const isClientSale = ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type) || s.pen_color === 'blue' || s.pen_color === 'yellow'
       if (!isClientSale) return
+
+      clientSalesCount += 1
 
       if (s.articles && s.articles.length > 0) {
         s.articles.forEach(art => {
@@ -80,7 +83,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 8)
 
-    const additionMoyenne = sales.length > 0 ? Math.round(totalRecette / sales.length) : 0
+    const additionMoyenne = clientSalesCount > 0 ? Math.round(totalRecette / clientSalesCount) : 0
 
     return {
       totalRecette,
@@ -99,8 +102,10 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
     <div className="space-y-6">
       {/* En-tête Resto */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-amber-200 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🍲</span>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2.5 bg-amber-100/80 rounded-2xl text-amber-800 flex items-center justify-center">
+            <UtensilsCrossed className="w-6 h-6" />
+          </div>
           <div>
             <h2 className="font-handwritten text-xl font-bold text-gray-900">
               Analyses Cuisine & Bar
@@ -123,7 +128,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
               <button
                 key={p.id}
                 onClick={() => onPeriodChange(p.id as any)}
-                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all ${
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all active:scale-95 ${
                   period === p.id 
                     ? 'bg-gray-900 text-white shadow-sm' 
                     : 'text-gray-600 hover:bg-gray-200'
@@ -138,7 +143,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
             href={generateWhatsAppPerformanceReport(sales, period === 'all' ? 'Tout' : period === 'month' ? 'Ce Mois' : period === '7days' ? '7 Jours' : 'Aujourd\'hui', shopName)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm"
+            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm active:scale-95"
           >
             <Share2 className="w-3 h-3" />
             <span>Rapport Resto WhatsApp</span>
@@ -154,7 +159,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Recette Totale</span>
-            <span className="text-lg font-bold font-mono text-emerald-800">{formatPrice(restoStats.totalRecette)}</span>
+            <span className="text-lg font-bold font-mono tabular-nums text-emerald-800">{formatPrice(restoStats.totalRecette)}</span>
           </div>
         </div>
 
@@ -164,7 +169,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Plats Servis</span>
-            <span className="text-lg font-bold font-mono text-gray-800">{restoStats.totalPlatsServis} plats</span>
+            <span className="text-lg font-bold font-mono tabular-nums text-gray-800">{restoStats.totalPlatsServis} plats</span>
           </div>
         </div>
 
@@ -174,7 +179,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Boissons Servies</span>
-            <span className="text-lg font-bold font-mono text-gray-800">{restoStats.totalBoissonsServies} bbt</span>
+            <span className="text-lg font-bold font-mono tabular-nums text-gray-800">{restoStats.totalBoissonsServies} bbt</span>
           </div>
         </div>
 
@@ -184,15 +189,16 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Addition Moyenne</span>
-            <span className="text-lg font-bold font-mono text-gray-800">{formatPrice(restoStats.additionMoyenne)}</span>
+            <span className="text-lg font-bold font-mono tabular-nums text-gray-800">{formatPrice(restoStats.additionMoyenne)}</span>
           </div>
         </div>
       </div>
 
-      {/* ⚖️ Dualité Cuisine vs Bar (Graphique Comparatif) */}
+      {/* Dualité Cuisine vs Bar (Graphique Comparatif) */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
-          ⚖️ Équilibre Recettes Cuisine vs Bar
+          <Scale className="w-5 h-5 text-amber-700" />
+          <span>Équilibre Recettes Cuisine vs Bar</span>
         </h3>
 
         <div className="space-y-3">
@@ -215,24 +221,27 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
           <div className="grid grid-cols-2 gap-4 text-xs font-mono">
             <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex justify-between items-center">
               <span className="font-bold text-amber-900 flex items-center gap-1.5">
-                <span>🍲</span> Plats Chauds & Cuisine
+                <Utensils className="w-3.5 h-3.5 text-amber-700" />
+                <span>Plats Chauds & Cuisine</span>
               </span>
-              <strong className="text-amber-950">{formatPrice(restoStats.totalCuisine)}</strong>
+              <strong className="text-amber-950 tabular-nums">{formatPrice(restoStats.totalCuisine)}</strong>
             </div>
             <div className="bg-sky-50 border border-sky-200 p-3 rounded-2xl flex justify-between items-center">
               <span className="font-bold text-sky-900 flex items-center gap-1.5">
-                <span>🍺</span> Boissons & Bar
+                <Beer className="w-3.5 h-3.5 text-sky-700" />
+                <span>Boissons & Bar</span>
               </span>
-              <strong className="text-sky-950">{formatPrice(restoStats.totalBar)}</strong>
+              <strong className="text-sky-950 tabular-nums">{formatPrice(restoStats.totalBar)}</strong>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 🏆 Palmarès de la Carte (Top Plats & Boissons) */}
+      {/* Palmarès de la Carte (Top Plats & Boissons) */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
-          🏆 Top Plats & Boissons du Menu ({restoStats.topItems.length})
+          <Trophy className="w-5 h-5 text-amber-600" />
+          <span>Top Plats & Boissons du Menu ({restoStats.topItems.length})</span>
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -242,14 +251,18 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
                 <span className="w-6 h-6 rounded-full bg-amber-900 text-white font-mono text-[10px] font-bold flex items-center justify-center">
                   #{idx + 1}
                 </span>
-                <span className="font-bold text-xs text-gray-900 flex items-center gap-1">
-                  <span>{item.isBar ? '🥤' : '🍲'}</span>
+                <span className="font-bold text-xs text-gray-900 flex items-center gap-1.5">
+                  {item.isBar ? (
+                    <Beer className="w-3.5 h-3.5 text-sky-700 flex-shrink-0" />
+                  ) : (
+                    <Utensils className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+                  )}
                   <span>{item.name}</span>
                 </span>
               </div>
               <div className="text-right font-mono">
-                <span className="text-xs font-bold text-amber-900 block">{formatPrice(item.revenue)}</span>
-                <span className="text-[9px] text-gray-500">{item.qty} servis</span>
+                <span className="text-xs font-bold text-amber-900 block tabular-nums">{formatPrice(item.revenue)}</span>
+                <span className="text-[9px] text-gray-500 tabular-nums">{item.qty} servis</span>
               </div>
             </div>
           ))}

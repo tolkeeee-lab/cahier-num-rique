@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import { Calendar } from 'lucide-react'
 import { SalesFilterBar } from '@/components/sales/SalesFilterBar'
 import { SaleItemCard } from '@/components/sales/SaleItemCard'
 import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
@@ -209,14 +210,14 @@ export function SalesHistory({
                 {/* ── Séparateur de Date avec CA de la journée ── */}
                 <div className="flex items-center justify-between gap-2 py-2 px-3.5 bg-gradient-to-r from-amber-100/90 via-yellow-50 to-amber-100/90 border border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs select-none">
                   <div className="flex items-center gap-2 font-handwritten font-black text-sm sm:text-base text-amber-950">
-                    <span>📅</span>
+                    <Calendar className="w-4 h-4 text-amber-850 flex-shrink-0" />
                     <span>{formatLongDateFr(dateKey)}</span>
                   </div>
                   <div className="flex items-center gap-2 font-mono text-xs">
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-2xs">
-                      🔵 CA : +{formatPrice(salesTotal)}
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-2xs tabular-nums">
+                      CA : +{formatPrice(salesTotal)}
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full font-extrabold bg-amber-900/10 text-amber-950 border border-amber-300 text-[11px]">
+                    <span className="px-2.5 py-0.5 rounded-full font-extrabold bg-amber-900/10 text-amber-950 border border-amber-300 text-[11px] tabular-nums">
                       {validDateSales.length} vente(s)
                     </span>
                   </div>

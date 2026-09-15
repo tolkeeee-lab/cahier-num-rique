@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Truck } from 'lucide-react'
+import { Truck, Lightbulb } from 'lucide-react'
 import { StockFormState, TradeType } from '../types'
 
 interface WholesalePurchaseSectionProps {
@@ -98,10 +98,9 @@ export const WholesalePurchaseSection: React.FC<WholesalePurchaseSectionProps> =
         </div>
       </div>
 
-      {/* Badge Résultat Calcul automatique Coût Unitaire */}
       <div className="p-2 bg-white/90 border border-amber-300 rounded-xl flex items-center justify-between font-mono">
-        <span className="text-gray-700 text-xs font-bold flex items-center gap-1">
-          <span>💡</span>
+        <span className="text-gray-700 text-xs font-bold flex items-center gap-1.5">
+          <Lightbulb className="w-3.5 h-3.5 text-amber-700" />
           <span>Prix d'achat unitaire de revient :</span>
         </span>
         <span className="text-amber-950 font-black text-xs sm:text-sm px-2 py-0.5 bg-amber-100 rounded-lg border border-amber-300">

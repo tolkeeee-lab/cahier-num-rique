@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle, Calculator, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { calculateCategoryCashboxBreakdown, CategoryCashboxGroup } from '@/lib/boutiqueAnalyticsEngine'
 import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
 
@@ -523,11 +523,12 @@ export function CategoryCashboxWidget({
                     setAdjustMode('real')
                     setActualCashInput(adjustingGroup.paidCash.toString())
                   }}
-                  className={`p-2 rounded-xl border text-center transition-all ${
+                  className={`p-2 rounded-xl border text-center transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-[0.97] ${
                     adjustMode === 'real' ? 'bg-amber-900 text-white border-amber-950 shadow-xs' : 'bg-white border-gray-300 text-gray-700'
                   }`}
                 >
-                  🔢 Comptage Réel
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>Comptage</span>
                 </button>
                 <button
                   type="button"
@@ -535,11 +536,12 @@ export function CategoryCashboxWidget({
                     setAdjustMode('add')
                     setActualCashInput('')
                   }}
-                  className={`p-2 rounded-xl border text-center transition-all ${
+                  className={`p-2 rounded-xl border text-center transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-[0.97] ${
                     adjustMode === 'add' ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs' : 'bg-white border-gray-300 text-gray-700'
                   }`}
                 >
-                  📥 Apport (+)
+                  <ArrowDownLeft className="w-3.5 h-3.5" />
+                  <span>Apport (+)</span>
                 </button>
                 <button
                   type="button"
@@ -547,11 +549,12 @@ export function CategoryCashboxWidget({
                     setAdjustMode('sub')
                     setActualCashInput('')
                   }}
-                  className={`p-2 rounded-xl border text-center transition-all ${
+                  className={`p-2 rounded-xl border text-center transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-[0.97] ${
                     adjustMode === 'sub' ? 'bg-rose-700 text-white border-rose-800 shadow-xs' : 'bg-white border-gray-300 text-gray-700'
                   }`}
                 >
-                  📤 Retrait (-)
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  <span>Retrait (-)</span>
                 </button>
               </div>
             </div>

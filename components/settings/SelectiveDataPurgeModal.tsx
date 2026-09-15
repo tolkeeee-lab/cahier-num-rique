@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { AlertTriangle, Trash2, X, ShieldAlert, CheckSquare, Square } from 'lucide-react'
+import { AlertTriangle, Trash2, X, ShieldAlert, CheckSquare, Square, BookOpen, Users, Package, ShoppingCart, ClipboardList, Zap } from 'lucide-react'
 import { purgeShopData, PurgeOptions } from '@/lib/dataPurgeUtils'
 
 interface SelectiveDataPurgeModalProps {
@@ -143,7 +143,10 @@ export function SelectiveDataPurgeModal({
                   {options.deleteSales ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
                 </div>
                 <div className="flex-1">
-                  <p className="font-extrabold text-xs">📖 Ventes & Écritures du Journal</p>
+                  <div className="flex items-center gap-1.5 font-extrabold text-xs">
+                    <BookOpen className="w-3.5 h-3.5 text-rose-700" />
+                    <span>Ventes & Écritures du Journal</span>
+                  </div>
                   <p className="text-[10px] text-gray-500">Toutes les opérations d'entrées, sorties et dépenses saisies au cahier.</p>
                 </div>
                 <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${options.deleteSales ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
@@ -164,7 +167,10 @@ export function SelectiveDataPurgeModal({
                   {options.deleteDebts ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
                 </div>
                 <div className="flex-1">
-                  <p className="font-extrabold text-xs">👥 Dettes & Crédits (Clients & Grossistes)</p>
+                  <div className="flex items-center gap-1.5 font-extrabold text-xs">
+                    <Users className="w-3.5 h-3.5 text-rose-700" />
+                    <span>Dettes & Crédits (Clients & Grossistes)</span>
+                  </div>
                   <p className="text-[10px] text-gray-500">Le carnet des crédits accordés et des dettes fournisseurs.</p>
                 </div>
                 <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${options.deleteDebts ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
@@ -185,7 +191,10 @@ export function SelectiveDataPurgeModal({
                   {options.deleteProducts ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
                 </div>
                 <div className="flex-1">
-                  <p className="font-extrabold text-xs">📦 Catalogue de Stock & Produits</p>
+                  <div className="flex items-center gap-1.5 font-extrabold text-xs">
+                    <Package className="w-3.5 h-3.5 text-rose-700" />
+                    <span>Catalogue de Stock & Produits</span>
+                  </div>
                   <p className="text-[10px] text-gray-500">Liste des articles enregistrés, prix unitaires et seuils d'alerte.</p>
                 </div>
                 <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${options.deleteProducts ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
@@ -206,7 +215,10 @@ export function SelectiveDataPurgeModal({
                   {options.deleteShopping ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
                 </div>
                 <div className="flex-1">
-                  <p className="font-extrabold text-xs">🛒 Liste de Courses & Ravitaillement</p>
+                  <div className="flex items-center gap-1.5 font-extrabold text-xs">
+                    <ShoppingCart className="w-3.5 h-3.5 text-rose-700" />
+                    <span>Liste de Courses & Ravitaillement</span>
+                  </div>
                   <p className="text-[10px] text-gray-500">Articles à acheter et paniers d'approvisionnement.</p>
                 </div>
                 <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${options.deleteShopping ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
@@ -227,7 +239,10 @@ export function SelectiveDataPurgeModal({
                   {options.deleteRequests ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
                 </div>
                 <div className="flex-1">
-                  <p className="font-extrabold text-xs">📝 Demandes Clients Réclamées</p>
+                  <div className="flex items-center gap-1.5 font-extrabold text-xs">
+                    <ClipboardList className="w-3.5 h-3.5 text-rose-700" />
+                    <span>Demandes Clients Réclamées</span>
+                  </div>
                   <p className="text-[10px] text-gray-500">Historique des articles demandés par les clients.</p>
                 </div>
                 <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${options.deleteRequests ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
@@ -248,7 +263,10 @@ export function SelectiveDataPurgeModal({
                   {options.deleteTactileMenu ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
                 </div>
                 <div className="flex-1">
-                  <p className="font-extrabold text-xs">⚡ Raccourcis Tactiles 1-Tap</p>
+                  <div className="flex items-center gap-1.5 font-extrabold text-xs">
+                    <Zap className="w-3.5 h-3.5 text-rose-700" />
+                    <span>Raccourcis Tactiles 1-Tap</span>
+                  </div>
                   <p className="text-[10px] text-gray-500">Boutons de vente rapide configurés sur le tiroir.</p>
                 </div>
                 <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${options.deleteTactileMenu ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>

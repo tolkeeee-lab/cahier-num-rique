@@ -59,11 +59,11 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
       }
 
       if (data?.inviteSent) {
-        setFeedback({ type: 'success', msg: `Employé ajouté & e-mail d'invitation envoyé à ${email} 📩 (Vérifiez les Spams / Indésirables !)` })
+        setFeedback({ type: 'success', msg: `Employé ajouté & e-mail d'invitation envoyé à ${email} (Vérifiez les Spams / Indésirables)` })
       } else if (data?.inviteError) {
-        setFeedback({ type: 'success', msg: `Employé ajouté au système ✅ (${data.inviteError})` })
+        setFeedback({ type: 'success', msg: `Employé ajouté au système (${data.inviteError})` })
       } else {
-        setFeedback({ type: 'success', msg: `Employé ajouté pour ${email} ✅ (Vérifiez les Spams / Indésirables)` })
+        setFeedback({ type: 'success', msg: `Employé ajouté pour ${email} (Vérifiez les Spams / Indésirables)` })
       }
 
       setNameInput('')

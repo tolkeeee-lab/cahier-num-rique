@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Calculator } from 'lucide-react'
+import { X, Calculator, Banknote, Smartphone, Landmark } from 'lucide-react'
 import { formatPrice } from '@/lib/penUtils'
 
 interface DebtRepaymentModalProps {
@@ -103,20 +103,25 @@ export const DebtRepaymentModal: React.FC<DebtRepaymentModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-extrabold text-amber-950 uppercase mb-1">
+            <label className="block font-extrabold text-amber-950 uppercase mb-1 text-[11px]">
               Mode de Règlement :
             </label>
             <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
-              {['💵 Espèces', '📱 Wave / Mobile Money', '🏦 Virement'].map((mode) => (
+              {[
+                { label: 'Espèces', value: 'Espèces', icon: Banknote },
+                { label: 'Wave / MoMo', value: 'Wave / Mobile Money', icon: Smartphone },
+                { label: 'Virement', value: 'Virement bancaire', icon: Landmark },
+              ].map(({ label, value, icon: Icon }) => (
                 <button
-                  key={mode}
+                  key={value}
                   type="button"
-                  onClick={() => setNotes(mode)}
-                  className={`px-2.5 py-1 rounded-xl border text-[10px] font-bold transition-all cursor-pointer shadow-xs ${
-                    notes === mode ? 'bg-amber-900 text-white border-amber-950' : 'bg-white border-amber-300 text-amber-950 hover:bg-amber-100'
+                  onClick={() => setNotes(value)}
+                  className={`px-2.5 py-1 rounded-xl border text-[10px] font-bold transition-all cursor-pointer shadow-xs active:scale-[0.97] flex items-center gap-1.5 ${
+                    notes === value ? 'bg-amber-900 text-white border-amber-950' : 'bg-white border-amber-300 text-amber-950 hover:bg-amber-100'
                   }`}
                 >
-                  {mode}
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{label}</span>
                 </button>
               ))}
             </div>

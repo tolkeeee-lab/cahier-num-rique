@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, X } from 'lucide-react'
+import { Search, X, Package, FileText } from 'lucide-react'
 
 interface StockFilterBarProps {
   searchQuery: string
@@ -60,20 +60,24 @@ export function StockFilterBar({
               TOUT ({totalCount})
             </button>
             <button
+              type="button"
               onClick={() => setTrackModeFilter('TRACKED')}
-              className={`px-3 py-1 rounded-full transition-all ${
+              className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
                 trackModeFilter === 'TRACKED' ? 'bg-emerald-700 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              📦 Stock Suivi ({trackedCount})
+              <Package className="w-3.5 h-3.5" />
+              <span>Stock Suivi ({trackedCount})</span>
             </button>
             <button
+              type="button"
               onClick={() => setTrackModeFilter('UNTRACKED')}
-              className={`px-3 py-1 rounded-full transition-all ${
+              className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
                 trackModeFilter === 'UNTRACKED' ? 'bg-blue-700 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              📝 Ventes Seules ({untrackedCount})
+              <FileText className="w-3.5 h-3.5" />
+              <span>Ventes Seules ({untrackedCount})</span>
             </button>
           </div>
         </div>

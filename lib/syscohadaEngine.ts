@@ -59,6 +59,8 @@ export const SYSCOHADA_ACCOUNTS: Record<string, SyscohadaAccount> = {
   '4011': { code: '4011', label: 'Fournisseurs - Dettes sur achats à crédit', class: '4', type: 'debit' },
   '5711': { code: '5711', label: 'Caisse Principale (Espèces FCFA)', class: '5', type: 'debit' },
   '5211': { code: '5211', label: 'Banques & Mobile Money', class: '5', type: 'debit' },
+  '1011': { code: '1011', label: 'Capital individuel / Apports de l\'exploitant', class: '1', type: 'credit' },
+  '1012': { code: '1012', label: 'Prélèvements personnels de l\'exploitant', class: '1', type: 'debit' },
 }
 
 /**
@@ -267,9 +269,9 @@ export function generateSyscohadaJournal(sales: any[]): DoubleEntryRow[] {
         penColor
       })
     }
-    // 8. Ajustement de Caisse
+    // 8. Ajustement de Caisse (Apport capital exploitant ou Retrait personnel)
     else if (type === 'cash_adjustment') {
-      const isRetrait = notesStr.toLowerCase().includes('retrait') || notesStr.toLowerCase().includes('sortie')
+      const isRetrait = notesStr.toLowerCase().includes('retrait') || notesStr.toLowerCase().includes('sortie') || notesStr.toLowerCase().includes('ecart: -')
       if (isRetrait) {
         journal.push({
           id: `${sale.id}_1`,
@@ -277,8 +279,8 @@ export function generateSyscohadaJournal(sales: any[]): DoubleEntryRow[] {
           time: timeStr,
           pieceRef,
           description: `Retrait Espèces : ${notesStr}`,
-          debitAccountCode: '6581',
-          debitAccountLabel: SYSCOHADA_ACCOUNTS['6581'].label,
+          debitAccountCode: '1012',
+          debitAccountLabel: SYSCOHADA_ACCOUNTS['1012'].label,
           creditAccountCode: '5711',
           creditAccountLabel: SYSCOHADA_ACCOUNTS['5711'].label,
           amount: totalAmount,
@@ -294,8 +296,8 @@ export function generateSyscohadaJournal(sales: any[]): DoubleEntryRow[] {
           description: `Apport Espèces : ${notesStr}`,
           debitAccountCode: '5711',
           debitAccountLabel: SYSCOHADA_ACCOUNTS['5711'].label,
-          creditAccountCode: '7011',
-          creditAccountLabel: SYSCOHADA_ACCOUNTS['7011'].label,
+          creditAccountCode: '1011',
+          creditAccountLabel: SYSCOHADA_ACCOUNTS['1011'].label,
           amount: totalAmount,
           category: 'Caisse',
           penColor
@@ -368,6 +370,15 @@ export function calculateSyscohadaSMT(sales: any[]): SyscohadaSMTSummary {
       else if (exp.code === '6611') chargesSalaires661 += total
       else if (exp.code === '6011') achatsMarchandises601 += total
       else autresCharges658 += total
+    } else if (type === 'cash_adjustment') {
+      const catText = `${notes} ${category}`.toLowerCase()
+      const isRetrait = catText.includes('retrait') || catText.includes('sortie') || catText.includes('ecart: -') || catText.includes('écart: -')
+      const isApport = catText.includes('apport') || catText.includes('fond de caisse') || catText.includes('depot') || catText.includes('dépôt') || catText.includes('ecart: +') || catText.includes('écart: +')
+      let delta = paid > 0 ? paid : total
+      if (isRetrait) delta = -Math.abs(delta)
+      else if (isApport) delta = Math.abs(delta)
+      else delta = sale.pen_color === 'red' ? -Math.abs(delta) : Math.abs(delta)
+      soldeCaisse571 += delta
     }
   })
 

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { X, Printer } from 'lucide-react'
+import { X, Printer, Receipt } from 'lucide-react'
 import { formatPrice } from '@/lib/penUtils'
 
 interface SaleDetailModalProps {
@@ -26,7 +26,9 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
         {/* En-tête */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🧾</span>
+            <div className="p-1.5 rounded-xl bg-amber-100 text-amber-900">
+              <Receipt className="w-5 h-5" />
+            </div>
             <div>
               <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">Détails de la Vente</h3>
               <p className="text-xs text-gray-600 font-mono">

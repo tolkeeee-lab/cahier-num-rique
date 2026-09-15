@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import {
   X, Printer, Landmark, FileSpreadsheet,
-  BookOpen, Layers, ShieldCheck, Search
+  BookOpen, Layers, ShieldCheck, Search, BarChart2
 } from 'lucide-react'
 import {
   generateSyscohadaJournal, calculateSyscohadaSMT
@@ -197,7 +197,10 @@ export function SyscohadaModal({
               {/* Tableau Synthétique Compte de Résultat OHADA SMT */}
               <div className="bg-white border border-amber-200 rounded-2xl overflow-hidden shadow-xs">
                 <div className="px-4 py-3 bg-[#f6f1e7] border-b border-amber-200 font-bold text-xs text-amber-950 flex items-center justify-between">
-                  <span>📊 COMPTE DE RÉSULTAT SIMPLIFIÉ (SYSCOHADA SMT)</span>
+                  <span className="flex items-center gap-1.5">
+                    <BarChart2 className="w-4 h-4 text-amber-900" />
+                    <span>COMPTE DE RÉSULTAT SIMPLIFIÉ (SYSCOHADA SMT)</span>
+                  </span>
                   <span className="font-mono text-[10px] text-amber-800">Montants en FCFA</span>
                 </div>
 

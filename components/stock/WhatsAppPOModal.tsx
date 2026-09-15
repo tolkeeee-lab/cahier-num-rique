@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { X } from 'lucide-react'
+import { X, MessageCircle } from 'lucide-react'
 import { StockItem } from './types'
 import { getStockStatus } from './stockUtils'
 
@@ -31,9 +31,10 @@ export function WhatsAppPOModal({
       <div className="bg-[#fbf9f4] border border-emerald-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="px-5 py-4 border-b border-emerald-200 bg-emerald-100 flex items-center justify-between text-emerald-950">
           <div className="font-bold text-sm flex items-center gap-2">
-            <span>📲 Bon de Commande WhatsApp</span>
+            <MessageCircle className="w-4 h-4 text-emerald-800" />
+            <span>Bon de Commande WhatsApp</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-emerald-200/60">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-emerald-200/60 transition-colors cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -70,16 +71,23 @@ export function WhatsAppPOModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100"
+              className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               Fermer
             </button>
             <a
-              href={generateWhatsAppUrl()}
+              href={(() => {
+                try {
+                  return generateWhatsAppUrl() || '#'
+                } catch {
+                  return '#'
+                }
+              })()}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full text-center transition-transform hover:scale-105 active:scale-95 flex items-center justify-center gap-1"
+              className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full text-center transition-all active:scale-[0.97] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
             >
+              <MessageCircle className="w-4 h-4" />
               <span>Envoyer WhatsApp</span>
             </a>
           </div>
