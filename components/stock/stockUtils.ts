@@ -82,8 +82,7 @@ export function getStockStatus(item: StockItem): StockStatus {
       catLower.includes('coiffure') || 
       catLower.includes('atelier') || 
       catLower.includes('salon') || 
-      catLower.includes('couture') ||
-      item.category.includes('✂️')
+      catLower.includes('couture')
     ) return 'ok'
   }
 

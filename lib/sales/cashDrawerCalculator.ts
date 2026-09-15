@@ -71,13 +71,14 @@ export function calculateCash(list: any[]): number {
 }
 
 export async function getCurrentCash(shopId: string): Promise<number> {
+  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
   if (isSupabaseConfigured()) {
     try {
       const { supabase } = await import('@/lib/supabase')
       const { data, error } = await supabase
         .from('sales')
         .select('type, paid_amount, total_amount, status, notes, client_name, pen_color')
-        .eq('shop_id', shopId)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
       if (error) throw error
       return calculateCash(data || [])
@@ -88,14 +89,20 @@ export async function getCurrentCash(shopId: string): Promise<number> {
   if (typeof window !== 'undefined') {
     try {
       const { getOfflineSales } = await import('@/lib/offlineDb')
-      return calculateCash(getOfflineSales(shopId))
+      const primary = getOfflineSales(shopId)
+      const alt = getOfflineSales(altShopId)
+      const mergedMap = new Map()
+      for (const s of [...primary, ...alt]) {
+        if (s?.id) mergedMap.set(s.id, s)
+      }
+      return calculateCash(Array.from(mergedMap.values()))
     } catch {
       return 0
     }
   } else {
     try {
       const { getLocalDb } = await import('@/lib/localDb')
-      return calculateCash(getLocalDb().filter(s => s.shop_id === shopId))
+      return calculateCash(getLocalDb().filter(s => s.shop_id === shopId || s.shop_id === altShopId))
     } catch {
       return 0
     }

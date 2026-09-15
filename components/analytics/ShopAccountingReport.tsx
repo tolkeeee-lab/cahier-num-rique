@@ -9,7 +9,8 @@ import {
   ArrowDownRight,
   TrendingUp,
   Scale,
-  FileText
+  FileText,
+  Landmark
 } from 'lucide-react'
 import { getOfflineProducts, OfflineProduct } from '@/lib/offlineDb'
 import { getItemPurchaseValue } from '@/components/stock/stockUtils'
@@ -216,7 +217,7 @@ export function ShopAccountingReport({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-black text-amber-950 flex items-center gap-2 font-mono">
-              <span>🏛️</span>
+              <Landmark className="w-5 h-5 text-amber-800" strokeWidth={1.75} />
               <span>Comptabilité & Bilan : {shopName}</span>
             </h2>
           </div>

@@ -54,7 +54,7 @@ export function SelectiveDataPurgeModal({
     setIsPurging(false)
 
     if (result.success) {
-      setPurgeMessage('✓ Données supprimées avec succès !')
+      setPurgeMessage('Données supprimées avec succès !')
       setTimeout(() => {
         if (onPurgeComplete) onPurgeComplete()
         window.location.reload()

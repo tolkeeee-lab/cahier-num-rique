@@ -3,6 +3,15 @@ import { supabase } from '@/lib/supabase'
 
 export async function POST(request: Request) {
   const shopId = request.headers.get('x-shop-id') || 'default-shop'
+  const userRole = (request.headers.get('x-user-role') || '').toLowerCase().trim()
+
+  // Seul le patron (owner) peut vider le catalogue de stock
+  if (userRole === 'employee' || userRole === 'caissier') {
+    return NextResponse.json(
+      { error: 'Action interdite : Seul le propriétaire peut réinitialiser le stock.' },
+      { status: 403 }
+    )
+  }
 
   try {
     const isSupabaseConfigured = () => {
@@ -12,8 +21,16 @@ export async function POST(request: Request) {
     }
 
     if (isSupabaseConfigured()) {
-      // Supprimer uniquement le catalogue des produits pour cette boutique
-      const { error } = await supabase.from('products').delete().eq('shop_id', shopId)
+      const altShopId = shopId.startsWith('SHOP-')
+        ? shopId.replace(/^SHOP-/i, '')
+        : `SHOP-${shopId}`
+
+      // Supprimer uniquement le catalogue des produits pour cette boutique (shopId et altShopId)
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+
       if (error) throw error
     }
 

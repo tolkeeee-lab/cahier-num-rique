@@ -4,6 +4,7 @@ import { stockAdjustSchema, validatePayload } from '@/lib/validations'
 
 export async function POST(request: Request) {
   const shopId = request.headers.get('x-shop-id') || 'default-shop'
+  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
   const employeeName = request.headers.get('x-employee-name') || 'Gérant'
 
   try {
@@ -15,12 +16,12 @@ export async function POST(request: Request) {
 
     const { productId, quantity, type, reason, notes } = validation.data
 
-    // 1. Récupérer le produit
+    // 1. Récupérer le produit (support shopId et altShopId)
     const { data: product, error: prodErr } = await supabase
       .from('products')
       .select('*')
       .eq('id', productId)
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
       .single()
 
     if (prodErr || !product) {
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
       .from('products')
       .update(updatePayload)
       .eq('id', product.id)
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
     return NextResponse.json({
       success: true,

@@ -10,6 +10,15 @@ const isSupabaseConfigured = () => {
 
 export async function POST(request: Request) {
   const shopId = request.headers.get('x-shop-id') || 'default-shop'
+  const userRole = (request.headers.get('x-user-role') || '').toLowerCase().trim()
+
+  if (userRole === 'employee' || userRole === 'caissier') {
+    return NextResponse.json(
+      { error: 'Action interdite : Seul le propriétaire peut fusionner des produits du catalogue.' },
+      { status: 403 }
+    )
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données distante non configurée' }, { status: 503 })
   }
@@ -26,19 +35,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Impossible de fusionner un produit avec lui-même' }, { status: 400 })
     }
 
-    // 1. Récupérer les 2 produits
+    const altShopId = shopId.startsWith('SHOP-')
+      ? shopId.replace(/^SHOP-/i, '')
+      : `SHOP-${shopId}`
+
+    // 1. Récupérer les 2 produits (support shopId et altShopId)
     const { data: sourceProduct, error: err1 } = await supabase
       .from('products')
       .select('*')
       .eq('id', sourceProductId)
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
       .single()
 
     const { data: targetProduct, error: err2 } = await supabase
       .from('products')
       .select('*')
       .eq('id', targetProductId)
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
       .single()
 
     if (err1 || !sourceProduct) {
@@ -56,7 +69,7 @@ export async function POST(request: Request) {
         product_name: targetProduct.name,
         product_name_canonical: targetProduct.name,
       })
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
       .or(`product_id.eq.${sourceProduct.id},product_name.ilike.${sourceProduct.name}`)
 
     if (updateArticlesErr) {
@@ -72,7 +85,7 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', targetProduct.id)
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
       .select()
       .single()
 
@@ -83,7 +96,7 @@ export async function POST(request: Request) {
       .from('products')
       .delete()
       .eq('id', sourceProduct.id)
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
     if (deleteSourceErr) throw deleteSourceErr
 

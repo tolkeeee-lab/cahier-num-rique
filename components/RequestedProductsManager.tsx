@@ -108,7 +108,7 @@ export function RequestedProductsManager({
 
     const updated = recordRequestedProductInStorage(shopId, cleanName, price)
     setItems(updated)
-    setFeedbackMsg(`✓ Demande client « ${cleanName} » inscrite dans votre cahier !`)
+    setFeedbackMsg(`Demande client « ${cleanName} » inscrite dans votre cahier !`)
     setTimeout(() => setFeedbackMsg(null), 3500)
     setQuickInput('')
   }

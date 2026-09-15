@@ -130,7 +130,7 @@ export default function JournalPage() {
       }
     } catch (err: any) {
       if (err.message?.toLowerCase().includes('email not confirmed')) {
-        setAuthError('📧 E-mail non confirmé. Veuillez valider le lien reçu par e-mail, ou cliquez sur "Connexion sans mot de passe (Magic Link)" ci-dessous.')
+        setAuthError('E-mail non confirmé. Veuillez valider le lien reçu par e-mail, ou cliquez sur "Connexion sans mot de passe (Magic Link)" ci-dessous.')
       } else {
         setAuthError(err?.message || 'Erreur de connexion. Vérifiez vos identifiants.')
       }
@@ -512,7 +512,6 @@ export default function JournalPage() {
         price: p.unit_price || 0,
         category: p.category,
         stock: (p as any).current_stock ?? p.initial_stock,
-        emoji: '📦',
       }))
   }, [saleCreation.input, shopManager.shopId])
 
@@ -571,7 +570,7 @@ export default function JournalPage() {
   const handleBarcodeDetected = (formattedSaleText: string) => {
     if (!formattedSaleText.trim()) return
     saleCreation.setInput(prev => prev.trim() ? `${prev}, ${formattedSaleText}` : formattedSaleText)
-    setPostItMessage(`🛒 Articles scannés ajoutés à la vente !`)
+    setPostItMessage('Articles scannés ajoutés à la vente !')
   }
 
   // Enregistrer un nouveau produit découvert par code-barres
@@ -598,7 +597,7 @@ export default function JournalPage() {
         body: JSON.stringify(newProd),
       })
     } catch {}
-    setPostItMessage(`📦 Produit enregistré : ${name} (${price} F)`)
+    setPostItMessage(`Produit enregistré : ${name} (${price} F)`)
   }
 
   // Associer un code-barres à un produit du stock
@@ -612,7 +611,7 @@ export default function JournalPage() {
         headers: { 'Content-Type': 'application/json', 'x-shop-id': shopManager.shopId },
         body: JSON.stringify({ id: productId, barcode }),
       }).catch(() => {})
-      setPostItMessage(`🔗 Code-barres lié à ${prod.name}`)
+      setPostItMessage(`Code-barres lié à ${prod.name}`)
     }
   }
 
@@ -776,7 +775,7 @@ export default function JournalPage() {
                       onSelectSuggestion={handleAppendStockSuggestion}
                     />
 
-                    {/* Bouton Raccourcis ⚡ 1-Tap dédié à la saisie */}
+                    {/* Bouton Raccourcis 1-Tap dédié à la saisie */}
                     <button
                       type="button"
                       onClick={() => setShowTactileMenuModal(true)}
@@ -912,7 +911,7 @@ export default function JournalPage() {
                     saleCreation.setInput(text)
                     setSelectedPen('green')
                     setActiveTab('cahier')
-                    setPostItMessage('🛒 Bon de commande transféré dans le cahier (Stylo Vert Stock) !')
+                    setPostItMessage('Bon de commande transféré dans le cahier (Stylo Vert Stock) !')
                   }}
                 />
               </div>

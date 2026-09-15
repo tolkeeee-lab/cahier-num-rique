@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Calculator, Sparkles, CheckCircle2, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { ArrowRight, BookOpen, Calculator, Sparkles, CheckCircle2, ShieldCheck, AlertTriangle, Package, Clock } from 'lucide-react'
 
 export default function LandingPage() {
   const [authError, setAuthError] = useState<string | null>(null)
@@ -39,7 +39,7 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between border-b border-gray-800/40 relative z-10">
         <div className="flex items-center gap-2">
-          <span className="text-xl">📓</span>
+          <BookOpen className="w-5 h-5 text-[#f59e0b]" />
           <span className="font-extrabold text-base tracking-widest text-[#f59e0b] uppercase">
             Cahier Numérique
           </span>
@@ -140,8 +140,9 @@ export default function LandingPage() {
                 <div className="text-[#1d4ed8] text-base leading-none">
                   Vente 3 sacs de riz à 12000 F <span className="text-[8px] bg-blue-100 text-blue-800 border px-1 rounded font-sans">VENTE</span>
                 </div>
-                <div className="text-gray-500 text-[10px] -mt-1 ml-4">
-                  📦 3x riz à 12000 F (Total 36 000 F)
+                <div className="text-gray-500 text-[10px] -mt-1 ml-4 flex items-center gap-1">
+                  <Package className="w-3 h-3 text-gray-400" />
+                  <span>3x riz à 12000 F (Total 36 000 F)</span>
                 </div>
 
                 <div className="text-[#e11d48] text-base leading-none pt-2">
@@ -156,12 +157,15 @@ export default function LandingPage() {
               {/* Bottom Sticky mock bar */}
               <div className="relative z-10 border-t border-gray-200/80 pt-2 flex items-center justify-between text-gray-400 font-mono text-[9px]">
                 <div className="flex items-center gap-1">
-                  <span>⏰ 22:51</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5 text-gray-400" />
+                    <span>22:51</span>
+                  </span>
                   <span className="text-gray-300">|</span>
                   <span className="font-handwritten text-xs text-[#1d4ed8]">Ex: 3 litres d'huiles à 6000...</span>
                 </div>
                 <div className="w-5 h-5 rounded-full bg-gray-900 text-white flex items-center justify-center">
-                  →
+                  <ArrowRight className="w-2.5 h-2.5" />
                 </div>
               </div>
 

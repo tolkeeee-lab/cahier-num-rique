@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle, Calculator, ArrowDownLeft, ArrowUpRight, Pencil, CupSoda, Package } from 'lucide-react'
+import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle, Calculator, ArrowDownLeft, ArrowUpRight, Pencil, CupSoda, Package, X } from 'lucide-react'
 import { calculateCategoryCashboxBreakdown, CategoryCashboxGroup } from '@/lib/boutiqueAnalyticsEngine'
 import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
 
@@ -259,7 +259,7 @@ export function CategoryCashboxWidget({
                   onClick={() => openAdjustModal({
                     name: 'Commune Centrale',
                     key: 'commune',
-                    icon: '🏛️',
+                    icon: '',
                     revenue: unifiedTotals.revenue,
                     paidCash: unifiedTotals.paidCash,
                     debt: unifiedTotals.debt,
@@ -495,7 +495,9 @@ export function CategoryCashboxWidget({
           <div className="bg-[#fffdf8] border-2 border-amber-400 rounded-3xl p-5 max-w-md w-full shadow-2xl space-y-4 font-sans animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-amber-200 pb-2.5">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">{adjustingGroup.icon}</span>
+                <div className="w-8 h-8 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 flex-shrink-0">
+                  <Landmark className="w-4 h-4" />
+                </div>
                 <div>
                   <h4 className="font-bold text-base text-amber-950 font-handwritten text-lg">
                     Ajuster : {adjustingGroup.name}
@@ -506,10 +508,12 @@ export function CategoryCashboxWidget({
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setAdjustingGroup(null)}
-                className="w-7 h-7 rounded-full bg-amber-100 text-amber-900 font-bold flex items-center justify-center text-xs hover:bg-amber-200"
+                className="w-7 h-7 rounded-full bg-amber-100 text-amber-900 font-bold flex items-center justify-center text-xs hover:bg-amber-200 active:scale-[0.95] transition-transform cursor-pointer"
+                title="Fermer"
               >
-                ✕
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
 

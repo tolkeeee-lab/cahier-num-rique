@@ -232,6 +232,9 @@ export async function POST(request: Request) {
     }
 
     const canonicalName = normalizeProductName(name)
+    const altShopId = shopId.startsWith('SHOP-')
+      ? shopId.replace(/^SHOP-/i, '')
+      : `SHOP-${shopId}`
 
     const cleanData: Record<string, any> = sanitizeProductData({
       shop_id: shopId,
@@ -256,6 +259,29 @@ export async function POST(request: Request) {
     }
 
     const insertData = filterProductDbColumns(cleanData)
+
+    // Vérifier si le produit existe déjà sous shopId ou altShopId pour éviter les doublons inter-identifiants
+    const { data: existingProd } = await supabase
+      .from('products')
+      .select('*')
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .ilike('name', canonicalName)
+      .maybeSingle()
+
+    if (existingProd?.id) {
+      const updatePayload = { ...insertData }
+      delete updatePayload.id
+      delete updatePayload.created_at
+      const { data: updated, error: upErr } = await supabase
+        .from('products')
+        .update(updatePayload)
+        .eq('id', existingProd.id)
+        .select()
+        .single()
+      if (!upErr && updated) {
+        return NextResponse.json({ product: { ...updated, trade_type: cleanData.trade_type } }, { status: 200 })
+      }
+    }
 
     let { data, error } = await supabase
       .from('products')
@@ -445,13 +471,17 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    const altShopId = shopId.startsWith('SHOP-')
+      ? shopId.replace(/^SHOP-/i, '')
+      : `SHOP-${shopId}`
+
     // 1. Cas d'un article orphelin (historique de vente sans fiche produit dans le catalogue)
     if (id && id.startsWith('orphan_')) {
       const orphanName = id.replace(/^orphan_/, '')
       const { data: shopSales } = await supabase
         .from('sales')
         .select('id')
-        .eq('shop_id', shopId)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
       const saleIds = (shopSales || []).map(s => s.id)
       if (saleIds.length > 0) {
@@ -472,7 +502,7 @@ export async function DELETE(request: Request) {
         .from('products')
         .select('*')
         .eq('id', id)
-        .eq('shop_id', shopId)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
         .maybeSingle()
       
       productToDelete = prod
@@ -483,7 +513,7 @@ export async function DELETE(request: Request) {
         .from('products')
         .select('*')
         .ilike('name', productName.trim())
-        .eq('shop_id', shopId)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
         .maybeSingle()
 
       productToDelete = prodByName
@@ -495,7 +525,7 @@ export async function DELETE(request: Request) {
         .from('products')
         .delete()
         .eq('id', productToDelete.id)
-        .eq('shop_id', shopId)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
       if (deleteProdErr) throw deleteProdErr
     } else if (id && !id.startsWith('stk_')) {
@@ -504,7 +534,7 @@ export async function DELETE(request: Request) {
         .from('products')
         .delete()
         .eq('id', id)
-        .eq('shop_id', shopId)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
     }
 
     // 3. Purger les sold_articles associés au produit pour cette boutique
@@ -513,7 +543,7 @@ export async function DELETE(request: Request) {
       const { data: shopSales } = await supabase
         .from('sales')
         .select('id')
-        .eq('shop_id', shopId)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
       const saleIds = (shopSales || []).map(s => s.id)
       if (saleIds.length > 0) {

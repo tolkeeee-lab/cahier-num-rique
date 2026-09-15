@@ -33,7 +33,8 @@ export async function feedMarketKnowledge(
 
 export function getLocalSales(dateParam: string | null, shopId: string): any[] {
   const salesDatabase = getLocalDb()
-  let filtered = salesDatabase.filter(s => s.shop_id === shopId)
+  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
+  let filtered = salesDatabase.filter(s => s.shop_id === shopId || s.shop_id === altShopId)
   if (dateParam === 'today') {
     const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
     filtered = filtered.filter(s => s.date === today)
@@ -47,6 +48,7 @@ export async function fetchSalesHistory(dateParam: string | null, shopId: string
   }
 
   try {
+    const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
     let query = supabase
       .from('sales')
       .select(`
@@ -69,7 +71,7 @@ export async function fetchSalesHistory(dateParam: string | null, shopId: string
           category
         )
       `)
-      .eq('shop_id', shopId)
+      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
       .order('created_at', { ascending: false })
 
     if (dateParam === 'today') {

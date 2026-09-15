@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { X, Receipt } from 'lucide-react'
 
 interface ChangeCalculatorPostItProps {
   show: boolean
@@ -65,8 +65,9 @@ export function ChangeCalculatorPostIt({
       </button>
 
       <div className="flex items-center justify-between pr-6">
-        <p className="text-[11px] font-black text-amber-900 uppercase tracking-wider">
-          🧾 Calculateur de Rendu de Monnaie
+        <p className="text-[11px] font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+          <Receipt className="w-3.5 h-3.5 text-amber-800" strokeWidth={1.75} />
+          <span>Calculateur de Rendu de Monnaie</span>
         </p>
       </div>
 

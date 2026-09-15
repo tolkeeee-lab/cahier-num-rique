@@ -16,7 +16,8 @@ import {
   Sparkles,
   Smartphone,
   Shirt,
-  CupSoda
+  CupSoda,
+  Store
 } from 'lucide-react'
 import { exportSalesToCSV, exportSalesToPDF, generateWhatsAppPerformanceReport } from '@/lib/exportUtils'
 import { CategoryCashboxWidget } from '@/components/analytics/CategoryCashboxWidget'
@@ -157,8 +158,10 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
     <div className="space-y-6">
       {/* Header Boutique */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🏬</span>
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
+            <Store className="w-5 h-5" strokeWidth={1.75} />
+          </div>
           <div>
             <h2 className="font-handwritten text-xl font-bold text-gray-900">
               Analyses Ventes & Chiffre d'Affaires
@@ -268,7 +271,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
       {/* Widget Séparation des Caisses par Catégorie (Boissons vs Divers) */}
       <CategoryCashboxWidget sales={sales} shopId={shopId} onRefreshData={onRefreshData} />
 
-      {/* 📊 Répartition par Catégorie de Produit */}
+      {/* Répartition par Catégorie de Produit */}
       {retailStats.categoryStats.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm">
           <h3 className="font-handwritten text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -299,7 +302,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
         </div>
       )}
 
-      {/* 🏆 Classement des Produits */}
+      {/* Classement des Produits */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none">
           <div>
