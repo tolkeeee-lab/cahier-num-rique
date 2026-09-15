@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import { Scissors, Users, TrendingUp, DollarSign, Share2 } from 'lucide-react'
+import { Scissors, Users, TrendingUp, DollarSign, Share2, Package, Trophy } from 'lucide-react'
 import { generateWhatsAppPerformanceReport } from '@/lib/exportUtils'
 
 interface Sale {
@@ -35,7 +35,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
   const serviceStats = useMemo(() => {
     let totalServices = 0
     let totalProduits = 0
-    let totalClientsServis = sales.length
+    let clientCount = 0
 
     const serviceMap: Record<string, { name: string; qty: number; revenue: number }> = {}
 
@@ -44,6 +44,8 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
 
       const isClientSale = ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type) || s.pen_color === 'blue' || s.pen_color === 'yellow'
       if (!isClientSale) return
+
+      clientCount += 1
 
       if (s.articles && s.articles.length > 0) {
         s.articles.forEach(art => {
@@ -69,6 +71,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
       }
     })
 
+    const totalClientsServis = clientCount
     const totalRecette = totalServices + totalProduits
     const ratioServices = totalRecette > 0 ? Math.round((totalServices / totalRecette) * 100) : 80
     const ratioProduits = totalRecette > 0 ? 100 - ratioServices : 20
@@ -95,8 +98,10 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
     <div className="space-y-6">
       {/* En-tête Services */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-blue-200 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">✂️</span>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 flex-shrink-0">
+            <Scissors className="w-5 h-5" />
+          </div>
           <div>
             <h2 className="font-handwritten text-xl font-bold text-gray-900">
               Analyses Prestations & Services
@@ -119,7 +124,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
               <button
                 key={p.id}
                 onClick={() => onPeriodChange(p.id as any)}
-                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all ${
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer active:scale-[0.97] ${
                   period === p.id 
                     ? 'bg-gray-900 text-white shadow-sm' 
                     : 'text-gray-600 hover:bg-gray-200'
@@ -134,7 +139,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
             href={generateWhatsAppPerformanceReport(sales, period === 'all' ? 'Tout' : period === 'month' ? 'Ce Mois' : period === '7days' ? '7 Jours' : 'Aujourd\'hui', shopName)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm active:scale-[0.97]"
           >
             <Share2 className="w-3 h-3" />
             <span>Rapport Atelier WhatsApp</span>
@@ -185,10 +190,11 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
         </div>
       </div>
 
-      {/* ✂️ Dualité Main d'Œuvre vs Fournitures */}
+      {/* Dualité Main d'Œuvre vs Fournitures */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
-          ✂️ Répartition Main d'Œuvre vs Ventes Produits
+          <Scissors className="w-5 h-5 text-purple-600" />
+          <span>Répartition Main d'Œuvre vs Ventes Produits</span>
         </h3>
 
         <div className="space-y-3">
@@ -210,24 +216,27 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
           <div className="grid grid-cols-2 gap-4 text-xs font-mono">
             <div className="bg-purple-50 border border-purple-200 p-3 rounded-2xl flex justify-between items-center">
               <span className="font-bold text-purple-900 flex items-center gap-1.5">
-                <span>✂️</span> Main d'Œuvre & Prestations
+                <Scissors className="w-4 h-4 text-purple-600" />
+                <span>Main d'Œuvre & Prestations</span>
               </span>
-              <strong className="text-purple-950">{formatPrice(serviceStats.totalServices)}</strong>
+              <strong className="text-purple-950 tabular-nums">{formatPrice(serviceStats.totalServices)}</strong>
             </div>
             <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl flex justify-between items-center">
               <span className="font-bold text-emerald-900 flex items-center gap-1.5">
-                <span>📦</span> Fournitures & Produits Vendus
+                <Package className="w-4 h-4 text-emerald-600" />
+                <span>Fournitures & Produits Vendus</span>
               </span>
-              <strong className="text-emerald-950">{formatPrice(serviceStats.totalProduits)}</strong>
+              <strong className="text-emerald-950 tabular-nums">{formatPrice(serviceStats.totalProduits)}</strong>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 🏆 Classement des Prestations Phares */}
+      {/* Classement des Prestations Phares */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
-          🏆 Top Prestations & Services Réalisés ({serviceStats.topServices.length})
+          <Trophy className="w-5 h-5 text-amber-500" />
+          <span>Top Prestations & Services Réalisés ({serviceStats.topServices.length})</span>
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -237,14 +246,14 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
                 <span className="w-6 h-6 rounded-full bg-purple-900 text-white font-mono text-[10px] font-bold flex items-center justify-center">
                   #{idx + 1}
                 </span>
-                <span className="font-bold text-xs text-gray-900 flex items-center gap-1">
-                  <span>✂️</span>
+                <span className="font-bold text-xs text-gray-900 flex items-center gap-1.5">
+                  <Scissors className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
                   <span>{item.name}</span>
                 </span>
               </div>
               <div className="text-right font-mono">
-                <span className="text-xs font-bold text-purple-900 block">{formatPrice(item.revenue)}</span>
-                <span className="text-[9px] text-gray-500">{item.qty} réalisé(s)</span>
+                <span className="text-xs font-bold text-purple-900 block tabular-nums">{formatPrice(item.revenue)}</span>
+                <span className="text-[9px] text-gray-500 tabular-nums">{item.qty} réalisé(s)</span>
               </div>
             </div>
           ))}

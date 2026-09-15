@@ -12,7 +12,7 @@
  */
 
 import React, { useState } from 'react'
-import { Plus, X, ChevronDown, ChevronUp, Loader } from 'lucide-react'
+import { Plus, X, ChevronDown, ChevronUp, Loader, Utensils } from 'lucide-react'
 import type { MenuItem } from '@/hooks/useTactileMenu'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -98,12 +98,13 @@ export function TactileMenuGrid({
       <div className="flex items-center justify-between px-1">
         <button
           onClick={() => setShowGrid(v => !v)}
-          className="flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-900 transition-colors cursor-pointer active:scale-[0.97]"
         >
-          🍽️ Menu Tactile
+          <Utensils className="w-3.5 h-3.5 text-amber-700" />
+          <span>Menu Tactile</span>
           {showGrid ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           {items.length > 0 && (
-            <span className="ml-1 bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5 text-[10px] font-bold">
+            <span className="ml-1 bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5 text-[10px] font-bold font-mono tabular-nums">
               {items.length}
             </span>
           )}
@@ -111,11 +112,11 @@ export function TactileMenuGrid({
 
         <button
           onClick={() => setShowAddForm(v => !v)}
-          className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-800 font-medium transition-colors"
+          className="flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-800 font-medium transition-colors cursor-pointer active:scale-[0.97]"
           title="Ajouter un produit au menu"
         >
           <Plus className="w-3 h-3" />
-          Ajouter
+          <span>Ajouter</span>
         </button>
       </div>
 

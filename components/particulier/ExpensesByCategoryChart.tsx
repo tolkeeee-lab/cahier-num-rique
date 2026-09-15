@@ -7,7 +7,8 @@ import { PieChart } from 'lucide-react'
 interface CategoryExpense {
   category: string
   label: string
-  emoji: string
+  emoji?: string
+  icon?: React.ReactNode
   amount: number
 }
 
@@ -34,10 +35,10 @@ export const ExpensesByCategoryChart: React.FC<ExpensesByCategoryChartProps> = (
             <div key={idx} className="space-y-1">
               <div className="flex justify-between text-xs font-mono text-gray-800">
                 <span className="flex items-center gap-1.5 font-extrabold">
-                  <span>{cat.emoji}</span>
+                  {cat.icon ? cat.icon : <span>{cat.emoji}</span>}
                   <span>{cat.label}</span>
                 </span>
-                <span className="font-bold">{formatPrice(cat.amount)} ({percentage}%)</span>
+                <span className="font-bold tabular-nums">{formatPrice(cat.amount)} ({percentage}%)</span>
               </div>
               <div className="w-full bg-amber-100/80 h-3 rounded-full overflow-hidden border border-amber-200 shadow-inner">
                 <div

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Pen, formatPrice } from '@/lib/penUtils'
-import { Calculator } from 'lucide-react'
+import { Calculator, ClipboardList } from 'lucide-react'
 import { CategoryBreakdownModal } from './CategoryBreakdownModal'
 
 interface SaleItem {
@@ -86,15 +86,16 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
             if (onSelectFilter) onSelectFilter('all')
             onSelectPen('blue')
           }}
-          className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-mono font-black transition-all duration-150 flex-shrink-0 border cursor-pointer ${
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-black transition-all duration-150 flex-shrink-0 border cursor-pointer active:scale-[0.97] ${
             activeFilter === 'all'
               ? 'bg-amber-950 text-amber-100 border-amber-950 shadow-xs scale-102 ring-2 ring-amber-400/80'
               : 'bg-white/90 text-gray-800 border-amber-300/80 hover:bg-amber-100 shadow-2xs'
           }`}
           title="Afficher toutes les écritures"
         >
-          <span>📋 TOUS</span>
-          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+          <ClipboardList className="w-3.5 h-3.5" />
+          <span>TOUS</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black font-mono tabular-nums ${
             activeFilter === 'all' ? 'bg-amber-800 text-white' : 'bg-amber-200/80 text-amber-950'
           }`}>
             {validSales.length}
@@ -113,7 +114,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
                 onSelectPen(pen.id)
                 if (onSelectFilter) onSelectFilter(pen.id)
               }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-extrabold transition-all duration-150 flex-shrink-0 border cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-extrabold transition-all duration-150 flex-shrink-0 border cursor-pointer active:scale-[0.97] ${
                 isSelected
                   ? 'text-white shadow-xs scale-102 ring-2 ring-amber-400/80 border-white/60'
                   : 'bg-white/90 text-gray-800 border-amber-300/80 hover:bg-amber-50 shadow-2xs'
@@ -151,7 +152,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
               onSelectFilter(activeFilter === 'total' ? 'all' : 'total')
             }
           }}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-xs font-black shadow-xs flex-shrink-0 ml-auto transition-all cursor-pointer border ${
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-xs font-black shadow-xs flex-shrink-0 ml-auto transition-all cursor-pointer active:scale-[0.97] border ${
             activeFilter === 'total'
               ? 'bg-emerald-700 text-white border-emerald-800 ring-2 ring-emerald-400 scale-102'
               : 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-950 border-emerald-300 hover:bg-emerald-200'

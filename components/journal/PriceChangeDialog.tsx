@@ -11,7 +11,7 @@
  */
 
 import React from 'react'
-import { X, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react'
+import { X, AlertTriangle, TrendingUp, TrendingDown, Check, RotateCcw } from 'lucide-react'
 
 interface PriceChangeDialogProps {
   isOpen: boolean
@@ -104,10 +104,10 @@ export function PriceChangeDialog({
         </div>
 
         {/* Explication */}
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-600">
           {isIncrease
-            ? '⚠️ Le prix a augmenté. Voulez-vous mettre à jour votre catalogue ?'
-            : '✅ Le prix a baissé. Voulez-vous mettre à jour votre catalogue ?'
+            ? 'Le prix saisi est supérieur au tarif habituel. Souhaitez-vous actualiser votre catalogue ?'
+            : 'Le prix saisi est inférieur au tarif habituel. Souhaitez-vous actualiser votre catalogue ?'
           }
         </p>
 
@@ -117,25 +117,25 @@ export function PriceChangeDialog({
             type="button"
             onClick={handleAccept}
             disabled={loadingAccept || loadingKeep}
-            className="flex items-center justify-center gap-1.5 bg-amber-500 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-colors shadow-sm"
+            className="flex items-center justify-center gap-1.5 bg-amber-500 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-all shadow-sm cursor-pointer active:scale-[0.97]"
           >
             {loadingAccept
               ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : '✅'
+              : <Check className="w-3.5 h-3.5 text-white" />
             }
-            Enregistrer avec le nouveau prix ({formatPrice(newLotPrice)}) + MAJ catalogue
+            <span>Enregistrer avec le nouveau prix ({formatPrice(newLotPrice)}) + MAJ catalogue</span>
           </button>
           <button
             type="button"
             onClick={handleKeep}
             disabled={loadingAccept || loadingKeep}
-            className="flex items-center justify-center gap-1.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 text-xs font-semibold py-2.5 rounded-xl disabled:opacity-50 transition-colors"
+            className="flex items-center justify-center gap-1.5 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 text-xs font-semibold py-2.5 rounded-xl disabled:opacity-50 transition-all cursor-pointer active:scale-[0.97]"
           >
             {loadingKeep
               ? <span className="w-3.5 h-3.5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
-              : '↩️'
+              : <RotateCcw className="w-3.5 h-3.5 text-gray-700" />
             }
-            Garder l'ancien prix ({formatPrice(oldLotPrice)}) sans modifier le catalogue
+            <span>Garder l'ancien prix ({formatPrice(oldLotPrice)}) sans modifier le catalogue</span>
           </button>
         </div>
       </div>

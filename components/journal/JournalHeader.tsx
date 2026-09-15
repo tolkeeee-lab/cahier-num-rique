@@ -125,7 +125,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             type="button"
             onClick={onSyncClick}
             disabled={isSyncing}
-            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold border transition-all shadow-2xs ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold border transition-all shadow-2xs cursor-pointer active:scale-[0.97] ${
               isOnline
                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                 : 'bg-amber-100 text-amber-800 border-amber-300'
@@ -140,7 +140,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             )}
             <span className="hidden sm:inline">{isOnline ? 'EN LIGNE' : 'OFFLINE'}</span>
             {pendingSyncCount > 0 && (
-              <span className="px-1 py-0.2 bg-amber-500 text-black text-[9px] font-bold rounded-full">
+              <span className="px-1.5 py-0.5 bg-amber-500 text-black text-[9px] font-bold font-mono tabular-nums rounded-full">
                 {pendingSyncCount}
               </span>
             )}
@@ -152,7 +152,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenCashClosing}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100/90 hover:bg-amber-200 text-amber-900 text-xs font-bold border border-amber-300 transition-all shadow-2xs"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100/90 hover:bg-amber-200 text-amber-900 text-xs font-bold border border-amber-300 transition-all shadow-2xs cursor-pointer active:scale-[0.97]"
               >
                 <Calculator className="w-3 h-3 text-amber-700" />
                 <span>Clôture</span>
@@ -163,7 +163,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenBoutiqueAssistant}
-                className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 transition-colors shadow-2xs"
+                className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 transition-colors shadow-2xs cursor-pointer active:scale-[0.97]"
                 title="Assistant IA Boutique"
               >
                 <Sparkles className="w-3.5 h-3.5" />

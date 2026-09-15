@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Plus, Loader, Zap, Search, Check } from 'lucide-react'
+import { X, Plus, Loader, Zap, Search, Check, Package } from 'lucide-react'
 import type { MenuItem } from '@/hooks/useTactileMenu'
 
 interface TactileMenuModalProps {
@@ -189,20 +189,20 @@ export function TactileMenuModal({
                   <button
                     type="button"
                     onClick={() => handleTap(item)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-extrabold transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap select-none ${
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-extrabold transition-all shadow-xs cursor-pointer active:scale-[0.97] whitespace-nowrap select-none ${
                       isTapped
                         ? 'bg-emerald-600 text-white border-emerald-700 scale-105 ring-2 ring-emerald-400'
                         : 'bg-white hover:bg-amber-100 border-amber-300 hover:border-amber-500 text-gray-900 shadow-2xs'
                     }`}
                   >
-                    <span className="text-base">{item.emoji || '📦'}</span>
+                    {item.emoji ? <span className="text-base">{item.emoji}</span> : <Package className="w-4 h-4 text-amber-700 flex-shrink-0" />}
                     <span className="font-bold text-xs">{item.name}</span>
 
                     {isTapped ? (
-                      <Check className="w-3.5 h-3.5 text-white flex-shrink-0 animate-in zoom-in-50" />
+                       <Check className="w-3.5 h-3.5 text-white flex-shrink-0 animate-in zoom-in-50" />
                     ) : (
                       item.price > 0 && (
-                        <span className="text-amber-900 font-mono font-black text-[11px] bg-amber-100/90 border border-amber-300/80 px-1.5 py-0.2 rounded-lg flex-shrink-0">
+                        <span className="text-amber-900 font-mono font-black text-[11px] bg-amber-100/90 border border-amber-300/80 px-1.5 py-0.5 tabular-nums rounded-lg flex-shrink-0">
                           {item.price} F
                         </span>
                       )

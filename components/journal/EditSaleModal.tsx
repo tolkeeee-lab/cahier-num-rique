@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { X, Trash2, Check } from 'lucide-react'
+import { X, Trash2, Check, Edit3 } from 'lucide-react'
 import { formatPrice } from '@/lib/penUtils'
 
 interface Article {
@@ -110,14 +110,16 @@ export function EditSaleModal({
         
         {/* En-tête */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">✏️</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center border border-amber-300 flex-shrink-0">
+              <Edit3 className="w-4 h-4 text-amber-800" />
+            </div>
             <div>
               <h3 className="font-bold text-gray-900 text-base">Modifier l'Écriture de Vente</h3>
               <p className="text-xs text-gray-500 font-mono">ID: {sale.id?.slice(0, 8)}... • {sale.time}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 cursor-pointer active:scale-[0.97]">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -251,7 +253,7 @@ export function EditSaleModal({
                     onClose()
                   }
                 }}
-                className="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold rounded-xl border border-rose-300 transition-colors flex items-center gap-1.5"
+                className="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold rounded-xl border border-rose-300 transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Raturer la Vente</span>
@@ -262,14 +264,14 @@ export function EditSaleModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition-colors"
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97]"
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-[0.97]"
               >
                 {isSubmitting ? (
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

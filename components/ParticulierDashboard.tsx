@@ -8,7 +8,7 @@ import { BudgetOverviewCard } from '@/components/particulier/BudgetOverviewCard'
 import { TontineTracker } from '@/components/particulier/TontineTracker'
 import { CarnetBoutiquierWidget } from '@/components/particulier/CarnetBoutiquierWidget'
 import { ExpensesByCategoryChart } from '@/components/particulier/ExpensesByCategoryChart'
-import { Home, PiggyBank, Store, FileText } from 'lucide-react'
+import { Home, PiggyBank, Store, FileText, ShoppingCart, Zap, GraduationCap } from 'lucide-react'
 
 export interface ParticulierDashboardProps {
   mappedUser?: { id: string; email: string; name: string; role: string; shop_id: string } | null
@@ -33,16 +33,17 @@ export function ParticulierDashboard({
 }: ParticulierDashboardProps) {
   const [activeTab, setActiveTab] = useState<'budget' | 'tontine' | 'carnet' | 'historique'>('budget')
 
+  // Calculs Budgétaires Spécifiques Famille / Foyer
   const incomeTotal = sales
-    .filter(s => s.status !== 'crossed_out' && s.pen_color === 'blue')
-    .reduce((sum, s) => sum + (s.total || 0), 0)
+    .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale'))
+    .reduce((sum, s) => sum + (s.paid || s.total || 0), 0)
 
   const expensesTotal = sales
-    .filter(s => s.status !== 'crossed_out' && s.pen_color === 'red')
+    .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out'))
     .reduce((sum, s) => sum + (s.total || 0), 0)
 
   const reserveStockTotal = sales
-    .filter(s => s.status !== 'crossed_out' && s.pen_color === 'green')
+    .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'green' || s.type === 'purchase_stock'))
     .reduce((sum, s) => sum + (s.total || 0), 0)
 
   const netBalance = incomeTotal - expensesTotal - reserveStockTotal
@@ -59,25 +60,25 @@ export function ParticulierDashboard({
     {
       category: 'Marché',
       label: 'Marché & Nourriture',
-      emoji: '🛒',
+      icon: <ShoppingCart className="w-4 h-4 text-emerald-600 flex-shrink-0" />,
       amount: sales.filter(s => (s.notes || '').toLowerCase().includes('marché')).reduce((sum, s) => sum + s.total, 0),
     },
     {
       category: 'Loyer',
       label: 'Loyer & Logement',
-      emoji: '🏠',
+      icon: <Home className="w-4 h-4 text-blue-600 flex-shrink-0" />,
       amount: sales.filter(s => (s.notes || '').toLowerCase().includes('loyer')).reduce((sum, s) => sum + s.total, 0),
     },
     {
       category: 'Factures',
       label: 'Factures (CIE / Eau / Net)',
-      emoji: '⚡',
+      icon: <Zap className="w-4 h-4 text-amber-600 flex-shrink-0" />,
       amount: sales.filter(s => /cie|sodeci|eau|electricite/i.test(s.notes || '')).reduce((sum, s) => sum + s.total, 0),
     },
     {
       category: 'École',
       label: 'Scolarité & Enfants',
-      emoji: '📚',
+      icon: <GraduationCap className="w-4 h-4 text-purple-600 flex-shrink-0" />,
       amount: sales.filter(s => /ecole|école|scolarité/i.test(s.notes || '')).reduce((sum, s) => sum + s.total, 0),
     },
   ]

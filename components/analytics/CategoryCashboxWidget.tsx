@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle, Calculator, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle, Calculator, ArrowDownLeft, ArrowUpRight, Pencil, CupSoda, Package } from 'lucide-react'
 import { calculateCategoryCashboxBreakdown, CategoryCashboxGroup } from '@/lib/boutiqueAnalyticsEngine'
 import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
 
@@ -205,8 +205,8 @@ export function CategoryCashboxWidget({
             </h3>
             <p className="text-xs text-amber-800 font-medium">
               {cashboxMode === 'unified' 
-                ? '🏛️ Mode Caisse Unique (Toutes les écritures regroupées)' 
-                : '🥤📦 Mode Multi-Caisses (Fonds de roulement séparés par rayon)'}
+                ? 'Mode Caisse Unique (Toutes les écritures regroupées)' 
+                : 'Mode Multi-Caisses (Fonds de roulement séparés par rayon)'}
             </p>
           </div>
         </div>
@@ -215,23 +215,25 @@ export function CategoryCashboxWidget({
         <div className="flex items-center gap-1 bg-amber-100/70 p-1 rounded-2xl border border-amber-300 self-start md:self-auto text-xs font-bold font-mono">
           <button
             onClick={() => setCashboxMode('unified')}
-            className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
               cashboxMode === 'unified'
                 ? 'bg-amber-900 text-white shadow-xs'
                 : 'text-amber-950 hover:bg-amber-200/60'
             }`}
           >
-            <span>🏛️</span> Caisse Unique (Commune)
+            <Landmark className="w-3.5 h-3.5" />
+            <span>Caisse Unique (Commune)</span>
           </button>
           <button
             onClick={() => setCashboxMode('separated')}
-            className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
               cashboxMode === 'separated'
                 ? 'bg-amber-900 text-white shadow-xs'
                 : 'text-amber-950 hover:bg-amber-200/60'
             }`}
           >
-            <span>🥤📦</span> Multi-Caisses (Par Rayon)
+            <Layers className="w-3.5 h-3.5" />
+            <span>Multi-Caisses (Par Rayon)</span>
           </button>
         </div>
       </div>
@@ -267,9 +269,10 @@ export function CategoryCashboxWidget({
                     itemCount: unifiedTotals.itemCount,
                     outOfStockCount: unifiedTotals.outOfStockCount
                   })}
-                  className="px-2.5 py-1 bg-amber-700 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg transition-all shadow-xs flex items-center gap-1 font-mono uppercase border border-amber-500"
+                  className="px-2.5 py-1 bg-amber-700 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg transition-all shadow-xs flex items-center gap-1 font-mono uppercase border border-amber-500 cursor-pointer active:scale-[0.97]"
                 >
-                  <span>✏️ Ajuster</span>
+                  <Pencil className="w-2.5 h-2.5" />
+                  <span>Ajuster</span>
                 </button>
 
                 {unifiedTotals.outOfStockCount > 0 && (
@@ -332,9 +335,10 @@ export function CategoryCashboxWidget({
                       <button
                         type="button"
                         onClick={() => openAdjustModal(group)}
-                        className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-[9px] font-bold rounded-lg transition-all"
+                        className="px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-[9px] font-bold rounded-lg transition-all cursor-pointer active:scale-[0.97] flex items-center gap-1"
                       >
-                        ✏️ Ajuster
+                        <Pencil className="w-2.5 h-2.5" />
+                        <span>Ajuster</span>
                       </button>
                       <span>{formatPrice(group.revenue)}</span>
                     </div>
@@ -355,7 +359,7 @@ export function CategoryCashboxWidget({
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs font-bold font-mono">
               <button
                 onClick={() => onSelectCashboxFilter('ALL')}
-                className={`px-3 py-1.5 rounded-xl transition-all ${
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer active:scale-[0.97] ${
                   activeCashboxFilter === 'ALL'
                     ? 'bg-amber-900 text-white shadow-xs'
                     : 'bg-amber-100/60 text-amber-900 hover:bg-amber-200/50'
@@ -365,23 +369,25 @@ export function CategoryCashboxWidget({
               </button>
               <button
                 onClick={() => onSelectCashboxFilter('boissons')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
                   activeCashboxFilter === 'boissons'
                     ? 'bg-amber-900 text-white shadow-xs'
                     : 'bg-amber-100/60 text-amber-900 hover:bg-amber-200/50'
                 }`}
               >
-                <span>🥤</span> Boissons
+                <CupSoda className="w-3.5 h-3.5" />
+                <span>Boissons</span>
               </button>
               <button
                 onClick={() => onSelectCashboxFilter('divers')}
-                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 ${
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
                   activeCashboxFilter === 'divers'
                     ? 'bg-amber-900 text-white shadow-xs'
                     : 'bg-amber-100/60 text-amber-900 hover:bg-amber-200/50'
                 }`}
               >
-                <span>📦</span> Divers
+                <Package className="w-3.5 h-3.5" />
+                <span>Divers</span>
               </button>
             </div>
           )}
@@ -418,10 +424,11 @@ export function CategoryCashboxWidget({
                       <button
                         type="button"
                         onClick={() => openAdjustModal(group)}
-                        className="px-2.5 py-1 bg-amber-800 hover:bg-amber-900 text-white border border-amber-900 text-[10px] font-bold rounded-lg transition-all shadow-xs flex items-center gap-1 font-mono uppercase"
+                        className="px-2.5 py-1 bg-amber-800 hover:bg-amber-900 text-white border border-amber-900 text-[10px] font-bold rounded-lg transition-all shadow-xs flex items-center gap-1 font-mono uppercase cursor-pointer active:scale-[0.97]"
                         title={`Ajuster ce tiroir cash (${group.name})`}
                       >
-                        <span>✏️ Ajuster</span>
+                        <Pencil className="w-2.5 h-2.5" />
+                        <span>Ajuster</span>
                       </button>
 
                       {group.outOfStockCount > 0 && (
@@ -439,10 +446,10 @@ export function CategoryCashboxWidget({
                       <span className="text-[9.5px] uppercase font-bold text-gray-500 block">
                         Ventes (Chiffre d'Affaires)
                       </span>
-                      <span className="text-base font-bold text-gray-900 block">
+                      <span className="text-base font-bold text-gray-900 block tabular-nums">
                         {formatPrice(group.revenue)}
                       </span>
-                      <span className="text-[9px] text-emerald-700 font-bold block">
+                      <span className="text-[9px] text-emerald-700 font-bold block tabular-nums">
                         Cash actuel : {formatPrice(group.paidCash)}
                       </span>
                     </div>
@@ -451,10 +458,10 @@ export function CategoryCashboxWidget({
                       <span className="text-[9.5px] uppercase font-bold text-gray-500 block">
                         Capital Stock (Immobilisé)
                       </span>
-                      <span className="text-base font-bold text-gray-900 block">
+                      <span className="text-base font-bold text-gray-900 block tabular-nums">
                         {formatPrice(group.stockValueSale)}
                       </span>
-                      <span className="text-[9px] text-gray-500">
+                      <span className="text-[9px] text-gray-500 tabular-nums">
                         Prix de revient : {formatPrice(group.stockValueCost)}
                       </span>
                     </div>
@@ -463,13 +470,15 @@ export function CategoryCashboxWidget({
                   {/* Détails Crédits & Dépenses du rayon */}
                   <div className="flex items-center justify-between text-xs font-mono pt-1">
                     <div className="flex items-center gap-1.5 text-amber-900">
-                      <span>🟡 Crédits en cours :</span>
-                      <strong className="font-bold">{formatPrice(group.debt)}</strong>
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block flex-shrink-0" />
+                      <span>Crédits en cours :</span>
+                      <strong className="font-bold tabular-nums">{formatPrice(group.debt)}</strong>
                     </div>
 
                     {group.expenses > 0 && (
-                      <div className="text-red-700">
-                        🔴 Dépenses rayon : <strong>-{formatPrice(group.expenses)}</strong>
+                      <div className="text-red-700 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
+                        <span>Dépenses rayon : <strong className="tabular-nums">-{formatPrice(group.expenses)}</strong></span>
                       </div>
                     )}
                   </div>

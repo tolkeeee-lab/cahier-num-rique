@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Package } from 'lucide-react'
 
 export interface StockSuggestionItem {
   id: string
@@ -42,9 +42,9 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
             key={idx}
             type="button"
             onClick={() => onSelectSuggestion(item)}
-            className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 hover:border-amber-400 text-amber-950 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+            className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 hover:border-amber-400 text-amber-950 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-[0.97] cursor-pointer"
           >
-            <span>{item.emoji || '📦'}</span>
+            {item.emoji ? <span>{item.emoji}</span> : <Package className="w-3.5 h-3.5 text-amber-800 flex-shrink-0" />}
             <span className="font-handwritten text-sm text-[#1d4ed8]">{item.name}</span>
             {item.price > 0 && (
               <span className="font-mono text-[10px] bg-amber-200/80 px-1.5 py-0.5 rounded text-amber-900 font-extrabold">

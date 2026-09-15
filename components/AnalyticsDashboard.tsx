@@ -8,7 +8,7 @@ import { ServicesAnalyticsWidget } from '@/components/analytics/ServicesAnalytic
 import { RetailAnalyticsWidget } from '@/components/analytics/RetailAnalyticsWidget'
 import { SyscohadaModal } from '@/components/SyscohadaModal'
 import { DashboardCustomizerModal } from '@/components/analytics/DashboardCustomizerModal'
-import { Landmark, BarChart3, Receipt } from 'lucide-react'
+import { Landmark, BarChart3, Receipt, Coins, Package } from 'lucide-react'
 import { canViewExecutiveDashboard, getDefaultDashboardWidgets } from '@/lib/roleUtils'
 
 interface Sale {
@@ -148,7 +148,7 @@ export function AnalyticsDashboard({
             <button
               type="button"
               onClick={() => setViewMode('accounting')}
-              className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.97] ${
                 viewMode === 'accounting' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
               }`}
             >
@@ -158,7 +158,7 @@ export function AnalyticsDashboard({
             <button
               type="button"
               onClick={() => setViewMode('products')}
-              className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.97] ${
                 viewMode === 'products' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
               }`}
             >
@@ -170,7 +170,7 @@ export function AnalyticsDashboard({
           {isExecutive && (
             <button
               onClick={() => setShowSyscohada(true)}
-              className="px-3 py-2 bg-amber-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+              className="px-3 py-2 bg-amber-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
               title="Bilan conforme référentiel SYSCOHADA"
             >
               <Landmark className="w-3.5 h-3.5" />
@@ -184,24 +184,24 @@ export function AnalyticsDashboard({
       {!isExecutive && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-              💰
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold flex-shrink-0">
+              <Coins className="w-5 h-5 text-emerald-700" />
             </div>
             <div>
               <span className="text-[11px] text-stone-500 font-bold uppercase tracking-wider font-mono">Caisse Encaissée Aujourd'hui</span>
-              <div className="text-xl font-black text-emerald-700 font-mono">
+              <div className="text-xl font-black text-emerald-700 font-mono tabular-nums">
                 {todayStats.totalCash.toLocaleString('fr-FR')} <span className="text-xs font-normal">FCFA</span>
               </div>
             </div>
           </div>
 
           <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
-              📦
+            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-bold flex-shrink-0">
+              <Package className="w-5 h-5 text-blue-700" />
             </div>
             <div>
               <span className="text-[11px] text-stone-500 font-bold uppercase tracking-wider font-mono">Ventes du jour</span>
-              <div className="text-xl font-black text-blue-900 font-mono">
+              <div className="text-xl font-black text-blue-900 font-mono tabular-nums">
                 {todayStats.count} <span className="text-xs font-normal">opérations</span>
               </div>
             </div>

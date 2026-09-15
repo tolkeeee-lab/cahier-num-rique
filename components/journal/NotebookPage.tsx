@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useMemo } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical, Share2 } from 'lucide-react'
+import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical, Share2, Coins, Lightbulb, Calendar } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -86,7 +86,7 @@ function getBadgeClass(penId: string, type?: string) {
 }
 
 function getPenLabel(penId: string, type?: string) {
-  if (type === 'client_request') return '💡 DEMANDE'
+  if (type === 'client_request') return 'DEMANDE'
   switch (penId) {
     case 'red':    return 'DÉPENSE'
     case 'green':  return 'ACHAT STOCK'
@@ -191,6 +191,10 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
               .filter(s => s.pen_color === 'yellow' || s.type === 'sale_credit')
               .reduce((sum, s) => sum + (s.debt || s.total || 0), 0)
 
+            const salesCashTotal = allDaySales
+              .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale' || s.type === 'sale_cash' || s.type === 'payment_client')
+              .reduce((sum, s) => sum + (s.total || 0), 0)
+
             const dayNet = salesTotal - expensesTotal - stockCashTotal
 
             return (
@@ -199,50 +203,50 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                 {activeFilter === 'blue' ? (
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border border-blue-300 font-mono text-xs text-blue-950 font-bold bg-blue-50/90 rounded-xl shadow-2xs">
                     <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-blue-900 font-bold">
-                      <span>📅</span>
+                      <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-xs">
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-xs font-mono tabular-nums">
                       🔵 Ventes (CA) : +{formatPrice(salesTotal)}
                     </span>
                   </div>
                 ) : activeFilter === 'red' ? (
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border border-rose-300 font-mono text-xs text-rose-950 font-bold bg-rose-50/90 rounded-xl shadow-2xs">
                     <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-rose-900 font-bold">
-                      <span>📅</span>
+                      <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-rose-600 text-white shadow-xs">
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-rose-600 text-white shadow-xs font-mono tabular-nums">
                       🔴 Dépenses : -{formatPrice(expensesTotal)}
                     </span>
                   </div>
                 ) : activeFilter === 'green' ? (
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border border-emerald-300 font-mono text-xs text-emerald-950 font-bold bg-emerald-50/90 rounded-xl shadow-2xs">
                     <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-emerald-900 font-bold">
-                      <span>📅</span>
+                      <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-emerald-600 text-white shadow-xs">
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-emerald-600 text-white shadow-xs font-mono tabular-nums">
                       🟢 Achats Stock : -{formatPrice(stockCashTotal)}
                     </span>
                   </div>
                 ) : activeFilter === 'purple' ? (
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border border-fuchsia-300 font-mono text-xs text-fuchsia-950 font-bold bg-fuchsia-50/90 rounded-xl shadow-2xs">
                     <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-fuchsia-900 font-bold">
-                      <span>📅</span>
+                      <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-fuchsia-600 text-white shadow-xs">
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-fuchsia-600 text-white shadow-xs font-mono tabular-nums">
                       🟣 Dettes Fournisseurs : -{formatPrice(purpleCreditTotal)}
                     </span>
                   </div>
                 ) : activeFilter === 'yellow' ? (
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border border-amber-300 font-mono text-xs text-amber-950 font-bold bg-amber-50/90 rounded-xl shadow-2xs">
                     <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-amber-900 font-bold">
-                      <span>📅</span>
+                      <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-amber-600 text-white shadow-xs">
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-amber-600 text-white shadow-xs font-mono tabular-nums">
                       🟡 Crédits Clients : +{formatPrice(yellowCreditTotal)}
                     </span>
                   </div>
@@ -250,14 +254,14 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                   /* ── BANNIÈRE TOUS ── */
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border-b border-dashed border-amber-300/80 font-handwritten text-xs sm:text-sm text-amber-900 select-none font-bold bg-amber-50/60 rounded-xl">
                     <div className="flex items-center gap-1.5">
-                      <span>📅</span>
+                      <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span className="font-extrabold text-amber-950">{formatLongDateFr(dateKey)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 font-mono text-[10px] sm:text-xs">
-                      <span className="px-2 py-0.2 rounded-full font-extrabold bg-blue-50 text-blue-900 border border-blue-200">
+                      <span className="px-2 py-0.5 rounded-full font-extrabold bg-blue-50 text-blue-900 border border-blue-200 tabular-nums">
                         CA : +{formatPrice(salesTotal)}
                       </span>
-                      <span className="px-2 py-0.2 rounded-full font-black bg-amber-200/90 text-amber-950 border border-amber-300">
+                      <span className="px-2 py-0.5 rounded-full font-black bg-amber-200/90 text-amber-950 border border-amber-300 tabular-nums">
                         {allDayOperations.length} écriture(s)
                       </span>
                     </div>
@@ -269,7 +273,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                   <div className="py-3 px-3.5 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/85 border-2 border-emerald-400/90 rounded-2xl font-mono text-xs shadow-md space-y-3 select-none">
                     <div className="flex items-center justify-between border-b-2 border-dashed border-amber-300 pb-2 font-handwritten font-black text-amber-950 text-sm sm:text-base">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">📐</span>
+                        <Calculator className="w-4 h-4 text-emerald-800" />
                         <span className="tracking-wide uppercase">Bilan & Solde de Caisse</span>
                       </div>
                       <span className="font-mono text-xs text-emerald-950 bg-emerald-100 px-2.5 py-0.5 rounded-full font-extrabold border border-emerald-300">
@@ -278,29 +282,29 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     </div>
 
                     {/* Lignes de décomposition arithmétique */}
-                    <div className="space-y-2 text-xs sm:text-sm">
-                      <div className="flex items-center justify-between text-blue-900 font-bold bg-blue-50/80 p-2 rounded-xl border border-blue-200">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
-                          <span>(+) Ventes encaissées (CA)</span>
+                    <div className="space-y-1.5 pt-1">
+                      {/* Ventes Cash */}
+                      <div className="flex justify-between items-center bg-blue-100/70 p-2 rounded-xl border border-blue-300/80">
+                        <span className="text-blue-950 font-bold flex items-center gap-1">
+                          <span>🔵</span> Encaissements Ventes
                         </span>
-                        <span className="font-extrabold text-blue-950 text-sm sm:text-base">+{formatPrice(salesTotal)}</span>
+                        <span className="font-black text-blue-950 text-sm">+{formatPrice(salesCashTotal)}</span>
                       </div>
 
-                      <div className="flex items-center justify-between text-rose-900 font-bold bg-rose-50/80 p-2 rounded-xl border border-rose-200">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block" />
-                          <span>(-) Dépenses réglées</span>
+                      {/* Dépenses */}
+                      <div className="flex justify-between items-center bg-rose-100/70 p-2 rounded-xl border border-rose-300/80">
+                        <span className="text-rose-950 font-bold flex items-center gap-1">
+                          <span>🔴</span> Dépenses Diverses
                         </span>
-                        <span className="font-extrabold text-rose-950 text-sm sm:text-base">-{formatPrice(expensesTotal)}</span>
+                        <span className="font-black text-rose-950 text-sm">-{formatPrice(expensesTotal)}</span>
                       </div>
 
-                      <div className="flex items-center justify-between text-emerald-900 font-bold bg-emerald-50/80 p-2 rounded-xl border border-emerald-200">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
-                          <span>(-) Achats stock au comptant</span>
+                      {/* Achats Stock */}
+                      <div className="flex justify-between items-center bg-emerald-100/70 p-2 rounded-xl border border-emerald-300/80">
+                        <span className="text-emerald-950 font-bold flex items-center gap-1">
+                          <span>🟢</span> Achats Marchandises (Cash)
                         </span>
-                        <span className="font-extrabold text-emerald-950 text-sm sm:text-base">-{formatPrice(stockCashTotal)}</span>
+                        <span className="font-black text-emerald-950 text-sm">-{formatPrice(stockCashTotal)}</span>
                       </div>
 
                       {/* Ligne Maîtresse : Solde Net */}
@@ -310,7 +314,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           : 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-300/60'
                       }`}>
                         <span className="flex items-center gap-2 font-handwritten text-base sm:text-lg">
-                          <span>💰</span>
+                          <Coins className="w-5 h-5 text-white" />
                           <span>SOLDE NET DU JOUR</span>
                         </span>
                         <span className="font-mono font-black text-base sm:text-lg">
@@ -394,8 +398,9 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           {/* Montant + Actions */}
                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
                             {sale.type === 'client_request' ? (
-                              <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-lg font-mono bg-amber-100/90 text-amber-950 border border-amber-300 shadow-2xs">
-                                💡 Demande
+                              <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-lg font-mono bg-amber-100/90 text-amber-950 border border-amber-300 shadow-2xs flex items-center gap-1">
+                                <Lightbulb className="w-3 h-3 text-amber-800" />
+                                <span>Demande</span>
                               </span>
                             ) : (
                               (() => {
@@ -425,7 +430,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                 }
 
                                 return (
-                                  <span className={`text-xs sm:text-sm font-extrabold px-2 py-0.2 rounded-lg font-mono border ${badgeClass}`}>
+                                  <span className={`text-xs sm:text-sm font-extrabold px-2 py-0.5 rounded-lg font-mono tabular-nums border ${badgeClass}`}>
                                     {prefix}{formatPrice(sale.total)}
                                   </span>
                                 )
@@ -561,7 +566,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                 key={val}
                                 type="button"
                                 onClick={() => setChangeReceivedMap(prev => ({ ...prev, [sale.id]: String(val) }))}
-                                className="px-1 py-0.2 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold rounded border border-amber-300 text-[9px] cursor-pointer"
+                                className="px-1.5 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold font-mono tabular-nums rounded border border-amber-300 text-[9px] cursor-pointer active:scale-[0.97]"
                               >
                                 {val}
                               </button>
@@ -569,18 +574,18 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                             {Number(changeReceivedMap[sale.id]) > 0 && (
                               <div className="ml-auto flex items-center gap-1 font-bold text-[10px]">
                                 {Number(changeReceivedMap[sale.id]) >= sale.total ? (
-                                  <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded border border-emerald-300">
+                                  <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 font-mono tabular-nums rounded border border-emerald-300">
                                     Monnaie : {formatPrice(Number(changeReceivedMap[sale.id]) - sale.total)}
                                   </span>
                                 ) : (
-                                  <span className="text-rose-700 bg-rose-100 px-1.5 py-0.2 rounded border border-rose-300">
+                                  <span className="text-rose-700 bg-rose-100 px-1.5 py-0.5 font-mono tabular-nums rounded border border-rose-300">
                                     Manque : {formatPrice(sale.total - Number(changeReceivedMap[sale.id]))}
                                   </span>
                                 )}
                                 <button
                                   type="button"
                                   onClick={() => setActiveChangeSaleId(null)}
-                                  className="p-0.5 text-gray-400 hover:text-gray-600 rounded cursor-pointer"
+                                  className="p-0.5 text-gray-400 hover:text-gray-600 rounded cursor-pointer active:scale-[0.97]"
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -639,7 +644,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         : 'bg-rose-100/90 text-rose-950 border border-rose-300'
                     }`}>
                       <span className="flex items-center gap-1.5 font-handwritten sm:text-base">
-                        <span>💰</span>
+                        <Coins className="w-4 h-4 text-emerald-800 flex-shrink-0" />
                         <span>SOLDE NET DU JOUR</span>
                       </span>
                       <span className="font-mono font-black text-sm sm:text-base">
