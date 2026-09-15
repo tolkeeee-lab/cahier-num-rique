@@ -103,6 +103,7 @@ export function useOfflineSync({
             date: sale.date,
             time: sale.time,
             type: sale.type,
+            status: sale.status,
             category: sale.category,
             text: sale.notes || '',
             raw_text: sale.notes || '',
@@ -110,6 +111,7 @@ export function useOfflineSync({
             pen_color: sale.pen_color || 'blue',
             overrideData: {
               type: sale.type,
+              status: sale.status,
               category: sale.category,
               articles: (sale.articles || []).map((a: any) => ({
                 name: a.name || a.nom,

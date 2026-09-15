@@ -1,7 +1,23 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import { TrendingUp, Package, ShoppingBag, Award, Share2, Download, FileText, Layers } from 'lucide-react'
+import { 
+  TrendingUp, 
+  Package, 
+  ShoppingBag, 
+  Award, 
+  Share2, 
+  Download, 
+  FileText, 
+  Layers,
+  Coins,
+  RotateCw,
+  Trophy,
+  Sparkles,
+  Smartphone,
+  Shirt,
+  CupSoda
+} from 'lucide-react'
 import { exportSalesToCSV, exportSalesToPDF, generateWhatsAppPerformanceReport } from '@/lib/exportUtils'
 import { CategoryCashboxWidget } from '@/components/analytics/CategoryCashboxWidget'
 
@@ -38,13 +54,13 @@ interface RetailAnalyticsWidgetProps {
   onRefreshData?: () => void
 }
 
-const PRODUCT_CATEGORY_INFOS: Record<string, { label: string; emoji: string; bg: string; text: string }> = {
-  'Alimentation': { label: 'Alimentation', emoji: '🌾', bg: 'bg-amber-500', text: 'text-amber-700' },
-  'Boissons': { label: 'Boissons', emoji: '🥤', bg: 'bg-blue-500', text: 'text-blue-700' },
-  'Hygiène & Cosmétique': { label: 'Hygiène & Cosmétique', emoji: '🧼', bg: 'bg-[#9d60ec]', text: 'text-[#9d60ec]' },
-  'Électronique': { label: 'Électronique & Mobile', emoji: '📱', bg: 'bg-emerald-500', text: 'text-emerald-700' },
-  'Habillement': { label: 'Habillement & Textile', emoji: '👕', bg: 'bg-rose-500', text: 'text-rose-700' },
-  'Divers': { label: 'Divers & Général', emoji: '📦', bg: 'bg-gray-400', text: 'text-gray-600' }
+const PRODUCT_CATEGORY_INFOS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; bg: string; text: string }> = {
+  'Alimentation': { label: 'Alimentation', icon: ShoppingBag, bg: 'bg-amber-500', text: 'text-amber-700' },
+  'Boissons': { label: 'Boissons', icon: CupSoda, bg: 'bg-blue-500', text: 'text-blue-700' },
+  'Hygiène & Cosmétique': { label: 'Hygiène & Cosmétique', icon: Sparkles, bg: 'bg-[#9d60ec]', text: 'text-[#9d60ec]' },
+  'Électronique': { label: 'Électronique & Mobile', icon: Smartphone, bg: 'bg-emerald-500', text: 'text-emerald-700' },
+  'Habillement': { label: 'Habillement & Textile', icon: Shirt, bg: 'bg-rose-500', text: 'text-rose-700' },
+  'Divers': { label: 'Divers & Général', icon: Package, bg: 'bg-gray-400', text: 'text-gray-600' }
 }
 
 function formatPrice(price: number): string {
@@ -264,7 +280,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
               <div key={idx} className="space-y-1.5 bg-[#fdfaf2] border border-gray-150 p-3 rounded-2xl">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-gray-700 flex items-center gap-1.5">
-                    <span>{cat.info.emoji}</span>
+                    <cat.info.icon className="w-3.5 h-3.5 text-gray-700 flex-shrink-0" />
                     <span>{cat.info.label}</span>
                   </span>
                   <span className="font-mono font-bold text-gray-600">
@@ -288,7 +304,8 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-none">
           <div>
             <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
-              🏆 Classement des Produits ({retailStats.productList.length})
+              <Trophy className="w-5 h-5 text-amber-500" />
+              <span>Classement des Produits ({retailStats.productList.length})</span>
             </h3>
             <p className="text-[9px] font-mono uppercase text-gray-400">
               {sortBy === 'revenue' ? 'Trié par Chiffre d\'Affaires généré' : sortBy === 'quantity' ? 'Trié par volume d\'articles vendus' : 'Trié par fréquence de vente'}
@@ -298,27 +315,30 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
           <div className="flex items-center gap-1 bg-[#f5f1e8] p-1 rounded-2xl border border-gray-200">
             <button
               onClick={() => setSortBy('revenue')}
-              className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all ${
+              className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97] inline-flex items-center gap-1.5 ${
                 sortBy === 'revenue' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              💰 Par CA
+              <Coins className="w-3.5 h-3.5" />
+              <span>Par CA</span>
             </button>
             <button
               onClick={() => setSortBy('quantity')}
-              className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all ${
+              className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97] inline-flex items-center gap-1.5 ${
                 sortBy === 'quantity' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              📦 Par Quantité
+              <Package className="w-3.5 h-3.5" />
+              <span>Par Quantité</span>
             </button>
             <button
               onClick={() => setSortBy('frequency')}
-              className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all ${
+              className={`px-3 py-1 text-[10px] font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97] inline-flex items-center gap-1.5 ${
                 sortBy === 'frequency' ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              🔄 Par Fréquence
+              <RotateCw className="w-3.5 h-3.5" />
+              <span>Par Fréquence</span>
             </button>
           </div>
         </div>
@@ -338,26 +358,39 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
             <tbody className="divide-y divide-gray-100 font-sans bg-white">
               {retailStats.productList.map((prod, idx) => {
                 const catInfo = PRODUCT_CATEGORY_INFOS[prod.category] || PRODUCT_CATEGORY_INFOS['Divers']
+                const CategoryIcon = catInfo.icon
                 return (
                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-bold">
-                      {idx === 0 ? '🥇 1er' : idx === 1 ? '🥈 2e' : idx === 2 ? '🥉 3e' : `#${idx + 1}`}
+                      {idx === 0 ? (
+                        <span className="inline-flex items-center gap-1 text-amber-600 font-black">
+                          <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                          <span>1er</span>
+                        </span>
+                      ) : idx === 1 ? (
+                        <span className="text-slate-600 font-black">2e</span>
+                      ) : idx === 2 ? (
+                        <span className="text-amber-800 font-black">3e</span>
+                      ) : (
+                        <span className="text-gray-400">#{idx + 1}</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 font-bold text-gray-800 flex items-center gap-2">
                       <span>{prod.name}</span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${catInfo.bg} text-white`}>
-                        {catInfo.emoji} {catInfo.label}
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold ${catInfo.bg} text-white`}>
+                        <CategoryIcon className="w-3 h-3 flex-shrink-0" />
+                        <span>{catInfo.label}</span>
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-center font-mono font-bold text-gray-700">
+                    <td className="py-3.5 px-4 text-center font-mono font-bold text-gray-700 tabular-nums">
                       {prod.totalQuantity} u
                     </td>
-                    <td className="py-3.5 px-4 text-center font-mono text-gray-500">
+                    <td className="py-3.5 px-4 text-center font-mono text-gray-500 tabular-nums">
                       {prod.frequency} fois
                     </td>
-                    <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-800">
+                    <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-800 tabular-nums">
                       {formatPrice(prod.totalRevenue)}
                     </td>
                   </tr>

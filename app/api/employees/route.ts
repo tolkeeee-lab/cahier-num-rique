@@ -215,12 +215,17 @@ export async function DELETE(request: NextRequest) {
           ? shopId.replace(/^BTQ-/i, 'SHOP-')
           : shopId
 
-      // 1. Récupérer l'email de l'employé avant la suppression
+      // 1. Récupérer l'email de l'employé avant la suppression (restreint strictement à la boutique)
       const { data: empData } = await supabase
         .from('employees')
         .select('*')
         .eq('id', id)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
         .maybeSingle()
+
+      if (!empData) {
+        return NextResponse.json({ success: true, message: 'Employé introuvable ou déjà dissocié' })
+      }
 
       const empEmail = empData?.email?.toLowerCase().trim()
 
@@ -237,6 +242,7 @@ export async function DELETE(request: NextRequest) {
         .from('employees')
         .delete()
         .eq('id', id)
+        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
       // 3. Nettoyer le compte Auth Supabase correspondant pour permettre une ré-invitation ultérieure
       const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY &&

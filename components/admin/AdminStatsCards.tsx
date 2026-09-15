@@ -26,7 +26,7 @@ export const AdminStatsCards: React.FC<AdminStatsCardsProps> = ({ kpis }) => {
           <Store className="w-3.5 h-3.5" />
           <span>Boutiques Réseau</span>
         </div>
-        <p className="text-xl font-extrabold text-white font-mono">
+        <p className="text-xl font-extrabold text-white font-mono tabular-nums">
           {kpis.totalBoutiques}
         </p>
       </div>
@@ -37,7 +37,7 @@ export const AdminStatsCards: React.FC<AdminStatsCardsProps> = ({ kpis }) => {
           <Users className="w-3.5 h-3.5" />
           <span>Utilisateurs</span>
         </div>
-        <p className="text-xl font-extrabold text-white font-mono">
+        <p className="text-xl font-extrabold text-white font-mono tabular-nums">
           {kpis.totalUsers}
         </p>
       </div>
@@ -48,7 +48,7 @@ export const AdminStatsCards: React.FC<AdminStatsCardsProps> = ({ kpis }) => {
           <FileText className="w-3.5 h-3.5" />
           <span>Transactions</span>
         </div>
-        <p className="text-xl font-extrabold text-white font-mono">
+        <p className="text-xl font-extrabold text-white font-mono tabular-nums">
           {kpis.globalTransactions}
         </p>
       </div>
@@ -59,7 +59,7 @@ export const AdminStatsCards: React.FC<AdminStatsCardsProps> = ({ kpis }) => {
           <TrendingUp className="w-3.5 h-3.5" />
           <span>Volume Réseau</span>
         </div>
-        <p className="text-[15px] font-extrabold text-amber-400 font-mono truncate">
+        <p className="text-[15px] font-extrabold text-amber-400 font-mono truncate tabular-nums">
           {formatPrice(kpis.globalVolumeSales)}
         </p>
       </div>

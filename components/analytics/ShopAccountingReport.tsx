@@ -4,7 +4,12 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { 
   Package, 
   FileSpreadsheet, 
-  Share2
+  Share2,
+  Coins,
+  ArrowDownRight,
+  TrendingUp,
+  Scale,
+  FileText
 } from 'lucide-react'
 import { getOfflineProducts, OfflineProduct } from '@/lib/offlineDb'
 import { getItemPurchaseValue } from '@/components/stock/stockUtils'
@@ -267,14 +272,16 @@ export function ShopAccountingReport({
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200/80 rounded-2xl p-4 shadow-xs space-y-1.5">
           <div className="flex items-center justify-between text-blue-900 font-mono text-xs font-black">
             <span>CHIFFRE D'AFFAIRES (CA)</span>
-            <span className="p-1.5 bg-blue-200/80 text-blue-900 rounded-xl">💰</span>
+            <span className="p-1.5 bg-blue-200/80 text-blue-900 rounded-xl">
+              <Coins className="w-4 h-4" />
+            </span>
           </div>
-          <div className="text-2xl font-black text-blue-950 font-mono">
+          <div className="text-2xl font-black text-blue-950 font-mono tabular-nums">
             {formatPrice(accounting.totalSalesCa)}
           </div>
           <div className="text-[11px] text-blue-800 font-mono flex items-center justify-between pt-1 border-t border-blue-200/60">
             <span>Encaissé réel :</span>
-            <span className="font-extrabold">{formatPrice(accounting.totalCashReceived)}</span>
+            <span className="font-extrabold tabular-nums">{formatPrice(accounting.totalCashReceived)}</span>
           </div>
         </div>
 
@@ -282,9 +289,11 @@ export function ShopAccountingReport({
         <div className="bg-gradient-to-br from-rose-50 to-red-50 border-2 border-rose-200/80 rounded-2xl p-4 shadow-xs space-y-1.5">
           <div className="flex items-center justify-between text-rose-900 font-mono text-xs font-black">
             <span>DÉPENSES & ACHATS</span>
-            <span className="p-1.5 bg-rose-200/80 text-rose-900 rounded-xl">💸</span>
+            <span className="p-1.5 bg-rose-200/80 text-rose-900 rounded-xl">
+              <ArrowDownRight className="w-4 h-4" />
+            </span>
           </div>
-          <div className="text-2xl font-black text-rose-950 font-mono">
+          <div className="text-2xl font-black text-rose-950 font-mono tabular-nums">
             {formatPrice(accounting.totalAllExpenses)}
           </div>
           <div className="text-[11px] text-rose-800 font-mono flex items-center justify-between pt-1 border-t border-rose-200/60">
@@ -296,14 +305,16 @@ export function ShopAccountingReport({
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl p-4 shadow-xs space-y-1.5">
           <div className="flex items-center justify-between text-emerald-900 font-mono text-xs font-black">
             <span>BÉNÉFICE NET RÉEL</span>
-            <span className="p-1.5 bg-emerald-200 text-emerald-950 rounded-xl">📈</span>
+            <span className="p-1.5 bg-emerald-200 text-emerald-950 rounded-xl">
+              <TrendingUp className="w-4 h-4" />
+            </span>
           </div>
-          <div className="text-2xl font-black text-emerald-900 font-mono">
+          <div className="text-2xl font-black text-emerald-900 font-mono tabular-nums">
             {accounting.realProfit >= 0 ? `+${formatPrice(accounting.realProfit)}` : formatPrice(accounting.realProfit)}
           </div>
           <div className="text-[11px] text-emerald-800 font-mono flex items-center justify-between pt-1 border-t border-emerald-200/60">
             <span>Marge nette :</span>
-            <span className="font-extrabold">{accounting.profitMarginPercent}%</span>
+            <span className="font-extrabold tabular-nums">{accounting.profitMarginPercent}%</span>
           </div>
         </div>
 
@@ -311,14 +322,16 @@ export function ShopAccountingReport({
         <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-2xl p-4 shadow-xs space-y-1.5">
           <div className="flex items-center justify-between text-amber-900 font-mono text-xs font-black">
             <span>VALEUR STOCK EN RAYON</span>
-            <span className="p-1.5 bg-amber-200 text-amber-950 rounded-xl">📦</span>
+            <span className="p-1.5 bg-amber-200 text-amber-950 rounded-xl">
+              <Package className="w-4 h-4" />
+            </span>
           </div>
-          <div className="text-2xl font-black text-amber-950 font-mono">
+          <div className="text-2xl font-black text-amber-950 font-mono tabular-nums">
             {formatPrice(accounting.totalStockPurchaseValue)}
           </div>
           <div className="text-[11px] text-amber-800 font-mono flex items-center justify-between pt-1 border-t border-amber-200/60">
             <span>Revente potentielle :</span>
-            <span className="font-extrabold">{formatPrice(accounting.totalStockSalesValue)}</span>
+            <span className="font-extrabold tabular-nums">{formatPrice(accounting.totalStockSalesValue)}</span>
           </div>
         </div>
       </div>
@@ -338,19 +351,19 @@ export function ShopAccountingReport({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
           <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
             <span className="text-[11px] text-amber-800 font-bold">Valeur d'Achat Immobilisée :</span>
-            <div className="text-lg font-black text-amber-950">{formatPrice(accounting.totalStockPurchaseValue)}</div>
+            <div className="text-lg font-black text-amber-950 tabular-nums">{formatPrice(accounting.totalStockPurchaseValue)}</div>
             <p className="text-[10px] text-gray-500">Ce que ces marchandises ont coûté chez le fournisseur</p>
           </div>
 
           <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1">
             <span className="text-[11px] text-blue-800 font-bold">Valeur Marchande (Revente) :</span>
-            <div className="text-lg font-black text-blue-950">{formatPrice(accounting.totalStockSalesValue)}</div>
+            <div className="text-lg font-black text-blue-950 tabular-nums">{formatPrice(accounting.totalStockSalesValue)}</div>
             <p className="text-[10px] text-gray-500">Chiffre d'affaires attendu une fois tout le stock vendu</p>
           </div>
 
           <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
             <span className="text-[11px] text-emerald-800 font-bold">Bénéfice Futur en Magasin :</span>
-            <div className="text-lg font-black text-emerald-900">+{formatPrice(accounting.expectedStockProfit)}</div>
+            <div className="text-lg font-black text-emerald-900 tabular-nums">+{formatPrice(accounting.expectedStockProfit)}</div>
             <p className="text-[10px] text-gray-500">Gain net prévisionnel enfermé dans les rayons</p>
           </div>
         </div>
@@ -362,10 +375,10 @@ export function ShopAccountingReport({
         <div className="bg-white border border-amber-300/80 rounded-2xl p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-amber-200 pb-2">
             <h3 className="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
-              <span>💸</span>
+              <ArrowDownRight className="w-4 h-4 text-rose-700" />
               <span>Où est parti l'argent (Dépenses) :</span>
             </h3>
-            <span className="text-xs font-bold text-rose-800">{formatPrice(accounting.totalAllExpenses)}</span>
+            <span className="text-xs font-bold text-rose-800 tabular-nums">{formatPrice(accounting.totalAllExpenses)}</span>
           </div>
 
           {accounting.expenseCategoryBreakdown.length > 0 ? (
@@ -374,7 +387,7 @@ export function ShopAccountingReport({
                 <div key={idx} className="space-y-1">
                   <div className="flex justify-between text-xs font-bold text-stone-800">
                     <span>{item.category}</span>
-                    <span className="text-rose-800">{formatPrice(item.amount)} ({item.percentage}%)</span>
+                    <span className="text-rose-800 tabular-nums">{formatPrice(item.amount)} ({item.percentage}%)</span>
                   </div>
                   <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
                     <div
@@ -396,7 +409,7 @@ export function ShopAccountingReport({
         <div className="bg-white border border-amber-300/80 rounded-2xl p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-amber-200 pb-2">
             <h3 className="text-xs font-black text-amber-950 uppercase flex items-center gap-1.5">
-              <span>⚖️</span>
+              <Scale className="w-4 h-4 text-amber-800" />
               <span>Trésorerie & Crédits Clients :</span>
             </h3>
           </div>
@@ -407,7 +420,7 @@ export function ShopAccountingReport({
                 <span className="text-xs font-bold text-emerald-950">Cash Réel Encaissé en Caisse :</span>
                 <p className="text-[10px] text-emerald-800">Paiements reçus sur la période</p>
               </div>
-              <span className="text-base font-black text-emerald-900">{formatPrice(accounting.totalCashReceived)}</span>
+              <span className="text-base font-black text-emerald-900 tabular-nums">{formatPrice(accounting.totalCashReceived)}</span>
             </div>
 
             <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
@@ -415,7 +428,7 @@ export function ShopAccountingReport({
                 <span className="text-xs font-bold text-amber-950">Crédits Accordés sur la période :</span>
                 <p className="text-[10px] text-amber-800">Ventes non payées de la période</p>
               </div>
-              <span className="text-base font-black text-amber-900">{formatPrice(accounting.totalCustomerDebts)}</span>
+              <span className="text-base font-black text-amber-900 tabular-nums">{formatPrice(accounting.totalCustomerDebts)}</span>
             </div>
 
             <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
@@ -423,7 +436,7 @@ export function ShopAccountingReport({
                 <span className="text-xs font-bold text-rose-950">Total Dettes Dehors (À vie) :</span>
                 <p className="text-[10px] text-rose-800">Argent à recouvrer auprès des clients</p>
               </div>
-              <span className="text-base font-black text-rose-900">{formatPrice(accounting.allTimeUnpaidDebts)}</span>
+              <span className="text-base font-black text-rose-900 tabular-nums">{formatPrice(accounting.allTimeUnpaidDebts)}</span>
             </div>
           </div>
         </div>
@@ -432,7 +445,7 @@ export function ShopAccountingReport({
       {/* ── 5. Actions d'Exportation & Partage ── */}
       <div className="bg-amber-100/60 border border-amber-300 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
         <span className="text-amber-950 font-bold flex items-center gap-1.5">
-          <span>📄</span>
+          <FileText className="w-4 h-4 text-amber-900" />
           <span>Rapports Comptables & Partage :</span>
         </span>
 
@@ -440,7 +453,7 @@ export function ShopAccountingReport({
           <button
             type="button"
             onClick={() => exportSalesToCSV(filteredSales as any, `Bilan_${shopName}_${period}`)}
-            className="px-3 py-2 bg-white hover:bg-amber-50 border border-amber-300 text-amber-950 rounded-xl font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-2 bg-white hover:bg-amber-50 border border-amber-300 text-amber-950 rounded-xl font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
             <span>Excel / CSV</span>
@@ -449,16 +462,16 @@ export function ShopAccountingReport({
           <button
             type="button"
             onClick={() => exportSalesToPDF(filteredSales as any, `Bilan_${shopName}_${period}`, shopName)}
-            className="px-3 py-2 bg-white hover:bg-amber-50 border border-amber-300 text-amber-950 rounded-xl font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-2 bg-white hover:bg-amber-50 border border-amber-300 text-amber-950 rounded-xl font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
           >
-            <Package className="w-3.5 h-3.5 text-rose-700" />
+            <FileText className="w-3.5 h-3.5 text-rose-700" />
             <span>PDF</span>
           </button>
 
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
           >
             <Share2 className="w-3.5 h-3.5" />
             <span>Rapport WhatsApp</span>

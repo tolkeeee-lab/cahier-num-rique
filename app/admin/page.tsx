@@ -136,7 +136,7 @@ export default function SuperAdminPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all"
+            className="w-full py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all cursor-pointer active:scale-[0.97] disabled:opacity-50"
           >
             {loading ? 'Connexion...' : 'Se Connecter'}
           </button>
@@ -157,7 +157,7 @@ export default function SuperAdminPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => loadAdminData()}
-            className="p-2 rounded-xl bg-[#1e1a18] border border-gray-800 text-gray-400 hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-[#1e1a18] border border-gray-800 text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-[0.97]"
             title="Rafraîchir"
           >
             <RefreshCw className="w-4 h-4" />
@@ -168,7 +168,7 @@ export default function SuperAdminPage() {
               localStorage.removeItem('cahier_admin_email')
               setIsAdmin(false)
             }}
-            className="p-2 rounded-xl bg-red-950/40 border border-red-800/40 text-red-400 hover:bg-red-900/60 transition-colors"
+            className="p-2 rounded-xl bg-red-950/40 border border-red-800/40 text-red-400 hover:bg-red-900/60 transition-colors cursor-pointer active:scale-[0.97]"
             title="Déconnexion"
           >
             <LogOut className="w-4 h-4" />

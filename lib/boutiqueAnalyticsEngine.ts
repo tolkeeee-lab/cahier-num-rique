@@ -49,14 +49,15 @@ export function answerBoutiqueQuestion(
     const todaySales = sales.filter(s => s.date === todayStr && isPureSale(s))
     const todayExpenses = sales.filter(s => s.date === todayStr && isPureExpense(s))
 
-    const totalCa = todaySales.reduce((sum, s) => sum + (s.total || 0), 0)
-    const totalExp = todayExpenses.reduce((sum, s) => sum + (s.total || 0), 0)
+    const totalCa = todaySales.reduce((sum, s) => sum + (s.total ?? s.total_amount ?? 0), 0)
+    const totalExp = todayExpenses.reduce((sum, s) => sum + (s.total ?? s.total_amount ?? 0), 0)
 
     // Calcul de l'estimation de marge brute si unit_cost disponible
     let estimatedCost = 0
     todaySales.forEach(s => {
       s.articles?.forEach((art: any) => {
-        const prod = products.find(p => p.name.toLowerCase() === art.name.toLowerCase())
+        const artName = (art.name || art.nom || art.product_name || '').toLowerCase().trim()
+        const prod = products.find(p => (p.name || '').toLowerCase().trim() === artName)
         const cost = prod?.unit_cost || 0
         estimatedCost += cost * (art.quantity || 1)
       })
@@ -79,7 +80,7 @@ export function answerBoutiqueQuestion(
   // 2. QUESTION : "Combien j'ai vendu ce mois / le mois passé ?"
   if (q.includes('mois pass') || q.includes('mois dernier') || q.includes('le mois passé')) {
     const lastMonthSales = sales.filter(s => (s.date || '').startsWith(lastMonthPrefix) && isPureSale(s))
-    const lastMonthCa = lastMonthSales.reduce((sum, s) => sum + (s.total || 0), 0)
+    const lastMonthCa = lastMonthSales.reduce((sum, s) => sum + (s.total ?? s.total_amount ?? 0), 0)
     const nbVentes = lastMonthSales.length
 
     return {
@@ -96,7 +97,7 @@ export function answerBoutiqueQuestion(
 
   if (q.includes('ce mois') || q.includes('mois ci') || q.includes('mois en cours')) {
     const thisMonthSales = sales.filter(s => (s.date || '').startsWith(thisMonthPrefix) && isPureSale(s))
-    const thisMonthCa = thisMonthSales.reduce((sum, s) => sum + (s.total || 0), 0)
+    const thisMonthCa = thisMonthSales.reduce((sum, s) => sum + (s.total ?? s.total_amount ?? 0), 0)
 
     return {
       question,
@@ -107,13 +108,13 @@ export function answerBoutiqueQuestion(
 
   // 3. QUESTION : "Combien les clients me doivent ?" / "Dettes clients"
   if (q.includes('doivent') || q.includes('dette') || q.includes('crédit client') || q.includes('impayé')) {
-    const debtSales = sales.filter(s => (s.debt || 0) > 0 && s.status !== 'crossed_out')
-    const totalDebt = debtSales.reduce((sum, s) => sum + (s.debt || 0), 0)
+    const debtSales = sales.filter(s => ((s.debt ?? s.debt_amount ?? 0) > 0) && s.status !== 'crossed_out')
+    const totalDebt = debtSales.reduce((sum, s) => sum + (s.debt ?? s.debt_amount ?? 0), 0)
 
     const clientDebts: Record<string, number> = {}
     debtSales.forEach(s => {
-      const c = s.client || 'Client anonyme'
-      clientDebts[c] = (clientDebts[c] || 0) + (s.debt || 0)
+      const c = s.client || s.client_name || 'Client anonyme'
+      clientDebts[c] = (clientDebts[c] || 0) + (s.debt ?? s.debt_amount ?? 0)
     })
 
     const topDebtors = Object.entries(clientDebts)
@@ -142,14 +143,15 @@ export function answerBoutiqueQuestion(
       sales.forEach(s => {
         if (!isPureSale(s)) return
         s.articles?.forEach((art: any) => {
-          if (art.name.toLowerCase().includes(searchTerm)) {
-            totalQty += Number(art.quantity) || 0
-            totalAmount += (Number(art.quantity) || 0) * (Number(art.unit_price) || 0)
+          const artName = (art.name || art.nom || art.product_name || '').toLowerCase()
+          if (artName.includes(searchTerm)) {
+            totalQty += Number(art.quantity || art.quantite) || 0
+            totalAmount += (Number(art.quantity || art.quantite) || 0) * (Number(art.unit_price || art.prix_unitaire) || 0)
           }
         })
       })
 
-      const matchedProd = products.find(p => p.name.toLowerCase().includes(searchTerm))
+      const matchedProd = products.find(p => (p.name || '').toLowerCase().includes(searchTerm))
       if (matchedProd && matchedProd.unit) {
         productUnit = matchedProd.unit
       }
@@ -181,7 +183,7 @@ export function answerBoutiqueQuestion(
       }
     }
 
-    const itemsList = lowStockItems.map(p => `- **${p.name}** : Reste ${p.current_stock ?? p.initial_stock ?? 0} ${p.unit || 'pcs'} (Seuil: ${p.alert_threshold || 5})`)
+    const itemsList = lowStockItems.map(p => `- **${p.name || 'Article'}** : Reste ${p.current_stock ?? p.initial_stock ?? 0} ${p.unit || 'pcs'} (Seuil: ${p.alert_threshold || 5})`)
 
     return {
       question,
@@ -193,7 +195,7 @@ export function answerBoutiqueQuestion(
 
   // 6. QUESTION GÉNÉRALE : Totaux généraux aujourd'hui
   const todaySales = sales.filter(s => s.date === todayStr && isPureSale(s))
-  const todayCa = todaySales.reduce((sum, s) => sum + (s.total || 0), 0)
+  const todayCa = todaySales.reduce((sum, s) => sum + (s.total ?? s.total_amount ?? 0), 0)
 
   return {
     question,

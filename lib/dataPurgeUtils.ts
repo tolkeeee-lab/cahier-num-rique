@@ -27,6 +27,7 @@ export async function purgeShopData(shopId: string, options: PurgeOptions): Prom
       if (isOnline) {
         try { await supabaseClient.from('sold_articles').delete().eq('shop_id', shopId) } catch {}
         try { await supabaseClient.from('sales').delete().eq('shop_id', shopId) } catch {}
+        try { await supabaseClient.from('cash_closings').delete().eq('shop_id', shopId) } catch {}
       }
     }
 

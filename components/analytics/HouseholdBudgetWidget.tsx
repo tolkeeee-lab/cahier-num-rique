@@ -63,12 +63,13 @@ export function HouseholdBudgetWidget({
       const isIncome = s.pen_color === 'blue' || s.type === 'cash_in'
       const isReserve = s.pen_color === 'green'
 
+      const entryAmount = s.paid ?? (s as any).paid_amount ?? s.total ?? (s as any).total_amount ?? 0
       if (isIncome) {
-        totalEntrees += s.paid || s.total || 0
+        totalEntrees += entryAmount
       } else if (isReserve) {
-        totalReserve += s.paid || s.total || 0
+        totalReserve += entryAmount
       } else {
-        const paidVal = s.paid ?? s.total ?? 0
+        const paidVal = entryAmount
         totalSorties += paidVal
 
         const notesLower = (s.notes || '').toLowerCase()

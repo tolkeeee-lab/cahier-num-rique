@@ -42,17 +42,25 @@ export async function GET(request: NextRequest) {
           const { data: debts } = await supabase.from('supplier_debts').select('*').eq('shop_id', shopId).order('supplier_name', { ascending: true })
           const { data: sales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier'])
 
-          const debtSuppliers = (debts || []).map(d => d.supplier_name)
-          const salesSuppliers = (sales || []).filter(s => s.client_name).map(s => s.client_name)
-          const supplierNames = Array.from(new Set([...debtSuppliers, ...salesSuppliers]))
+          const suppMap = new Map<string, string>()
+          ;[...(debts || []).map(d => d.supplier_name), ...(sales || []).filter(s => s.client_name).map(s => s.client_name)]
+            .filter(Boolean)
+            .forEach(rawName => {
+              const trimmed = String(rawName).trim()
+              const lower = trimmed.toLowerCase()
+              if (!suppMap.has(lower)) {
+                suppMap.set(lower, trimmed)
+              }
+            })
 
-          const list = supplierNames.map(name => {
-            const supplierDebts = (debts || []).filter(d => d.supplier_name === name)
+          const list = Array.from(suppMap.values()).map(name => {
+            const lowerName = name.toLowerCase().trim()
+            const supplierDebts = (debts || []).filter(d => (d.supplier_name || '').toLowerCase().trim() === lowerName)
             const legacyOwed = supplierDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
             const legacyPaid = supplierDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
             
             const history = (sales || [])
-              .filter(s => s.client_name === name && s.status !== 'crossed_out')
+              .filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out')
               .map(s => ({
                 id: s.id,
                 date: s.date,
@@ -62,7 +70,7 @@ export async function GET(request: NextRequest) {
               }))
             
             const salesOwed = history.reduce((sum, h) => sum + (h.amount > 0 ? h.amount : 0), 0)
-            const initialDownPayments = (sales || []).filter(s => s.client_name === name && s.status !== 'crossed_out' && s.type === 'purchase_credit').reduce((sum, s) => sum + (s.paid_amount || 0), 0)
+            const initialDownPayments = (sales || []).filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out' && s.type === 'purchase_credit').reduce((sum, s) => sum + (s.paid_amount || 0), 0)
             const salesPaid = history.reduce((sum, h) => sum + (h.amount < 0 ? Math.abs(h.amount) : 0), 0) + initialDownPayments
             const totalAmountOwed = (legacyOwed - legacyPaid) + (salesOwed - salesPaid + initialDownPayments)
 
@@ -71,7 +79,7 @@ export async function GET(request: NextRequest) {
               name,
               amount: totalAmountOwed,
               paid: legacyPaid + salesPaid,
-              status: totalAmountOwed <= 0 ? 'paid' : 'pending',
+              status: totalAmountOwed <= 0 ? 'settled' : 'pending',
               history
             }
           })
@@ -316,11 +324,22 @@ export async function POST(request: NextRequest) {
 // Helpers locaux en mémoire pour l'extraction dynamique
 function getLocalClients(shopId: string) {
   const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
-  const clientNames = Array.from(new Set(sales.filter((s: any) => s.type === 'sale_credit' || s.type === 'payment_client').map((s: any) => s.client_name)))
+  const clientNameMap = new Map<string, string>()
+  sales
+    .filter((s: any) => (s.type === 'sale_credit' || s.type === 'payment_client') && s.client_name)
+    .forEach((s: any) => {
+      const trimmed = String(s.client_name).trim()
+      const lower = trimmed.toLowerCase()
+      if (!clientNameMap.has(lower)) {
+        clientNameMap.set(lower, trimmed)
+      }
+    })
   
-  return clientNames.map(name => {
-    const clientSales = sales.filter((s: any) => s.client_name === name)
+  return Array.from(clientNameMap.values()).map(name => {
+    const lower = name.toLowerCase().trim()
+    const clientSales = sales.filter((s: any) => (s.client_name || '').toLowerCase().trim() === lower)
     const credits = clientSales.filter((s: any) => s.type === 'sale_credit').reduce((sum: number, s: any) => sum + (s.debt_amount ?? s.total_amount ?? 0), 0)
+    const downPayments = clientSales.filter((s: any) => s.type === 'sale_credit').reduce((sum: number, s: any) => sum + (s.paid_amount || 0), 0)
     const payments = clientSales.filter((s: any) => s.type === 'payment_client').reduce((sum: number, s: any) => sum + (s.paid_amount ?? s.total_amount ?? 0), 0)
     const balance = Math.max(0, credits - payments)
 
@@ -338,7 +357,7 @@ function getLocalClients(shopId: string) {
       id: randomUUID(),
       name,
       amount: balance,
-      paid: payments,
+      paid: payments + downPayments,
       status: balance === 0 ? 'settled' : 'pending',
       history
     }
@@ -347,11 +366,22 @@ function getLocalClients(shopId: string) {
 
 function getLocalSuppliers(shopId: string) {
   const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
-  const supplierNames = Array.from(new Set(sales.filter((s: any) => s.type === 'purchase_credit' || s.type === 'payment_supplier').map((s: any) => s.client_name)))
+  const suppNameMap = new Map<string, string>()
+  sales
+    .filter((s: any) => (s.type === 'purchase_credit' || s.type === 'payment_supplier') && s.client_name)
+    .forEach((s: any) => {
+      const trimmed = String(s.client_name).trim()
+      const lower = trimmed.toLowerCase()
+      if (!suppNameMap.has(lower)) {
+        suppNameMap.set(lower, trimmed)
+      }
+    })
 
-  return supplierNames.map(name => {
-    const supplierSales = sales.filter((s: any) => s.client_name === name)
+  return Array.from(suppNameMap.values()).map(name => {
+    const lower = name.toLowerCase().trim()
+    const supplierSales = sales.filter((s: any) => (s.client_name || '').toLowerCase().trim() === lower)
     const credits = supplierSales.filter((s: any) => s.type === 'purchase_credit').reduce((sum: number, s: any) => sum + (s.debt_amount ?? s.total_amount ?? 0), 0)
+    const downPayments = supplierSales.filter((s: any) => s.type === 'purchase_credit').reduce((sum: number, s: any) => sum + (s.paid_amount || 0), 0)
     const payments = supplierSales.filter((s: any) => s.type === 'payment_supplier').reduce((sum: number, s: any) => sum + (s.paid_amount ?? s.total_amount ?? 0), 0)
     const balance = Math.max(0, credits - payments)
 
@@ -369,7 +399,7 @@ function getLocalSuppliers(shopId: string) {
       id: randomUUID(),
       name,
       amount: balance,
-      paid: payments,
+      paid: payments + downPayments,
       status: balance === 0 ? 'settled' : 'pending',
       history
     }

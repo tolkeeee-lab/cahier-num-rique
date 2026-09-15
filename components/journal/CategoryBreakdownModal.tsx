@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { X, Calculator, TrendingUp, TrendingDown, ShoppingBag, CreditCard } from 'lucide-react'
+import { X, Calculator, TrendingUp, TrendingDown, ShoppingBag, CreditCard, Coins } from 'lucide-react'
 import { formatPrice } from '@/lib/penUtils'
 
 interface SaleItem {
@@ -116,28 +116,32 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
 
         {/* Formule de Calcul en Page */}
         <div className="p-3 bg-amber-50/80 border-b border-amber-200 space-y-2">
-          <div className="text-[11px] font-bold text-amber-900 uppercase tracking-wider">
-            📊 Formule de Calcul du Solde Réel :
+          <div className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+            <Calculator className="w-3.5 h-3.5 text-amber-800" />
+            <span>Formule de Calcul du Solde Réel :</span>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs font-mono">
             <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-950">
               <div className="text-[10px] text-blue-700 font-black">ENTRÉES / CA (+)</div>
-              <div className="text-xs font-black">+{formatPrice(blueTotal)}</div>
+              <div className="text-xs font-black tabular-nums">+{formatPrice(blueTotal)}</div>
             </div>
             <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-950">
               <div className="text-[10px] text-rose-700 font-black">DÉPENSES (-)</div>
-              <div className="text-xs font-black">-{formatPrice(redTotal)}</div>
+              <div className="text-xs font-black tabular-nums">-{formatPrice(redTotal)}</div>
             </div>
             <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950">
               <div className="text-[10px] text-emerald-700 font-black">ACHATS STOCK (-)</div>
-              <div className="text-xs font-black">-{formatPrice(greenTotal)}</div>
+              <div className="text-xs font-black tabular-nums">-{formatPrice(greenTotal)}</div>
             </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-100 to-amber-200 border-2 border-amber-400 flex items-center justify-between">
-            <span className="text-xs font-black text-amber-950">💰 BÉNÉFICE / SOLDE NET :</span>
-            <span className={`text-sm font-black ${netCash >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
+          <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-100 to-amber-200 border-2 border-amber-400 flex items-center justify-between font-mono">
+            <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+              <Coins className="w-4 h-4 text-amber-800" />
+              <span>BÉNÉFICE / SOLDE NET :</span>
+            </span>
+            <span className={`text-sm font-black tabular-nums ${netCash >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
               {netCash >= 0 ? `+${formatPrice(netCash)}` : `-${formatPrice(Math.abs(netCash))}`}
             </span>
           </div>
