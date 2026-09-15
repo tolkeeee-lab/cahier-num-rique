@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Share2, Sparkles, Check, Search, Send, PenTool, Lightbulb, ClipboardList, Flame, ShoppingCart } from 'lucide-react'
+import { Plus, Trash2, Share2, Sparkles, Check, Search, Send, PenTool, Lightbulb, ClipboardList, Flame, ShoppingCart, X } from 'lucide-react'
 import { formatCurrency } from '@/lib/currencyUtils'
 import { recordRequestedProductInStorage, RequestedProduct } from '@/lib/requestedProductsUtils'
 import { getOfflineSales } from '@/lib/offlineDb'
@@ -418,7 +418,13 @@ export function RequestedProductsManager({
                 <ClipboardList className="w-4 h-4 text-amber-800" />
                 <span>Enregistrer un Produit Réclamé par un Client</span>
               </h3>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-700">✕</button>
+              <button 
+                onClick={() => setShowAddModal(false)} 
+                className="text-gray-400 hover:text-gray-700 active:scale-[0.95] p-1 transition-transform"
+                title="Fermer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             <form onSubmit={handleAddRequestedProduct} className="space-y-3 text-xs">

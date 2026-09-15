@@ -90,8 +90,11 @@ export function useShopManager(mappedUser: any) {
                   const shortCode = formatShortShopCode(bestRow.shop_id)
                   if (shortCode && shortCode !== bestRow.shop_id) {
                     await supabaseClient.from('sales').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
+                    await supabaseClient.from('sold_articles').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
                     await supabaseClient.from('products').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
                     await supabaseClient.from('debts').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
+                    await supabaseClient.from('supplier_debts').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
+                    await supabaseClient.from('cash_closings').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
                   }
                 }
 

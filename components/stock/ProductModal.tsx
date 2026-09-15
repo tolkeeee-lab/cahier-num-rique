@@ -109,14 +109,15 @@ export function ProductModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-black rounded-xl transition-colors cursor-pointer font-mono"
+              className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 active:scale-[0.97] text-gray-800 text-xs font-black rounded-xl transition-all cursor-pointer font-mono flex items-center gap-1.5"
             >
-              ✕ Fermer
+              <X className="w-3.5 h-3.5" />
+              <span>Annuler</span>
             </button>
             <button
               type="submit"
               disabled={!formData.name.trim() || saving}
-              className="px-5 py-2.5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-black rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-md font-mono"
+              className="px-5 py-2.5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-black rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-md font-mono"
             >
               <Save className="w-4 h-4" />
               <span>{saving ? 'Enregistrement...' : 'Sauvegarder le Produit'}</span>

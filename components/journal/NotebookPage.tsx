@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useMemo } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical, Share2, Coins, Lightbulb, Calendar } from 'lucide-react'
+import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical, Share2, Coins, Lightbulb, Calendar, TrendingUp, ArrowDownRight, Package, Clock, CreditCard, Ruler } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -206,8 +206,9 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-xs font-mono tabular-nums">
-                      🔵 Ventes (CA) : +{formatPrice(salesTotal)}
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span>Ventes (CA) : +{formatPrice(salesTotal)}</span>
                     </span>
                   </div>
                 ) : activeFilter === 'red' ? (
@@ -216,8 +217,9 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-rose-600 text-white shadow-xs font-mono tabular-nums">
-                      🔴 Dépenses : -{formatPrice(expensesTotal)}
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-rose-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                      <ArrowDownRight className="w-3.5 h-3.5" />
+                      <span>Dépenses : -{formatPrice(expensesTotal)}</span>
                     </span>
                   </div>
                 ) : activeFilter === 'green' ? (
@@ -226,8 +228,9 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-emerald-600 text-white shadow-xs font-mono tabular-nums">
-                      🟢 Achats Stock : -{formatPrice(stockCashTotal)}
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-emerald-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                      <Package className="w-3.5 h-3.5" />
+                      <span>Achats Stock : -{formatPrice(stockCashTotal)}</span>
                     </span>
                   </div>
                 ) : activeFilter === 'purple' ? (
@@ -236,8 +239,9 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-fuchsia-600 text-white shadow-xs font-mono tabular-nums">
-                      🟣 Dettes Fournisseurs : -{formatPrice(purpleCreditTotal)}
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-fuchsia-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Dettes Fournisseurs : -{formatPrice(purpleCreditTotal)}</span>
                     </span>
                   </div>
                 ) : activeFilter === 'yellow' ? (
@@ -246,8 +250,9 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-amber-600 text-white shadow-xs font-mono tabular-nums">
-                      🟡 Crédits Clients : +{formatPrice(yellowCreditTotal)}
+                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-amber-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Crédits Clients : +{formatPrice(yellowCreditTotal)}</span>
                     </span>
                   </div>
                 ) : activeFilter === 'total' ? null : (
@@ -285,26 +290,29 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     <div className="space-y-1.5 pt-1">
                       {/* Ventes Cash */}
                       <div className="flex justify-between items-center bg-blue-100/70 p-2 rounded-xl border border-blue-300/80">
-                        <span className="text-blue-950 font-bold flex items-center gap-1">
-                          <span>🔵</span> Encaissements Ventes
+                        <span className="text-blue-950 font-bold flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
+                          <span>Encaissements Ventes</span>
                         </span>
-                        <span className="font-black text-blue-950 text-sm">+{formatPrice(salesCashTotal)}</span>
+                        <span className="font-black text-blue-950 text-sm font-mono tabular-nums">+{formatPrice(salesCashTotal)}</span>
                       </div>
 
                       {/* Dépenses */}
                       <div className="flex justify-between items-center bg-rose-100/70 p-2 rounded-xl border border-rose-300/80">
-                        <span className="text-rose-950 font-bold flex items-center gap-1">
-                          <span>🔴</span> Dépenses Diverses
+                        <span className="text-rose-950 font-bold flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
+                          <span>Dépenses Diverses</span>
                         </span>
-                        <span className="font-black text-rose-950 text-sm">-{formatPrice(expensesTotal)}</span>
+                        <span className="font-black text-rose-950 text-sm font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
                       </div>
 
                       {/* Achats Stock */}
                       <div className="flex justify-between items-center bg-emerald-100/70 p-2 rounded-xl border border-emerald-300/80">
-                        <span className="text-emerald-950 font-bold flex items-center gap-1">
-                          <span>🟢</span> Achats Marchandises (Cash)
+                        <span className="text-emerald-950 font-bold flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
+                          <span>Achats Marchandises (Cash)</span>
                         </span>
-                        <span className="font-black text-emerald-950 text-sm">-{formatPrice(stockCashTotal)}</span>
+                        <span className="font-black text-emerald-950 text-sm font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
                       </div>
 
                       {/* Ligne Maîtresse : Solde Net */}
@@ -317,7 +325,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           <Coins className="w-5 h-5 text-white" />
                           <span>SOLDE NET DU JOUR</span>
                         </span>
-                        <span className="font-mono font-black text-base sm:text-lg">
+                        <span className="font-mono font-black text-base sm:text-lg tabular-nums">
                           {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
                         </span>
                       </div>
@@ -326,13 +334,15 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       {(yellowCreditTotal > 0 || purpleCreditTotal > 0) && (
                         <div className="pt-2 border-t border-dashed border-amber-300 flex items-center justify-between text-[11px] font-bold text-gray-700 flex-wrap gap-2">
                           {yellowCreditTotal > 0 && (
-                            <span className="text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300">
-                              ⏳ Crédits clients en cours : +{formatPrice(yellowCreditTotal)}
+                            <span className="text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 font-mono tabular-nums">
+                              <Clock className="w-3.5 h-3.5 text-amber-700" />
+                              <span>Crédits clients en cours : +{formatPrice(yellowCreditTotal)}</span>
                             </span>
                           )}
                           {purpleCreditTotal > 0 && (
-                            <span className="text-fuchsia-900 bg-fuchsia-100 px-2.5 py-1 rounded-lg border border-fuchsia-300">
-                              💳 Dettes fournisseurs : -{formatPrice(purpleCreditTotal)}
+                            <span className="text-fuchsia-900 bg-fuchsia-100 px-2.5 py-1 rounded-lg border border-fuchsia-300 flex items-center gap-1 font-mono tabular-nums">
+                              <CreditCard className="w-3.5 h-3.5 text-fuchsia-700" />
+                              <span>Dettes fournisseurs : -{formatPrice(purpleCreditTotal)}</span>
                             </span>
                           )}
                         </div>
@@ -603,7 +613,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                   <div className="mt-3 pt-2.5 pb-2 px-3 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/80 border-2 border-dashed border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs space-y-2 select-none">
                   <div className="flex items-center justify-between border-b border-amber-300/80 pb-1 font-handwritten font-black text-amber-950 text-xs sm:text-sm">
                     <div className="flex items-center gap-1.5">
-                      <span>📐</span>
+                      <Ruler className="w-4 h-4 text-amber-900" />
                       <span className="tracking-wide uppercase">Bilan de Caisse du Jour</span>
                     </div>
                     <span className="font-mono text-[11px] text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full font-bold">
@@ -618,7 +628,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
                         <span>(+) Ventes encaissées (CA)</span>
                       </span>
-                      <span className="font-extrabold text-blue-950">+{formatPrice(salesTotal)}</span>
+                      <span className="font-extrabold text-blue-950 font-mono tabular-nums">+{formatPrice(salesTotal)}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-rose-900 font-bold">
@@ -626,7 +636,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
                         <span>(-) Dépenses réglées</span>
                       </span>
-                      <span className="font-extrabold text-rose-950">-{formatPrice(expensesTotal)}</span>
+                      <span className="font-extrabold text-rose-950 font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-emerald-900 font-bold">
@@ -634,7 +644,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
                         <span>(-) Achats stock au comptant</span>
                       </span>
-                      <span className="font-extrabold text-emerald-950">-{formatPrice(stockCashTotal)}</span>
+                      <span className="font-extrabold text-emerald-950 font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
                     </div>
 
                     {/* Ligne de Solde Net */}
@@ -647,7 +657,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         <Coins className="w-4 h-4 text-emerald-800 flex-shrink-0" />
                         <span>SOLDE NET DU JOUR</span>
                       </span>
-                      <span className="font-mono font-black text-sm sm:text-base">
+                      <span className="font-mono font-black text-sm sm:text-base tabular-nums">
                         {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
                       </span>
                     </div>
@@ -656,13 +666,15 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     {(yellowCreditTotal > 0 || purpleCreditTotal > 0) && (
                       <div className="pt-1.5 border-t border-dashed border-amber-300/60 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-gray-700 flex-wrap gap-2">
                         {yellowCreditTotal > 0 && (
-                          <span className="text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-lg border border-amber-300">
-                            ⏳ Crédits clients : +{formatPrice(yellowCreditTotal)}
+                          <span className="text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-lg border border-amber-300 flex items-center gap-1 font-mono tabular-nums">
+                            <Clock className="w-3.5 h-3.5 text-amber-800" />
+                            <span>Crédits clients : +{formatPrice(yellowCreditTotal)}</span>
                           </span>
                         )}
                         {purpleCreditTotal > 0 && (
-                          <span className="text-fuchsia-900 bg-fuchsia-100/90 px-2 py-0.5 rounded-lg border border-fuchsia-300">
-                            💳 Dettes fournisseurs : -{formatPrice(purpleCreditTotal)}
+                          <span className="text-fuchsia-900 bg-fuchsia-100/90 px-2 py-0.5 rounded-lg border border-fuchsia-300 flex items-center gap-1 font-mono tabular-nums">
+                            <CreditCard className="w-3.5 h-3.5 text-fuchsia-800" />
+                            <span>Dettes fournisseurs : -{formatPrice(purpleCreditTotal)}</span>
                           </span>
                         )}
                       </div>

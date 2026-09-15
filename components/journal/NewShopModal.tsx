@@ -31,13 +31,15 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
         {/* Entête Modale */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🏪</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-800">
+              <Store className="w-4 h-4" />
+            </div>
             <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">Nouveau Point de Vente</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-gray-400 hover:text-gray-700 transition-colors cursor-pointer active:scale-[0.97]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -110,7 +112,7 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 transition-colors cursor-pointer"
+            className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 active:scale-[0.97] transition-all cursor-pointer"
           >
             Annuler
           </button>
@@ -118,7 +120,7 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
             type="button"
             onClick={onCreate}
             disabled={!newShopName.trim()}
-            className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md cursor-pointer"
+            className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md cursor-pointer"
           >
             Créer la Boutique
           </button>

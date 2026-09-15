@@ -274,7 +274,7 @@ export function StockManager({
   }
 
   const handleClearAllStock = async () => {
-    if (!window.confirm('⚠️ Êtes-vous certain de vouloir supprimer TOUS les produits du stock ? Cette action est irréversible et remettra le stock à zéro.')) {
+    if (!window.confirm('Êtes-vous certain de vouloir supprimer TOUS les produits du stock ? Cette action est irréversible et remettra le stock à zéro.')) {
       return
     }
     setProducts([])

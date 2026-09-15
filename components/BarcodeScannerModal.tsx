@@ -466,9 +466,10 @@ export function BarcodeScannerModal({
                 <button
                   type="button"
                   onClick={handleDismissUnknown}
-                  className="text-gray-500 hover:text-gray-900 text-xs font-bold cursor-pointer"
+                  className="text-gray-500 hover:text-gray-900 active:scale-[0.97] text-xs font-bold cursor-pointer flex items-center gap-1 transition-transform"
                 >
-                  Passer ✕
+                  <X className="w-3.5 h-3.5" />
+                  <span>Passer</span>
                 </button>
               </div>
 

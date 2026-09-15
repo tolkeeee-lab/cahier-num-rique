@@ -127,9 +127,12 @@ export function ReceiptPrinterModal({
                 Date: {sale.date} {sale.time ? `• ${sale.time}` : ''}
               </div>
               <div className="text-[9px] text-gray-500">Réf: #{sale.id.slice(0, 8)}</div>
-              {sale.client && (
-                <div className="text-[10px] font-bold mt-1 uppercase">Client: {sale.client}</div>
-              )}
+              {(() => {
+                const clientName = sale.client || (sale as any).client_name
+                return clientName ? (
+                  <div className="text-[10px] font-bold mt-1 uppercase">Client: {clientName}</div>
+                ) : null
+              })()}
             </div>
 
             {/* Articles */}
@@ -142,34 +145,39 @@ export function ReceiptPrinterModal({
                 sale.articles.map((art, idx) => (
                   <div key={idx} className="space-y-0.5">
                     <div className="font-bold truncate">{art.name}</div>
-                    <div className="flex justify-between text-[10px] text-gray-700">
+                    <div className="flex justify-between text-[10px] text-gray-700 font-mono tabular-nums">
                       <span>{art.quantity} x {formatPrice(art.unit_price)}</span>
                       <span className="font-bold">{formatPrice(art.quantity * art.unit_price)}</span>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="flex justify-between">
+                <div className="flex justify-between font-mono tabular-nums">
                   <span>{sale.notes || 'Vente enregistrée'}</span>
-                  <span>{formatPrice(sale.total)}</span>
+                  <span>{formatPrice(sale.total ?? (sale as any).total_amount ?? 0)}</span>
                 </div>
               )}
             </div>
 
             {/* Totaux & Paiement */}
             {(() => {
+              const effectiveTotal = sale.total ?? (sale as any).total_amount ?? 0
+              const effectivePaid = sale.paid ?? (sale as any).paid_amount ?? 0
               const debtAmount = (sale.debt !== undefined && sale.debt !== null)
                 ? Number(sale.debt)
-                : Math.max(0, (sale.total || 0) - (sale.paid || 0))
+                : ((sale as any).debt_amount !== undefined && (sale as any).debt_amount !== null)
+                  ? Number((sale as any).debt_amount)
+                  : Math.max(0, effectiveTotal - effectivePaid)
+
               return (
-                <div className="py-2 border-b border-dashed border-black space-y-1 text-[11px]">
+                <div className="py-2 border-b border-dashed border-black space-y-1 text-[11px] font-mono tabular-nums">
                   <div className="flex justify-between font-bold text-sm">
                     <span>TOTAL :</span>
-                    <span>{formatPrice(sale.total)}</span>
+                    <span>{formatPrice(effectiveTotal)}</span>
                   </div>
                   <div className="flex justify-between text-gray-800">
                     <span>Montant Payé :</span>
-                    <span>{formatPrice(sale.paid || 0)}</span>
+                    <span>{formatPrice(effectivePaid)}</span>
                   </div>
                   {debtAmount > 0 && (
                     <div className="flex justify-between font-bold text-red-700 bg-red-50 p-1 rounded-sm mt-1">
@@ -180,7 +188,6 @@ export function ReceiptPrinterModal({
                 </div>
               )
             })()}
-
 
             {/* Pied de page */}
             <div className="text-center pt-3 text-[9px] text-gray-600 space-y-0.5">
@@ -195,13 +202,13 @@ export function ReceiptPrinterModal({
         <div className="p-4 bg-[#f5f1e8] border-t border-gray-200 flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 py-2 border border-gray-300 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-100"
+            className="flex-1 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 active:scale-[0.97] transition-all cursor-pointer shadow-2xs"
           >
             Fermer
           </button>
           <button
             onClick={handlePrint}
-            className="flex-1 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-full text-xs flex items-center justify-center gap-1.5 transition-transform hover:scale-105 active:scale-95 shadow-sm"
+            className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-all cursor-pointer shadow-xs"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Imprimer</span>

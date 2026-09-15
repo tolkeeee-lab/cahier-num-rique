@@ -74,11 +74,18 @@ export function getItemPurchaseValue(item: StockItem): number {
 
 export function getStockStatus(item: StockItem): StockStatus {
   if (item.is_unlimited || item.is_service) return 'ok'
-  if (item.category && (
-    item.category.toLowerCase().includes('prestation') || 
-    item.category.toLowerCase().includes('service') || 
-    item.category.includes('✂️')
-  )) return 'ok'
+  if (item.category) {
+    const catLower = item.category.toLowerCase()
+    if (
+      catLower.includes('prestation') || 
+      catLower.includes('service') || 
+      catLower.includes('coiffure') || 
+      catLower.includes('atelier') || 
+      catLower.includes('salon') || 
+      catLower.includes('couture') ||
+      item.category.includes('✂️')
+    ) return 'ok'
+  }
 
   const hasInitial = (item.initial_stock || 0) > 0
   const hasPurchases = (item.total_in || 0) > 0

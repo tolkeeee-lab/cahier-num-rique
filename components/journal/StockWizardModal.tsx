@@ -245,8 +245,9 @@ export function StockWizardModal({
                   </div>
                 </div>
                 {parseInt(multiplier) > 1 && (
-                  <p className="text-xs text-emerald-700 font-bold">
-                    ✓ 1 {packaging} = {multiplier} {unit}s
+                  <p className="text-xs text-emerald-700 font-bold flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5 inline-block text-emerald-600" />
+                    1 {packaging} = {multiplier} {unit}s
                   </p>
                 )}
               </div>
@@ -330,7 +331,7 @@ export function StockWizardModal({
               type="button"
               onClick={() => setStep(s => s + 1)}
               disabled={step === 1 && !name.trim()}
-              className="flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-emerald-700 active:scale-[0.97] disabled:opacity-50 transition-all"
             >
               Suivant
               <ChevronRight className="w-4 h-4" />
@@ -340,9 +341,14 @@ export function StockWizardModal({
               type="button"
               onClick={handleComplete}
               disabled={!name.trim() || !salePrice || isSaving}
-              className="flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-5 py-2 rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-colors shadow-md"
+              className="flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-5 py-2 rounded-xl hover:bg-amber-600 active:scale-[0.97] disabled:opacity-50 transition-all shadow-md"
             >
-              {isSaving ? 'Enregistrement...' : '✓ Enregistrer'}
+              {isSaving ? 'Enregistrement...' : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Enregistrer</span>
+                </>
+              )}
             </button>
           )}
         </div>

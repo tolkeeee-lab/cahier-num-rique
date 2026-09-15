@@ -114,8 +114,12 @@ export function AnalyticsDashboard({
     const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
     const todays = sales.filter(s => s.date === todayStr && s.status !== 'crossed_out')
     const totalCash = todays
-      .filter(s => ['cash_in', 'sale', 'sale_cash', 'payment_client'].includes(s.type) || s.pen_color === 'blue' || (s.type === 'sale_credit' && (s.paid || 0) > 0))
-      .reduce((sum, s) => sum + (s.paid || (s.type === 'sale_credit' ? 0 : s.total) || 0), 0)
+      .filter(s => ['cash_in', 'sale', 'sale_cash', 'payment_client'].includes(s.type) || s.pen_color === 'blue' || (s.type === 'sale_credit' && (s.paid ?? (s as any).paid_amount ?? 0) > 0))
+      .reduce((sum, s) => {
+        const paidVal = s.paid ?? (s as any).paid_amount
+        const totalVal = s.total ?? (s as any).total_amount ?? 0
+        return sum + (paidVal !== undefined && paidVal !== null ? paidVal : (s.type === 'sale_credit' ? 0 : totalVal))
+      }, 0)
     const count = todays.filter(s => ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type) || s.pen_color === 'blue' || s.pen_color === 'yellow').length
     return { totalCash, count }
   }, [sales])

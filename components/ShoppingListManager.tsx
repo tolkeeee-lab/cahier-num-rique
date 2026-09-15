@@ -156,7 +156,7 @@ export function ShoppingListManager({
           <button
             type="submit"
             disabled={!nameInput.trim()}
-            className="sm:col-span-2 px-4 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+            className="sm:col-span-2 px-4 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer shadow-sm"
           >
             <Plus className="w-4 h-4" />
             <span>Ajouter</span>
@@ -186,7 +186,7 @@ export function ShoppingListManager({
       {items.length > 0 && (
         <div className="bg-amber-100/90 p-4 rounded-2xl border border-amber-300 flex justify-between items-center font-mono shadow-sm">
           <span className="text-xs text-amber-950 font-bold">Total estimé de la commande :</span>
-          <span className="text-lg font-black text-amber-950">
+          <span className="text-lg font-black text-amber-950 tabular-nums">
             {formatPrice(totalEstimated)}
           </span>
         </div>

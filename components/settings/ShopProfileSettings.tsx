@@ -121,7 +121,7 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
             <option value="CM">🇨🇲 Cameroun (CM)</option>
             <option value="GN">🇬🇳 Guinée (GN)</option>
             <option value="FR">🇫🇷 France (FR)</option>
-            <option value="OTHER">🌍 Autre pays</option>
+            <option value="OTHER">Autre pays (International)</option>
           </select>
         </div>
 
@@ -143,10 +143,10 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
             onChange={(e) => setActivity(e.target.value)}
             className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner cursor-pointer"
           >
-            <option value="boutique">🏪 Commerce / Boutique / Grossiste</option>
-            <option value="resto">🍽️ Cafétéria / Restaurant / Bar / Maquis</option>
-            <option value="prestations">✂️ Salon de Coiffure / Atelier / Services</option>
-            <option value="particulier">🏡 Particulier / Budget du Foyer</option>
+            <option value="boutique">Commerce / Boutique / Grossiste</option>
+            <option value="resto">Cafétéria / Restaurant / Bar / Maquis</option>
+            <option value="prestations">Salon de Coiffure / Atelier / Services</option>
+            <option value="particulier">Particulier / Budget du Foyer</option>
           </select>
         </div>
 
@@ -176,7 +176,7 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
         <button
           type="submit"
           disabled={isSaving}
-          className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+          className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
         >
           <Save className="w-4 h-4" />
           <span>{isSaving ? 'Enregistrement...' : 'Sauvegarder les Modifications'}</span>

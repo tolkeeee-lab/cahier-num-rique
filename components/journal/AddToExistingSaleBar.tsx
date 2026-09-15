@@ -38,15 +38,17 @@ export function AddToExistingSaleBar({
     <div className="flex-shrink-0 border-t-2 border-dashed border-blue-300 bg-blue-50/60 rounded-xl px-3 py-2 space-y-2">
       {/* En-tête */}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-blue-700">
-          ➕ Ajouter à la vente de <span className="text-blue-900">{clientName}</span>
+        <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
+          <Plus className="w-3.5 h-3.5 text-blue-700" />
+          <span>Ajouter à la vente de <span className="text-blue-900 font-extrabold">{clientName}</span></span>
         </span>
         <button
+          type="button"
           onClick={onCancel}
-          className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition-colors"
+          className="text-xs text-gray-500 hover:text-red-500 flex items-center gap-1 active:scale-[0.97] transition-all cursor-pointer font-bold"
         >
           <X className="w-3 h-3" />
-          Annuler
+          <span>Annuler</span>
         </button>
       </div>
 

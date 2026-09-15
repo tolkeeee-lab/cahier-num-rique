@@ -181,6 +181,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
     const shopId = request.headers.get('x-shop-id') || body.shop_id || 'default-shop'
+    const altShopId = shopId.startsWith('SHOP-') ? shopId.replace('SHOP-', '') : `SHOP-${shopId}`
     const { id, action, text, penColor, articles, clientName, category } = body
 
     if (!id) {
@@ -202,6 +203,7 @@ export async function PATCH(request: NextRequest) {
           .from('sales')
           .select('*, sold_articles(*)')
           .eq('id', id)
+          .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
           .single()
 
         if (currentSale && !fetchErr) {
@@ -218,7 +220,7 @@ export async function PATCH(request: NextRequest) {
             debt_amount: newDebt,
             notes: newNotes,
             status: newStatus,
-          }).eq('id', id)
+          }).eq('id', id).or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
           const newSoldArticles = parsed.articles.map(a => ({
             sale_id: id,
@@ -234,7 +236,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: any) => s.id === id)
+      const idx = localSales.findIndex((s: any) => s.id === id && (s.shop_id === shopId || s.shop_id === altShopId || !s.shop_id))
       if (idx !== -1) {
         const sale = localSales[idx]
         const addedAmount = parsed.total_facture || 0
@@ -266,7 +268,12 @@ export async function PATCH(request: NextRequest) {
       const newNotes = updatedArticles.map((a: any) => `${a.quantity} ${a.name} à ${a.unit_price}`).join(', ')
 
       if (isSupabaseConfigured() && supabase) {
-        const { data: currentSale } = await supabase.from('sales').select('*').eq('id', id).single()
+        const { data: currentSale } = await supabase
+          .from('sales')
+          .select('*')
+          .eq('id', id)
+          .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+          .single()
         if (currentSale) {
           const isCashIn = currentSale.type === 'cash_in'
           const newPaid = isCashIn ? newTotal : (currentSale.paid_amount || 0)
@@ -279,7 +286,7 @@ export async function PATCH(request: NextRequest) {
             status: newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid',
           }
           if (clientName) patchObj.client_name = clientName
-          await supabase.from('sales').update(patchObj).eq('id', id)
+          await supabase.from('sales').update(patchObj).eq('id', id).or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
 
           await supabase.from('sold_articles').delete().eq('sale_id', id)
           if (updatedArticles.length > 0) {
@@ -298,7 +305,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: any) => s.id === id)
+      const idx = localSales.findIndex((s: any) => s.id === id && (s.shop_id === shopId || s.shop_id === altShopId || !s.shop_id))
       if (idx !== -1) {
         const sale = localSales[idx]
         const isCashIn = sale.type === 'cash_in'
@@ -322,11 +329,11 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'update_category') {
       if (isSupabaseConfigured() && supabase) {
-        await supabase.from('sales').update({ category }).eq('id', id)
+        await supabase.from('sales').update({ category }).eq('id', id).or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
         return NextResponse.json({ success: true })
       }
       const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: any) => s.id === id)
+      const idx = localSales.findIndex((s: any) => s.id === id && (s.shop_id === shopId || s.shop_id === altShopId || !s.shop_id))
       if (idx !== -1) {
         localSales[idx].category = category
         saveLocalDb(localSales)

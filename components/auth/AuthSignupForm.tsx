@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { User, Mail, Lock, Store, Key, ArrowRight, ShieldCheck, Users } from 'lucide-react'
+import { User, Mail, Lock, Store, Key, ArrowRight, ShieldCheck, Users, Info } from 'lucide-react'
 
 interface AuthSignupFormProps {
   onSignup: (name: string, email: string, password?: string, shopName?: string, role?: 'owner' | 'employee', shopCode?: string) => Promise<void>
@@ -163,8 +163,9 @@ export const AuthSignupForm: React.FC<AuthSignupFormProps> = ({
               className="w-full px-3 py-2.5 bg-[#141210] border border-[#f59e0b]/60 rounded-xl text-[#f59e0b] font-mono font-black text-sm tracking-wider placeholder-gray-600 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/30"
             />
           </div>
-          <p className="text-[10px] text-amber-300/80 font-mono">
-            📌 Demandez ce code à votre patron/gérant (il le trouve dans ses Réglages).
+          <p className="text-[10px] text-amber-300/80 font-mono flex items-center gap-1">
+            <Info className="w-3.5 h-3.5 inline-block -mt-0.5 mr-0.5 text-amber-400 shrink-0" />
+            Demandez ce code à votre patron/gérant (il le trouve dans ses Réglages).
           </p>
         </div>
       )}
@@ -174,7 +175,7 @@ export const AuthSignupForm: React.FC<AuthSignupFormProps> = ({
       <button
         type="submit"
         disabled={loading || !name.trim() || !email.trim() || (role === 'employee' && !shopCode.trim())}
-        className="w-full py-3 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+        className="w-full py-3 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg cursor-pointer"
       >
         <span>
           {loading

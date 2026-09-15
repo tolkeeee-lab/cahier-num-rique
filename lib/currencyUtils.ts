@@ -21,12 +21,14 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
 /**
  * Formate un montant dans la devise spécifiée.
  */
-export function formatCurrency(amount: number, currencyCode: string = 'XOF'): string {
+export function formatCurrency(amount: number | string | null | undefined, currencyCode: string = 'XOF'): string {
+  const num = typeof amount === 'number' ? amount : (parseFloat(String(amount)) || 0)
+  const safeNum = isNaN(num) ? 0 : num
   const config = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.XOF
   const formatted = new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: config.decimals,
     maximumFractionDigits: config.decimals,
-  }).format(amount)
+  }).format(safeNum)
 
   return `${formatted} ${config.symbol}`
 }

@@ -341,7 +341,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     if (isSupabaseClientConfigured() && isOnline) {
       try {
-        await supabaseClient.from('sales').update({ status: 'crossed_out' }).eq('id', saleId)
+        const altShopId = shopId.startsWith('SHOP-') ? shopId.replace('SHOP-', '') : `SHOP-${shopId}`
+        await supabaseClient
+          .from('sales')
+          .update({ status: 'crossed_out' })
+          .eq('id', saleId)
+          .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
       } catch (e) {
         console.warn('Erreur mise à jour status Supabase:', e)
       }

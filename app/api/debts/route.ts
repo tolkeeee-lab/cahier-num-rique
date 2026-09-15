@@ -18,15 +18,16 @@ async function getCurrentCash(shopId: string): Promise<number> {
 }
 
 async function getAllSales(shopId: string): Promise<any[]> {
+  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace('SHOP-', '') : `SHOP-${shopId}`
   if (isSupabaseConfigured()) {
     try {
-      const { data } = await supabase.from('sales').select('*').eq('shop_id', shopId)
+      const { data } = await supabase.from('sales').select('*').or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
       return data || []
     } catch (e) {
       console.error('Erreur Supabase dans debts API:', e)
     }
   }
-  return getLocalDb().filter((s: any) => s.shop_id === shopId)
+  return getLocalDb().filter((s: any) => s.shop_id === shopId || s.shop_id === altShopId)
 }
 
 export async function GET(request: NextRequest) {
@@ -34,13 +35,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // client ou supplier
     const shopId = request.headers.get('x-shop-id') || 'default-shop'
+    const altShopId = shopId.startsWith('SHOP-') ? shopId.replace('SHOP-', '') : `SHOP-${shopId}`
 
     if (type === 'supplier') {
       // Logic for explicit supplier request (maybe used elsewhere, keep it)
       if (isSupabaseConfigured()) {
         try {
-          const { data: debts } = await supabase.from('supplier_debts').select('*').eq('shop_id', shopId).order('supplier_name', { ascending: true })
-          const { data: sales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier'])
+          const { data: debts } = await supabase.from('supplier_debts').select('*').or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`).order('supplier_name', { ascending: true })
+          const { data: sales } = await supabase.from('sales').select('*').or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`).in('type', ['purchase_credit', 'payment_supplier'])
 
           const suppMap = new Map<string, string>()
           ;[...(debts || []).map(d => d.supplier_name), ...(sales || []).filter(s => s.client_name).map(s => s.client_name)]
@@ -97,8 +99,8 @@ export async function GET(request: NextRequest) {
     if (isSupabaseConfigured()) {
       try {
         // --- CLIENTS ---
-        const { data: cDebts } = await supabase.from('debts').select('*').eq('shop_id', shopId)
-        const { data: cSales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['sale_credit', 'payment_client'])
+        const { data: cDebts } = await supabase.from('debts').select('*').or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        const { data: cSales } = await supabase.from('sales').select('*').or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`).in('type', ['sale_credit', 'payment_client'])
         
         // Regroupement insensible à la casse et sans espaces résiduels
         const clientNameMap = new Map<string, string>()
@@ -141,8 +143,8 @@ export async function GET(request: NextRequest) {
         allDebts.push(...clientList)
 
         // --- SUPPLIERS ---
-        const { data: sDebts } = await supabase.from('supplier_debts').select('*').eq('shop_id', shopId)
-        const { data: sSales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier'])
+        const { data: sDebts } = await supabase.from('supplier_debts').select('*').or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        const { data: sSales } = await supabase.from('sales').select('*').or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`).in('type', ['purchase_credit', 'payment_supplier'])
         
         const suppNameMap = new Map<string, string>()
         ;[...(sDebts || []).map(d => d.supplier_name), ...(sSales || []).filter(s => s.client_name).map(s => s.client_name)]
@@ -323,7 +325,8 @@ export async function POST(request: NextRequest) {
 
 // Helpers locaux en mémoire pour l'extraction dynamique
 function getLocalClients(shopId: string) {
-  const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
+  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace('SHOP-', '') : `SHOP-${shopId}`
+  const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && (s.shop_id === shopId || s.shop_id === altShopId))
   const clientNameMap = new Map<string, string>()
   sales
     .filter((s: any) => (s.type === 'sale_credit' || s.type === 'payment_client') && s.client_name)
@@ -365,7 +368,8 @@ function getLocalClients(shopId: string) {
 }
 
 function getLocalSuppliers(shopId: string) {
-  const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && s.shop_id === shopId)
+  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace('SHOP-', '') : `SHOP-${shopId}`
+  const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && (s.shop_id === shopId || s.shop_id === altShopId))
   const suppNameMap = new Map<string, string>()
   sales
     .filter((s: any) => (s.type === 'purchase_credit' || s.type === 'payment_supplier') && s.client_name)
