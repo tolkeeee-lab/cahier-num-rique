@@ -245,6 +245,13 @@ export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
 
   let lotQty = Math.max(0, Math.round(Number(copy.lot_quantity) || 0))
   let lotPr = Math.max(0, Math.round(Number(copy.lot_price) || 0))
+
+  // Si le prix par lot est >= au prix au détail normal (pas de réduction), annuler l'offre invalide
+  if (lotQty > 1 && price > 0 && lotPr >= price * lotQty) {
+    lotQty = 0
+    lotPr = 0
+  }
+
   copy.lot_quantity = lotQty
   copy.lot_price = lotPr
 

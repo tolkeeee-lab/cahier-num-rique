@@ -13,12 +13,14 @@ interface SalesInputProps {
   onAddTransaction: (text: string, penColor: PenColorKey) => Promise<void>
   isSubmitting?: boolean
   shopActivity?: string
+  quickProducts?: Array<{ name: string; price: number }>
 }
 
 export function SalesInput({
   onAddTransaction,
   isSubmitting = false,
   shopActivity = 'boutique',
+  quickProducts = [],
 }: SalesInputProps) {
   const [text, setText] = useState('')
   const [activePenColor, setActivePenColor] = useState<PenColorKey>('blue')
@@ -26,8 +28,6 @@ export function SalesInput({
 
   const pens = getPens(shopActivity)
   const currentPen = pens.find(p => p.id === activePenColor) || pens[0]
-
-  const quickProducts: Array<{ name: string; price: number }> = []
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

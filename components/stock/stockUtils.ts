@@ -54,7 +54,18 @@ export function getItemPurchaseValue(item: StockItem): number {
   if (mult > 1) {
     const wholeCartons = Math.floor(stock / mult)
     const extraUnits = stock % mult
-    const cartonCost = Math.round(item.unit_cost * mult)
+    let cartonCost = Math.round(item.unit_cost * mult)
+
+    // Reconstitution du prix exact du carton sans artefact d'arrondi de division
+    // Ex: 333 F x 30 = 9990 F -> Vrai prix carton = 10 000 F (car 10000 / 30 = 333 F)
+    for (const step of [500, 100, 50, 25, 10, 5]) {
+      const candidate = Math.round(cartonCost / step) * step
+      if (candidate > 0 && Math.abs(candidate - cartonCost) < mult && Math.round(candidate / mult) === Math.round(item.unit_cost)) {
+        cartonCost = candidate
+        break
+      }
+    }
+
     return Math.round((wholeCartons * cartonCost) + (extraUnits * item.unit_cost))
   }
 
