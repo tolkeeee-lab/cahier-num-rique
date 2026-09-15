@@ -63,9 +63,9 @@ export const SalesFilterBar: React.FC<SalesFilterBarProps> = ({
             className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
           >
             <option value="all">Tous les statuts</option>
-            <option value="paid">Encaissés ✓</option>
-            <option value="debt">Dettes ⚠️</option>
-            <option value="crossed_out">Rayés ❌</option>
+            <option value="paid">Encaissés</option>
+            <option value="debt">Dettes</option>
+            <option value="crossed_out">Rayés</option>
           </select>
 
           {/* Boutons d'export */}

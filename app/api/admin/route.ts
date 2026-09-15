@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getLocalDb } from '@/lib/localDb'
+import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -212,19 +213,15 @@ function buildAdminStats(users: any[], sales: any[]) {
     if (sale.status !== 'crossed_out') {
       item.transactions_count += 1
       const total = sale.total_amount ?? sale.total ?? 0
-      const paid = sale.paid_amount ?? sale.paid ?? 0
 
-      // Calcul du chiffre d'affaires (ventes)
-      if (sale.type === 'cash_in' || sale.type === 'sale_credit') {
+      // Calcul du chiffre d'affaires (tous les types de ventes)
+      const isSale = ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(sale.type) || sale.pen_color === 'blue' || sale.pen_color === 'yellow'
+      if (isSale) {
         item.total_sales += total
       }
 
-      // Calcul du solde de caisse réel
-      if (sale.type === 'cash_in' || sale.type === 'payment_client') {
-        item.cash_balance += paid
-      } else if (sale.type === 'cash_out' || sale.type === 'purchase_cash' || sale.type === 'payment_supplier') {
-        item.cash_balance -= total
-      }
+      // Calcul du solde de caisse réel via le moteur canonique
+      item.cash_balance += getItemCashDelta(sale)
     }
   })
 

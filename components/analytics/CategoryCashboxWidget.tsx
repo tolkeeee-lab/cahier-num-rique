@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp } from 'lucide-react'
+import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle } from 'lucide-react'
 import { calculateCategoryCashboxBreakdown, CategoryCashboxGroup } from '@/lib/boutiqueAnalyticsEngine'
 import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
 
@@ -575,9 +575,24 @@ export function CategoryCashboxWidget({
                   {(() => {
                     const target = parseInt(actualCashInput) || 0
                     const diff = target - adjustingGroup.paidCash
-                    if (diff === 0) return <span className="text-emerald-700 font-bold">✅ Compte exact, aucun écart.</span>
-                    if (diff > 0) return <span className="text-emerald-700 font-bold">📈 Excédent détecté : +{formatPrice(diff)}</span>
-                    return <span className="text-rose-700 font-bold">⚠️ Manquant détecté : {formatPrice(diff)}</span>
+                    if (diff === 0) return (
+                      <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Compte exact, aucun écart.</span>
+                      </span>
+                    )
+                    if (diff > 0) return (
+                      <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        <span>Excédent détecté : +{formatPrice(diff)}</span>
+                      </span>
+                    )
+                    return (
+                      <span className="inline-flex items-center gap-1 text-rose-700 font-bold">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span>Manquant détecté : {formatPrice(diff)}</span>
+                      </span>
+                    )
                   })()}
                 </div>
               )}

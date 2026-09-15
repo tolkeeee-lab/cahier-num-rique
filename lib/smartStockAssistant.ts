@@ -228,20 +228,26 @@ export function analyzeNotebookInputWithMasterCatalog(
   let suggestedCorrectPrice: number | undefined = undefined
 
   if (typedPrice && referencePrice > 0) {
+    // Si un conditionnement groupé (carton, sac, pack) est utilisé et que le prix tapé correspond au carton
+    let effectiveTypedPrice = typedPrice
+    if (multiplier > 1 && typedPrice > referencePrice * 1.8) {
+      effectiveTypedPrice = Math.round(typedPrice / multiplier)
+    }
+
     // Détecter si le prix tapé est 10x plus bas (zéro manquant) ou 10x plus haut (zéro en trop)
-    const ratio = referencePrice / typedPrice
+    const ratio = referencePrice / effectiveTypedPrice
     if (ratio >= 8 && ratio <= 12) {
       // Zéro manquant (ex: 2200 au lieu de 22000)
       suspectPriceAnomaly = true
       suggestedCorrectPrice = referencePrice
-      finalUnitPrice = typedPrice
+      finalUnitPrice = effectiveTypedPrice
     } else if (ratio >= 0.08 && ratio <= 0.12) {
       // Zéro en trop (ex: 4000 au lieu de 400)
       suspectPriceAnomaly = true
       suggestedCorrectPrice = referencePrice
-      finalUnitPrice = typedPrice
+      finalUnitPrice = effectiveTypedPrice
     } else {
-      finalUnitPrice = typedPrice
+      finalUnitPrice = effectiveTypedPrice
     }
   }
 

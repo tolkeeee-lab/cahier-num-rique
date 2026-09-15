@@ -45,8 +45,8 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
             className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
           >
             <option value="all">Tous les carnets</option>
-            <option value="client">Dettes Clients ⚠️</option>
-            <option value="supplier">Dettes Grossistes 📦</option>
+            <option value="client">Dettes Clients</option>
+            <option value="supplier">Dettes Grossistes</option>
           </select>
 
           {/* Filtre Statut */}
@@ -56,8 +56,8 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
             className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
           >
             <option value="all">Tous les statuts</option>
-            <option value="pending">En cours ⏳</option>
-            <option value="settled">Soldés ✓</option>
+            <option value="pending">En cours</option>
+            <option value="settled">Soldés</option>
           </select>
         </div>
       </div>

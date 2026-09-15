@@ -252,7 +252,7 @@ export function StockManager({
         await fetch('/api/stock', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
-          body: JSON.stringify({ id, current_stock: nextStock }),
+          body: JSON.stringify({ id, name: targetProd?.name, current_stock: nextStock }),
         })
       } catch (err) {
         console.warn('Mode hors-ligne : ajustement stock enregistré localement.', err)

@@ -3,7 +3,8 @@
 import React from 'react'
 import {
   TrendingUp, TrendingDown, ChevronDown, ChevronUp,
-  Plus, Edit3, Trash2,
+  Plus, Edit3, Trash2, AlertTriangle, BookOpen, Lightbulb,
+  Coins, Gift, Package,
 } from 'lucide-react'
 import { StockItem } from './types'
 import { getStockStatus, getStatusColors, getBarWidth, formatPrice, getItemPurchaseValue } from './stockUtils'
@@ -63,11 +64,19 @@ export function StockItemRow({
             )}
             <div className="flex items-center gap-2">
               <span className={`font-mono text-xs font-bold flex-shrink-0 ${colors.text}`}>
-                {!item.stock_tracked
-                  ? '📝 Ventes seules (Cahier)'
-                  : item.current_stock <= 0
-                  ? '⚠️ RUPTURE'
-                  : `${item.current_stock} ${item.multiplier && item.multiplier > 1 ? (item.unit === 'carton' || item.unit === 'sac' || item.unit === 'colis' ? 'unités' : (item.unit || 'unités')) : (item.unit || 'unités')} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'cartons'})` : ''}`}
+                {!item.stock_tracked ? (
+                  <span className="inline-flex items-center gap-1 text-slate-500">
+                    <BookOpen className="w-3 h-3 text-slate-400" />
+                    <span>Ventes seules (Cahier)</span>
+                  </span>
+                ) : item.current_stock <= 0 ? (
+                  <span className="inline-flex items-center gap-1 text-rose-600">
+                    <AlertTriangle className="w-3 h-3 text-rose-600" />
+                    <span>RUPTURE</span>
+                  </span>
+                ) : (
+                  `${item.current_stock} ${item.multiplier && item.multiplier > 1 ? (item.unit === 'carton' || item.unit === 'sac' || item.unit === 'colis' ? 'unités' : (item.unit || 'unités')) : (item.unit || 'unités')} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'cartons'})` : ''}`
+                )}
               </span>
               {!item.stock_tracked && (
                 <button
@@ -166,7 +175,10 @@ export function StockItemRow({
           ) : (
             <div className="mb-3 p-3 bg-blue-50/70 border border-blue-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <div className="text-blue-900 font-sans">
-                <span className="font-bold block">💡 Article en vente directe au cahier</span>
+                <span className="font-bold flex items-center gap-1.5">
+                  <Lightbulb className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                  Article en vente directe au cahier
+                </span>
                 <span className="text-[11px] text-blue-700">Vous pouvez continuer à le vendre directement. Aucun inventaire n'est obligatoire !</span>
               </div>
               <button
@@ -181,8 +193,9 @@ export function StockItemRow({
           {/* Profitabilité & Marge (Masqué pour les employés ou si stock non suivi) */}
           {canViewFinancialMargins(userRole) && item.stock_tracked && item.unit_price > 0 && item.unit_cost > 0 && item.unit_cost !== Math.round(item.unit_price * 0.6) && item.unit_cost !== Math.round(item.unit_price * 0.7) && (
             <div className="mb-3 p-2 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between text-xs font-mono">
-              <span className="text-amber-800">
-                💰 Marge Unitaire: <strong>{formatPrice(item.unit_price - item.unit_cost)}</strong> ({Math.round(((item.unit_price - item.unit_cost) / item.unit_cost) * 100)}%)
+              <span className="text-amber-800 flex items-center gap-1.5">
+                <Coins className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+                Marge Unitaire: <strong>{formatPrice(item.unit_price - item.unit_cost)}</strong> ({Math.round(((item.unit_price - item.unit_cost) / item.unit_cost) * 100)}%)
               </span>
               {item.current_stock > 0 && item.current_stock < 999900 && (
                 <span className="text-amber-900 font-bold">
@@ -203,14 +216,14 @@ export function StockItemRow({
             )}
             {item.unit_price > 0 && <span>Vente: <strong className="text-gray-700">{formatPrice(item.unit_price)}</strong></span>}
             {item.lot_quantity && item.lot_quantity > 1 && item.lot_price && item.lot_price > 0 ? (
-              <span className="bg-amber-100 text-amber-950 border border-amber-300 px-2 py-0.5 rounded-md font-bold">
-                🎁 Lot de {item.lot_quantity} à {formatPrice(item.lot_price)}
+              <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-950 border border-amber-300 px-2 py-0.5 rounded-md font-bold">
+                <Gift className="w-3 h-3 text-amber-800" /> Lot de {item.lot_quantity} à {formatPrice(item.lot_price)}
               </span>
             ) : null}
             {item.multiplier && item.multiplier > 1 && (
               <>
-                <span className="bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
-                  📦 1 {item.packaging_name || 'carton'} = {item.multiplier} {!item.unit || item.unit === 'carton' || item.unit === (item.packaging_name || 'carton') ? 'unités' : `${item.unit}s`}
+                <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
+                  <Package className="w-3 h-3 text-amber-800" /> 1 {item.packaging_name || 'carton'} = {item.multiplier} {!item.unit || item.unit === 'carton' || item.unit === (item.packaging_name || 'carton') ? 'unités' : `${item.unit}s`}
                 </span>
                 {canViewFinancialMargins(userRole) && item.unit_cost > 0 && (
                   <span className="text-amber-800 font-bold">

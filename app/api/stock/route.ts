@@ -379,9 +379,12 @@ export async function PATCH(request: Request) {
 
     // 3. Si le produit n'existe pas encore dans Supabase (créé en local/offline), on l'insère proprement
     if (!updatedProduct) {
+      if (!name || !name.trim()) {
+        return NextResponse.json({ error: 'Produit introuvable pour mise à jour (nom manquant)' }, { status: 404 })
+      }
       const insertData = {
         shop_id: shopId,
-        name: normalizeProductName(name || 'Produit'),
+        name: normalizeProductName(name),
         category: category || 'Divers',
         unit: unit || 'unité',
         alert_threshold: alert_threshold ?? 5,
