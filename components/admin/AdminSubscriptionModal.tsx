@@ -38,7 +38,12 @@ export const AdminSubscriptionModal: React.FC<AdminSubscriptionModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="w-full max-w-5xl max-h-[90vh] bg-[#1e1a18] border border-[#2a2421] rounded-2xl p-6 shadow-2xl flex flex-col space-y-4">
         
         {/* Entête */}

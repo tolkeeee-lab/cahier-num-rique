@@ -112,7 +112,7 @@ export default function SuperAdminPage() {
       <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4">
         <form onSubmit={handleLogin} className="w-full max-w-sm bg-[#1e1a18] p-6 rounded-2xl border border-gray-800 space-y-4 shadow-2xl">
           <div className="flex items-center gap-2 border-b border-gray-800 pb-3">
-            <Lock className="w-5 h-5 text-amber-400" />
+            <Lock className="w-5 h-5 text-amber-400" strokeWidth={1.75} />
             <h2 className="text-base font-extrabold text-white">Administration Plateforme</h2>
           </div>
 
@@ -150,7 +150,7 @@ export default function SuperAdminPage() {
       {/* En-tête Admin */}
       <div className="flex items-center justify-between border-b border-gray-800 pb-4">
         <div className="flex items-center gap-3">
-          <Store className="w-6 h-6 text-amber-400" />
+          <Store className="w-6 h-6 text-amber-400" strokeWidth={1.75} />
           <h1 className="text-lg font-extrabold text-white">Tableau de Super-Administration</h1>
         </div>
 
@@ -160,7 +160,7 @@ export default function SuperAdminPage() {
             className="p-2 rounded-xl bg-[#1e1a18] border border-gray-800 text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-[0.97]"
             title="Rafraîchir"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4" strokeWidth={1.75} />
           </button>
 
           <button
@@ -171,7 +171,7 @@ export default function SuperAdminPage() {
             className="p-2 rounded-xl bg-red-950/40 border border-red-800/40 text-red-400 hover:bg-red-900/60 transition-colors cursor-pointer active:scale-[0.97]"
             title="Déconnexion"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
       </div>

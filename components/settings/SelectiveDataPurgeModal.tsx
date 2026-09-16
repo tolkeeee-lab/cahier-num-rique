@@ -157,18 +157,18 @@ export function SelectiveDataPurgeModal({
               {/* Ventes */}
               <label
                 onClick={() => toggleOption('deleteSales')}
-                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.99] ${
                   options.deleteSales
                     ? 'bg-rose-50/90 border-rose-300 text-rose-950 shadow-2xs'
                     : 'bg-white/80 border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <div className="pt-0.5">
-                  {options.deleteSales ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
+                  {options.deleteSales ? <CheckSquare className="w-4 h-4 text-rose-600" strokeWidth={1.75} /> : <Square className="w-4 h-4 text-gray-400" strokeWidth={1.75} />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5 font-extrabold text-xs">
-                    <BookOpen className="w-3.5 h-3.5 text-rose-700" />
+                    <BookOpen className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
                     <span>Ventes & Écritures du Journal</span>
                   </div>
                   <p className="text-[10px] text-gray-500">Toutes les opérations d'entrées, sorties et dépenses saisies au cahier.</p>
@@ -181,18 +181,18 @@ export function SelectiveDataPurgeModal({
               {/* Dettes */}
               <label
                 onClick={() => toggleOption('deleteDebts')}
-                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.99] ${
                   options.deleteDebts
                     ? 'bg-rose-50/90 border-rose-300 text-rose-950 shadow-2xs'
                     : 'bg-white/80 border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <div className="pt-0.5">
-                  {options.deleteDebts ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
+                  {options.deleteDebts ? <CheckSquare className="w-4 h-4 text-rose-600" strokeWidth={1.75} /> : <Square className="w-4 h-4 text-gray-400" strokeWidth={1.75} />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5 font-extrabold text-xs">
-                    <Users className="w-3.5 h-3.5 text-rose-700" />
+                    <Users className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
                     <span>Dettes & Crédits (Clients & Grossistes)</span>
                   </div>
                   <p className="text-[10px] text-gray-500">Le carnet des crédits accordés et des dettes fournisseurs.</p>
@@ -205,18 +205,18 @@ export function SelectiveDataPurgeModal({
               {/* Produits / Stock */}
               <label
                 onClick={() => toggleOption('deleteProducts')}
-                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.99] ${
                   options.deleteProducts
                     ? 'bg-rose-50/90 border-rose-300 text-rose-950 shadow-2xs'
                     : 'bg-white/80 border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <div className="pt-0.5">
-                  {options.deleteProducts ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
+                  {options.deleteProducts ? <CheckSquare className="w-4 h-4 text-rose-600" strokeWidth={1.75} /> : <Square className="w-4 h-4 text-gray-400" strokeWidth={1.75} />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5 font-extrabold text-xs">
-                    <Package className="w-3.5 h-3.5 text-rose-700" />
+                    <Package className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
                     <span>Catalogue de Stock & Produits</span>
                   </div>
                   <p className="text-[10px] text-gray-500">Liste des articles enregistrés, prix unitaires et seuils d'alerte.</p>
@@ -229,18 +229,18 @@ export function SelectiveDataPurgeModal({
               {/* Courses */}
               <label
                 onClick={() => toggleOption('deleteShopping')}
-                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.99] ${
                   options.deleteShopping
                     ? 'bg-rose-50/90 border-rose-300 text-rose-950 shadow-2xs'
                     : 'bg-white/80 border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <div className="pt-0.5">
-                  {options.deleteShopping ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
+                  {options.deleteShopping ? <CheckSquare className="w-4 h-4 text-rose-600" strokeWidth={1.75} /> : <Square className="w-4 h-4 text-gray-400" strokeWidth={1.75} />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5 font-extrabold text-xs">
-                    <ShoppingCart className="w-3.5 h-3.5 text-rose-700" />
+                    <ShoppingCart className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
                     <span>Liste de Courses & Ravitaillement</span>
                   </div>
                   <p className="text-[10px] text-gray-500">Articles à acheter et paniers d'approvisionnement.</p>
@@ -253,18 +253,18 @@ export function SelectiveDataPurgeModal({
               {/* Demandes clients */}
               <label
                 onClick={() => toggleOption('deleteRequests')}
-                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.99] ${
                   options.deleteRequests
                     ? 'bg-rose-50/90 border-rose-300 text-rose-950 shadow-2xs'
                     : 'bg-white/80 border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <div className="pt-0.5">
-                  {options.deleteRequests ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
+                  {options.deleteRequests ? <CheckSquare className="w-4 h-4 text-rose-600" strokeWidth={1.75} /> : <Square className="w-4 h-4 text-gray-400" strokeWidth={1.75} />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5 font-extrabold text-xs">
-                    <ClipboardList className="w-3.5 h-3.5 text-rose-700" />
+                    <ClipboardList className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
                     <span>Demandes Clients Réclamées</span>
                   </div>
                   <p className="text-[10px] text-gray-500">Historique des articles demandés par les clients.</p>
@@ -277,18 +277,18 @@ export function SelectiveDataPurgeModal({
               {/* Raccourcis Tactiles */}
               <label
                 onClick={() => toggleOption('deleteTactileMenu')}
-                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                className={`flex items-start gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.99] ${
                   options.deleteTactileMenu
                     ? 'bg-rose-50/90 border-rose-300 text-rose-950 shadow-2xs'
                     : 'bg-white/80 border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <div className="pt-0.5">
-                  {options.deleteTactileMenu ? <CheckSquare className="w-4 h-4 text-rose-600" /> : <Square className="w-4 h-4 text-gray-400" />}
+                  {options.deleteTactileMenu ? <CheckSquare className="w-4 h-4 text-rose-600" strokeWidth={1.75} /> : <Square className="w-4 h-4 text-gray-400" strokeWidth={1.75} />}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5 font-extrabold text-xs">
-                    <Zap className="w-3.5 h-3.5 text-rose-700" />
+                    <Zap className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
                     <span>Raccourcis Tactiles 1-Tap</span>
                   </div>
                   <p className="text-[10px] text-gray-500">Boutons de vente rapide configurés sur le tiroir.</p>

@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { Search, Eye, Users } from 'lucide-react'
+import { Search, Eye, Users, X } from 'lucide-react'
 
 interface AdminShop {
   shop_id: string
@@ -38,14 +38,30 @@ export const AdminShopsTable: React.FC<AdminShopsTableProps> = ({
     <div className="space-y-4">
       {/* Barre de Recherche */}
       <div className="relative max-w-md">
-        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" strokeWidth={1.75} />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              onSearchChange('')
+            }
+          }}
           placeholder="Rechercher par nom de boutique, e-mail gérant ou ID..."
-          className="w-full pl-9 pr-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 font-mono"
+          className="w-full pl-9 pr-9 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 font-mono"
         />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => onSearchChange('')}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-300 transition-colors active:scale-[0.97] cursor-pointer"
+            title="Effacer la recherche (Échap)"
+          >
+            <X className="w-3.5 h-3.5" strokeWidth={1.75} />
+          </button>
+        )}
       </div>
 
       {/* Tableau des Boutiques */}
@@ -71,32 +87,32 @@ export const AdminShopsTable: React.FC<AdminShopsTableProps> = ({
                   </td>
 
                   <td className="p-4 text-center text-gray-300">
-                    <span className="px-2 py-0.5 rounded-lg bg-[#141210] border border-gray-800">
+                    <span className="px-2 py-0.5 rounded-lg bg-[#141210] border border-gray-800 tabular-nums">
                       {shop.transactions_count}
                     </span>
                   </td>
 
-                  <td className="p-4 text-right font-bold text-amber-400">
+                  <td className="p-4 text-right font-black text-amber-400 tabular-nums tracking-tight">
                     {formatPrice(shop.total_sales)}
                   </td>
 
-                  <td className="p-4 text-right text-emerald-400 font-bold">
+                  <td className="p-4 text-right text-emerald-400 font-black tabular-nums tracking-tight">
                     {formatPrice(shop.cash_balance)}
                   </td>
 
                   <td className="p-4 text-center text-gray-400">
                     <span className="flex items-center justify-center gap-1">
-                      <Users className="w-3.5 h-3.5 text-gray-500" />
-                      <span>{shop.employees_count}</span>
+                      <Users className="w-3.5 h-3.5 text-gray-500" strokeWidth={1.75} />
+                      <span className="tabular-nums">{shop.employees_count}</span>
                     </span>
                   </td>
 
                   <td className="p-4 text-right">
                     <button
                       onClick={() => onInspectShop(shop.shop_id, shop.name)}
-                      className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all font-mono font-bold text-[11px] inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 active:scale-[0.97] transition-all font-mono font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
-                      <Eye className="w-3.5 h-3.5" />
+                      <Eye className="w-3.5 h-3.5" strokeWidth={1.75} />
                       <span>Voir Cahier</span>
                     </button>
                   </td>
