@@ -318,10 +318,24 @@ export function BarcodeScannerModal({
 
   useEffect(() => {
     if (isOpen) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          if (unknownBarcode) {
+            setUnknownBarcode(null)
+            isScanningRef.current = true
+          } else {
+            stopScanner()
+            onClose()
+          }
+        }
+      }
+      window.addEventListener('keydown', handleKeyDown)
+
       const timer = setTimeout(() => {
         startScanner()
       }, 100)
       return () => {
+        window.removeEventListener('keydown', handleKeyDown)
         clearTimeout(timer)
         stopScanner()
       }
@@ -331,7 +345,7 @@ export function BarcodeScannerModal({
       setUnknownBarcode(null)
       setLastBippedName(null)
     }
-  }, [isOpen, startScanner, stopScanner])
+  }, [isOpen, startScanner, stopScanner, onClose, unknownBarcode])
 
   if (!isOpen) return null
 
@@ -427,7 +441,7 @@ export function BarcodeScannerModal({
         {/* Header */}
         <div className="px-4 sm:px-5 py-3 border-b border-amber-200 bg-amber-100 flex items-center justify-between text-amber-950 flex-shrink-0">
           <div className="font-bold text-sm flex items-center gap-2">
-            <QrCode className="w-5 h-5 text-amber-700" />
+            <QrCode className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
             <span>Mode Caisse & Multi-Scan</span>
           </div>
 
@@ -436,19 +450,19 @@ export function BarcodeScannerModal({
               <button
                 type="button"
                 onClick={toggleTorch}
-                className={`p-1.5 rounded-full transition-colors cursor-pointer ${torchOn ? 'bg-amber-400 text-amber-950' : 'bg-amber-200/80 text-amber-800 hover:bg-amber-300'}`}
+                className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-[0.97] ${torchOn ? 'bg-amber-400 text-amber-950' : 'bg-amber-200/80 text-amber-800 hover:bg-amber-300'}`}
                 title="Allumer la lampe torche"
               >
-                {torchOn ? <Zap className="w-4 h-4 fill-amber-950" /> : <ZapOff className="w-4 h-4" />}
+                {torchOn ? <Zap className="w-4 h-4 fill-amber-950" strokeWidth={1.75} /> : <ZapOff className="w-4 h-4" strokeWidth={1.75} />}
               </button>
             )}
 
             <button
               type="button"
               onClick={() => { stopScanner(); onClose(); }}
-              className="p-1 rounded-full hover:bg-amber-200/60 transition-colors cursor-pointer text-gray-600"
+              className="p-1 rounded-full hover:bg-amber-200/60 transition-all cursor-pointer text-gray-600 active:scale-[0.97]"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" strokeWidth={1.75} />
             </button>
           </div>
         </div>

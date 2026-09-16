@@ -39,6 +39,15 @@ export function ExpressAdjustmentModal({
   const [cartonMult, setCartonMult] = React.useState(expressItem?.multiplier && expressItem.multiplier > 1 ? String(expressItem.multiplier) : '')
   const [cartonsTaken, setCartonsTaken] = React.useState('')
 
+  React.useEffect(() => {
+    if (!expressItem) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [expressItem, onClose])
+
   const handleWholesalePriceChange = (val: string) => {
     setWholesalePrice(val)
     const price = parseFloat(val) || 0
@@ -81,8 +90,8 @@ export function ExpressAdjustmentModal({
           <div className="font-bold text-sm flex items-center gap-2">
             <span>{expressType === 'in' ? 'Entrée de Stock (+)' : 'Sortie de Stock (-)'}</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-black/10">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-black/10 cursor-pointer active:scale-[0.97] transition-all">
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 

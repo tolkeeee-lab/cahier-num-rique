@@ -37,7 +37,9 @@ export async function POST(request: Request) {
 
     const altShopId = shopId.startsWith('SHOP-')
       ? shopId.replace(/^SHOP-/i, '')
-      : `SHOP-${shopId}`
+      : shopId.startsWith('BTQ-')
+        ? shopId.replace(/^BTQ-/i, 'SHOP-')
+        : `SHOP-${shopId}`
 
     // 1. Récupérer les 2 produits (support shopId et altShopId)
     const { data: sourceProduct, error: err1 } = await supabase
@@ -97,10 +99,12 @@ export async function POST(request: Request) {
 
     // 3. Consolider le stock initial du produit cible (si le produit source avait du stock)
     const combinedInitialStock = (targetProduct.initial_stock || 0) + (sourceProduct.initial_stock || 0)
+    const isTracked = targetProduct.stock_tracked || sourceProduct.stock_tracked || combinedInitialStock > 0
     const { data: updatedTarget, error: updateTargetErr } = await supabase
       .from('products')
       .update({
         initial_stock: combinedInitialStock,
+        stock_tracked: isTracked,
         updated_at: new Date().toISOString(),
       })
       .eq('id', targetProduct.id)
