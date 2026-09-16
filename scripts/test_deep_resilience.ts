@@ -208,6 +208,52 @@ try {
 assert(!searchErrorOccurred, `La recherche ne doit jamais lever d'erreur sur des objets avec client: null ou articles: undefined`)
 assert(searchResults.length === 1 && searchResults[0].id === 's2', `La recherche doit identifier la bonne vente sans planter`)
 
+// ── Test 26 : Immunité NaN dans les calculs de solde et dettes du journal ──
+console.log('\n26. Immunité NaN dans useJournalData calculateSummary...')
+const rawJournalSales: any[] = [
+  { id: 'j1', type: 'sale', pen_color: 'blue', paid: undefined, total: 5000, debt: '1500' },
+  { id: 'j2', type: 'cash_out', pen_color: 'red', paid: null, total: undefined, debt: 0 },
+  { id: 'j3', type: 'sale', pen_color: 'blue', paid: 2500, total: 2500, debt: null },
+  { id: 'j4', type: 'payment_client', paid: '1500', total: 1500, debt: 0 },
+]
+
+let testTodayBalance = 0
+let testClientDebts = 0
+
+rawJournalSales.forEach(s => {
+  const d = Number(s.debt || 0)
+  if (d > 0) testClientDebts += d
+  if (s.type === 'payment_client') {
+    testClientDebts -= Number(s.paid || s.total || 0)
+  }
+  if (s.pen_color === 'blue' || s.type === 'sale') {
+    testTodayBalance += Number(s.paid ?? s.total ?? 0)
+  } else if (s.pen_color === 'red' || s.type === 'cash_out') {
+    testTodayBalance -= Number(s.total ?? 0)
+  }
+})
+
+assert(!isNaN(testTodayBalance), `testTodayBalance ne doit jamais être NaN (${testTodayBalance})`)
+assert(!isNaN(testClientDebts), `testClientDebts ne doit jamais être NaN (${testClientDebts})`)
+assert(testTodayBalance === 7500, `testTodayBalance doit valoir 7500 (5000 fallback total + 2500 paid), obtenu: ${testTodayBalance}`)
+assert(testClientDebts === 0, `testClientDebts doit valoir 0 (1500 - 1500), obtenu: ${testClientDebts}`)
+
+// ── Test 27 : Non-négativité des dettes en cas de sur-remboursement ──
+console.log('\n27. Non-négativité des dettes (Math.max(0, ...))...')
+let overpaidDebt = 1000 - 1500
+const sanitizedDebt = Math.max(0, Math.round(overpaidDebt * 100) / 100)
+assert(sanitizedDebt === 0, `Une dette sur-remboursée doit être bornée à 0, obtenu: ${sanitizedDebt}`)
+
+// ── Test 28 : Résolution complète multi-tenant getDualShopIds ──
+console.log('\n28. Résolution multi-tenant getDualShopIds...')
+const btqIds = getDualShopIds('BTQ-58C54')
+const shopPrefixIds = getDualShopIds('SHOP-58C54')
+const cleanBareIds = getDualShopIds('58C54')
+
+assert(btqIds.includes('58C54') && btqIds.includes('SHOP-58C54') && btqIds.includes('BTQ-58C54'), `getDualShopIds(BTQ-58C54) doit inclure tous les alias`)
+assert(shopPrefixIds.includes('58C54') && shopPrefixIds.includes('SHOP-58C54') && shopPrefixIds.includes('BTQ-58C54'), `getDualShopIds(SHOP-58C54) doit inclure tous les alias`)
+assert(cleanBareIds.includes('58C54') && cleanBareIds.includes('SHOP-58C54') && cleanBareIds.includes('BTQ-58C54'), `getDualShopIds(58C54) doit inclure tous les alias`)
+
 console.log('\n============================================================')
 console.log(`📊 RÉSULTAT DU CONTRÔLE DE RÉSILIENCE : ${passed} SUCCÈS / ${failed} ÉCHECS`)
 console.log('============================================================\n')

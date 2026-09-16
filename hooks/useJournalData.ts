@@ -12,6 +12,7 @@ import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient
 
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export interface Sale {
   id: string
@@ -60,11 +61,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
       try {
         if (isSupabaseClientConfigured() && isOnline) {
+          const targetShopIds = getDualShopIds(shopId)
           // Requête principale avec les articles détaillés
           let { data, error } = await supabaseClient
             .from('sales')
             .select('*, sold_articles(*)')
-            .eq('shop_id', shopId)
+            .in('shop_id', targetShopIds)
             .order('created_at', { ascending: false })
 
           // Si la jointure sold_articles échoue (400 / table inaccessible),
@@ -74,7 +76,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             const fallback = await supabaseClient
               .from('sales')
               .select('*')
-              .eq('shop_id', shopId)
+              .in('shop_id', targetShopIds)
               .order('created_at', { ascending: false })
             data = fallback.data
             error = fallback.error
@@ -289,35 +291,36 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       // Calcul unifié du tiroir-caisse (gestion apports, retraits, ventes, dépenses, règlements)
       cash += getItemCashDelta(s)
 
-      if (s.debt > 0) {
+      const d = Number(s.debt || 0)
+      if (d > 0) {
         if (type === 'purchase_credit' || s.pen_color === 'purple') {
-          supplierDebts += s.debt
+          supplierDebts += d
         } else {
-          clientDebts += s.debt
+          clientDebts += d
         }
       }
       
       // Déduire les paiements des dettes correspondantes
       if (type === 'payment_client') {
-        clientDebts -= s.paid || s.total || 0
+        clientDebts -= Number(s.paid || s.total || 0)
       } else if (type === 'payment_supplier') {
-        supplierDebts -= s.paid || s.total || 0
+        supplierDebts -= Number(s.paid || s.total || 0)
       }
     })
 
     todays.forEach(s => {
       if (s.status === 'crossed_out') return
       if (s.pen_color === 'blue' || s.type === 'sale') {
-        todayBalance += s.paid
+        todayBalance += Number(s.paid ?? s.total ?? 0)
       } else if (s.pen_color === 'red' || s.type === 'cash_out') {
-        todayBalance -= s.total
+        todayBalance -= Number(s.total ?? 0)
       }
     })
 
-    setTiroirCaisse(cash)
-    setArgentDehors(clientDebts)
-    setNosDettes(supplierDebts)
-    setSoldeDuJour(todayBalance)
+    setTiroirCaisse(Math.round(cash * 100) / 100)
+    setArgentDehors(Math.max(0, Math.round(clientDebts * 100) / 100))
+    setNosDettes(Math.max(0, Math.round(supplierDebts * 100) / 100))
+    setSoldeDuJour(Math.round(todayBalance * 100) / 100)
   }, [])
 
   const crossOutSale = useCallback(async (saleId: string) => {
@@ -346,12 +349,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     if (isSupabaseClientConfigured() && isOnline) {
       try {
-        const altShopId = shopId.startsWith('SHOP-') ? shopId.replace('SHOP-', '') : `SHOP-${shopId}`
+        const targetShopIds = getDualShopIds(shopId)
         await supabaseClient
           .from('sales')
           .update({ status: 'crossed_out' })
           .eq('id', saleId)
-          .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+          .in('shop_id', targetShopIds)
       } catch (e) {
         console.warn('Erreur mise à jour status Supabase:', e)
       }

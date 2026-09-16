@@ -4,6 +4,7 @@ import { formatCurrency } from '@/lib/currencyUtils'
 import { recordRequestedProductInStorage, RequestedProduct } from '@/lib/requestedProductsUtils'
 import { getOfflineSales } from '@/lib/offlineDb'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
+import { getTodayDateString } from '@/lib/dateUtils'
 
 interface RequestedProductsManagerProps {
   shopId: string
@@ -88,7 +89,7 @@ export function RequestedProductsManager({
             requestCount: count,
             estimatedPrice: lastPrice || undefined,
             notes: lastSale.notes,
-            date: lastSale.date || new Date().toISOString().slice(0, 10),
+            date: lastSale.date || getTodayDateString(),
             status: 'pending'
           })
         }
@@ -96,7 +97,9 @@ export function RequestedProductsManager({
 
       const mergedList = Array.from(mergedMap.values())
       setItems(mergedList)
-      localStorage.setItem(storageKey, JSON.stringify(mergedList))
+      for (const sId of targetShopIds) {
+        localStorage.setItem(`cahier_requested_products_${sId}`, JSON.stringify(mergedList))
+      }
     } catch { }
   }, [storageKey, targetShopIds.join(','), sales, shopId])
 
@@ -127,7 +130,9 @@ export function RequestedProductsManager({
   const saveItems = (updated: RequestedProduct[]) => {
     setItems(updated)
     try {
-      localStorage.setItem(storageKey, JSON.stringify(updated))
+      for (const sId of targetShopIds) {
+        localStorage.setItem(`cahier_requested_products_${sId}`, JSON.stringify(updated))
+      }
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cahier_requested_products_updated'))
       }
@@ -170,7 +175,7 @@ export function RequestedProductsManager({
       requestCount: 1,
       estimatedPrice: estimatedPrice ? parseInt(estimatedPrice, 10) : undefined,
       notes: notes.trim() || undefined,
-      date: new Date().toISOString().slice(0, 10),
+      date: getTodayDateString(),
       status: 'pending'
     }
 

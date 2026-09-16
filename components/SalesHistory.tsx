@@ -107,7 +107,7 @@ export function SalesHistory({
       if (statusFilter !== 'all' && s.status !== statusFilter) return false
 
       if (dateFilter === 'today') {
-        const today = new Date().toISOString().slice(0, 10)
+        const today = getTodayDateString()
         if (s.date !== today) return false
       }
 
