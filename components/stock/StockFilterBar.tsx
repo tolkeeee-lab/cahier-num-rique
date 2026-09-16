@@ -52,32 +52,33 @@ export function StockFilterBar({
           {/* Commutateur de Mode de Suivi */}
           <div className="flex bg-gray-200/80 p-0.5 rounded-full text-[10px] font-bold select-none w-full sm:w-auto justify-center">
             <button
+              type="button"
               onClick={() => setTrackModeFilter('ALL')}
-              className={`px-3 py-1 rounded-full transition-all ${
+              className={`px-3 py-1 rounded-full active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer ${
                 trackModeFilter === 'ALL' ? 'bg-gray-900 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              TOUT ({totalCount})
+              TOUT (<span className="tabular-nums">{totalCount}</span>)
             </button>
             <button
               type="button"
               onClick={() => setTrackModeFilter('TRACKED')}
-              className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
+              className={`px-3 py-1 rounded-full flex items-center gap-1.5 cursor-pointer active:scale-[0.97] transition-transform duration-100 ease-out ${
                 trackModeFilter === 'TRACKED' ? 'bg-emerald-700 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <Package className="w-3.5 h-3.5" />
-              <span>Stock Suivi ({trackedCount})</span>
+              <span>Stock Suivi (<span className="tabular-nums">{trackedCount}</span>)</span>
             </button>
             <button
               type="button"
               onClick={() => setTrackModeFilter('UNTRACKED')}
-              className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
+              className={`px-3 py-1 rounded-full flex items-center gap-1.5 cursor-pointer active:scale-[0.97] transition-transform duration-100 ease-out ${
                 trackModeFilter === 'UNTRACKED' ? 'bg-blue-700 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>Ventes Seules ({untrackedCount})</span>
+              <span>Ventes Seules (<span className="tabular-nums">{untrackedCount}</span>)</span>
             </button>
           </div>
         </div>
@@ -86,11 +87,12 @@ export function StockFilterBar({
           {allCategories.map(cat => (
             <button
               key={cat}
+              type="button"
               onClick={() => setCategoryFilter(cat)}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex-shrink-0 transition-all ${
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex-shrink-0 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer ${
                 categoryFilter === cat
-                  ? 'bg-gray-800 border-gray-800 text-white scale-105'
-                  : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                  ? 'bg-gray-900 border-gray-900 text-white shadow-xs'
+                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
               {cat}

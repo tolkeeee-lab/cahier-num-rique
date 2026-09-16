@@ -61,20 +61,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Produit cible introuvable' }, { status: 404 })
     }
 
-    // 2. Mettre à jour les articles vendus (sold_articles) associés au nom ou à l'ID source pour cette boutique
-    const { error: updateArticlesErr } = await supabase
-      .from('sold_articles')
-      .update({
-        product_id: targetProduct.id,
-        product_name: targetProduct.name,
-        product_name_canonical: targetProduct.name,
-      })
+    // 2. Mettre à jour les articles vendus (sold_articles) associés pour cette boutique
+    const { data: shopSales } = await supabase
+      .from('sales')
+      .select('id')
       .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
-      .or(`product_id.eq.${sourceProduct.id},product_name.ilike.${sourceProduct.name}`)
 
-    if (updateArticlesErr) {
-      console.warn('[Merge] Remarque lors de la màj des sold_articles:', updateArticlesErr.message)
+    const saleIds = (shopSales || []).map(s => s.id)
+    if (saleIds.length > 0) {
+      const { error: updateArticlesErr } = await supabase
+        .from('sold_articles')
+        .update({
+          product_id: targetProduct.id,
+          product_name: targetProduct.name,
+          product_name_canonical: targetProduct.name,
+        })
+        .in('sale_id', saleIds)
+        .or(`product_id.eq.${sourceProduct.id},product_name.ilike.${sourceProduct.name}`)
+
+      if (updateArticlesErr) {
+        console.warn('[Merge] Remarque lors de la màj des sold_articles:', updateArticlesErr.message)
+      }
     }
+
+    try {
+      await supabase
+        .from('sold_articles')
+        .update({
+          product_id: targetProduct.id,
+          product_name: targetProduct.name,
+          product_name_canonical: targetProduct.name,
+        })
+        .eq('product_id', sourceProduct.id)
+    } catch {}
 
     // 3. Consolider le stock initial du produit cible (si le produit source avait du stock)
     const combinedInitialStock = (targetProduct.initial_stock || 0) + (sourceProduct.initial_stock || 0)
