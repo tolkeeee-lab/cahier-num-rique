@@ -102,7 +102,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
 
         {/* Montant total & Actions */}
         <div className="flex flex-col items-end gap-2">
-          <span className="text-base font-black text-gray-900 font-mono">
+          <span className="text-base font-black text-gray-900 font-mono tabular-nums tracking-tight">
             {formatPrice(sale.total)}
           </span>
 
@@ -112,7 +112,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
                 <button
                   type="button"
                   onClick={() => onShareWhatsApp(sale)}
-                  className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   title="Partager le reçu WhatsApp"
                 >
                   <Share2 className="w-3.5 h-3.5" />
@@ -123,7 +123,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
                 <button
                   type="button"
                   onClick={() => onPrintReceipt(sale)}
-                  className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   title="Imprimer le reçu"
                 >
                   <Printer className="w-3.5 h-3.5" />
@@ -134,7 +134,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
                 <button
                   type="button"
                   onClick={() => onEdit(sale)}
-                  className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   title="Modifier l'écriture"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
@@ -145,7 +145,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
                 <button
                   type="button"
                   onClick={() => onCrossOut(sale.id)}
-                  className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   title="Raturer l'écriture"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

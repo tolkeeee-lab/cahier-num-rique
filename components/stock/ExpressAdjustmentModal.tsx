@@ -90,18 +90,29 @@ export function ExpressAdjustmentModal({
           <div className="bg-white p-3 rounded-xl border border-gray-200">
             <div className="text-[10px] text-gray-400 font-mono uppercase">Produit sélectionné</div>
             <div className="font-handwritten text-lg font-bold text-gray-800">{expressItem.name}</div>
-            <div className="text-[11px] text-gray-500 font-mono">Stock actuel : {expressItem.current_stock} {expressItem.unit}</div>
+            <div className="text-[11px] text-gray-500 font-mono">
+              Stock actuel : <span className="font-bold tabular-nums">{expressItem.current_stock}</span> {expressItem.unit}
+            </div>
           </div>
 
           <div>
             <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Quantité à {expressType === 'in' ? 'ajouter' : 'retirer'}</label>
             <input
               type="number"
-              min="1"
-              value={expressQty}
-              onChange={e => setExpressQty(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-sm font-bold text-gray-800 outline-none focus:border-gray-900"
+              step="any"
+              min="0.01"
+              value={expressQty || ''}
+              onChange={e => {
+                const val = parseFloat(e.target.value)
+                setExpressQty(isNaN(val) ? 0 : Math.max(0, val))
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-sm font-bold text-gray-800 outline-none focus:border-gray-900 tabular-nums"
             />
+            {expressType === 'out' && expressQty > (expressItem.current_stock ?? 0) && (
+              <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 p-1.5 rounded-lg font-mono mt-1.5">
+                Attention : la quantité dépasse le stock disponible ({expressItem.current_stock ?? 0} {expressItem.unit}).
+              </p>
+            )}
           </div>
 
           <div>
@@ -209,14 +220,14 @@ export function ExpressAdjustmentModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100"
+              className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={adjusting}
-              className={`flex-1 py-2 text-white font-bold rounded-full transition-transform hover:scale-105 active:scale-95 ${
+              className={`flex-1 py-2 text-white font-bold rounded-full active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer ${
                 expressType === 'in' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
               }`}
             >

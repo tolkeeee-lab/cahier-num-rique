@@ -382,7 +382,16 @@ export function getOfflineSales(shopId: string): OfflineSale[] {
   if (typeof window !== 'undefined') {
     migrateLocalStorageToIndexedDB(shopId).catch(() => {})
   }
-  return readJson<OfflineSale[]>(salesKey(shopId), [])
+  if (!shopId) return []
+  const alt = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
+  const primary = readJson<OfflineSale[]>(salesKey(shopId), [])
+  const altList = readJson<OfflineSale[]>(salesKey(alt), [])
+  if (altList.length === 0) return primary
+  if (primary.length === 0) return altList
+  const map = new Map<string, OfflineSale>()
+  for (const s of altList) if (s.id) map.set(s.id, s)
+  for (const s of primary) if (s.id) map.set(s.id, s)
+  return Array.from(map.values())
 }
 
 export async function getOfflineSalesAsync(shopId: string): Promise<OfflineSale[]> {
@@ -542,7 +551,19 @@ export function getOfflineProducts(shopId: string): OfflineProduct[] {
   if (typeof window !== 'undefined') {
     migrateLocalStorageToIndexedDB(shopId).catch(() => {})
   }
-  const raw = readJson<OfflineProduct[]>(productsKey(shopId), [])
+  if (!shopId) return []
+  const alt = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
+  const primaryRaw = readJson<OfflineProduct[]>(productsKey(shopId), [])
+  const altRaw = readJson<OfflineProduct[]>(productsKey(alt), [])
+  let raw: OfflineProduct[] = primaryRaw
+  if (altRaw.length > 0 && primaryRaw.length === 0) {
+    raw = altRaw
+  } else if (altRaw.length > 0 && primaryRaw.length > 0) {
+    const map = new Map<string, OfflineProduct>()
+    for (const p of altRaw) if (p.id) map.set(p.id, p)
+    for (const p of primaryRaw) if (p.id) map.set(p.id, p)
+    raw = Array.from(map.values())
+  }
   return raw.map(p => sanitizeProductData(p as any))
 }
 
