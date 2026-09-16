@@ -43,6 +43,13 @@ export function useOfflineSync({
 }: UseOfflineSyncOptions) {
   // Évite les double-syncs simultanés
   const isSyncing = useRef(false)
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
+    }
+  }, [])
 
   const syncOfflineData = useCallback(async (includeErrors = false) => {
     if (!shopId || !isOnline || isSyncing.current) return
@@ -143,19 +150,21 @@ export function useOfflineSync({
     refreshPendingCount(shopId)
     isSyncing.current = false
 
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
+
     if (errorCount === 0) {
       setSyncStatus('success')
       onSyncComplete?.()
       // Réinitialiser le badge après 3s
-      setTimeout(() => setSyncStatus('idle'), 3000)
+      statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 3000)
     } else if (successCount > 0) {
       // Sync partielle : certaines ont réussi, d'autres non
       setSyncStatus('success')
       onSyncComplete?.()
-      setTimeout(() => setSyncStatus('idle'), 3000)
+      statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 3000)
     } else {
       setSyncStatus('error')
-      setTimeout(() => setSyncStatus('idle'), 5000)
+      statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 5000)
     }
   }, [shopId, shopActivity, isOnline, setSyncStatus, refreshPendingCount, onSyncComplete])
 

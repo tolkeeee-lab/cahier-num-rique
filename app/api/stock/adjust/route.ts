@@ -41,8 +41,10 @@ export async function POST(request: Request) {
     const fullNotes = `[${reasonLabel}] ${signSymbol}${quantity} ${product.name} par ${employeeName}${notes ? ` (${notes})` : ''}`
 
     // Coût d'achat unitaire effectif fourni par le propriétaire ou pré-existant en base (sans estimation à 60%)
-    const inputUnitCost = typeof rawBody?.unitCost === 'number' ? rawBody.unitCost : (parseInt(rawBody?.unitCost) || 0)
-    const effectiveUnitCost = inputUnitCost > 0 ? inputUnitCost : (product.unit_cost || 0)
+    const parsedCost = typeof rawBody?.unitCost === 'number'
+      ? rawBody.unitCost
+      : (parseFloat(String(rawBody?.unitCost || '').replace(/\s+/g, '').replace(',', '.')) || 0)
+    const effectiveUnitCost = (Number.isFinite(parsedCost) && parsedCost > 0) ? parsedCost : (product.unit_cost || 0)
 
     // Calcul de l'impact financier en caisse :
     // - Un ajustement d'inventaire ou une casse N'AJOUTE PAS d'argent au tiroir cash

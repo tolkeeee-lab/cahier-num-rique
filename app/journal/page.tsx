@@ -530,22 +530,25 @@ export default function JournalPage() {
     saleCreation.setInput(prefix ? `${prefix}, ${entry}` : entry)
   }
 
-  // ── Horloge & Écouteurs globaux ──────────────────────────────────────────
+  // ── Horloge ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const update = () => setCurrentTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
     update()
     const t = setInterval(update, 30000)
+    return () => clearInterval(t)
+  }, [])
 
+  // ── Écouteurs globaux de vente créée ──────────────────────────────────────
+  const { reloadData } = journalData
+  useEffect(() => {
     const handleSaleCreated = () => {
-      journalData.reloadData()
+      reloadData()
     }
     window.addEventListener('cahier_sale_created', handleSaleCreated)
-
     return () => {
-      clearInterval(t)
       window.removeEventListener('cahier_sale_created', handleSaleCreated)
     }
-  }, [journalData])
+  }, [reloadData])
 
   const pens = getPens(shopManager.shopActivity)
 

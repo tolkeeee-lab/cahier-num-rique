@@ -58,6 +58,14 @@ export function useNetworkStatus(shopId: string | undefined): NetworkStatus {
   const [syncErrors, setSyncErrors] = useState(0)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   const refreshPendingCount = useCallback((sid: string) => {
     if (!sid) return
@@ -74,12 +82,16 @@ export function useNetworkStatus(shopId: string | undefined): NetworkStatus {
   const updateOnlineStatus = useCallback(async (hint?: boolean) => {
     // Si navigator dit offline, pas besoin de ping
     if (hint === false || (typeof window !== 'undefined' && !window.navigator.onLine)) {
-      setIsOnline(false)
-      setSyncStatus('idle')
+      if (isMountedRef.current) {
+        setIsOnline(false)
+        setSyncStatus('idle')
+      }
       return
     }
     const real = await checkRealConnectivity()
-    setIsOnline(real)
+    if (isMountedRef.current) {
+      setIsOnline(real)
+    }
   }, [])
 
   useEffect(() => {

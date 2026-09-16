@@ -276,7 +276,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     }
   }, [shopId, isOnline, refreshTrigger, reloadData])
 
-  const calculateSummary = (all: Sale[], todays: Sale[]) => {
+  const calculateSummary = useCallback((all: Sale[], todays: Sale[]) => {
     let cash = 0
     let clientDebts = 0
     let supplierDebts = 0
@@ -318,9 +318,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     setArgentDehors(clientDebts)
     setNosDettes(supplierDebts)
     setSoldeDuJour(todayBalance)
-  }
+  }, [])
 
-  const crossOutSale = async (saleId: string) => {
+  const crossOutSale = useCallback(async (saleId: string) => {
     const updated = allSales.map(s => (s.id === saleId ? { ...s, status: 'crossed_out' as const } : s))
     setAllSales(updated)
     const today = getTodayDateString()
@@ -356,9 +356,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         console.warn('Erreur mise à jour status Supabase:', e)
       }
     }
-  }
+  }, [allSales, calculateSummary, isOnline, shopId])
 
-  const addArticleToSale = async (saleId: string, text: string, penColor?: string) => {
+  const addArticleToSale = useCallback(async (saleId: string, text: string, penColor?: string) => {
     const activePen = penColor || 'blue'
     const parsed = parseTextLocally(text, activePen)
 
@@ -417,9 +417,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         console.warn('Erreur PATCH add_article:', e)
       }
     }
-  }
+  }, [reloadData, isOnline, shopId])
 
-  const updateSale = async (
+  const updateSale = useCallback(async (
     saleId: string,
     updatedArticles: Array<{ name: string; quantity: number; unit_price: number }>,
     clientName?: string
@@ -471,9 +471,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         console.warn('Erreur PATCH update_sale:', e)
       }
     }
-  }
+  }, [reloadData, isOnline, shopId])
 
-  const updateCategory = async (saleId: string, category: string) => {
+  const updateCategory = useCallback(async (saleId: string, category: string) => {
     const offlineSales = getOfflineSales(shopId)
     const idx = offlineSales.findIndex(s => s.id === saleId)
     if (idx !== -1) {
@@ -504,7 +504,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         console.warn('Erreur PATCH update_category:', e)
       }
     }
-  }
+  }, [reloadData, isOnline, shopId])
 
   return {
     sales,
