@@ -108,6 +108,17 @@ export function DebtsBook({
 
   useEffect(() => {
     loadDebts()
+
+    const handleSalesUpdate = () => {
+      loadDebts()
+    }
+
+    window.addEventListener('cahier_sale_created', handleSalesUpdate)
+    window.addEventListener('cahier_sales_updated', handleSalesUpdate)
+    return () => {
+      window.removeEventListener('cahier_sale_created', handleSalesUpdate)
+      window.removeEventListener('cahier_sales_updated', handleSalesUpdate)
+    }
   }, [loadDebts])
 
   const handleConfirmRepayment = async (repayAmount: number, customNotes?: string) => {
@@ -175,6 +186,7 @@ export function DebtsBook({
     if (onRefreshTotals) onRefreshTotals()
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
     }
   }
 

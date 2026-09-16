@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { answerBoutiqueQuestion, AnalyticsAnswer } from '@/lib/boutiqueAnalyticsEngine'
 import {
   Sparkles, Mic, MicOff, Send, X,
@@ -24,6 +24,15 @@ export default function BoutiqueAssistantModal({
   const [query, setQuery] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [currentAnswer, setCurrentAnswer] = useState<AnalyticsAnswer | null>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
@@ -85,7 +94,7 @@ export default function BoutiqueAssistantModal({
         <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-4 text-white flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-amber-100" />
+              <Sparkles className="w-6 h-6 text-amber-100" strokeWidth={1.75} />
             </div>
             <div>
               <h3 className="font-bold text-sm leading-tight">Assistant Bilan & Stock</h3>
@@ -97,7 +106,7 @@ export default function BoutiqueAssistantModal({
             className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold flex items-center justify-center active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
             aria-label="Fermer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -133,11 +142,11 @@ export default function BoutiqueAssistantModal({
             >
               {isListening ? (
                 <>
-                  <MicOff className="w-4 h-4" />
+                  <MicOff className="w-4 h-4" strokeWidth={1.75} />
                   <span className="text-[10px]">Écoute...</span>
                 </>
               ) : (
-                <Mic className="w-4 h-4" />
+                <Mic className="w-4 h-4" strokeWidth={1.75} />
               )}
             </button>
 
@@ -146,7 +155,7 @@ export default function BoutiqueAssistantModal({
               type="submit"
               className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-3.5 h-3.5" strokeWidth={1.75} />
               <span>Poser</span>
             </button>
           </form>
@@ -168,7 +177,7 @@ export default function BoutiqueAssistantModal({
                     }}
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100/70 hover:bg-amber-200 border border-amber-300 rounded-full text-[11px] text-amber-950 font-bold font-mono active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   >
-                    <IconComponent className="w-3 h-3 text-amber-800 flex-shrink-0" />
+                    <IconComponent className="w-3 h-3 text-amber-800 flex-shrink-0" strokeWidth={1.75} />
                     <span>{item.label}</span>
                   </button>
                 )
@@ -180,7 +189,7 @@ export default function BoutiqueAssistantModal({
           {currentAnswer ? (
             <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300 rounded-2xl p-4 space-y-2 shadow-xs animate-in fade-in duration-200">
               <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
-                <Lightbulb className="w-4 h-4 text-amber-700" />
+                <Lightbulb className="w-4 h-4 text-amber-700" strokeWidth={1.75} />
                 <span>Réponse de l'assistant :</span>
               </div>
 

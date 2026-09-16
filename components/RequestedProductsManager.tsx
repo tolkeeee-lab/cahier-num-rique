@@ -30,7 +30,7 @@ export function RequestedProductsManager({
   const storageKey = `cahier_requested_products_${shopId}`
   const altStorageKey = `cahier_requested_products_${altShopId}`
 
-  useEffect(() => {
+  const loadItems = React.useCallback(() => {
     try {
       const stored = localStorage.getItem(storageKey)
       const altStored = localStorage.getItem(altStorageKey)
@@ -85,17 +85,43 @@ export function RequestedProductsManager({
         }
       }
 
-
       const mergedList = Array.from(mergedMap.values())
       setItems(mergedList)
       localStorage.setItem(storageKey, JSON.stringify(mergedList))
     } catch { }
-  }, [storageKey, sales, shopId])
+  }, [storageKey, altStorageKey, sales, shopId])
+
+  useEffect(() => {
+    loadItems()
+
+    const handleUpdate = () => {
+      loadItems()
+    }
+
+    window.addEventListener('cahier_sale_created', handleUpdate)
+    window.addEventListener('cahier_requested_products_updated', handleUpdate)
+    return () => {
+      window.removeEventListener('cahier_sale_created', handleUpdate)
+      window.removeEventListener('cahier_requested_products_updated', handleUpdate)
+    }
+  }, [loadItems])
+
+  useEffect(() => {
+    if (!showAddModal) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowAddModal(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showAddModal])
 
   const saveItems = (updated: RequestedProduct[]) => {
     setItems(updated)
     try {
       localStorage.setItem(storageKey, JSON.stringify(updated))
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cahier_requested_products_updated'))
+      }
     } catch { }
   }
 
@@ -116,6 +142,9 @@ export function RequestedProductsManager({
 
     const updated = recordRequestedProductInStorage(shopId, cleanName, price)
     setItems(updated)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_requested_products_updated'))
+    }
     setFeedbackMsg(`Demande client « ${cleanName} » inscrite dans votre cahier !`)
     setTimeout(() => setFeedbackMsg(null), 3500)
     setQuickInput('')
@@ -423,15 +452,15 @@ export function RequestedProductsManager({
           <div className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-amber-200 pb-3">
               <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 text-amber-800" />
+                <ClipboardList className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
                 <span>Enregistrer un Produit Réclamé par un Client</span>
               </h3>
               <button 
                 onClick={() => setShowAddModal(false)} 
-                className="text-gray-400 hover:text-gray-700 active:scale-[0.95] p-1 transition-transform"
+                className="text-gray-400 hover:text-gray-700 active:scale-[0.97] p-1 transition-transform cursor-pointer rounded-full"
                 title="Fermer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" strokeWidth={1.75} />
               </button>
             </div>
 
@@ -499,13 +528,13 @@ export function RequestedProductsManager({
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold"
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold active:scale-[0.97] transition-all cursor-pointer"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-amber-800 hover:bg-amber-900 text-white rounded-xl font-bold shadow-md"
+                  className="px-5 py-2 bg-amber-800 hover:bg-amber-900 text-white rounded-xl font-bold shadow-md active:scale-[0.97] transition-all cursor-pointer"
                 >
                   Enregistrer
                 </button>
