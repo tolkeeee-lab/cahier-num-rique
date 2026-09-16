@@ -34,17 +34,27 @@ export function StockFilterBar({
       <div className="px-4 py-2.5 border-b border-gray-100 flex flex-col gap-2 bg-[#faf7f0] flex-shrink-0">
         <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
           <div className="relative w-full sm:flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" strokeWidth={1.75} />
             <input
               type="text"
               placeholder="Chercher un produit..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs font-mono outline-none focus:border-gray-400 transition-colors"
+              onKeyDown={e => {
+                if (e.key === 'Escape') {
+                  setSearchQuery('')
+                }
+              }}
+              className="w-full pl-8 pr-8 py-1.5 bg-white border border-gray-200 rounded-full text-xs font-mono outline-none focus:border-gray-400 transition-colors"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                <X className="w-3 h-3" />
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 active:scale-[0.97] transition-transform duration-100 cursor-pointer p-0.5"
+                title="Effacer la recherche (Échap)"
+              >
+                <X className="w-3 h-3" strokeWidth={1.75} />
               </button>
             )}
           </div>
@@ -67,7 +77,7 @@ export function StockFilterBar({
                 trackModeFilter === 'TRACKED' ? 'bg-emerald-700 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Package className="w-3.5 h-3.5" />
+              <Package className="w-3.5 h-3.5" strokeWidth={1.75} />
               <span>Stock Suivi (<span className="tabular-nums">{trackedCount}</span>)</span>
             </button>
             <button
@@ -77,7 +87,7 @@ export function StockFilterBar({
                 trackModeFilter === 'UNTRACKED' ? 'bg-blue-700 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <FileText className="w-3.5 h-3.5" />
+              <FileText className="w-3.5 h-3.5" strokeWidth={1.75} />
               <span>Ventes Seules (<span className="tabular-nums">{untrackedCount}</span>)</span>
             </button>
           </div>

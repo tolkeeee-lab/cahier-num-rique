@@ -210,7 +210,7 @@ export function SalesHistory({
                 {/* ── Séparateur de Date avec CA de la journée ── */}
                 <div className="flex items-center justify-between gap-2 py-2 px-3.5 bg-gradient-to-r from-amber-100/90 via-yellow-50 to-amber-100/90 border border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs select-none">
                   <div className="flex items-center gap-2 font-handwritten font-black text-sm sm:text-base text-amber-950">
-                    <Calendar className="w-4 h-4 text-amber-850 flex-shrink-0" />
+                    <Calendar className="w-4 h-4 text-amber-900 flex-shrink-0" strokeWidth={1.75} />
                     <span>{formatLongDateFr(dateKey)}</span>
                   </div>
                   <div className="flex items-center gap-2 font-mono text-xs">

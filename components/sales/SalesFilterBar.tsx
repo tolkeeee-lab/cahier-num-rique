@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, Download, Share2 } from 'lucide-react'
+import { Search, Download, Share2, X } from 'lucide-react'
 
 interface SalesFilterBarProps {
   searchQuery: string
@@ -30,14 +30,29 @@ export const SalesFilterBar: React.FC<SalesFilterBarProps> = ({
         
         {/* Champ de Recherche */}
         <div className="relative flex-grow max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.75} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                onSearchChange('')
+              }
+            }}
             placeholder="Rechercher par client, article ou note..."
-            className="w-full pl-9 pr-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono shadow-inner font-bold"
+            className="w-full pl-9 pr-8 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono shadow-inner font-bold"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-600 rounded-md active:scale-[0.97] transition-all duration-100 ease-out"
+              title="Effacer la recherche (Échap)"
+            >
+              <X className="w-3.5 h-3.5" strokeWidth={1.75} />
+            </button>
+          )}
         </div>
 
         {/* Filtres & Exportations */}
@@ -73,10 +88,10 @@ export const SalesFilterBar: React.FC<SalesFilterBarProps> = ({
             <button
               type="button"
               onClick={onExportCSV}
-              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
               title="Exporter en CSV / Excel"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4" strokeWidth={1.75} />
             </button>
           )}
 
@@ -84,10 +99,10 @@ export const SalesFilterBar: React.FC<SalesFilterBarProps> = ({
             <button
               type="button"
               onClick={onExportPDF}
-              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
               title="Générer rapport PDF"
             >
-              <Share2 className="w-4 h-4" />
+              <Share2 className="w-4 h-4" strokeWidth={1.75} />
             </button>
           )}
         </div>

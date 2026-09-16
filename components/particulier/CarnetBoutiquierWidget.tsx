@@ -17,19 +17,19 @@ export const CarnetBoutiquierWidget: React.FC<CarnetBoutiquierWidgetProps> = ({
     <div className="bg-fuchsia-50/90 p-4 rounded-2xl border border-fuchsia-200 space-y-3 mb-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Store className="w-5 h-5 text-fuchsia-700" />
+          <Store className="w-5 h-5 text-fuchsia-700" strokeWidth={1.75} />
           <h4 className="text-sm font-extrabold text-fuchsia-950">Carnet Boutiquier (Crédits Foyer)</h4>
         </div>
-        <span className="text-sm font-mono font-black text-fuchsia-950">
+        <span className="text-sm font-mono tabular-nums tracking-tight font-black text-fuchsia-950">
           {formatPrice(totalCreditBoutiquier)}
         </span>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-fuchsia-900 font-mono font-bold">
-        <span>Achats pris à crédit : {debtsCount} opération(s)</span>
+      <div className="flex items-center justify-between text-xs text-fuchsia-900 font-medium">
+        <span>Achats pris à crédit : <strong className="font-mono tabular-nums">{debtsCount}</strong> opération(s)</span>
         {totalCreditBoutiquier > 0 && (
           <span className="text-amber-900 font-extrabold flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> À régler à la paie
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.75} /> À régler à la paie
           </span>
         )}
       </div>

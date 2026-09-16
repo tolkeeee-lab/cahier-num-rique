@@ -22,10 +22,10 @@ export const BudgetOverviewCard: React.FC<BudgetOverviewCardProps> = ({
       {/* Entrées Cash / Revenus */}
       <div className="bg-blue-50/90 p-4 rounded-2xl border border-blue-200 space-y-1 shadow-sm">
         <div className="flex items-center gap-1.5 text-xs text-blue-800 font-mono font-extrabold">
-          <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
+          <TrendingUp className="w-3.5 h-3.5 text-blue-600" strokeWidth={1.75} />
           <span>Revenus / Entrées</span>
         </div>
-        <p className="text-base font-black text-blue-950 font-mono">
+        <p className="text-base font-black text-blue-950 font-mono tabular-nums tracking-tight">
           {formatPrice(income)}
         </p>
       </div>
@@ -33,10 +33,10 @@ export const BudgetOverviewCard: React.FC<BudgetOverviewCardProps> = ({
       {/* Dépenses Cash Foyer */}
       <div className="bg-rose-50/90 p-4 rounded-2xl border border-rose-200 space-y-1 shadow-sm">
         <div className="flex items-center gap-1.5 text-xs text-rose-800 font-mono font-extrabold">
-          <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
+          <TrendingDown className="w-3.5 h-3.5 text-rose-600" strokeWidth={1.75} />
           <span>Dépenses Foyer</span>
         </div>
-        <p className="text-base font-black text-rose-950 font-mono">
+        <p className="text-base font-black text-rose-950 font-mono tabular-nums tracking-tight">
           {formatPrice(expenses)}
         </p>
       </div>
@@ -44,10 +44,10 @@ export const BudgetOverviewCard: React.FC<BudgetOverviewCardProps> = ({
       {/* Stock Réserve */}
       <div className="bg-emerald-50/90 p-4 rounded-2xl border border-emerald-200 space-y-1 shadow-sm">
         <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-mono font-extrabold">
-          <PiggyBank className="w-3.5 h-3.5 text-emerald-600" />
+          <PiggyBank className="w-3.5 h-3.5 text-emerald-600" strokeWidth={1.75} />
           <span>Réserve Stock</span>
         </div>
-        <p className="text-base font-black text-emerald-950 font-mono">
+        <p className="text-base font-black text-emerald-950 font-mono tabular-nums tracking-tight">
           {formatPrice(reserveStock)}
         </p>
       </div>
@@ -55,10 +55,10 @@ export const BudgetOverviewCard: React.FC<BudgetOverviewCardProps> = ({
       {/* Solde Net Disponible */}
       <div className="bg-amber-100/90 p-4 rounded-2xl border border-amber-300 space-y-1 shadow-sm">
         <div className="flex items-center gap-1.5 text-xs text-amber-950 font-mono font-extrabold">
-          <Wallet className="w-3.5 h-3.5 text-amber-700" />
+          <Wallet className="w-3.5 h-3.5 text-amber-700" strokeWidth={1.75} />
           <span>Solde Net</span>
         </div>
-        <p className="text-base font-black text-amber-950 font-mono">
+        <p className="text-base font-black text-amber-950 font-mono tabular-nums tracking-tight">
           {formatPrice(netBalance)}
         </p>
       </div>

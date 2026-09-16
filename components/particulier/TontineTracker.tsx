@@ -19,10 +19,10 @@ export const TontineTracker: React.FC<TontineTrackerProps> = ({
     <div className="bg-white/90 p-4 rounded-2xl border border-amber-300/80 space-y-3 mb-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <HandCoins className="w-5 h-5 text-amber-700" />
+          <HandCoins className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
           <h4 className="text-sm font-extrabold text-gray-900">Suivi Tontine & Épargne</h4>
         </div>
-        <span className="text-xs font-mono font-black text-amber-950">
+        <span className="text-xs font-mono font-black text-amber-950 tabular-nums tracking-tight">
           {formatPrice(totalTontine)} / {formatPrice(targetGoal)}
         </span>
       </div>
@@ -36,10 +36,10 @@ export const TontineTracker: React.FC<TontineTrackerProps> = ({
       </div>
 
       <div className="flex justify-between items-center text-xs text-gray-700 font-mono font-bold">
-        <span>Progression : {percentage}%</span>
+        <span>Progression : <span className="tabular-nums">{percentage}%</span></span>
         {percentage >= 100 && (
           <span className="text-emerald-700 font-extrabold flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Objectif atteint !
+            <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Objectif atteint !
           </span>
         )}
       </div>

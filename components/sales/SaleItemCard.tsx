@@ -94,8 +94,8 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
           {/* Information dette si existante */}
           {sale.debt > 0 && !isCrossedOut && (
             <div className="flex items-center gap-1.5 text-xs text-amber-900 font-bold font-mono pt-1">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              <span>Dette client : {formatPrice(sale.debt)}</span>
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.75} />
+              <span>Dette client : <span className="tabular-nums">{formatPrice(sale.debt)}</span></span>
             </div>
           )}
         </div>
@@ -115,7 +115,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
                   className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   title="Partager le reçu WhatsApp"
                 >
-                  <Share2 className="w-3.5 h-3.5" />
+                  <Share2 className="w-3.5 h-3.5" strokeWidth={1.75} />
                 </button>
               )}
 
@@ -126,7 +126,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
                   className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   title="Imprimer le reçu"
                 >
-                  <Printer className="w-3.5 h-3.5" />
+                  <Printer className="w-3.5 h-3.5" strokeWidth={1.75} />
                 </button>
               )}
 
@@ -137,7 +137,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
                   className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   title="Modifier l'écriture"
                 >
-                  <Edit3 className="w-3.5 h-3.5" />
+                  <Edit3 className="w-3.5 h-3.5" strokeWidth={1.75} />
                 </button>
               )}
 
@@ -148,7 +148,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
                   className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   title="Raturer l'écriture"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
                 </button>
               )}
             </div>

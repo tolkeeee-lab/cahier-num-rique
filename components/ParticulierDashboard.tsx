@@ -90,52 +90,52 @@ export function ParticulierDashboard({
         <button
           type="button"
           onClick={() => setActiveTab('budget')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold transition-all border cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold active:scale-[0.97] transition-all duration-100 ease-out border cursor-pointer ${
             activeTab === 'budget'
               ? 'bg-amber-800 text-white border-amber-900 shadow-md'
               : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
           }`}
         >
-          <Home className="w-4 h-4" />
+          <Home className="w-4 h-4" strokeWidth={1.75} />
           <span>Bilan Foyer</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('tontine')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold transition-all border cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold active:scale-[0.97] transition-all duration-100 ease-out border cursor-pointer ${
             activeTab === 'tontine'
               ? 'bg-amber-800 text-white border-amber-900 shadow-md'
               : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
           }`}
         >
-          <PiggyBank className="w-4 h-4" />
+          <PiggyBank className="w-4 h-4" strokeWidth={1.75} />
           <span>Tontine & Épargne</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('carnet')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold transition-all border cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold active:scale-[0.97] transition-all duration-100 ease-out border cursor-pointer ${
             activeTab === 'carnet'
               ? 'bg-amber-800 text-white border-amber-900 shadow-md'
               : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
           }`}
         >
-          <Store className="w-4 h-4" />
+          <Store className="w-4 h-4" strokeWidth={1.75} />
           <span>Carnet Boutiquier</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('historique')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold transition-all border cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold active:scale-[0.97] transition-all duration-100 ease-out border cursor-pointer ${
             activeTab === 'historique'
               ? 'bg-amber-800 text-white border-amber-900 shadow-md'
               : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
           }`}
         >
-          <FileText className="w-4 h-4" />
+          <FileText className="w-4 h-4" strokeWidth={1.75} />
           <span>Historique Foyer</span>
         </button>
       </div>
