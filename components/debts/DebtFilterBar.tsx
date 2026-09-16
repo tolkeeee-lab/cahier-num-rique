@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 
 interface DebtFilterBarProps {
   searchQuery: string
@@ -26,14 +26,27 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
         
         {/* Champ de recherche */}
         <div className="relative flex-grow max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.75} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') onSearchChange('')
+            }}
             placeholder="Rechercher par nom de client ou fournisseur..."
-            className="w-full pl-9 pr-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono shadow-inner font-bold"
+            className="w-full pl-9 pr-8 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono shadow-inner font-bold"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-600 rounded-md active:scale-[0.97] transition-all duration-100 ease-out"
+              title="Effacer la recherche (Échap)"
+            >
+              <X className="w-3.5 h-3.5" strokeWidth={1.75} />
+            </button>
+          )}
         </div>
 
         {/* Filtres par Type & Statut */}

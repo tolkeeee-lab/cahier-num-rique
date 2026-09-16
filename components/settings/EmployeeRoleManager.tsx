@@ -79,7 +79,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
   return (
     <div className="bg-white/90 p-5 rounded-2xl border border-amber-300/80 space-y-4 shadow-sm">
       <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
-        <Users className="w-5 h-5 text-amber-700" />
+        <Users className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
         <h4 className="text-sm font-extrabold text-gray-900">Gestion des Employés & Droits</h4>
       </div>
 
@@ -114,9 +114,9 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
           <button
             type="submit"
             disabled={!emailInput.trim() || isSubmitting}
-            className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 text-xs font-extrabold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 active:scale-[0.97] text-amber-950 text-xs font-extrabold rounded-xl transition-all duration-100 ease-out disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
           >
-            <UserPlus className="w-4 h-4" />
+            <UserPlus className="w-4 h-4" strokeWidth={1.75} />
             <span>{isSubmitting ? 'Envoi...' : 'Inviter'}</span>
           </button>
         </div>
@@ -137,7 +137,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
             className="flex items-center justify-between p-3 bg-amber-50/70 rounded-xl border border-amber-200 font-mono text-xs"
           >
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-amber-700" />
+              <Shield className="w-4 h-4 text-amber-700" strokeWidth={1.75} />
               <div>
                 <p className="font-extrabold text-gray-900">{emp.name}</p>
                 <p className="text-[11px] text-gray-600 font-sans">{emp.email}</p>
@@ -152,10 +152,10 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
                 <button
                   type="button"
                   onClick={() => onRemoveEmployee(emp.id)}
-                  className="p-1 text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
+                  className="p-1 text-rose-600 hover:text-rose-800 active:scale-[0.97] transition-all duration-100 ease-out cursor-pointer"
                   title="Retirer l'employé"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                 </button>
               )}
             </div>

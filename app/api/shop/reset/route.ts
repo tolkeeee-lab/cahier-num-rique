@@ -50,6 +50,11 @@ export async function POST(request: Request) {
 
       // 5. Supprimer les clôtures de caisse
       await supabase.from('cash_closings').delete().or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+
+      // 6. Supprimer les demandes de produits si table présente
+      try {
+        await supabase.from('requested_products').delete().or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      } catch {}
     }
 
     return NextResponse.json({ success: true, message: 'Boutique réinitialisée avec succès' })

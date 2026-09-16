@@ -67,19 +67,19 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
 
             {isOverdue && (
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono bg-rose-100 text-rose-800 border border-rose-300 font-extrabold animate-pulse">
-                <AlertTriangle className="w-3 h-3 text-rose-600" />
+                <AlertTriangle className="w-3 h-3 text-rose-600" strokeWidth={1.75} />
                 <span>En retard ({new Date(debt.due_date!).toLocaleDateString('fr-FR')})</span>
               </span>
             )}
             {isDueToday && (
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono bg-amber-200 text-amber-950 border border-amber-400 font-extrabold">
-                <Bell className="w-3 h-3 text-amber-800" />
+                <Bell className="w-3 h-3 text-amber-800" strokeWidth={1.75} />
                 <span>Échéance aujourd'hui !</span>
               </span>
             )}
             {!isOverdue && !isDueToday && debt.due_date && (
               <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono bg-blue-50 text-blue-800 border border-blue-200 font-bold">
-                <Calendar className="w-3 h-3 text-blue-600" />
+                <Calendar className="w-3 h-3 text-blue-600" strokeWidth={1.75} />
                 <span>Promesse : {new Date(debt.due_date).toLocaleDateString('fr-FR')}</span>
               </span>
             )}
@@ -94,7 +94,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
 
         {/* Montant & Actions */}
         <div className="flex flex-col items-end gap-2">
-          <span className={`text-base font-black font-mono ${isSupplier ? 'text-fuchsia-900' : 'text-rose-900'}`}>
+          <span className={`text-base font-black font-mono tabular-nums tracking-tight ${isSupplier ? 'text-fuchsia-900' : 'text-rose-900'}`}>
             {formatPrice(debt.amount_owed)}
           </span>
 
@@ -104,10 +104,10 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                 <button
                   type="button"
                   onClick={handleSendWhatsAppReminder}
-                  className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 active:scale-[0.97] text-emerald-800 border border-emerald-300 transition-all duration-100 ease-out cursor-pointer"
                   title="Relancer par WhatsApp"
                 >
-                  <Share2 className="w-3.5 h-3.5" />
+                  <Share2 className="w-3.5 h-3.5" strokeWidth={1.75} />
                 </button>
               )}
 
@@ -115,9 +115,9 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                 <button
                   type="button"
                   onClick={() => onOpenRepaymentModal(debt)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 transition-all text-xs font-mono font-bold cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out text-xs font-mono font-bold cursor-pointer"
                 >
-                  <Calculator className="w-3.5 h-3.5 text-amber-700" />
+                  <Calculator className="w-3.5 h-3.5 text-amber-700" strokeWidth={1.75} />
                   <span>Solder</span>
                 </button>
               )}

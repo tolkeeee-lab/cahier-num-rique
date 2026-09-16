@@ -73,21 +73,21 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
       <div className="flex items-center justify-between border-b border-amber-200 pb-3 flex-wrap gap-2">
 
         <div className="flex items-center gap-2">
-          <Store className="w-5 h-5 text-amber-700" />
+          <Store className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
           <h4 className="text-sm font-extrabold text-gray-900">Profil & Localisation du Point de Vente</h4>
         </div>
 
         {/* Badge Code Boutique pour le propriétaire */}
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-300/80 px-3 py-1.5 rounded-xl text-xs font-mono">
-          <Key className="w-4 h-4 text-amber-600" />
+          <Key className="w-4 h-4 text-amber-600" strokeWidth={1.75} />
           <span className="text-gray-600 font-medium">Code Équipe :</span>
           <span className="font-extrabold text-amber-900 tracking-wider bg-amber-200/80 px-2 py-0.5 rounded-md">{shortCode}</span>
           <button
             type="button"
             onClick={handleCopyCode}
-            className="ml-1 text-amber-800 hover:text-amber-950 font-bold flex items-center gap-1 bg-amber-200/60 hover:bg-amber-300/80 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+            className="ml-1 text-amber-800 hover:text-amber-950 active:scale-[0.97] font-bold flex items-center gap-1 bg-amber-200/60 hover:bg-amber-300/80 px-2 py-0.5 rounded-lg transition-all duration-100 ease-out cursor-pointer"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-green-700" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-green-700" strokeWidth={1.75} /> : <Copy className="w-3.5 h-3.5" strokeWidth={1.75} />}
             <span>{copied ? 'Copié !' : 'Copier'}</span>
           </button>
         </div>
@@ -176,9 +176,9 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
         <button
           type="submit"
           disabled={isSaving}
-          className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+          className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all duration-100 ease-out flex items-center gap-1.5 cursor-pointer shadow-sm"
         >
-          <Save className="w-4 h-4" />
+          <Save className="w-4 h-4" strokeWidth={1.75} />
           <span>{isSaving ? 'Enregistrement...' : 'Sauvegarder les Modifications'}</span>
         </button>
       </div>

@@ -71,7 +71,7 @@ export function SalesInput({
           className="p-2 rounded-xl bg-[#2a2421] text-amber-400 border border-gray-800 hover:bg-[#342d29] active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
           title="Calculateur de monnaie"
         >
-          <Calculator className="w-4 h-4" />
+          <Calculator className="w-4 h-4" strokeWidth={1.75} />
         </button>
       </div>
 
@@ -99,7 +99,7 @@ export function SalesInput({
           disabled={!text.trim() || isSubmitting}
           className="p-3 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-transform duration-100 ease-out disabled:opacity-50 cursor-pointer"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-4 h-4" strokeWidth={1.75} />
         </button>
       </form>
 
