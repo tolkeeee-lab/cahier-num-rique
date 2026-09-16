@@ -165,7 +165,7 @@ export function StockWizardModal({
                     ? 'border-emerald-500 text-emerald-700'
                     : 'border-gray-300 text-gray-400'
                 }`}>
-                  {idx + 1 < step ? <Check className="w-3 h-3" /> : idx + 1}
+                  {idx + 1 < step ? <Check className="w-3 h-3" strokeWidth={2} /> : idx + 1}
                 </div>
                 <span className="text-[11px] font-semibold hidden sm:block">{label}</span>
               </div>
@@ -198,9 +198,9 @@ export function StockWizardModal({
                     key={cat}
                     type="button"
                     onClick={() => setCategory(cat)}
-                    className={`px-3 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                    className={`px-3 py-1.5 text-xs rounded-lg border font-medium transition-all cursor-pointer active:scale-[0.97] ${
                       category === cat
-                        ? 'bg-emerald-500 text-white border-emerald-500'
+                        ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
                         : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'
                     }`}
                   >
@@ -223,9 +223,9 @@ export function StockWizardModal({
                     key={p}
                     type="button"
                     onClick={() => setPackaging(p)}
-                    className={`px-3 py-1.5 text-xs rounded-lg border font-medium capitalize transition-colors ${
+                    className={`px-3 py-1.5 text-xs rounded-lg border font-medium capitalize transition-all cursor-pointer active:scale-[0.97] ${
                       packaging === p
-                        ? 'bg-amber-500 text-white border-amber-500'
+                        ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
                         : 'bg-white text-gray-700 border-gray-300 hover:border-amber-400'
                     }`}
                   >
@@ -246,7 +246,7 @@ export function StockWizardModal({
                     value={multiplier}
                     onChange={e => setMultiplier(e.target.value)}
                     min="1"
-                    className="w-20 px-2 py-1.5 border border-amber-300 rounded-lg text-sm text-center font-bold focus:outline-none focus:border-emerald-500"
+                    className="w-20 px-2 py-1.5 border border-amber-300 rounded-lg text-sm text-center font-bold focus:outline-none focus:border-emerald-500 font-mono tabular-nums"
                   />
                   <div className="flex gap-1 flex-wrap">
                     {UNITS.map(u => (
@@ -254,9 +254,9 @@ export function StockWizardModal({
                         key={u}
                         type="button"
                         onClick={() => setUnit(u)}
-                        className={`px-2.5 py-1 text-[11px] rounded-lg border font-medium ${
+                        className={`px-2.5 py-1 text-[11px] rounded-lg border font-medium transition-all cursor-pointer active:scale-[0.97] ${
                           unit === u
-                            ? 'bg-emerald-500 text-white border-emerald-500'
+                            ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
                             : 'bg-white text-gray-600 border-gray-300'
                         }`}
                       >
@@ -266,8 +266,8 @@ export function StockWizardModal({
                   </div>
                 </div>
                 {parseInt(multiplier) > 1 && (
-                  <p className="text-xs text-emerald-700 font-bold flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5 inline-block text-emerald-600" />
+                  <p className="text-xs text-emerald-700 font-bold flex items-center gap-1 font-mono tabular-nums">
+                    <Check className="w-3.5 h-3.5 inline-block text-emerald-600" strokeWidth={1.75} />
                     1 {packaging} = {multiplier} {unit}s
                   </p>
                 )}
@@ -287,7 +287,7 @@ export function StockWizardModal({
                   value={purchasePrice}
                   onChange={e => setPurchasePrice(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white font-mono tabular-nums"
                 />
               </div>
               <div>
@@ -298,7 +298,7 @@ export function StockWizardModal({
                   value={salePrice}
                   onChange={e => setSalePrice(e.target.value)}
                   placeholder="0"
-                  className="w-full px-3 py-2 border border-amber-300 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white font-bold"
+                  className="w-full px-3 py-2 border border-amber-300 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white font-bold font-mono tabular-nums"
                 />
               </div>
             </div>
@@ -311,7 +311,7 @@ export function StockWizardModal({
                   value={initialStock}
                   onChange={e => setInitialStock(e.target.value)}
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white font-mono tabular-nums"
                 />
               </div>
               <div>
@@ -321,16 +321,20 @@ export function StockWizardModal({
                   value={alertThreshold}
                   onChange={e => setAlertThreshold(e.target.value)}
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emerald-500 bg-white font-mono tabular-nums"
                 />
               </div>
             </div>
 
             {parseInt(purchasePrice) > 0 && parseInt(salePrice) > 0 && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs text-emerald-800">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs text-emerald-800 font-mono">
                 <span className="font-bold">Marge unitaire : </span>
-                {(parseInt(salePrice) - parseInt(purchasePrice)).toLocaleString('fr-FR')} F
-                ({Math.round(((parseInt(salePrice) - parseInt(purchasePrice)) / parseInt(purchasePrice)) * 100)}%)
+                <span className="tabular-nums tracking-tight font-black">
+                  {(parseInt(salePrice) - parseInt(purchasePrice)).toLocaleString('fr-FR')} F
+                </span>{' '}
+                <span className="tabular-nums">
+                  ({Math.round(((parseInt(salePrice) - parseInt(purchasePrice)) / parseInt(purchasePrice)) * 100)}%)
+                </span>
               </div>
             )}
           </div>

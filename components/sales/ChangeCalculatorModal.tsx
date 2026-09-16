@@ -43,7 +43,12 @@ export const ChangeCalculatorModal: React.FC<ChangeCalculatorModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="w-full max-w-md bg-[#fdfaf2] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Entête */}
@@ -74,15 +79,27 @@ export const ChangeCalculatorModal: React.FC<ChangeCalculatorModalProps> = ({
           <label className="block font-mono font-extrabold text-amber-950 uppercase">
             Somme Donnée par le Client (FCFA) :
           </label>
-          <input
-            ref={inputRef}
-            type="text"
-            inputMode="numeric"
-            value={givenAmount}
-            onChange={(e) => setGivenAmount(e.target.value)}
-            placeholder="ex: 5 000"
-            className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-base text-gray-900 font-black tabular-nums tracking-tight focus:outline-none focus:border-amber-500 shadow-inner"
-          />
+          <div className="relative">
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
+              value={givenAmount}
+              onChange={(e) => setGivenAmount(e.target.value)}
+              placeholder="ex: 5 000"
+              className="w-full pl-3.5 pr-9 py-2.5 bg-white border border-amber-300 rounded-xl text-base text-gray-900 font-black tabular-nums tracking-tight focus:outline-none focus:border-amber-500 shadow-inner"
+            />
+            {givenAmount && (
+              <button
+                type="button"
+                onClick={() => setGivenAmount('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 transition-colors active:scale-[0.97] cursor-pointer"
+                title="Effacer"
+              >
+                <X className="w-4 h-4" strokeWidth={1.75} />
+              </button>
+            )}
+          </div>
 
           {/* Raccourcis billets & Compte Juste */}
           <div className="flex items-center gap-1.5 flex-wrap pt-1">

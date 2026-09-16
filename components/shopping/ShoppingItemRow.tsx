@@ -45,12 +45,12 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
         <button
           type="button"
           onClick={() => onToggleCheck(item.id)}
-          className="text-amber-700 hover:text-amber-900 transition-colors cursor-pointer"
+          className="text-amber-700 hover:text-amber-900 transition-colors cursor-pointer active:scale-[0.97]"
         >
           {item.isChecked ? (
-            <CheckSquare className="w-5 h-5 text-emerald-600" />
+            <CheckSquare className="w-5 h-5 text-emerald-600" strokeWidth={1.75} />
           ) : (
-            <Square className="w-5 h-5 text-amber-700" />
+            <Square className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
           )}
         </button>
 
@@ -67,11 +67,11 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
           <p className="text-xs text-gray-600 font-mono font-bold">
             {item.isWholesale ? (
               <>
-                {item.wholesaleQty} carton(s) × {formatPrice(item.wholesalePrice || 0)} ({item.itemsPerWholesale} un./carton)
+                <span className="tabular-nums">{item.wholesaleQty}</span> carton(s) × <span className="tabular-nums">{formatPrice(item.wholesalePrice || 0)}</span> (<span className="tabular-nums">{item.itemsPerWholesale}</span> un./carton)
               </>
             ) : (
               <>
-                {item.quantity} un. × {formatPrice(item.unitCost)}
+                <span className="tabular-nums">{item.quantity}</span> un. × <span className="tabular-nums">{formatPrice(item.unitCost)}</span>
               </>
             )}
           </p>
@@ -80,16 +80,16 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
 
       {/* Montant Total Estimé & Bouton Supprimer */}
       <div className="flex items-center gap-4">
-        <span className="text-sm font-black text-amber-950 font-mono">
+        <span className="text-sm font-black text-amber-950 font-mono tabular-nums tracking-tight">
           {formatPrice(itemTotal)}
         </span>
         <button
           type="button"
           onClick={() => onRemove(item.id)}
-          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 transition-colors border border-rose-300 cursor-pointer"
+          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 transition-all border border-rose-300 cursor-pointer active:scale-[0.97]"
           title="Supprimer de la liste"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-4 h-4" strokeWidth={1.75} />
         </button>
       </div>
     </div>
