@@ -339,6 +339,11 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       saveOfflineSale(shopId, offlineTarget)
     }
 
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+    }
+
     if (isSupabaseClientConfigured() && isOnline) {
       try {
         const altShopId = shopId.startsWith('SHOP-') ? shopId.replace('SHOP-', '') : `SHOP-${shopId}`
@@ -387,6 +392,10 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       sale.is_synced = false
       replaceOfflineSales(shopId, offlineSales)
       reloadData()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+        window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+      }
     }
 
     if (isSupabaseClientConfigured() && isOnline) {
@@ -437,6 +446,10 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       sale.is_synced = false
       replaceOfflineSales(shopId, offlineSales)
       reloadData()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+        window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+      }
     }
 
     if (isSupabaseClientConfigured() && isOnline) {
@@ -468,6 +481,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       offlineSales[idx].is_synced = false
       replaceOfflineSales(shopId, offlineSales)
       reloadData()
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+      }
     }
 
     if (isSupabaseClientConfigured() && isOnline) {

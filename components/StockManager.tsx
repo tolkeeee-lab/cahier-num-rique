@@ -269,6 +269,9 @@ export function StockManager({
   const handleDeleteProduct = async (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id))
     deleteOfflineProduct(shopId, id)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+    }
     try {
       await fetch(`/api/stock?id=${id}`, {
         method: 'DELETE',
@@ -285,6 +288,9 @@ export function StockManager({
     }
     setProducts([])
     clearOfflineProducts(shopId)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+    }
     try {
       await fetch('/api/stock/reset', {
         method: 'POST',
@@ -345,6 +351,10 @@ export function StockManager({
         saveOfflineProduct(shopId, { ...targetProd, current_stock: combinedStock } as any)
         deleteOfflineProduct(shopId, sourceId)
         setProducts(prev => prev.filter(p => p.id !== sourceId).map(p => p.id === targetId ? { ...p, current_stock: combinedStock } : p))
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
       }
 
       // 2. Synchronisation distante

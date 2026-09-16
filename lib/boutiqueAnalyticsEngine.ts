@@ -261,7 +261,7 @@ export function calculateCategoryCashboxBreakdown(
     boissons: {
       name: 'Caisse Boissons & Dépôt',
       key: 'boissons',
-      icon: '🥤',
+      icon: 'boissons',
       revenue: 0,
       paidCash: 0,
       debt: 0,
@@ -274,7 +274,7 @@ export function calculateCategoryCashboxBreakdown(
     divers: {
       name: 'Caisse Divers & Alimentation',
       key: 'divers',
-      icon: '📦',
+      icon: 'divers',
       revenue: 0,
       paidCash: 0,
       debt: 0,
@@ -287,7 +287,7 @@ export function calculateCategoryCashboxBreakdown(
     resto: {
       name: 'Caisse Plats & Carte',
       key: 'resto',
-      icon: '🍽️',
+      icon: 'resto',
       revenue: 0,
       paidCash: 0,
       debt: 0,
@@ -300,7 +300,7 @@ export function calculateCategoryCashboxBreakdown(
     services: {
       name: 'Caisse Prestations & Services',
       key: 'services',
-      icon: '✂️',
+      icon: 'services',
       revenue: 0,
       paidCash: 0,
       debt: 0,

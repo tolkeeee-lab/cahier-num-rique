@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { X, BookOpen } from 'lucide-react'
 import { SalesHistory } from '@/components/SalesHistory'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
@@ -26,6 +26,15 @@ export const AdminSubscriptionModal: React.FC<AdminSubscriptionModalProps> = ({
   onTabChange,
   loading = false,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   return (
@@ -35,7 +44,7 @@ export const AdminSubscriptionModal: React.FC<AdminSubscriptionModalProps> = ({
         {/* Entête */}
         <div className="flex items-center justify-between border-b border-gray-800 pb-3">
           <div className="flex items-center gap-3">
-            <BookOpen className="w-6 h-6 text-amber-400" />
+            <BookOpen className="w-6 h-6 text-amber-400" strokeWidth={1.75} />
             <div>
               <h3 className="text-base font-extrabold text-white">Inspection Admin : {shopName}</h3>
               <p className="text-xs text-gray-400 font-mono">Shop ID : {shopId}</p>
@@ -47,7 +56,7 @@ export const AdminSubscriptionModal: React.FC<AdminSubscriptionModalProps> = ({
             <div className="flex items-center gap-1 bg-[#141210] p-1 rounded-xl border border-gray-800">
               <button
                 onClick={() => onTabChange('journal')}
-                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
+                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer active:scale-[0.97] ${
                   activeTab === 'journal' ? 'bg-[#2a2421] text-amber-400' : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -55,7 +64,7 @@ export const AdminSubscriptionModal: React.FC<AdminSubscriptionModalProps> = ({
               </button>
               <button
                 onClick={() => onTabChange('analytics')}
-                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
+                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer active:scale-[0.97] ${
                   activeTab === 'analytics' ? 'bg-[#2a2421] text-amber-400' : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -63,8 +72,8 @@ export const AdminSubscriptionModal: React.FC<AdminSubscriptionModalProps> = ({
               </button>
             </div>
 
-            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-white rounded-lg transition-colors">
-              <X className="w-5 h-5" />
+            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-white rounded-lg transition-colors cursor-pointer active:scale-[0.97]">
+              <X className="w-5 h-5" strokeWidth={1.75} />
             </button>
           </div>
         </div>

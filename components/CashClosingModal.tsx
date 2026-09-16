@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { CheckCircle2, AlertTriangle, X, Share2, Calculator, Coins, ArrowDownLeft, ArrowUpRight, FileText, Wallet } from 'lucide-react'
 import { calculateCash } from '@/lib/sales/cashDrawerCalculator'
 
@@ -44,6 +44,15 @@ export function CashClosingModal({
     50: 0,
   })
 
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const todayIso = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
@@ -72,9 +81,9 @@ export function CashClosingModal({
   // Fond de caisse théorique net en tiroir (calibré sur le cumul de toutes les écritures actives)
   const theoreticalCash = calculateCash(activeSales)
 
-  // Parsing robuste des montants (suppression des espaces)
+  // Parsing robuste des montants (espaces et virgules)
   const actualCash = actualCashInput !== ''
-    ? (parseFloat(actualCashInput.replace(/\s/g, '')) || 0)
+    ? (parseFloat(actualCashInput.replace(/\s/g, '').replace(/,/g, '.')) || 0)
     : theoreticalCash
 
   const difference = actualCash - theoreticalCash
@@ -129,7 +138,7 @@ export function CashClosingModal({
             <Calculator className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
             <span className="font-mono tracking-tight font-extrabold">Clôture de Caisse Journalière (Z)</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-amber-200/60 cursor-pointer text-amber-800 transition-colors">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-amber-200/60 cursor-pointer text-amber-800 active:scale-[0.97] transition-all">
             <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
@@ -190,9 +199,9 @@ export function CashClosingModal({
               <button
                 type="button"
                 onClick={() => setShowBilletage(prev => !prev)}
-                className="text-[11px] font-bold text-amber-900 flex items-center gap-1 hover:underline cursor-pointer"
+                className="text-[11px] font-bold text-amber-900 flex items-center gap-1 hover:underline cursor-pointer active:scale-[0.97] transition-transform"
               >
-                <Coins className="w-3.5 h-3.5" />
+                <Coins className="w-3.5 h-3.5" strokeWidth={1.75} />
                 <span>{showBilletage ? 'Masquer billetage' : 'Compter mes billets'}</span>
               </button>
             </div>

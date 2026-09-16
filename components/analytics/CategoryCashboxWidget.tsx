@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
-import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle, Calculator, ArrowDownLeft, ArrowUpRight, Pencil, CupSoda, Package, X } from 'lucide-react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle, Calculator, ArrowDownLeft, ArrowUpRight, Pencil, CupSoda, Package, X, Scissors, UtensilsCrossed } from 'lucide-react'
 import { calculateCategoryCashboxBreakdown, CategoryCashboxGroup } from '@/lib/boutiqueAnalyticsEngine'
 import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
 
@@ -12,6 +12,14 @@ interface CategoryCashboxWidgetProps {
   onSelectCashboxFilter?: (filter: string) => void
   onRefreshData?: () => void
   shopId?: string
+}
+
+function CashboxIcon({ groupKey, className }: { groupKey: string; className?: string }) {
+  if (groupKey === 'boissons') return <CupSoda className={className || "w-4 h-4 text-blue-700"} strokeWidth={1.75} />
+  if (groupKey === 'resto') return <UtensilsCrossed className={className || "w-4 h-4 text-emerald-700"} strokeWidth={1.75} />
+  if (groupKey === 'services') return <Scissors className={className || "w-4 h-4 text-purple-700"} strokeWidth={1.75} />
+  if (groupKey === 'commune') return <Landmark className={className || "w-4 h-4 text-amber-700"} strokeWidth={1.75} />
+  return <Package className={className || "w-4 h-4 text-amber-700"} strokeWidth={1.75} />
 }
 
 function formatPrice(amount: number): string {
@@ -37,6 +45,15 @@ export function CategoryCashboxWidget({
   const [adjustNote, setAdjustNote] = useState<string>('')
   const [savingAdjust, setSavingAdjust] = useState<boolean>(false)
 
+  useEffect(() => {
+    if (!adjustingGroup) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAdjustingGroup(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [adjustingGroup])
+
   const openAdjustModal = (group: CategoryCashboxGroup) => {
     setAdjustingGroup(group)
     setActualCashInput(group.paidCash.toString())
@@ -53,8 +70,10 @@ export function CategoryCashboxWidget({
     let delta = 0
     let noteText = ''
 
+    const parseCash = (str: string) => Math.round(parseFloat(str.replace(/\s/g, '').replace(/,/g, '.')) || 0)
+
     if (adjustMode === 'real') {
-      const target = parseInt(actualCashInput) || 0
+      const target = parseCash(actualCashInput)
       delta = target - currentCash
       if (delta === 0) {
         setAdjustingGroup(null)
@@ -64,12 +83,12 @@ export function CategoryCashboxWidget({
       const sign = delta > 0 ? '+' : '-'
       noteText = `Ajustement Caisse (${adjustingGroup.name}) : Écart ${sign}${Math.abs(delta)} F ${adjustNote ? `(${adjustNote})` : ''}`
     } else if (adjustMode === 'add') {
-      const val = parseInt(actualCashInput) || 0
+      const val = parseCash(actualCashInput)
       if (val <= 0) return
       delta = val
       noteText = `Apport Fond de Caisse (${adjustingGroup.name}) : +${val} F ${adjustNote ? `(${adjustNote})` : ''}`
     } else if (adjustMode === 'sub') {
-      const val = parseInt(actualCashInput) || 0
+      const val = parseCash(actualCashInput)
       if (val <= 0) return
       delta = -val
       noteText = `Retrait Caisse (${adjustingGroup.name}) : -${val} F ${adjustNote ? `(${adjustNote})` : ''}`
@@ -137,6 +156,7 @@ export function CategoryCashboxWidget({
       setSavingAdjust(false)
       setAdjustingGroup(null)
       if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cahier_sale_created'))
         window.dispatchEvent(new Event('cahier_sales_updated'))
       }
       if (onRefreshData) {
@@ -329,7 +349,7 @@ export function CategoryCashboxWidget({
                 <div key={group.key} className="bg-white border border-amber-200 rounded-xl p-3 space-y-2 font-mono text-xs">
                   <div className="flex items-center justify-between font-bold text-amber-950 border-b border-amber-100 pb-1.5">
                     <span className="flex items-center gap-1.5">
-                      <span>{group.icon}</span> {group.name}
+                      <CashboxIcon groupKey={group.key} className="w-4 h-4 text-amber-900" /> {group.name}
                     </span>
                     <div className="flex items-center gap-2">
                       <button
@@ -411,7 +431,9 @@ export function CategoryCashboxWidget({
                   {/* Entête Caisse avec bouton Ajuster */}
                   <div className="flex items-center justify-between border-b border-black/5 pb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{group.icon}</span>
+                      <div className="p-2 bg-white/90 rounded-xl border border-black/5 shadow-2xs">
+                        <CashboxIcon groupKey={group.key} className="w-5 h-5" />
+                      </div>
                       <div>
                         <h4 className="font-bold text-sm text-gray-900">{group.name}</h4>
                         <span className="text-[10px] text-gray-500 font-medium">
