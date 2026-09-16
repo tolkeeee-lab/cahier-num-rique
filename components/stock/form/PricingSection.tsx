@@ -25,7 +25,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     <div className="p-3.5 bg-white border border-amber-300/90 rounded-2xl space-y-3 shadow-2xs">
       <div className="flex items-center justify-between border-b border-amber-200 pb-2">
         <div className="flex items-center gap-1.5 text-amber-950 font-black text-xs sm:text-sm">
-          <Package className="w-4 h-4 text-amber-800" />
+          <Package className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
           <span>2. Prix de Vente & Marges :</span>
         </div>
       </div>
@@ -70,9 +70,9 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             className="w-full px-2.5 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-black text-xs"
           />
           {formData.unit_price > 0 && formData.unit_cost > 0 && (
-            <div className="text-[10px] text-emerald-800 font-bold flex items-center justify-between">
+            <div className="text-[10px] text-emerald-800 font-bold flex items-center justify-between font-mono">
               <span>Marge brute :</span>
-              <span className="font-extrabold">+{formData.unit_price - formData.unit_cost} F (+{Math.round(((formData.unit_price - formData.unit_cost) / formData.unit_cost) * 100)}%)</span>
+              <span className="font-extrabold tabular-nums tracking-tight">+{formData.unit_price - formData.unit_cost} F (+{Math.round(((formData.unit_price - formData.unit_cost) / formData.unit_cost) * 100)}%)</span>
             </div>
           )}
         </div>
@@ -110,8 +110,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
               </div>
             </div>
             {formData.lot_price > 0 && formData.lot_quantity > 0 && (
-              <div className="text-[10px] text-amber-900 font-bold">
-                Soit {Math.round(formData.lot_price / formData.lot_quantity)} F / pièce
+              <div className="text-[10px] text-amber-900 font-bold font-mono">
+                Soit <span className="tabular-nums tracking-tight">{Math.round(formData.lot_price / formData.lot_quantity)}</span> F / pièce
               </div>
             )}
           </div>
@@ -139,9 +139,9 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
               className="w-full px-2.5 py-2 bg-white border border-amber-300 rounded-xl text-gray-900 font-black text-xs"
             />
             {parseFloat(cartonPrice) > 0 && parseFloat(cartonCost) > 0 && (
-              <div className="text-[10px] text-emerald-800 font-bold flex items-center justify-between">
+              <div className="text-[10px] text-emerald-800 font-bold flex items-center justify-between font-mono">
                 <span>Bénéfice par carton :</span>
-                <span className="font-extrabold">+{Math.round(parseFloat(cartonPrice) - parseFloat(cartonCost))} F</span>
+                <span className="font-extrabold tabular-nums tracking-tight">+{Math.round(parseFloat(cartonPrice) - parseFloat(cartonCost))} F</span>
               </div>
             )}
           </div>

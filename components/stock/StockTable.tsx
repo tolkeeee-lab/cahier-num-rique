@@ -86,14 +86,14 @@ export const StockTable: React.FC<StockTableProps> = ({
                         <button
                           type="button"
                           onClick={() => onAdjustStock(prod.id, -1)}
-                          className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 transition-colors cursor-pointer"
+                          className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
                           title="Retirer 1 unité"
                         >
-                          <Minus className="w-3.5 h-3.5" />
+                          <Minus className="w-3.5 h-3.5" strokeWidth={1.75} />
                         </button>
                       )}
 
-                      <span className={`px-3 py-1 rounded-xl font-black text-sm border shadow-xs ${
+                      <span className={`px-3 py-1 rounded-xl font-black text-sm font-mono tabular-nums tracking-tight border shadow-xs ${
                         isOutOfStock
                           ? 'bg-rose-100 text-rose-900 border-rose-300'
                           : isLow
@@ -107,10 +107,10 @@ export const StockTable: React.FC<StockTableProps> = ({
                         <button
                           type="button"
                           onClick={() => onAdjustStock(prod.id, 1)}
-                          className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 transition-colors cursor-pointer"
+                          className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
                           title="Ajouter 1 unité"
                         >
-                          <Plus className="w-3.5 h-3.5" />
+                          <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
                         </button>
                       )}
                     </div>
@@ -118,13 +118,13 @@ export const StockTable: React.FC<StockTableProps> = ({
 
                   {/* Prix d'Achat (Masqué aux employés) */}
                   {!isEmployee && (
-                    <td className="p-3.5 text-right text-gray-700 font-bold">
+                    <td className="p-3.5 text-right text-gray-700 font-bold tabular-nums tracking-tight">
                       {formatPrice(prod.unit_cost || 0)}
                     </td>
                   )}
 
                   {/* Prix de Vente */}
-                  <td className="p-3.5 text-right font-extrabold text-amber-900">
+                  <td className="p-3.5 text-right font-extrabold text-amber-900 tabular-nums tracking-tight">
                     {formatPrice(prod.unit_price || 0)}
                   </td>
 
@@ -134,20 +134,20 @@ export const StockTable: React.FC<StockTableProps> = ({
                       <button
                         type="button"
                         onClick={() => onEditProduct(prod)}
-                        className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 transition-colors border border-amber-300 cursor-pointer"
+                        className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 transition-all duration-100 ease-out border border-amber-300 cursor-pointer"
                         title="Modifier le produit"
                       >
-                        <Edit3 className="w-3.5 h-3.5" />
+                        <Edit3 className="w-3.5 h-3.5" strokeWidth={1.75} />
                       </button>
 
                       {!isEmployee && (
                         <button
                           type="button"
                           onClick={() => onDeleteProduct(prod.id)}
-                          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 transition-colors border border-rose-300 cursor-pointer"
+                          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 active:scale-[0.97] text-rose-800 transition-all duration-100 ease-out border border-rose-300 cursor-pointer"
                           title="Supprimer le produit"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
                         </button>
                       )}
                     </div>

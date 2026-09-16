@@ -35,12 +35,17 @@ export function ProductMergeModal({
   const currentPair = duplicatePairs[activePairIndex]
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="bg-[#fbf9f4] border-2 border-amber-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="px-5 py-4 border-b border-amber-200 bg-amber-100 flex items-center justify-between">
           <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
             <GitMerge className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-            <span>Fusionner les doublons ({activePairIndex + 1}/{duplicatePairs.length})</span>
+            <span>Fusionner les doublons (<span className="font-mono tabular-nums">{activePairIndex + 1}/{duplicatePairs.length}</span>)</span>
           </div>
           <button
             onClick={onClose}

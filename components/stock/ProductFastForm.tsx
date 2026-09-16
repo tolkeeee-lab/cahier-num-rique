@@ -62,33 +62,33 @@ export const ProductFastForm: React.FC<ProductFastFormProps> = ({
         <button
           type="button"
           onClick={() => handleSelectTradeType('retail')}
-          className={`py-2 px-1 rounded-lg flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+          className={`py-2 px-1 rounded-lg flex flex-col items-center justify-center gap-1 transition-all active:scale-[0.97] duration-100 ease-out cursor-pointer ${
             currentTradeType === 'retail' ? 'bg-amber-900 text-white font-black shadow-xs' : 'text-amber-950 hover:bg-amber-200/60 font-bold'
           }`}
         >
-          <Store className="w-3.5 h-3.5" />
+          <Store className="w-3.5 h-3.5" strokeWidth={1.75} />
           <span className="text-[10px] text-center leading-tight">Détail (Pièce)</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleSelectTradeType('semi_wholesale')}
-          className={`py-2 px-1 rounded-lg flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+          className={`py-2 px-1 rounded-lg flex flex-col items-center justify-center gap-1 transition-all active:scale-[0.97] duration-100 ease-out cursor-pointer ${
             currentTradeType === 'semi_wholesale' ? 'bg-amber-900 text-white font-black shadow-xs' : 'text-amber-950 hover:bg-amber-200/60 font-bold'
           }`}
         >
-          <Layers className="w-3.5 h-3.5" />
+          <Layers className="w-3.5 h-3.5" strokeWidth={1.75} />
           <span className="text-[10px] text-center leading-tight">Demi-Gros (Pack)</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleSelectTradeType('wholesale')}
-          className={`py-2 px-1 rounded-lg flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+          className={`py-2 px-1 rounded-lg flex flex-col items-center justify-center gap-1 transition-all active:scale-[0.97] duration-100 ease-out cursor-pointer ${
             currentTradeType === 'wholesale' ? 'bg-amber-900 text-white font-black shadow-xs' : 'text-amber-950 hover:bg-amber-200/60 font-bold'
           }`}
         >
-          <Truck className="w-3.5 h-3.5" />
+          <Truck className="w-3.5 h-3.5" strokeWidth={1.75} />
           <span className="text-[10px] text-center leading-tight">Grossiste (Carton)</span>
         </button>
       </div>

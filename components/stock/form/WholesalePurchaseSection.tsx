@@ -27,7 +27,7 @@ export const WholesalePurchaseSection: React.FC<WholesalePurchaseSectionProps> =
     <div className="p-3.5 bg-gradient-to-br from-amber-100/90 to-yellow-100/60 border-2 border-amber-400/90 rounded-2xl space-y-3 shadow-2xs">
       <div className="flex items-center justify-between border-b border-amber-300 pb-2">
         <div className="flex items-center gap-1.5 text-amber-950 font-black text-xs sm:text-sm">
-          <Truck className="w-4 h-4 text-amber-800" />
+          <Truck className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
           <span>1. Achat Fournisseur (Colisage) :</span>
         </div>
         <span className="text-[10px] text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full font-bold border border-amber-300">
@@ -100,10 +100,10 @@ export const WholesalePurchaseSection: React.FC<WholesalePurchaseSectionProps> =
 
       <div className="p-2 bg-white/90 border border-amber-300 rounded-xl flex items-center justify-between font-mono">
         <span className="text-gray-700 text-xs font-bold flex items-center gap-1.5">
-          <Lightbulb className="w-3.5 h-3.5 text-amber-700" />
+          <Lightbulb className="w-3.5 h-3.5 text-amber-700" strokeWidth={1.75} />
           <span>Prix d'achat unitaire de revient :</span>
         </span>
-        <span className="text-amber-950 font-black text-xs sm:text-sm px-2 py-0.5 bg-amber-100 rounded-lg border border-amber-300">
+        <span className="text-amber-950 font-black text-xs sm:text-sm px-2 py-0.5 bg-amber-100 rounded-lg border border-amber-300 tabular-nums tracking-tight">
           {formData.unit_cost > 0 
             ? (formData.unit_cost % 1 === 0 
                 ? `${formData.unit_cost} FCFA / ${formData.unit || 'pièce'}` 

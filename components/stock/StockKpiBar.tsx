@@ -44,11 +44,11 @@ export function StockKpiBar({
   ]
 
   return (
-    <div className="flex gap-2 px-4 py-2 border-b border-gray-100 overflow-x-auto scrollbar-hide flex-shrink-0 bg-white bg-opacity-50">
+    <div className="flex gap-2 px-4 py-2 border-b border-gray-100 overflow-x-auto scrollbar-hide flex-shrink-0 bg-white/70">
       {kpis.map(kpi => (
-        <div key={kpi.label} title={kpi.title} className={`flex-shrink-0 text-center px-3 py-1 bg-[#fffdf9] border rounded-xl ${kpi.color}`}>
-          <div className="text-[8px] font-bold uppercase opacity-70">{kpi.label}</div>
-          <div className={`font-mono text-sm font-bold ${kpi.color}`}>{kpi.value}</div>
+        <div key={kpi.label} title={kpi.title} className={`flex-shrink-0 text-center px-3 py-1.5 bg-[#fffdf9] border rounded-xl shadow-xs transition-transform active:scale-[0.98] ${kpi.color}`}>
+          <div className="text-[10px] font-bold uppercase tracking-wider opacity-70">{kpi.label}</div>
+          <div className={`font-mono tabular-nums tracking-tight text-sm font-black ${kpi.color}`}>{kpi.value}</div>
         </div>
       ))}
     </div>
