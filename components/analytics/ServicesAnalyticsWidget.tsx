@@ -142,7 +142,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
             href={generateWhatsAppPerformanceReport(sales, period === 'all' ? 'Tout' : period === 'month' ? 'Ce Mois' : period === '7days' ? '7 Jours' : 'Aujourd\'hui', shopName)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm active:scale-[0.97]"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm active:scale-[0.97] cursor-pointer"
           >
             <Share2 className="w-3 h-3" />
             <span>Rapport Atelier WhatsApp</span>
@@ -158,7 +158,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Recette Services</span>
-            <span className="text-lg font-bold font-mono text-emerald-800">{formatPrice(serviceStats.totalRecette)}</span>
+            <span className="text-lg font-bold font-mono tabular-nums text-emerald-800">{formatPrice(serviceStats.totalRecette)}</span>
           </div>
         </div>
 
@@ -168,7 +168,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Clients Servis</span>
-            <span className="text-lg font-bold font-mono text-gray-800">{serviceStats.totalClientsServis} pers.</span>
+            <span className="text-lg font-bold font-mono tabular-nums text-gray-800">{serviceStats.totalClientsServis} pers.</span>
           </div>
         </div>
 
@@ -178,7 +178,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Main d'Œuvre Pur</span>
-            <span className="text-lg font-bold font-mono text-gray-800">{formatPrice(serviceStats.totalServices)}</span>
+            <span className="text-lg font-bold font-mono tabular-nums text-gray-800">{formatPrice(serviceStats.totalServices)}</span>
           </div>
         </div>
 
@@ -188,7 +188,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
           </div>
           <div>
             <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Recette / Client</span>
-            <span className="text-lg font-bold font-mono text-gray-800">{formatPrice(serviceStats.recetteMoyenneClient)}</span>
+            <span className="text-lg font-bold font-mono tabular-nums text-gray-800">{formatPrice(serviceStats.recetteMoyenneClient)}</span>
           </div>
         </div>
       </div>
@@ -203,16 +203,16 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
         <div className="space-y-3">
           <div className="h-6 w-full bg-gray-100 rounded-2xl overflow-hidden flex shadow-inner border border-gray-200">
             <div
-              className="bg-purple-700 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all"
+              className="bg-purple-700 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all overflow-hidden"
               style={{ width: `${serviceStats.ratioServices}%` }}
             >
-              Services {serviceStats.ratioServices}%
+              {serviceStats.ratioServices >= 12 ? `Services ${serviceStats.ratioServices}%` : ''}
             </div>
             <div
-              className="bg-emerald-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all"
+              className="bg-emerald-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all overflow-hidden"
               style={{ width: `${serviceStats.ratioProduits}%` }}
             >
-              Matériel {serviceStats.ratioProduits}%
+              {serviceStats.ratioProduits >= 12 ? `Matériel ${serviceStats.ratioProduits}%` : ''}
             </div>
           </div>
 
