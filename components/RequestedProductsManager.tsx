@@ -25,13 +25,21 @@ export function RequestedProductsManager({
   const [estimatedPrice, setEstimatedPrice] = useState('')
   const [notes, setNotes] = useState('')
 
-  // Storage key
+  // Storage key avec support dual-tenant
+  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
   const storageKey = `cahier_requested_products_${shopId}`
+  const altStorageKey = `cahier_requested_products_${altShopId}`
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(storageKey)
-      const localItems: RequestedProduct[] = stored ? JSON.parse(stored) : []
+      const altStored = localStorage.getItem(altStorageKey)
+      const primaryItems: RequestedProduct[] = stored ? JSON.parse(stored) : []
+      const altItems: RequestedProduct[] = altStored ? JSON.parse(altStored) : []
+      const localItemsMap = new Map<string, RequestedProduct>()
+      altItems.forEach(i => localItemsMap.set(i.name.toLowerCase().trim(), i))
+      primaryItems.forEach(i => localItemsMap.set(i.name.toLowerCase().trim(), i))
+      const localItems: RequestedProduct[] = Array.from(localItemsMap.values())
 
       // Fusionner avec les ventes de type 'client_request' (patron ↔ employé)
       const salesSource = sales || getOfflineSales(shopId)

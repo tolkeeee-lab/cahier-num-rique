@@ -94,7 +94,7 @@ export default function BoutiqueAssistantModal({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold flex items-center justify-center transition-transform active:scale-95"
+            className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold flex items-center justify-center active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
             aria-label="Fermer"
           >
             <X className="w-4 h-4" />
@@ -125,7 +125,7 @@ export default function BoutiqueAssistantModal({
               type="button"
               onClick={handleVoiceInput}
               title="Parler à l'assistant"
-              className={`p-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 active:scale-95 ${
+              className={`p-2 rounded-xl text-xs font-bold flex items-center gap-1 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer ${
                 isListening
                   ? 'bg-rose-500 text-white animate-pulse'
                   : 'bg-amber-200 text-amber-900 hover:bg-amber-300'
@@ -144,7 +144,7 @@ export default function BoutiqueAssistantModal({
             {/* Submit Button */}
             <button
               type="submit"
-              className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 active:scale-95 transition-transform"
+              className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Poser</span>
@@ -166,7 +166,7 @@ export default function BoutiqueAssistantModal({
                       setQuery(item.q)
                       handleAsk(item.q)
                     }}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100/70 hover:bg-amber-200 border border-amber-300 rounded-full text-[11px] text-amber-950 font-bold font-mono transition-transform hover:scale-105 active:scale-95"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100/70 hover:bg-amber-200 border border-amber-300 rounded-full text-[11px] text-amber-950 font-bold font-mono active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer"
                   >
                     <IconComponent className="w-3 h-3 text-amber-800 flex-shrink-0" />
                     <span>{item.label}</span>

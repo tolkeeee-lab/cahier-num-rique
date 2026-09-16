@@ -173,6 +173,9 @@ export function DebtsBook({
     ]
     loadDebts(combinedSales)
     if (onRefreshTotals) onRefreshTotals()
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+    }
   }
 
   const filteredDebts = debts.filter((d) => {

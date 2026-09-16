@@ -69,12 +69,19 @@ export function parseRequestedProductFromNotebookText(text: string): { isRequest
  * Enregistre ou incrémente une demande client dans localStorage / IndexedDB
  */
 export function recordRequestedProductInStorage(shopId: string, productName: string, estimatedPrice?: number, notes?: string): RequestedProduct[] {
-  if (typeof window === 'undefined') return []
+  if (typeof window === 'undefined' || !shopId) return []
   const storageKey = `cahier_requested_products_${shopId}`
+  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
+  const altStorageKey = `cahier_requested_products_${altShopId}`
 
   try {
     const existingRaw = localStorage.getItem(storageKey)
-    const items: RequestedProduct[] = existingRaw ? JSON.parse(existingRaw) : []
+    const existingAltRaw = localStorage.getItem(altStorageKey)
+    const items: RequestedProduct[] = existingRaw
+      ? JSON.parse(existingRaw)
+      : existingAltRaw
+        ? JSON.parse(existingAltRaw)
+        : []
 
     const normTarget = productName.toLowerCase().trim()
     const existingIndex = items.findIndex(i => i.name.toLowerCase().trim() === normTarget)
