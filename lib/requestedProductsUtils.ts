@@ -1,6 +1,4 @@
-/**
- * requestedProductsUtils.ts — Gestion et synchronisation des produits réclamés par les clients
- */
+import { normalizeProductName } from '@/lib/productUtils'
 
 export interface RequestedProduct {
   id: string
@@ -53,9 +51,10 @@ export function parseRequestedProductFromNotebookText(text: string): { isRequest
       }
 
       if (cleanName.length >= 2) {
+        const normalized = normalizeProductName(cleanName)
         return {
           isRequestedProduct: true,
-          cleanName: cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
+          cleanName: normalized || cleanName.charAt(0).toUpperCase() + cleanName.slice(1),
           price
         }
       }
@@ -83,8 +82,9 @@ export function recordRequestedProductInStorage(shopId: string, productName: str
         ? JSON.parse(existingAltRaw)
         : []
 
-    const normTarget = productName.toLowerCase().trim()
-    const existingIndex = items.findIndex(i => i.name.toLowerCase().trim() === normTarget)
+    const cleanItemName = normalizeProductName(productName).trim()
+    const normTarget = cleanItemName.toLowerCase()
+    const existingIndex = items.findIndex(i => normalizeProductName(i.name).toLowerCase().trim() === normTarget)
 
     if (existingIndex >= 0) {
       items[existingIndex].requestCount += 1
@@ -97,7 +97,7 @@ export function recordRequestedProductInStorage(shopId: string, productName: str
     } else {
       const newReq: RequestedProduct = {
         id: `req_${Date.now()}`,
-        name: productName.trim(),
+        name: cleanItemName || productName.trim(),
         category: 'Alimentation',
         requestCount: 1,
         estimatedPrice,

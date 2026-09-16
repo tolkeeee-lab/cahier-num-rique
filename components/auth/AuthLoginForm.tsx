@@ -95,7 +95,7 @@ export const AuthLoginForm: React.FC<AuthLoginFormProps> = ({
       <button
         type="submit"
         disabled={loading || !email.trim()}
-        className="w-full py-3 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
+        className="w-full py-3 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg cursor-pointer"
       >
         <span>{loading ? 'Connexion...' : useMagicLink ? 'Envoyer le lien de connexion' : 'Se Connecter'}</span>
         <ArrowRight className="w-4 h-4" />

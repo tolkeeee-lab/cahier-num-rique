@@ -144,6 +144,32 @@ if (analysisFraction) {
   assert(analysisFraction.totalAmount === 300, `Montant total attendu 300 F (0.5 x 600), obtenu: ${analysisFraction.totalAmount} F`)
 }
 
+// ─── 6. TEST RÉSILIENCE DEMANDES CLIENTS & CALCULS FOYER ─────────────────────
+console.log('\n--- 6. TEST RÉSILIENCE DEMANDES CLIENTS & FOYER ---')
+
+import { parseRequestedProductFromNotebookText } from '../lib/requestedProductsUtils'
+
+const parsedReq = parseRequestedProductFromNotebookText('demande client beufort 600f')
+assert(parsedReq !== null, `La demande client doit être détectée`)
+if (parsedReq) {
+  assert(parsedReq.cleanName === 'Beaufort', `Le nom doit être canoniquement normalisé en 'Beaufort' (obtenu: ${parsedReq.cleanName})`)
+  assert(parsedReq.price === 600, `Le prix extrait doit être 600 F`)
+}
+
+// Vérification de la non-apparition de NaN sur des écritures incomplètes
+const incompleteSales: any[] = [
+  { id: '1', status: 'normal', pen_color: 'red', type: 'cash_out', notes: 'marché légume', total: undefined },
+  { id: '2', status: 'crossed_out', pen_color: 'red', type: 'cash_out', notes: 'marché viande', total: 5000 },
+  { id: '3', status: 'normal', pen_color: 'red', type: 'cash_out', notes: 'facture cie', total: null },
+]
+
+const safeMarche = incompleteSales
+  .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && (s.notes || '').toLowerCase().includes('marché'))
+  .reduce((sum, s) => sum + (Number(s.total) || 0), 0)
+
+assert(Number.isFinite(safeMarche), `Le total marché doit être un nombre fini (pas NaN)`)
+assert(safeMarche === 0, `Le total marché doit ignorer les undefined et lignes rayées (obtenu: ${safeMarche})`)
+
 console.log('\n============================================================')
 console.log(`📊 RÉSULTAT DU CONTRÔLE DE RÉSILIENCE : ${passed} SUCCÈS / ${failed} ÉCHECS`)
 console.log('============================================================\n')

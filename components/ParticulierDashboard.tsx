@@ -36,50 +36,59 @@ export function ParticulierDashboard({
   // Calculs Budgétaires Spécifiques Famille / Foyer
   const incomeTotal = sales
     .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale'))
-    .reduce((sum, s) => sum + (s.paid || s.total || 0), 0)
+    .reduce((sum, s) => sum + (Number(s.paid) || Number(s.total) || 0), 0)
 
   const expensesTotal = sales
     .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out'))
-    .reduce((sum, s) => sum + (s.total || 0), 0)
+    .reduce((sum, s) => sum + (Number(s.total) || 0), 0)
 
   const reserveStockTotal = sales
     .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'green' || s.type === 'purchase_stock'))
-    .reduce((sum, s) => sum + (s.total || 0), 0)
+    .reduce((sum, s) => sum + (Number(s.total) || 0), 0)
 
-  const netBalance = incomeTotal - expensesTotal - reserveStockTotal
+  const rawBalance = incomeTotal - expensesTotal - reserveStockTotal
+  const netBalance = Number.isFinite(rawBalance) ? rawBalance : 0
 
   const tontineTotal = sales
     .filter(s => s.status !== 'crossed_out' && (s.notes || '').toLowerCase().includes('tontine'))
-    .reduce((sum, s) => sum + (s.total || 0), 0)
+    .reduce((sum, s) => sum + (Number(s.total) || 0), 0)
 
   const boutiquierCreditTotal = sales
     .filter(s => s.status !== 'crossed_out' && s.pen_color === 'purple')
-    .reduce((sum, s) => sum + (s.debt || s.total || 0), 0)
+    .reduce((sum, s) => sum + (Number(s.debt) || Number(s.total) || 0), 0)
 
   const categoryBreakdown = [
     {
       category: 'Marché',
       label: 'Marché & Nourriture',
       icon: <ShoppingCart className="w-4 h-4 text-emerald-600 flex-shrink-0" />,
-      amount: sales.filter(s => (s.notes || '').toLowerCase().includes('marché')).reduce((sum, s) => sum + s.total, 0),
+      amount: sales
+        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && (s.notes || '').toLowerCase().includes('marché'))
+        .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
     {
       category: 'Loyer',
       label: 'Loyer & Logement',
       icon: <Home className="w-4 h-4 text-blue-600 flex-shrink-0" />,
-      amount: sales.filter(s => (s.notes || '').toLowerCase().includes('loyer')).reduce((sum, s) => sum + s.total, 0),
+      amount: sales
+        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && (s.notes || '').toLowerCase().includes('loyer'))
+        .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
     {
       category: 'Factures',
       label: 'Factures (CIE / Eau / Net)',
       icon: <Zap className="w-4 h-4 text-amber-600 flex-shrink-0" />,
-      amount: sales.filter(s => /cie|sodeci|eau|electricite/i.test(s.notes || '')).reduce((sum, s) => sum + s.total, 0),
+      amount: sales
+        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && /cie|sodeci|eau|electricite/i.test(s.notes || ''))
+        .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
     {
       category: 'École',
       label: 'Scolarité & Enfants',
       icon: <GraduationCap className="w-4 h-4 text-purple-600 flex-shrink-0" />,
-      amount: sales.filter(s => /ecole|école|scolarité/i.test(s.notes || '')).reduce((sum, s) => sum + s.total, 0),
+      amount: sales
+        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && /ecole|école|scolarité/i.test(s.notes || ''))
+        .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
   ]
 
@@ -162,7 +171,7 @@ export function ParticulierDashboard({
       {activeTab === 'carnet' && (
         <CarnetBoutiquierWidget
           totalCreditBoutiquier={boutiquierCreditTotal}
-          debtsCount={sales.filter(s => s.pen_color === 'purple').length}
+          debtsCount={sales.filter(s => s.status !== 'crossed_out' && s.pen_color === 'purple').length}
         />
       )}
 
