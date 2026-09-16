@@ -20,6 +20,99 @@ export interface SaleExportItem {
   }>
 }
 
+export interface ProductExportItem {
+  id?: string
+  name: string
+  category?: string
+  barcode?: string
+  unit_cost?: number
+  purchase_price?: number
+  unit_price?: number
+  selling_price?: number
+  initial_stock?: number
+  current_stock?: number
+  stock_quantity?: number
+  alert_threshold?: number
+  min_stock_alert?: number
+  unit?: string
+}
+
+/**
+ * Exporte le catalogue de stock en fichier CSV compatible Excel (UTF-8 BOM).
+ */
+export function exportProductsToCSV(
+  products: ProductExportItem[],
+  shopName: string = 'Cahier_Numerique'
+) {
+  if (products.length === 0) {
+    alert("Aucun produit disponible à exporter.")
+    return
+  }
+
+  const headers = [
+    "Nom du Produit",
+    "Catégorie",
+    "Code-Barres / Réf",
+    "Prix d'Achat (F)",
+    "Prix de Vente (F)",
+    "Marge Unitaire (F)",
+    "Stock Actuel",
+    "Unité",
+    "Seuil d'Alerte",
+    "Valeur Stock Vente (F)",
+    "Valeur Stock Achat (F)",
+    "Statut Stock"
+  ]
+
+  const rows = products.map(p => {
+    const buyPrice = Number(p.unit_cost ?? p.purchase_price ?? 0)
+    const sellPrice = Number(p.unit_price ?? p.selling_price ?? 0)
+    const margin = sellPrice - buyPrice
+    const stock = Number(p.current_stock ?? p.stock_quantity ?? p.initial_stock ?? 0)
+    const threshold = Number(p.alert_threshold ?? p.min_stock_alert ?? 0)
+    const unit = p.unit || 'unité'
+
+    let status = 'En Stock'
+    if (stock <= 0) {
+      status = 'Rupture'
+    } else if (threshold > 0 && stock <= threshold) {
+      status = 'Alerte Faible'
+    }
+
+    const cleanName = (p.name || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')
+    const cleanCat = (p.category || 'Général').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')
+    const cleanBarcode = (p.barcode || '—').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')
+
+    return [
+      `"${cleanName}"`,
+      `"${cleanCat}"`,
+      `"${cleanBarcode}"`,
+      buyPrice,
+      sellPrice,
+      margin,
+      stock,
+      `"${unit}"`,
+      threshold,
+      stock * sellPrice,
+      stock * buyPrice,
+      `"${status}"`
+    ]
+  })
+
+  const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n")
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  const cleanShopName = shopName.replace(/[^a-zA-Z0-9_-]/g, '_')
+  const dateStr = getTodayDateString()
+
+  link.setAttribute("href", url)
+  link.setAttribute("download", `Inventaire_Stock_${cleanShopName}_${dateStr}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
 /**
  * Exporte une liste de ventes en fichier CSV compatible Excel (UTF-8 BOM).
  */
@@ -56,10 +149,10 @@ export function exportSalesToCSV(
     return [
       `"${s.date}"`,
       `"${s.time || ''}"`,
-      `"${(s.client || 'Client anonyme').replace(/"/g, '""')}"`,
+      `"${(s.client || 'Client anonyme').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`,
       `"${s.type}"`,
       `"${statusLabel}"`,
-      `"${articlesStr.replace(/"/g, '""')}"`,
+      `"${articlesStr.replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`,
       s.total || 0,
       s.paid || 0,
       s.debt || 0
@@ -352,14 +445,14 @@ export function exportSyscohadaJournalCSV(
   ]
 
   const rows = journal.map((j: any) => [
-    `"${j.pieceRef}"`,
+    `"${(j.pieceRef || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`,
     `"${j.date}"`,
     `"${j.time || ''}"`,
-    `"${(j.description || '').replace(/"/g, '""')}"`,
-    `"${j.debitAccountCode}"`,
-    `"${j.debitAccountLabel.replace(/"/g, '""')}"`,
-    `"${j.creditAccountCode}"`,
-    `"${j.creditAccountLabel.replace(/"/g, '""')}"`,
+    `"${(j.description || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`,
+    `"${j.debitAccountCode || ''}"`,
+    `"${(j.debitAccountLabel || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`,
+    `"${j.creditAccountCode || ''}"`,
+    `"${(j.creditAccountLabel || '').replace(/[\r\n]+/g, ' ').replace(/"/g, '""')}"`,
     j.amount || 0
   ])
 

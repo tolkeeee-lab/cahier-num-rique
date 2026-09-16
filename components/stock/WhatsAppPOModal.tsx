@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { X, MessageCircle } from 'lucide-react'
 import { StockItem } from './types'
 import { getStockStatus } from './stockUtils'
@@ -22,6 +22,15 @@ export function WhatsAppPOModal({
   items,
   generateWhatsAppUrl,
 }: WhatsAppPOModalProps) {
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const alertItems = items.filter(i => getStockStatus(i) === 'low' || getStockStatus(i) === 'out')
@@ -31,11 +40,14 @@ export function WhatsAppPOModal({
       <div className="bg-[#fbf9f4] border border-emerald-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="px-5 py-4 border-b border-emerald-200 bg-emerald-100 flex items-center justify-between text-emerald-950">
           <div className="font-bold text-sm flex items-center gap-2">
-            <MessageCircle className="w-4 h-4 text-emerald-800" />
+            <MessageCircle className="w-4 h-4 text-emerald-800" strokeWidth={1.75} />
             <span>Bon de Commande WhatsApp</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-emerald-200/60 transition-colors cursor-pointer">
-            <X className="w-4 h-4" />
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-emerald-200/60 transition-colors cursor-pointer active:scale-[0.97]"
+          >
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -47,7 +59,7 @@ export function WhatsAppPOModal({
               placeholder="ex: +22997000000 ou laisser vide"
               value={supplierPhone}
               onChange={e => setSupplierPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-xs outline-none focus:border-emerald-600"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xl font-mono text-xs outline-none focus:border-emerald-600 shadow-inner"
             />
           </div>
 
@@ -59,8 +71,8 @@ export function WhatsAppPOModal({
               alertItems.map(item => (
                 <div key={item.id} className="flex justify-between items-center text-xs py-1 border-b border-gray-100 last:border-0 font-mono">
                   <span className="font-bold text-gray-800">{item.name}</span>
-                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">
-                    A commander: {Math.max(item.alert_threshold * 2 - Math.max(0, item.current_stock), 10)} {item.unit}
+                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold tabular-nums">
+                    À commander : {Math.max(item.alert_threshold * 2 - Math.max(0, item.current_stock), 10)} {item.unit}
                   </span>
                 </div>
               ))
@@ -71,7 +83,7 @@ export function WhatsAppPOModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+              className="flex-1 py-2 border border-gray-300 rounded-full font-bold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer active:scale-[0.97]"
             >
               Fermer
             </button>
@@ -87,7 +99,7 @@ export function WhatsAppPOModal({
               rel="noopener noreferrer"
               className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full text-center transition-all active:scale-[0.97] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
             >
-              <MessageCircle className="w-4 h-4" />
+              <MessageCircle className="w-4 h-4" strokeWidth={1.75} />
               <span>Envoyer WhatsApp</span>
             </a>
           </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { X, ShoppingBag, Share2, Copy, Check, Sparkles } from 'lucide-react'
 
 interface Product {
@@ -36,6 +36,15 @@ export const RestockAdvisorModal: React.FC<RestockAdvisorModalProps> = ({
   shopName = 'Ma Boutique',
 }) => {
   const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   // Calcul intelligent des besoins de réapprovisionnement
   const suggestions = useMemo(() => {
@@ -127,7 +136,7 @@ Merci de nous confirmer la disponibilité et le montant total !`
         <div className="flex items-center justify-between border-b border-amber-200 pb-3 flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-amber-200 text-amber-950 font-bold">
-              <ShoppingBag className="w-5 h-5" />
+              <ShoppingBag className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <div>
               <h3 className="text-base font-extrabold text-gray-900 font-handwritten">
@@ -136,8 +145,12 @@ Merci de nous confirmer la disponibilité et le montant total !`
               <p className="text-[11px] font-mono text-gray-600">Calcul basé sur vos ventes réelles des 7 derniers jours</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 rounded-lg transition-colors cursor-pointer">
-            <X className="w-5 h-5" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 text-gray-400 hover:text-gray-700 rounded-lg transition-colors cursor-pointer active:scale-[0.97]"
+          >
+            <X className="w-5 h-5" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -145,7 +158,7 @@ Merci de nous confirmer la disponibilité et le montant total !`
         <div className="flex-1 overflow-y-auto space-y-2 font-mono text-xs pr-1">
           {suggestions.length === 0 ? (
             <div className="p-6 text-center bg-white rounded-2xl border border-amber-200 space-y-2">
-              <Sparkles className="w-8 h-8 text-emerald-600 mx-auto" />
+              <Sparkles className="w-8 h-8 text-emerald-600 mx-auto" strokeWidth={1.75} />
               <p className="font-extrabold text-sm text-gray-900">Vos stocks sont au vert !</p>
               <p className="text-gray-500 text-xs">Aucun article ne risque de rupture pour les 7 prochains jours.</p>
             </div>
@@ -154,14 +167,14 @@ Merci de nous confirmer la disponibilité et le montant total !`
               <div key={idx} className="p-3 bg-white border border-amber-200 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
                 <div>
                   <div className="font-extrabold text-sm text-gray-900">{item.product.name}</div>
-                  <div className="text-[11px] text-gray-500 flex items-center gap-2 pt-0.5">
+                  <div className="text-[11px] text-gray-500 flex items-center gap-2 pt-0.5 font-mono tabular-nums">
                     <span className="text-rose-700 font-bold">Stock actuel : {item.currentStock}</span>
                     <span>•</span>
                     <span>Vente : ~{item.dailyRunRate}/jour</span>
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <span className="inline-block px-2.5 py-1 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 font-black text-xs">
+                  <span className="inline-block px-2.5 py-1 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 font-black text-xs tabular-nums">
                     + {item.suggestedPackages} {item.packageName}(s)
                   </span>
                 </div>
@@ -175,18 +188,18 @@ Merci de nous confirmer la disponibilité et le montant total !`
           <button
             type="button"
             onClick={handleCopy}
-            className="flex-1 py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer font-mono"
+            className="flex-1 py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer font-mono active:scale-[0.97]"
           >
-            {copied ? <Check className="w-4 h-4 text-emerald-700" /> : <Copy className="w-4 h-4 text-amber-800" />}
+            {copied ? <Check className="w-4 h-4 text-emerald-700" strokeWidth={1.75} /> : <Copy className="w-4 h-4 text-amber-800" strokeWidth={1.75} />}
             <span>{copied ? 'Copié !' : 'Copier Bon'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md font-mono"
+            className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md font-mono active:scale-[0.97]"
           >
-            <Share2 className="w-4 h-4" />
+            <Share2 className="w-4 h-4" strokeWidth={1.75} />
             <span>Commander (WhatsApp)</span>
           </button>
         </div>

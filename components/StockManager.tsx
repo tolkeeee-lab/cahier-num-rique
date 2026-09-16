@@ -8,7 +8,7 @@ import { ProductModal } from '@/components/stock/ProductModal'
 import { RestockAdvisorModal } from '@/components/stock/RestockAdvisorModal'
 import { ProductMergeModal } from '@/components/stock/ProductMergeModal'
 import { StockFormState } from '@/components/stock/types'
-import { exportSalesToCSV } from '@/lib/exportUtils'
+import { exportProductsToCSV } from '@/lib/exportUtils'
 import { clearOfflineProducts, saveOfflineProduct, deleteOfflineProduct, getOfflineSales, getOfflineProducts, replaceOfflineProducts } from '@/lib/offlineDb'
 import { findDuplicateCandidates } from '@/lib/productUtils'
 
@@ -393,7 +393,7 @@ export function StockManager({
         categories={categories}
         onAddProduct={handleOpenAddModal}
         onOpenRestockAdvisor={() => setIsRestockModalOpen(true)}
-        onExportCSV={() => exportSalesToCSV(filteredProducts as any, `Inventaire_Stock_${shopId}`)}
+        onExportCSV={() => exportProductsToCSV(filteredProducts, `Stock_${shopId}`)}
         onClearAllStock={handleClearAllStock}
         hasProducts={products.length > 0}
         isEmployee={isEmployee}

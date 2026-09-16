@@ -479,7 +479,22 @@ export function markSyncError(shopId: string, saleId: string, error: string): vo
 // ─── Opérations sur les Dettes Clients ───────────────────────────────────────
 
 export function getOfflineClients(shopId: string): OfflineDebt[] {
-  return readJson<OfflineDebt[]>(clientsKey(shopId), [])
+  if (!shopId) return []
+  const alt = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
+  const primary = readJson<OfflineDebt[]>(clientsKey(shopId), [])
+  const altList = readJson<OfflineDebt[]>(clientsKey(alt), [])
+  if (altList.length === 0) return primary
+  if (primary.length === 0) return altList
+  const map = new Map<string, OfflineDebt>()
+  for (const c of altList) {
+    const key = (c.client_name || '').toLowerCase().trim()
+    if (key) map.set(key, c)
+  }
+  for (const c of primary) {
+    const key = (c.client_name || '').toLowerCase().trim()
+    if (key) map.set(key, c)
+  }
+  return Array.from(map.values())
 }
 
 export function replaceOfflineClients(shopId: string, clients: OfflineDebt[]): void {
@@ -506,7 +521,22 @@ export function addOrUpdateOfflineClientDebt(
 // ─── Opérations sur les Dettes Fournisseurs ──────────────────────────────────
 
 export function getOfflineSuppliers(shopId: string): OfflineDebt[] {
-  return readJson<OfflineDebt[]>(suppliersKey(shopId), [])
+  if (!shopId) return []
+  const alt = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
+  const primary = readJson<OfflineDebt[]>(suppliersKey(shopId), [])
+  const altList = readJson<OfflineDebt[]>(suppliersKey(alt), [])
+  if (altList.length === 0) return primary
+  if (primary.length === 0) return altList
+  const map = new Map<string, OfflineDebt>()
+  for (const s of altList) {
+    const key = (s.client_name || '').toLowerCase().trim()
+    if (key) map.set(key, s)
+  }
+  for (const s of primary) {
+    const key = (s.client_name || '').toLowerCase().trim()
+    if (key) map.set(key, s)
+  }
+  return Array.from(map.values())
 }
 
 export function replaceOfflineSuppliers(shopId: string, suppliers: OfflineDebt[]): void {
