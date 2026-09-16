@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { X, Store, Utensils, Scissors } from 'lucide-react'
 
 interface NewShopModalProps {
@@ -22,17 +22,34 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
   onActivityChange,
   onCreate,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="w-full max-w-md bg-[#fdfaf2] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Entête Modale */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-800">
-              <Store className="w-4 h-4" />
+              <Store className="w-4 h-4" strokeWidth={1.75} />
             </div>
             <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">Nouveau Point de Vente</h3>
           </div>
@@ -41,7 +58,7 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
             onClick={onClose}
             className="p-1 rounded-lg text-gray-400 hover:text-gray-700 transition-colors cursor-pointer active:scale-[0.97]"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -68,39 +85,39 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
               <button
                 type="button"
                 onClick={() => onActivityChange('boutique')}
-                className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
+                className={`p-3 rounded-xl border text-center transition-all cursor-pointer active:scale-[0.97] ${
                   newShopActivity === 'boutique'
                     ? 'bg-amber-800 text-white border-amber-900 font-extrabold shadow-md'
                     : 'bg-white text-gray-700 border-amber-300 hover:bg-amber-50'
                 }`}
               >
-                <Store className="w-5 h-5 mx-auto mb-1" />
+                <Store className="w-5 h-5 mx-auto mb-1" strokeWidth={1.75} />
                 <span className="text-xs block font-bold">Commerce</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => onActivityChange('resto')}
-                className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
+                className={`p-3 rounded-xl border text-center transition-all cursor-pointer active:scale-[0.97] ${
                   newShopActivity === 'resto'
                     ? 'bg-amber-800 text-white border-amber-900 font-extrabold shadow-md'
                     : 'bg-white text-gray-700 border-amber-300 hover:bg-amber-50'
                 }`}
               >
-                <Utensils className="w-5 h-5 mx-auto mb-1" />
+                <Utensils className="w-5 h-5 mx-auto mb-1" strokeWidth={1.75} />
                 <span className="text-xs block font-bold">Resto / Bar</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => onActivityChange('prestations')}
-                className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
+                className={`p-3 rounded-xl border text-center transition-all cursor-pointer active:scale-[0.97] ${
                   newShopActivity === 'prestations'
                     ? 'bg-amber-800 text-white border-amber-900 font-extrabold shadow-md'
                     : 'bg-white text-gray-700 border-amber-300 hover:bg-amber-50'
                 }`}
               >
-                <Scissors className="w-5 h-5 mx-auto mb-1" />
+                <Scissors className="w-5 h-5 mx-auto mb-1" strokeWidth={1.75} />
                 <span className="text-xs block font-bold">Service</span>
               </button>
             </div>

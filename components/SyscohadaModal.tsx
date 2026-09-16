@@ -48,6 +48,18 @@ export function SyscohadaModal({
     )
   }, [journalRows, searchQuery])
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const handlePrintPDF = () => {
@@ -55,14 +67,19 @@ export function SyscohadaModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-fade-in font-sans">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-fade-in font-sans"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="bg-[#fffdf9] border-2 border-amber-900/20 rounded-[32px] shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
         
         {/* Header */}
         <div className="px-6 py-4 bg-[#f4ebd9] border-b border-amber-250 flex items-center justify-between flex-shrink-0 select-none">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center font-bold shadow-sm">
-              <Landmark className="w-5 h-5" />
+              <Landmark className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -81,27 +98,30 @@ export function SyscohadaModal({
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => exportSyscohadaJournalCSV(sales, periodLabel, shopName)}
-              className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+              className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.97] text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
               title="Télécharger le Journal en format CSV Excel pour votre comptable"
             >
-              <FileSpreadsheet className="w-4 h-4" />
+              <FileSpreadsheet className="w-4 h-4" strokeWidth={1.75} />
               <span className="hidden sm:inline">Export CSV SYSCOHADA</span>
             </button>
 
             <button
+              type="button"
               onClick={handlePrintPDF}
-              className="p-2 text-amber-900 hover:bg-amber-200/60 rounded-xl transition-colors"
+              className="p-2 text-amber-900 hover:bg-amber-200/60 active:scale-[0.97] rounded-xl transition-all cursor-pointer"
               title="Imprimer ou enregistrer en PDF"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4" strokeWidth={1.75} />
             </button>
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 text-gray-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors"
+              className="p-2 text-gray-500 hover:text-red-700 hover:bg-red-50 active:scale-[0.97] rounded-xl transition-all cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" strokeWidth={1.75} />
             </button>
           </div>
         </div>
@@ -109,38 +129,41 @@ export function SyscohadaModal({
         {/* Barre d'Onglets */}
         <div className="flex items-center gap-2 px-6 py-2 bg-[#eae1cd]/60 border-b border-amber-200 flex-shrink-0 text-xs font-bold select-none overflow-x-auto">
           <button
+            type="button"
             onClick={() => setActiveTab('smt')}
-            className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all ${
+            className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all active:scale-[0.97] cursor-pointer ${
               activeTab === 'smt'
                 ? 'bg-amber-900 text-white shadow-sm'
                 : 'text-amber-900 hover:bg-amber-200/50'
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
+            <BookOpen className="w-3.5 h-3.5" strokeWidth={1.75} />
             <span>1. Compte de Résultat & Trésorerie (SMT)</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('journal')}
-            className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all ${
+            className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all active:scale-[0.97] cursor-pointer ${
               activeTab === 'journal'
                 ? 'bg-amber-900 text-white shadow-sm'
                 : 'text-amber-900 hover:bg-amber-200/50'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
+            <Layers className="w-3.5 h-3.5" strokeWidth={1.75} />
             <span>2. Grand Livre Partie Double ({journalRows.length} écritures)</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('balance')}
-            className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all ${
+            className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-all active:scale-[0.97] cursor-pointer ${
               activeTab === 'balance'
                 ? 'bg-amber-900 text-white shadow-sm'
                 : 'text-amber-900 hover:bg-amber-200/50'
             }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
+            <ShieldCheck className="w-3.5 h-3.5" strokeWidth={1.75} />
             <span>3. Balance des Tiers (411 Clients / 401 Fournisseurs)</span>
           </button>
         </div>
@@ -417,12 +440,13 @@ export function SyscohadaModal({
         {/* Footer */}
         <div className="px-6 py-3 bg-[#f4ebd9] border-t border-amber-250 flex items-center justify-between text-xs text-amber-900 flex-shrink-0 select-none">
           <div className="flex items-center gap-2 font-mono text-[10px]">
-            <ShieldCheck className="w-4 h-4 text-emerald-700" />
+            <ShieldCheck className="w-4 h-4 text-emerald-700" strokeWidth={1.75} />
             <span>Conforme aux normes du Conseil Comptable OHADA (SYSCOHADA révisé 2017)</span>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-1.5 bg-gray-800 hover:bg-black text-white font-bold rounded-xl text-xs transition-colors"
+            className="px-4 py-1.5 bg-gray-800 hover:bg-black active:scale-[0.97] text-white font-bold rounded-xl text-xs transition-transform duration-100 cursor-pointer"
           >
             Fermer
           </button>

@@ -31,6 +31,22 @@ export function SelectiveDataPurgeModal({
   const [isPurging, setIsPurging] = useState(false)
   const [purgeMessage, setPurgeMessage] = useState<string | null>(null)
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        if (confirmStep) {
+          setConfirmStep(false)
+        } else {
+          onClose()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, confirmStep, onClose])
+
   if (!isOpen) return null
 
   const toggleOption = (key: keyof PurgeOptions) => {
@@ -67,14 +83,22 @@ export function SelectiveDataPurgeModal({
   const selectedCount = Object.values(options).filter(Boolean).length
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          if (confirmStep) setConfirmStep(false)
+          else onClose()
+        }
+      }}
+    >
       <div className="w-full max-w-lg bg-[#fffdf5] border-2 border-rose-400 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto font-sans">
         
         {/* Entête */}
         <div className="flex items-center justify-between border-b border-rose-200 pb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-rose-100 border border-rose-300 text-rose-700 flex items-center justify-center shadow-2xs flex-shrink-0">
-              <ShieldAlert className="w-5 h-5" />
+              <ShieldAlert className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <div>
               <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">
@@ -88,9 +112,9 @@ export function SelectiveDataPurgeModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-700 rounded-lg transition-colors cursor-pointer"
+            className="p-1 text-gray-400 hover:text-gray-700 active:scale-[0.97] rounded-lg transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -280,7 +304,7 @@ export function SelectiveDataPurgeModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 active:scale-[0.97] text-gray-800 font-bold rounded-xl transition-all cursor-pointer"
               >
                 Annuler
               </button>
@@ -289,9 +313,9 @@ export function SelectiveDataPurgeModal({
                 type="button"
                 disabled={selectedCount === 0}
                 onClick={() => setConfirmStep(true)}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl transition-all shadow-md disabled:opacity-40 flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-[0.97] text-white font-extrabold rounded-xl transition-all shadow-md disabled:opacity-40 flex items-center gap-2 cursor-pointer"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                 <span>Continuer ({selectedCount} sélectionné{selectedCount > 1 ? 's' : ''})</span>
               </button>
             </div>
@@ -303,7 +327,7 @@ export function SelectiveDataPurgeModal({
           <div className="space-y-4 font-mono text-xs animate-in fade-in duration-200">
             <div className="p-4 bg-rose-100/90 border border-rose-300 rounded-2xl space-y-2 text-rose-950">
               <div className="flex items-center gap-2 font-black text-sm text-rose-900">
-                <AlertTriangle className="w-5 h-5 text-rose-700 flex-shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-rose-700 flex-shrink-0" strokeWidth={1.75} />
                 <span>Attention : Action Irréversible !</span>
               </div>
               <p className="text-xs">
@@ -342,7 +366,7 @@ export function SelectiveDataPurgeModal({
               <button
                 type="button"
                 onClick={() => setConfirmStep(false)}
-                className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-xl transition-colors cursor-pointer"
+                className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 active:scale-[0.97] text-gray-800 font-bold rounded-xl transition-all cursor-pointer"
               >
                 Retour
               </button>
@@ -351,13 +375,13 @@ export function SelectiveDataPurgeModal({
                 type="button"
                 disabled={confirmWord !== 'EFFACER' || isPurging}
                 onClick={handleApplyPurge}
-                className="px-5 py-2.5 bg-rose-700 hover:bg-rose-800 text-white font-black rounded-xl transition-all shadow-md disabled:opacity-30 flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 bg-rose-700 hover:bg-rose-800 active:scale-[0.97] text-white font-black rounded-xl transition-all shadow-md disabled:opacity-30 flex items-center gap-2 cursor-pointer"
               >
                 {isPurging ? (
                   <span>Suppression en cours...</span>
                 ) : (
                   <>
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                     <span>Confirmer la Suppression</span>
                   </>
                 )}

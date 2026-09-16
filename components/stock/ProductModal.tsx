@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Save, Sparkles } from 'lucide-react'
 import { ProductFastForm } from './ProductFastForm'
 import { ProductAdvancedForm } from './ProductAdvancedForm'
@@ -32,6 +32,18 @@ export function ProductModal({
 }: ProductModalProps) {
   const [mode, setMode] = useState<'fast' | 'advanced'>(editingItem ? 'advanced' : initialMode)
 
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -52,7 +64,7 @@ export function ProductModal({
         {/* Entête fixe */}
         <div className="flex-shrink-0 flex items-center justify-between border-b border-amber-200 pb-3 mb-2">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-700" />
+            <Sparkles className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
             <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">
               {editingItem ? 'Modifier le Produit' : 'Nouveau Produit en Stock'}
             </h3>
@@ -65,7 +77,7 @@ export function ProductModal({
                 <button
                   type="button"
                   onClick={() => setMode('fast')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg transition-all active:scale-[0.97] cursor-pointer ${
                     mode === 'fast' ? 'bg-amber-800 text-white font-extrabold shadow-xs' : 'text-amber-900 font-bold'
                   }`}
                 >
@@ -74,7 +86,7 @@ export function ProductModal({
                 <button
                   type="button"
                   onClick={() => setMode('advanced')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg transition-all active:scale-[0.97] cursor-pointer ${
                     mode === 'advanced' ? 'bg-amber-800 text-white font-extrabold shadow-xs' : 'text-amber-900 font-bold'
                   }`}
                 >
@@ -86,10 +98,10 @@ export function ProductModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 bg-amber-100/80 hover:bg-amber-200 text-gray-700 hover:text-gray-950 rounded-xl transition-colors cursor-pointer border border-amber-300"
+              className="p-1.5 bg-amber-100/80 hover:bg-amber-200 text-gray-700 hover:text-gray-950 rounded-xl transition-all active:scale-[0.97] cursor-pointer border border-amber-300"
               title="Fermer la fenêtre"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5" strokeWidth={1.75} />
             </button>
           </div>
         </div>
@@ -111,7 +123,7 @@ export function ProductModal({
               onClick={onClose}
               className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 active:scale-[0.97] text-gray-800 text-xs font-black rounded-xl transition-all cursor-pointer font-mono flex items-center gap-1.5"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5" strokeWidth={1.75} />
               <span>Annuler</span>
             </button>
             <button
@@ -119,7 +131,7 @@ export function ProductModal({
               disabled={!formData.name.trim() || saving}
               className="px-5 py-2.5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-black rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-md font-mono"
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-4 h-4" strokeWidth={1.75} />
               <span>{saving ? 'Enregistrement...' : 'Sauvegarder le Produit'}</span>
             </button>
           </div>

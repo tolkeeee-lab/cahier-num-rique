@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { X, Calculator, TrendingUp, TrendingDown, ShoppingBag, CreditCard, Coins } from 'lucide-react'
 import { formatPrice } from '@/lib/penUtils'
 
@@ -36,6 +36,18 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
   categoryType,
   sales = [],
 }) => {
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const validSales = sales.filter(s => s.status !== 'crossed_out')
@@ -56,39 +68,44 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
   const netCash = blueTotal - redTotal - greenTotal
 
   let title = 'Détails & Calculs de la Caisse'
-  let icon = <Calculator className="w-5 h-5 text-amber-700" />
+  let icon = <Calculator className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
   let targetSales: SaleItem[] = validSales
   let totalAmount = netCash
 
   if (categoryType === 'blue') {
     title = 'Chiffre d\'Affaires (Entrées Cash & Ventes)'
-    icon = <TrendingUp className="w-5 h-5 text-blue-600" />
+    icon = <TrendingUp className="w-5 h-5 text-blue-600" strokeWidth={1.75} />
     targetSales = blueSales
     totalAmount = blueTotal
   } else if (categoryType === 'red') {
     title = 'Dépenses & Frais Généraux'
-    icon = <TrendingDown className="w-5 h-5 text-rose-600" />
+    icon = <TrendingDown className="w-5 h-5 text-rose-600" strokeWidth={1.75} />
     targetSales = redSales
     totalAmount = redTotal
   } else if (categoryType === 'green') {
     title = 'Achats de Stock (Payés Cash)'
-    icon = <ShoppingBag className="w-5 h-5 text-emerald-600" />
+    icon = <ShoppingBag className="w-5 h-5 text-emerald-600" strokeWidth={1.75} />
     targetSales = greenSales
     totalAmount = greenTotal
   } else if (categoryType === 'purple') {
     title = 'Achats de Stock à Crédit (Fournisseurs)'
-    icon = <CreditCard className="w-5 h-5 text-fuchsia-600" />
+    icon = <CreditCard className="w-5 h-5 text-fuchsia-600" strokeWidth={1.75} />
     targetSales = purpleSales
     totalAmount = purpleTotal
   } else if (categoryType === 'yellow') {
     title = 'Ventes à Crédit (Dettes Clients)'
-    icon = <CreditCard className="w-5 h-5 text-amber-600" />
+    icon = <CreditCard className="w-5 h-5 text-amber-600" strokeWidth={1.75} />
     targetSales = yellowSales
     totalAmount = yellowDebtTotal
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-in fade-in">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs animate-in fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="w-full max-w-lg bg-[#fffdf2] border-2 border-amber-400 rounded-2xl shadow-2xl overflow-hidden font-mono flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="p-3.5 bg-gradient-to-r from-amber-100 to-amber-200/90 border-b border-amber-300 flex items-center justify-between">
@@ -101,23 +118,23 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
                 {title}
               </h3>
               <p className="text-[10px] text-amber-800 font-bold">
-                {targetSales.length} opération(s) • Total : <span className="font-mono font-black text-amber-950">{categoryType === 'red' && totalAmount > 0 ? `-${formatPrice(totalAmount)}` : formatPrice(totalAmount)}</span>
+                {targetSales.length} opération(s) • Total : <span className="font-mono font-black text-amber-950 tabular-nums">{categoryType === 'red' && totalAmount > 0 ? `-${formatPrice(totalAmount)}` : formatPrice(totalAmount)}</span>
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-xl bg-white/80 hover:bg-white text-gray-700 hover:text-gray-950 border border-amber-300 cursor-pointer shadow-xs"
+            className="p-1 rounded-xl bg-white/80 hover:bg-white text-gray-700 hover:text-gray-950 border border-amber-300 cursor-pointer active:scale-[0.97] shadow-xs"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
         {/* Formule de Calcul en Page */}
         <div className="p-3 bg-amber-50/80 border-b border-amber-200 space-y-2">
           <div className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-            <Calculator className="w-3.5 h-3.5 text-amber-800" />
+            <Calculator className="w-3.5 h-3.5 text-amber-800" strokeWidth={1.75} />
             <span>Formule de Calcul du Solde Réel :</span>
           </div>
           
@@ -138,7 +155,7 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
 
           <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-100 to-amber-200 border-2 border-amber-400 flex items-center justify-between font-mono">
             <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
-              <Coins className="w-4 h-4 text-amber-800" />
+              <Coins className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
               <span>BÉNÉFICE / SOLDE NET :</span>
             </span>
             <span className={`text-sm font-black tabular-nums ${netCash >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
@@ -194,7 +211,7 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-amber-950 hover:bg-amber-900 text-white font-bold text-xs shadow-xs cursor-pointer"
+            className="px-4 py-1.5 rounded-xl bg-amber-950 hover:bg-amber-900 active:scale-[0.97] text-white font-bold text-xs shadow-xs cursor-pointer transition-all"
           >
             Fermer
           </button>

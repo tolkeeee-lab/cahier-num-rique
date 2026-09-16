@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Plus, Loader, Zap, Search, Check, Package } from 'lucide-react'
 import type { MenuItem } from '@/hooks/useTactileMenu'
 
@@ -57,6 +57,17 @@ export function TactileMenuModal({
   const [isSavingNew, setIsSavingNew] = useState(false)
   const [recentlyTappedId, setRecentlyTappedId] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const categories = CATEGORY_OPTIONS[shopActivity] || CATEGORY_OPTIONS.boutique
@@ -100,7 +111,7 @@ export function TactileMenuModal({
         <div className="flex items-center justify-between gap-2 border-b border-amber-200 pb-1.5 flex-wrap">
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded-lg bg-amber-400 text-amber-950 flex items-center justify-center font-black shadow-xs">
-              <Zap className="w-3.5 h-3.5 fill-amber-950" />
+              <Zap className="w-3.5 h-3.5 fill-amber-950" strokeWidth={1.75} />
             </div>
             <span className="font-extrabold text-amber-950 text-xs font-mono">
               Raccourcis 1-Tap (Défilement Horizontal)
@@ -110,7 +121,7 @@ export function TactileMenuModal({
           <div className="flex items-center gap-1.5">
             {/* Champ de recherche compact */}
             <div className="relative">
-              <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.75} />
               <input
                 type="text"
                 value={filterQuery}
@@ -124,9 +135,9 @@ export function TactileMenuModal({
             <button
               type="button"
               onClick={() => setShowAddForm((v) => !v)}
-              className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold transition-all shadow-xs flex-shrink-0 cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.97] text-white rounded-full text-xs font-bold transition-all shadow-xs flex-shrink-0 cursor-pointer"
             >
-              <Plus className="w-3 h-3" />
+              <Plus className="w-3 h-3" strokeWidth={1.75} />
               <span>Nouveau</span>
             </button>
 
@@ -134,10 +145,10 @@ export function TactileMenuModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-1 bg-amber-200/80 hover:bg-amber-300 text-amber-950 rounded-full transition-colors cursor-pointer"
+              className="p-1 bg-amber-200/80 hover:bg-amber-300 active:scale-[0.97] text-amber-950 rounded-full transition-all cursor-pointer"
               title="Fermer les raccourcis"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5" strokeWidth={1.75} />
             </button>
           </div>
         </div>
@@ -166,9 +177,9 @@ export function TactileMenuModal({
             <button
               type="submit"
               disabled={!newName.trim() || isSavingNew}
-              className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-xl hover:bg-emerald-700 font-bold disabled:opacity-50 transition-colors flex-shrink-0 cursor-pointer"
+              className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-xl hover:bg-emerald-700 active:scale-[0.97] font-bold disabled:opacity-50 transition-all flex-shrink-0 cursor-pointer"
             >
-              {isSavingNew ? <Loader className="w-3 h-3 animate-spin" /> : 'Enregistrer'}
+              {isSavingNew ? <Loader className="w-3 h-3 animate-spin" strokeWidth={1.75} /> : 'Enregistrer'}
             </button>
           </form>
         )}
@@ -176,7 +187,7 @@ export function TactileMenuModal({
         {/* ── Ruban Défilable Horizontalement (Single / Double Line Scroll) ── */}
         {isLoading ? (
           <div className="flex items-center justify-center py-3 text-amber-700 text-xs gap-1.5 font-mono">
-            <Loader className="w-3.5 h-3.5 animate-spin" />
+            <Loader className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} />
             <span>Chargement des raccourcis...</span>
           </div>
         ) : filteredItems.length > 0 ? (
@@ -195,11 +206,11 @@ export function TactileMenuModal({
                         : 'bg-white hover:bg-amber-100 border-amber-300 hover:border-amber-500 text-gray-900 shadow-2xs'
                     }`}
                   >
-                    {item.emoji ? <span className="text-base">{item.emoji}</span> : <Package className="w-4 h-4 text-amber-700 flex-shrink-0" />}
+                    {item.emoji ? <span className="text-base">{item.emoji}</span> : <Package className="w-4 h-4 text-amber-700 flex-shrink-0" strokeWidth={1.75} />}
                     <span className="font-bold text-xs">{item.name}</span>
 
                     {isTapped ? (
-                       <Check className="w-3.5 h-3.5 text-white flex-shrink-0 animate-in zoom-in-50" />
+                       <Check className="w-3.5 h-3.5 text-white flex-shrink-0 animate-in zoom-in-50" strokeWidth={1.75} />
                     ) : (
                       item.price > 0 && (
                         <span className="text-amber-900 font-mono font-black text-[11px] bg-amber-100/90 border border-amber-300/80 px-1.5 py-0.5 tabular-nums rounded-lg flex-shrink-0">
@@ -216,10 +227,10 @@ export function TactileMenuModal({
                       e.stopPropagation()
                       onDeleteItem(item.id, item.name)
                     }}
-                    className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-700 transition-all shadow-xs z-10"
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-700 active:scale-[0.97] transition-all shadow-xs z-10"
                     title={`Supprimer "${item.name}"`}
                   >
-                    <X className="w-2.5 h-2.5" />
+                    <X className="w-2.5 h-2.5" strokeWidth={1.75} />
                   </button>
                 </div>
               )

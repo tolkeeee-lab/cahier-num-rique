@@ -9,7 +9,7 @@
  * 100% UI — expose onComplete(product) pour laisser le parent gérer la sauvegarde.
  */
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, ChevronRight, ChevronLeft, Check, Package } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -74,8 +74,6 @@ export function StockWizardModal({
   const categories = CATEGORIES_BY_ACTIVITY[shopActivity] || CATEGORIES_BY_ACTIVITY.boutique
   const hasMultiplier = packaging !== 'unité'
 
-  if (!isOpen) return null
-
   const reset = () => {
     setStep(1)
     setName(prefillName)
@@ -93,6 +91,20 @@ export function StockWizardModal({
     reset()
     onClose()
   }
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        handleClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
+
+  if (!isOpen) return null
 
   const handleComplete = async () => {
     setIsSaving(true)
@@ -118,17 +130,26 @@ export function StockWizardModal({
   const totalSteps = 3
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose()
+      }}
+    >
       <div className="bg-[#fffdf2] border border-amber-300 rounded-[28px] p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
 
         {/* En-tête */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-emerald-600" />
+            <Package className="w-5 h-5 text-emerald-600" strokeWidth={1.75} />
             <h3 className="font-bold text-gray-900 text-lg">Nouveau Produit</h3>
           </div>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-700">
-            <X className="w-5 h-5" />
+          <button
+            type="button"
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-700 active:scale-[0.97] p-1 rounded-lg cursor-pointer"
+          >
+            <X className="w-5 h-5" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -320,10 +341,10 @@ export function StockWizardModal({
           <button
             type="button"
             onClick={step === 1 ? handleClose : () => setStep(s => s - 1)}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 active:scale-[0.97] transition-all cursor-pointer"
           >
-            <ChevronLeft className="w-4 h-4" />
-            {step === 1 ? 'Annuler' : 'Retour'}
+            <ChevronLeft className="w-4 h-4" strokeWidth={1.75} />
+            <span>{step === 1 ? 'Annuler' : 'Retour'}</span>
           </button>
 
           {step < totalSteps ? (
@@ -331,21 +352,21 @@ export function StockWizardModal({
               type="button"
               onClick={() => setStep(s => s + 1)}
               disabled={step === 1 && !name.trim()}
-              className="flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-emerald-700 active:scale-[0.97] disabled:opacity-50 transition-all"
+              className="flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-emerald-700 active:scale-[0.97] disabled:opacity-50 transition-all cursor-pointer shadow-xs"
             >
-              Suivant
-              <ChevronRight className="w-4 h-4" />
+              <span>Suivant</span>
+              <ChevronRight className="w-4 h-4" strokeWidth={1.75} />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleComplete}
               disabled={!name.trim() || !salePrice || isSaving}
-              className="flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-5 py-2 rounded-xl hover:bg-amber-600 active:scale-[0.97] disabled:opacity-50 transition-all shadow-md"
+              className="flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-5 py-2 rounded-xl hover:bg-amber-600 active:scale-[0.97] disabled:opacity-50 transition-all shadow-md cursor-pointer"
             >
               {isSaving ? 'Enregistrement...' : (
                 <>
-                  <Check className="w-4 h-4" />
+                  <Check className="w-4 h-4" strokeWidth={1.75} />
                   <span>Enregistrer</span>
                 </>
               )}

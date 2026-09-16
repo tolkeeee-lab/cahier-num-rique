@@ -53,6 +53,18 @@ export function EditSaleModal({
     }
   }, [sale])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen || !sale) return null
 
   const handleQtyChange = (index: number, qty: number) => {
@@ -105,14 +117,19 @@ export function EditSaleModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="bg-[#fffdf2] border border-amber-300 rounded-[24px] p-5 max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
         
         {/* En-tête */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center border border-amber-300 flex-shrink-0">
-              <Edit3 className="w-4 h-4 text-amber-800" />
+              <Edit3 className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
             </div>
             <div>
               <h3 className="font-bold text-gray-900 text-base">Modifier l'Écriture de Vente</h3>
@@ -120,7 +137,7 @@ export function EditSaleModal({
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 cursor-pointer active:scale-[0.97]">
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -181,10 +198,10 @@ export function EditSaleModal({
                 <button
                   type="button"
                   onClick={() => handleRemoveArticle(idx)}
-                  className="p-1 text-gray-400 hover:text-rose-600 rounded-lg transition-colors flex-shrink-0"
+                  className="p-1 text-gray-400 hover:text-rose-600 rounded-lg transition-colors flex-shrink-0 active:scale-[0.97] cursor-pointer"
                   title="Supprimer cet article"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
                 </button>
               </div>
             ))}
@@ -229,7 +246,7 @@ export function EditSaleModal({
                 type="button"
                 onClick={handleAddNewArticle}
                 disabled={!newArtName.trim()}
-                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-40"
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-[0.97] text-white rounded-lg text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
               >
                 + Ajouter
               </button>
@@ -239,7 +256,7 @@ export function EditSaleModal({
           {/* Nouveau Total */}
           <div className="pt-2 border-t border-dashed border-amber-300 flex items-center justify-between font-mono">
             <span className="text-xs text-gray-600 font-bold">Nouveau Total Calculé :</span>
-            <span className="text-base font-extrabold text-amber-900">{formatPrice(totalCalculated)}</span>
+            <span className="text-base font-extrabold text-amber-900 tabular-nums">{formatPrice(totalCalculated)}</span>
           </div>
 
           {/* Boutons validation & suppression */}
@@ -255,7 +272,7 @@ export function EditSaleModal({
                 }}
                 className="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold rounded-xl border border-rose-300 transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
                 <span>Raturer la Vente</span>
               </button>
             ) : <div />}
@@ -276,7 +293,7 @@ export function EditSaleModal({
                 {isSubmitting ? (
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Check className="w-3.5 h-3.5" />
+                  <Check className="w-3.5 h-3.5" strokeWidth={1.75} />
                 )}
                 <span>Enregistrer</span>
               </button>

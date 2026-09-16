@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Printer, X } from 'lucide-react'
 
 interface ReceiptArticle {
@@ -40,6 +40,18 @@ export function ReceiptPrinterModal({
 }: ReceiptPrinterModalProps) {
   const [paperWidth, setPaperWidth] = useState<'58mm' | '80mm'>('58mm')
 
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen || !sale) return null
 
   const handlePrint = () => {
@@ -51,7 +63,12 @@ export function ReceiptPrinterModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-xs">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       {/* Styles CSS dédiés à l'impression thermique */}
       <style jsx global>{`
         @media print {
@@ -82,7 +99,7 @@ export function ReceiptPrinterModal({
         {/* Header Modal */}
         <div className="px-5 py-3.5 border-b border-gray-200 bg-[#f5f1e8] flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-gray-800 text-sm">
-            <Printer className="w-4 h-4 text-emerald-700" />
+            <Printer className="w-4 h-4 text-emerald-700" strokeWidth={1.75} />
             <span>Ticket de Caisse</span>
           </div>
           <div className="flex items-center gap-2">
@@ -90,7 +107,7 @@ export function ReceiptPrinterModal({
             <div className="flex bg-gray-200 rounded-lg p-0.5 text-[10px] font-mono">
               <button
                 onClick={() => setPaperWidth('58mm')}
-                className={`px-2 py-0.5 rounded-md font-bold transition-all ${
+                className={`px-2 py-0.5 rounded-md font-bold transition-all active:scale-[0.97] cursor-pointer ${
                   paperWidth === '58mm' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'
                 }`}
               >
@@ -98,15 +115,15 @@ export function ReceiptPrinterModal({
               </button>
               <button
                 onClick={() => setPaperWidth('80mm')}
-                className={`px-2 py-0.5 rounded-md font-bold transition-all ${
+                className={`px-2 py-0.5 rounded-md font-bold transition-all active:scale-[0.97] cursor-pointer ${
                   paperWidth === '80mm' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-600'
                 }`}
               >
                 80mm
               </button>
             </div>
-            <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 rounded-full">
-              <X className="w-4 h-4" />
+            <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 rounded-full active:scale-[0.97] cursor-pointer">
+              <X className="w-4 h-4" strokeWidth={1.75} />
             </button>
           </div>
         </div>
@@ -210,7 +227,7 @@ export function ReceiptPrinterModal({
             onClick={handlePrint}
             className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-all cursor-pointer shadow-xs"
           >
-            <Printer className="w-3.5 h-3.5" />
+            <Printer className="w-3.5 h-3.5" strokeWidth={1.75} />
             <span>Imprimer</span>
           </button>
         </div>

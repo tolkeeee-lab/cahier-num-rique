@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Sliders, Check, RotateCcw } from 'lucide-react'
 import { DASHBOARD_WIDGET_IDS, getDefaultDashboardWidgets } from '@/lib/roleUtils'
 
@@ -70,6 +70,18 @@ export function DashboardCustomizerModal({
 }: DashboardCustomizerModalProps) {
   const [selected, setSelected] = useState<string[]>(activeWidgets)
 
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const isOwner = userRole !== 'employee'
@@ -92,13 +104,18 @@ export function DashboardCustomizerModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="px-6 py-5 bg-[#faf8f5] border-b border-stone-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center shadow-xs">
-              <Sliders className="w-5 h-5" />
+              <Sliders className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <div>
               <h3 className="font-bold text-stone-900 text-lg leading-tight">Personnaliser le Tableau de Bord</h3>
@@ -106,10 +123,11 @@ export function DashboardCustomizerModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-stone-100 text-stone-500 hover:text-stone-800 hover:bg-stone-200 flex items-center justify-center transition-colors"
+            className="w-9 h-9 rounded-full bg-stone-100 text-stone-500 hover:text-stone-800 hover:bg-stone-200 active:scale-[0.97] flex items-center justify-center transition-all cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -118,11 +136,12 @@ export function DashboardCustomizerModal({
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Indicateurs disponibles</span>
             <button
+              type="button"
               onClick={handleResetDefault}
-              className="text-xs text-amber-800 hover:text-amber-900 font-semibold flex items-center gap-1 hover:underline"
+              className="text-xs text-amber-800 hover:text-amber-900 active:scale-[0.97] font-semibold flex items-center gap-1 hover:underline cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Réinitialiser
+              <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.75} />
+              <span>Réinitialiser</span>
             </button>
           </div>
 
@@ -132,7 +151,7 @@ export function DashboardCustomizerModal({
               <div
                 key={widget.id}
                 onClick={() => toggleWidget(widget.id)}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none active:scale-[0.99] ${
                   isChecked
                     ? 'border-amber-400 bg-amber-50/50 shadow-xs'
                     : 'border-stone-200 hover:border-stone-300 bg-stone-50/40'
@@ -141,7 +160,7 @@ export function DashboardCustomizerModal({
                 <div className={`w-6 h-6 rounded-lg mt-0.5 flex items-center justify-center transition-colors ${
                   isChecked ? 'bg-amber-800 text-amber-50' : 'border border-stone-300 bg-white text-transparent'
                 }`}>
-                  <Check className="w-4 h-4" />
+                  <Check className="w-4 h-4" strokeWidth={1.75} />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
@@ -162,17 +181,19 @@ export function DashboardCustomizerModal({
         {/* Footer Actions */}
         <div className="p-4 bg-stone-50 border-t border-stone-200 flex items-center justify-end gap-3">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl text-stone-600 font-semibold text-sm hover:bg-stone-200/60 transition-colors"
+            className="px-4 py-2.5 rounded-xl text-stone-600 font-semibold text-sm hover:bg-stone-200/60 active:scale-[0.97] transition-all cursor-pointer"
           >
             Annuler
           </button>
           <button
+            type="button"
             onClick={handleSave}
-            className="px-5 py-2.5 rounded-xl bg-amber-800 hover:bg-amber-900 text-amber-50 font-bold text-sm shadow-md transition-colors flex items-center gap-2"
+            className="px-5 py-2.5 rounded-xl bg-amber-800 hover:bg-amber-900 active:scale-[0.97] text-amber-50 font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
           >
-            <Check className="w-4 h-4" />
-            Enregistrer
+            <Check className="w-4 h-4" strokeWidth={1.75} />
+            <span>Enregistrer</span>
           </button>
         </div>
       </div>

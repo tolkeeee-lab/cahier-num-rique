@@ -26,20 +26,41 @@ export const SupplierComparisonModal: React.FC<SupplierComparisonModalProps> = (
   suppliers,
   onSelectSupplier,
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="w-full max-w-md bg-[#1e1a18] border border-[#2a2421] rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Entête */}
         <div className="flex items-center justify-between border-b border-gray-800 pb-3">
           <div className="flex items-center gap-2">
-            <Store className="w-5 h-5 text-amber-400" />
+            <Store className="w-5 h-5 text-amber-400" strokeWidth={1.75} />
             <h3 className="text-base font-extrabold text-white">Comparatif Grossistes</h3>
           </div>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-white rounded-lg transition-colors">
-            <X className="w-4 h-4" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 text-gray-400 hover:text-white rounded-lg transition-colors cursor-pointer active:scale-[0.97]"
+          >
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -60,19 +81,20 @@ export const SupplierComparisonModal: React.FC<SupplierComparisonModalProps> = (
                   <p className="text-[11px] text-gray-400 font-mono">{sup.unit}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono font-extrabold text-amber-400">
+                  <span className="text-xs font-mono font-extrabold text-amber-400 tabular-nums">
                     {formatPrice(sup.price)}
                   </span>
                   {onSelectSupplier && (
                     <button
+                      type="button"
                       onClick={() => {
                         onSelectSupplier(sup.supplierName, sup.price)
                         onClose()
                       }}
-                      className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors"
+                      className="p-1 text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer active:scale-[0.97]"
                       title="Choisir ce fournisseur"
                     >
-                      <CheckCircle className="w-4 h-4" />
+                      <CheckCircle className="w-4 h-4" strokeWidth={1.75} />
                     </button>
                   )}
                 </div>
@@ -88,8 +110,9 @@ export const SupplierComparisonModal: React.FC<SupplierComparisonModalProps> = (
         {/* Actions */}
         <div className="flex justify-end pt-2">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-800 text-gray-300 text-xs font-bold rounded-xl hover:bg-gray-700 transition-colors"
+            className="px-4 py-2 bg-gray-800 text-gray-300 text-xs font-bold rounded-xl hover:bg-gray-700 active:scale-[0.97] transition-all cursor-pointer"
           >
             Fermer
           </button>

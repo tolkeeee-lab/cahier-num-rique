@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   Wifi, 
   WifiOff, 
@@ -72,6 +72,17 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
   const { features } = useFeatures()
   const labels = getActivityLabels(activity)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+
+  useEffect(() => {
+    if (!showMobileMenu) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowMobileMenu(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showMobileMenu])
 
   const getActivityBadge = (act: string) => {
     switch (act) {
@@ -211,10 +222,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             <button
               type="button"
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="p-1.5 rounded-xl bg-amber-100/90 text-amber-950 border border-amber-300 shadow-xs cursor-pointer hover:bg-amber-200"
+              className="p-1.5 rounded-xl bg-amber-100/90 text-amber-950 border border-amber-300 shadow-xs cursor-pointer hover:bg-amber-200 active:scale-[0.97] transition-transform duration-100"
               title="Plus d'actions"
             >
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="w-4 h-4" strokeWidth={1.75} />
             </button>
 
             {showMobileMenu && (
@@ -235,10 +246,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenCashClosing() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0 text-amber-900">
-                        <Calculator className="w-3.5 h-3.5" />
+                        <Calculator className="w-3.5 h-3.5" strokeWidth={1.75} />
                       </div>
                       <span>Clôture de Caisse (Z)</span>
                     </button>
@@ -248,10 +259,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenBoutiqueAssistant() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0 text-amber-900">
-                        <Sparkles className="w-3.5 h-3.5" />
+                        <Sparkles className="w-3.5 h-3.5" strokeWidth={1.75} />
                       </div>
                       <span>Assistant IA Boutique</span>
                     </button>
@@ -261,10 +272,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenBarcodeScanner() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0 text-gray-800">
-                        <ScanLine className="w-3.5 h-3.5" />
+                        <ScanLine className="w-3.5 h-3.5" strokeWidth={1.75} />
                       </div>
                       <span>Scanner Code-barres</span>
                     </button>
@@ -274,10 +285,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenSyscohada() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0 text-amber-900">
-                        <BookText className="w-3.5 h-3.5" />
+                        <BookText className="w-3.5 h-3.5" strokeWidth={1.75} />
                       </div>
                       <span>Compta SYSCOHADA</span>
                     </button>
@@ -287,10 +298,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onLogout() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-100 text-rose-700 font-black flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-200 mt-1 pt-1.5 whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-100 active:scale-[0.97] text-rose-700 font-black flex items-center gap-2.5 transition-all cursor-pointer border-t border-amber-200 mt-1 pt-1.5 whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-rose-200/80 flex items-center justify-center flex-shrink-0 text-rose-700">
-                        <LogOut className="w-3.5 h-3.5" />
+                        <LogOut className="w-3.5 h-3.5" strokeWidth={1.75} />
                       </div>
                       <span>Déconnexion</span>
                     </button>

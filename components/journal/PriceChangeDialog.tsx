@@ -41,6 +41,18 @@ export function PriceChangeDialog({
   const [loadingAccept, setLoadingAccept] = React.useState(false)
   const [loadingKeep, setLoadingKeep] = React.useState(false)
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCancel()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onCancel])
+
   if (!isOpen) return null
 
   const diff = newLotPrice - oldLotPrice
@@ -59,17 +71,26 @@ export function PriceChangeDialog({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel()
+      }}
+    >
       <div className="bg-[#fffdf2] border border-amber-400 rounded-[24px] p-5 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
 
         {/* En-tête */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <AlertTriangle className="w-5 h-5 text-amber-500" strokeWidth={1.75} />
             <h3 className="font-bold text-gray-900">Changement de Prix</h3>
           </div>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-700">
-            <X className="w-4 h-4" />
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-gray-400 hover:text-gray-700 active:scale-[0.97] p-1 rounded-lg cursor-pointer"
+          >
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -83,20 +104,20 @@ export function PriceChangeDialog({
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-500 font-semibold">Prix mémorisé</span>
-            <span className="font-mono font-bold text-gray-700">{formatPrice(oldLotPrice)}</span>
+            <span className="font-mono font-bold text-gray-700 tabular-nums">{formatPrice(oldLotPrice)}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-500 font-semibold">Prix saisi</span>
-            <span className={`font-mono font-bold ${isIncrease ? 'text-red-600' : 'text-emerald-600'}`}>
+            <span className={`font-mono font-bold tabular-nums ${isIncrease ? 'text-red-600' : 'text-emerald-600'}`}>
               {formatPrice(newLotPrice)}
             </span>
           </div>
           <div className="border-t border-amber-200 pt-2 flex items-center justify-between">
             <span className="text-xs font-bold text-gray-600">Écart</span>
-            <div className={`flex items-center gap-1 text-xs font-bold ${isIncrease ? 'text-red-600' : 'text-emerald-600'}`}>
+            <div className={`flex items-center gap-1 text-xs font-bold tabular-nums ${isIncrease ? 'text-red-600' : 'text-emerald-600'}`}>
               {isIncrease
-                ? <TrendingUp className="w-3.5 h-3.5" />
-                : <TrendingDown className="w-3.5 h-3.5" />
+                ? <TrendingUp className="w-3.5 h-3.5" strokeWidth={1.75} />
+                : <TrendingDown className="w-3.5 h-3.5" strokeWidth={1.75} />
               }
               {isIncrease ? '+' : ''}{formatPrice(diff)} ({pctChange}%)
             </div>
@@ -121,7 +142,7 @@ export function PriceChangeDialog({
           >
             {loadingAccept
               ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : <Check className="w-3.5 h-3.5 text-white" />
+              : <Check className="w-3.5 h-3.5 text-white" strokeWidth={1.75} />
             }
             <span>Enregistrer avec le nouveau prix ({formatPrice(newLotPrice)}) + MAJ catalogue</span>
           </button>
@@ -133,7 +154,7 @@ export function PriceChangeDialog({
           >
             {loadingKeep
               ? <span className="w-3.5 h-3.5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
-              : <RotateCcw className="w-3.5 h-3.5 text-gray-700" />
+              : <RotateCcw className="w-3.5 h-3.5 text-gray-700" strokeWidth={1.75} />
             }
             <span>Garder l'ancien prix ({formatPrice(oldLotPrice)}) sans modifier le catalogue</span>
           </button>

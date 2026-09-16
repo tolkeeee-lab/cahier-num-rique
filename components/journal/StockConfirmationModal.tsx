@@ -50,6 +50,18 @@ export function StockConfirmationModal({
 }: StockConfirmationModalProps) {
   const [isLoading, setIsLoading] = React.useState(false)
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCancel()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onCancel])
+
   if (!isOpen) return null
 
   const isUnit = packaging === 'unité' || !packaging
@@ -67,17 +79,26 @@ export function StockConfirmationModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel()
+      }}
+    >
       <div className="bg-[#fffdf2] border border-emerald-300 rounded-[24px] p-5 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
 
         {/* En-tête */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-emerald-600" />
+            <Package className="w-5 h-5 text-emerald-600" strokeWidth={1.75} />
             <h3 className="font-bold text-gray-900">Réapprovisionnement</h3>
           </div>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-700">
-            <X className="w-4 h-4" />
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-gray-400 hover:text-gray-700 active:scale-[0.97] p-1 rounded-lg cursor-pointer"
+          >
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -88,25 +109,25 @@ export function StockConfirmationModal({
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
               <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">Quantité</p>
-              <p className="font-mono font-bold text-gray-900">
+              <p className="font-mono font-bold text-gray-900 tabular-nums">
                 {quantity} {isUnit ? `${unit}(s)` : `${packaging}(s)`}
               </p>
             </div>
             {!isUnit && (
               <div>
                 <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">Contenu</p>
-                <p className="font-mono font-bold text-gray-900">{multiplier} {unit}(s) / {packaging}</p>
+                <p className="font-mono font-bold text-gray-900 tabular-nums">{multiplier} {unit}(s) / {packaging}</p>
               </div>
             )}
             <div>
               <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">
                 Coût {isUnit ? 'unitaire' : `/ ${packaging}`}
               </p>
-              <p className="font-mono font-bold text-emerald-700">{formatPrice(lotPrice)}</p>
+              <p className="font-mono font-bold text-emerald-700 tabular-nums">{formatPrice(lotPrice)}</p>
             </div>
             <div>
               <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">Prix de vente</p>
-              <p className="font-mono font-bold text-amber-700">{formatPrice(product.unit_price)}</p>
+              <p className="font-mono font-bold text-amber-700 tabular-nums">{formatPrice(product.unit_price)}</p>
             </div>
           </div>
         </div>
@@ -117,10 +138,10 @@ export function StockConfirmationModal({
             <div>
               <p className="text-xs text-gray-500">Total achat</p>
               {!isUnit && (
-                <p className="text-[10px] text-gray-400 font-mono">{totalUnits} {unit}(s) au total</p>
+                <p className="text-[10px] text-gray-400 font-mono tabular-nums">{totalUnits} {unit}(s) au total</p>
               )}
             </div>
-            <p className="font-mono font-bold text-lg text-emerald-900">{formatPrice(totalLotPrice)}</p>
+            <p className="font-mono font-bold text-lg text-emerald-900 tabular-nums">{formatPrice(totalLotPrice)}</p>
           </div>
         </div>
 
@@ -129,23 +150,23 @@ export function StockConfirmationModal({
           <button
             type="button"
             onClick={onModify}
-            className="flex-1 flex items-center justify-center gap-1.5 border border-amber-400 text-amber-800 bg-amber-50 hover:bg-amber-100 text-xs font-semibold py-2.5 rounded-xl transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 border border-amber-400 text-amber-800 bg-amber-50 hover:bg-amber-100 text-xs font-semibold py-2.5 rounded-xl transition-all active:scale-[0.97] cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Modifier les infos
+            <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
+            <span>Modifier les infos</span>
           </button>
           <button
             type="button"
             onClick={handleConfirm}
             disabled={isLoading}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
+            className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-sm active:scale-[0.97] cursor-pointer"
           >
             {isLoading ? (
               <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Check className="w-3.5 h-3.5" />
+              <Check className="w-3.5 h-3.5" strokeWidth={1.75} />
             )}
-            Confirmer
+            <span>Confirmer</span>
           </button>
         </div>
       </div>
