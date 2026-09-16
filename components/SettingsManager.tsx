@@ -56,7 +56,7 @@ export function SettingsManager({
           <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-lg font-bold text-purple-900 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-purple-700" />
+                <Shield className="w-5 h-5 text-purple-700" strokeWidth={1.75} />
                 <span>Mode Super Admin</span>
               </h2>
               <p className="text-sm text-purple-700">
@@ -65,7 +65,7 @@ export function SettingsManager({
             </div>
             <a 
               href="/admin" 
-              className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm flex items-center gap-2 whitespace-nowrap"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2 whitespace-nowrap active:scale-[0.97] cursor-pointer"
             >
               Ouvrir le Panel
             </a>

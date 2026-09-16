@@ -36,7 +36,12 @@ export function WhatsAppPOModal({
   const alertItems = items.filter(i => getStockStatus(i) === 'low' || getStockStatus(i) === 'out')
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-xs flex items-center justify-center p-4 z-50"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
       <div className="bg-[#fbf9f4] border border-emerald-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="px-5 py-4 border-b border-emerald-200 bg-emerald-100 flex items-center justify-between text-emerald-950">
           <div className="font-bold text-sm flex items-center gap-2">
@@ -99,7 +104,7 @@ export function WhatsAppPOModal({
               rel="noopener noreferrer"
               className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-full text-center transition-all active:scale-[0.97] flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
             >
-              <MessageCircle className="w-4 h-4" strokeWidth={1.75} />
+              <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.75} />
               <span>Envoyer WhatsApp</span>
             </a>
           </div>
