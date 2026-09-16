@@ -52,21 +52,21 @@ export function ExpressAdjustmentModal({
     setCartonMult(val)
     const mult = parseInt(val) || 1
     const price = parseFloat(wholesalePrice) || 0
-    const cartons = parseInt(cartonsTaken) || 0
+    const cartons = parseFloat(cartonsTaken) || 0
     if (price > 0 && mult > 0) {
       setExpressUnitCost(Math.round(price / mult).toString())
     }
     if (cartons > 0 && mult > 0) {
-      setExpressQty(cartons * mult)
+      setExpressQty(Math.round(cartons * mult * 100) / 100)
     }
   }
 
   const handleCartonsTakenChange = (val: string) => {
     setCartonsTaken(val)
-    const cartons = parseInt(val) || 0
+    const cartons = parseFloat(val) || 0
     const mult = parseInt(cartonMult) || (expressItem?.multiplier && expressItem.multiplier > 1 ? expressItem.multiplier : 1)
     if (cartons > 0 && mult > 0) {
-      setExpressQty(cartons * mult)
+      setExpressQty(Math.round(cartons * mult * 100) / 100)
     }
   }
 
@@ -175,7 +175,8 @@ export function ExpressAdjustmentModal({
                   <label className="block text-[8px] font-bold text-amber-900 uppercase mb-0.5">{expressItem?.packaging_name || 'Cartons'} pris</label>
                   <input
                     type="number"
-                    min="1"
+                    step="any"
+                    min="0.01"
                     placeholder="Ex: 3"
                     value={cartonsTaken}
                     onChange={e => handleCartonsTakenChange(e.target.value)}

@@ -21,6 +21,19 @@ const CANONICAL_ALIASES: Record<string, string> = {
   'possotomè': 'Eau Possotomè',
   'eau possotome': 'Eau Possotomè',
   'eau possotomè': 'Eau Possotomè',
+  'guinness': 'Guinness',
+  'castel': 'Castel',
+  'heineken': 'Heineken',
+  'sobebra': 'Sobebra',
+  'sobgbra': 'Sobebra',
+  'nido': 'Lait Nido',
+  'milo': 'Milo',
+  'fanico': 'Savon Fanico',
+  'maggi': 'Cube Maggi',
+  'cube maggi': 'Cube Maggi',
+  'dinor': 'Huile Dinor',
+  'mayor': 'Huile Mayor',
+  'boni': 'Riz Boni',
 }
 
 /**
@@ -172,7 +185,13 @@ export function findDuplicateCandidates(
       const pairKey = [item1.id, item2.id].sort().join('_')
       if (seen.has(pairKey)) continue
 
-      const sim = calculateSimilarity(item1.name, item2.name)
+      const norm1 = normalizeProductName(item1.name).toLowerCase()
+      const norm2 = normalizeProductName(item2.name).toLowerCase()
+      const isCanonicalExactMatch = norm1 === norm2 && norm1.length > 0
+      const rawSim = calculateSimilarity(item1.name, item2.name)
+      const normSim = calculateSimilarity(norm1, norm2)
+      const sim = isCanonicalExactMatch ? 1.0 : Math.max(rawSim, normSim)
+
       if (sim >= threshold) {
         seen.add(pairKey)
         duplicates.push({ item1, item2, similarityScore: sim })
