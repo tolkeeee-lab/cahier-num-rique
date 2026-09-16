@@ -170,6 +170,44 @@ const safeMarche = incompleteSales
 assert(Number.isFinite(safeMarche), `Le total marché doit être un nombre fini (pas NaN)`)
 assert(safeMarche === 0, `Le total marché doit ignorer les undefined et lignes rayées (obtenu: ${safeMarche})`)
 
+// ─── 7. TEST RECHERCHE VENTES RÉSISTANTE AUX VALEURS NULLES & ALIAS BOUTIQUE ─
+console.log('\n--- 7. TEST RECHERCHE VENTES & ALIAS BOUTIQUE ---')
+
+import { getDualShopIds } from '../lib/shopCodeUtils'
+
+const dualIds = getDualShopIds('BTQ-58C54')
+assert(dualIds.includes('BTQ-58C54'), `Doit inclure l'ID original BTQ-58C54`)
+assert(dualIds.includes('58C54'), `Doit inclure le code normalisé 58C54`)
+assert(dualIds.includes('SHOP-58C54'), `Doit inclure l'alias SHOP-58C54`)
+
+// Simulation d'une recherche utilisateur sur des ventes avec champs nuls
+const rawSalesFromDB: any[] = [
+  { id: 's1', client: null, notes: null, articles: undefined, total: '2500' },
+  { id: 's2', client: 'Moussa', notes: 'crédit', articles: [{ name: 'Sucre' }], total: 1000 },
+  { id: 's3', client: undefined, notes: 'vente cash', articles: null, total: 3000 },
+]
+
+const searchQuery = 'moussa'
+let searchErrorOccurred = false
+let searchResults: any[] = []
+
+try {
+  searchResults = rawSalesFromDB.filter(s => {
+    const q = searchQuery.toLowerCase().trim()
+    const clientStr = (s.client || '').toLowerCase()
+    const notesStr = (s.notes || '').toLowerCase()
+    const matchClient = clientStr.includes(q)
+    const matchNotes = notesStr.includes(q)
+    const matchArticle = Array.isArray(s.articles) && s.articles.some((a: any) => (a?.name || '').toLowerCase().includes(q))
+    return matchClient || matchNotes || matchArticle
+  })
+} catch (e) {
+  searchErrorOccurred = true
+}
+
+assert(!searchErrorOccurred, `La recherche ne doit jamais lever d'erreur sur des objets avec client: null ou articles: undefined`)
+assert(searchResults.length === 1 && searchResults[0].id === 's2', `La recherche doit identifier la bonne vente sans planter`)
+
 console.log('\n============================================================')
 console.log(`📊 RÉSULTAT DU CONTRÔLE DE RÉSILIENCE : ${passed} SUCCÈS / ${failed} ÉCHECS`)
 console.log('============================================================\n')

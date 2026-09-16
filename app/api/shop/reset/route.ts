@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export async function POST(request: Request) {
   const shopId = request.headers.get('x-shop-id') || 'default-shop'
@@ -21,39 +22,37 @@ export async function POST(request: Request) {
     }
 
     if (isSupabaseConfigured()) {
-      const altShopId = shopId.startsWith('SHOP-')
-        ? shopId.replace(/^SHOP-/i, '')
-        : `SHOP-${shopId}`
+      const targetShopIds = getDualShopIds(shopId)
 
-      // 1. Nettoyer sold_articles pour les ventes de cette boutique (shopId et altShopId)
+      // 1. Nettoyer sold_articles pour les ventes de cette boutique (tous alias inclus)
       const { data: sales } = await supabase
         .from('sales')
         .select('id')
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .in('shop_id', targetShopIds)
 
       if (sales && sales.length > 0) {
         const saleIds = sales.map(s => s.id)
         await supabase.from('sold_articles').delete().in('sale_id', saleIds)
       }
       // Nettoyer aussi les éventuels articles orphelins portant directement le shop_id
-      await supabase.from('sold_articles').delete().or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      await supabase.from('sold_articles').delete().in('shop_id', targetShopIds)
 
       // 2. Supprimer les ventes
-      await supabase.from('sales').delete().or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      await supabase.from('sales').delete().in('shop_id', targetShopIds)
 
       // 3. Supprimer le catalogue de stock
-      await supabase.from('products').delete().or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      await supabase.from('products').delete().in('shop_id', targetShopIds)
 
       // 4. Supprimer les créances clients et dettes grossistes
-      await supabase.from('debts').delete().or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
-      await supabase.from('supplier_debts').delete().or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      await supabase.from('debts').delete().in('shop_id', targetShopIds)
+      await supabase.from('supplier_debts').delete().in('shop_id', targetShopIds)
 
       // 5. Supprimer les clôtures de caisse
-      await supabase.from('cash_closings').delete().or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      await supabase.from('cash_closings').delete().in('shop_id', targetShopIds)
 
       // 6. Supprimer les demandes de produits si table présente
       try {
-        await supabase.from('requested_products').delete().or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        await supabase.from('requested_products').delete().in('shop_id', targetShopIds)
       } catch {}
     }
 

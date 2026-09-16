@@ -3,6 +3,7 @@ import { Plus, Trash2, Share2, Sparkles, Check, Search, Send, PenTool, Lightbulb
 import { formatCurrency } from '@/lib/currencyUtils'
 import { recordRequestedProductInStorage, RequestedProduct } from '@/lib/requestedProductsUtils'
 import { getOfflineSales } from '@/lib/offlineDb'
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 interface RequestedProductsManagerProps {
   shopId: string
@@ -25,20 +26,27 @@ export function RequestedProductsManager({
   const [estimatedPrice, setEstimatedPrice] = useState('')
   const [notes, setNotes] = useState('')
 
-  // Storage key avec support dual-tenant
-  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
+  // Storage key avec support multi-tenant et alias complets
+  const targetShopIds = getDualShopIds(shopId)
   const storageKey = `cahier_requested_products_${shopId}`
-  const altStorageKey = `cahier_requested_products_${altShopId}`
 
   const loadItems = React.useCallback(() => {
     try {
-      const stored = localStorage.getItem(storageKey)
-      const altStored = localStorage.getItem(altStorageKey)
-      const primaryItems: RequestedProduct[] = stored ? JSON.parse(stored) : []
-      const altItems: RequestedProduct[] = altStored ? JSON.parse(altStored) : []
       const localItemsMap = new Map<string, RequestedProduct>()
-      altItems.forEach(i => localItemsMap.set(i.name.toLowerCase().trim(), i))
-      primaryItems.forEach(i => localItemsMap.set(i.name.toLowerCase().trim(), i))
+      for (const sId of targetShopIds) {
+        const stored = localStorage.getItem(`cahier_requested_products_${sId}`)
+        if (stored) {
+          try {
+            const parsed: RequestedProduct[] = JSON.parse(stored)
+            if (Array.isArray(parsed)) {
+              parsed.forEach(i => {
+                const clean = (i?.name || '').toLowerCase().trim()
+                if (clean) localItemsMap.set(clean, i)
+              })
+            }
+          } catch {}
+        }
+      }
       const localItems: RequestedProduct[] = Array.from(localItemsMap.values())
 
       // Fusionner avec les ventes de type 'client_request' (patron ↔ employé)
@@ -47,7 +55,8 @@ export function RequestedProductsManager({
 
       const mergedMap = new Map<string, RequestedProduct>()
       for (const item of localItems) {
-        mergedMap.set(item.name.toLowerCase().trim(), { ...item })
+        const k = (item?.name || '').toLowerCase().trim()
+        if (k) mergedMap.set(k, { ...item })
       }
 
       // Grouper les demandes provenant des ventes pour obtenir le décompte réel
@@ -89,7 +98,7 @@ export function RequestedProductsManager({
       setItems(mergedList)
       localStorage.setItem(storageKey, JSON.stringify(mergedList))
     } catch { }
-  }, [storageKey, altStorageKey, sales, shopId])
+  }, [storageKey, targetShopIds.join(','), sales, shopId])
 
   useEffect(() => {
     loadItems()

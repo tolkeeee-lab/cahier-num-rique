@@ -95,10 +95,12 @@ export function SalesHistory({
   const filteredSales = useMemo(() => {
     return sales.filter(s => {
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase()
-        const matchClient = s.client.toLowerCase().includes(q)
-        const matchNotes = (s.notes || '').toLowerCase().includes(q)
-        const matchArticle = s.articles.some(a => a.name.toLowerCase().includes(q))
+        const q = searchQuery.toLowerCase().trim()
+        const clientStr = (s.client || '').toLowerCase()
+        const notesStr = (s.notes || '').toLowerCase()
+        const matchClient = clientStr.includes(q)
+        const matchNotes = notesStr.includes(q)
+        const matchArticle = Array.isArray(s.articles) && s.articles.some(a => (a?.name || '').toLowerCase().includes(q))
         if (!matchClient && !matchNotes && !matchArticle) return false
       }
 
@@ -203,7 +205,7 @@ export function SalesHistory({
             const validDateSales = dateSales.filter(s => s.status !== 'crossed_out')
             const salesTotal = validDateSales
               .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit' || s.type === 'sale')
-              .reduce((sum, s) => sum + (s.total || 0), 0)
+              .reduce((sum, s) => sum + Number(s.total || 0), 0)
 
             return (
               <div key={dateKey} className="space-y-2.5">
