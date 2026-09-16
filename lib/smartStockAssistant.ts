@@ -192,7 +192,13 @@ export function analyzeNotebookInputWithMasterCatalog(
     }
   }
 
-  const calculatedItemsCount = Math.max(1, Math.round(qty * fractionMultiplier * multiplier))
+  const unitName = (bestMatch.unit || '').trim().toLowerCase()
+  const isBulkUnit = ['kg', 'g', 'litre', 'l', 'cl', 'mètre', 'm'].includes(unitName)
+  const rawItemsCount = qty * fractionMultiplier * multiplier
+  const calculatedItemsCount = isBulkUnit
+    ? Math.max(0.01, Math.round(rawItemsCount * 100) / 100)
+    : Math.max(1, Math.round(rawItemsCount))
+
   const stockBefore = typeof bestMatch.current_stock === 'number'
     ? bestMatch.current_stock
     : (bestMatch.initial_stock || 0)
@@ -205,7 +211,7 @@ export function analyzeNotebookInputWithMasterCatalog(
   let isOutOfStock = false
 
   if (kind === 'sale') {
-    stockAfter = stockBefore - calculatedItemsCount
+    stockAfter = Math.round((stockBefore - calculatedItemsCount) * 100) / 100
     if (stockTracked && !isUnlimited) {
       if (stockBefore <= 0 || stockAfter < 0) {
         isStockAlert = true
@@ -215,7 +221,7 @@ export function analyzeNotebookInputWithMasterCatalog(
       }
     }
   } else if (kind === 'stock_addition') {
-    stockAfter = stockBefore + calculatedItemsCount
+    stockAfter = Math.round((stockBefore + calculatedItemsCount) * 100) / 100
   }
 
   // Calcul du prix unitaire et détection d'anomalies de zéros (ex: 2200 au lieu de 22000)

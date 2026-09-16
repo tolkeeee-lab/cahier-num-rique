@@ -75,7 +75,7 @@ export function DebtsBook({
           
           const existingIdx = mergedDebts.findIndex(d => (d.client_name || '').toLowerCase().trim() === lowerName && d.debt_type === type)
           if (existingIdx >= 0) {
-            mergedDebts[existingIdx].amount_owed = mergedDebts[existingIdx].amount_owed + owed - paid
+            mergedDebts[existingIdx].amount_owed = Math.max(0, (mergedDebts[existingIdx].amount_owed || 0) + owed - paid)
             mergedDebts[existingIdx].paid_amount = (mergedDebts[existingIdx].paid_amount || 0) + paid
             mergedDebts[existingIdx].status = mergedDebts[existingIdx].amount_owed <= 0 ? 'settled' : 'pending'
           } else {

@@ -5,10 +5,12 @@ export const isSupabaseConfigured = () => {
 }
 
 export function getItemCashDelta(item: any): number {
-  if (item.status === 'crossed_out') return 0
+  if (!item || item.status === 'crossed_out') return 0
   const type = item.type
-  const paid = Number(item.paid_amount ?? item.paid ?? 0)
-  const total = Number(item.total_amount ?? item.total ?? 0)
+  const rawPaid = Number(item.paid_amount ?? item.paid ?? 0)
+  const rawTotal = Number(item.total_amount ?? item.total ?? 0)
+  const paid = Number.isFinite(rawPaid) ? rawPaid : 0
+  const total = Number.isFinite(rawTotal) ? rawTotal : 0
 
   if (type === 'cash_in' || type === 'payment_client' || type === 'sale' || type === 'sale_cash') {
     return paid > 0 ? paid : (type === 'cash_in' || type === 'sale' ? total : 0)
@@ -67,7 +69,11 @@ export function getItemCashDelta(item: any): number {
 }
 
 export function calculateCash(list: any[]): number {
-  return (list || []).reduce((sum, item) => sum + getItemCashDelta(item), 0)
+  const sum = (list || []).reduce((acc, item) => {
+    const delta = getItemCashDelta(item)
+    return acc + (Number.isFinite(delta) ? delta : 0)
+  }, 0)
+  return Math.round(sum * 100) / 100
 }
 
 export async function getCurrentCash(shopId: string): Promise<number> {

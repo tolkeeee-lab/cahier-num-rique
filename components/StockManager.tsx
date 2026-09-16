@@ -75,9 +75,16 @@ export function StockManager({
   const [saving, setSaving] = useState(false)
   const [deductPastSales, setDeductPastSales] = useState(false)
 
-  // Référence anti-rebond pour ajustements de stock sur réseaux instables
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  // Références anti-rebond par produit pour ajustements de stock sur réseaux instables
+  const debounceTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
   const productsRef = useRef<Product[]>(products)
+
+  useEffect(() => {
+    return () => {
+      debounceTimersRef.current.forEach((t) => clearTimeout(t))
+      debounceTimersRef.current.clear()
+    }
+  }, [])
 
   useEffect(() => {
     productsRef.current = products
@@ -113,11 +120,6 @@ export function StockManager({
 
   useEffect(() => {
     loadStock()
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
-    }
   }, [loadStock])
 
   const handleOpenAddModal = () => {
@@ -248,22 +250,28 @@ export function StockManager({
       window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
     }
 
-    // 3. Debounce de la synchronisation serveur
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
+    // 3. Debounce individuel par produit pour éviter l'écrasement multi-articles
+    const existingTimer = debounceTimersRef.current.get(id)
+    if (existingTimer) {
+      clearTimeout(existingTimer)
     }
 
-    debounceTimerRef.current = setTimeout(async () => {
+    const timer = setTimeout(async () => {
+      debounceTimersRef.current.delete(id)
+      const latestProd = productsRef.current.find(p => p.id === id)
+      const stockToSend = latestProd?.current_stock ?? nextStock
       try {
         await fetch('/api/stock', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
-          body: JSON.stringify({ id, name: targetProd.name, current_stock: nextStock }),
+          body: JSON.stringify({ id, name: targetProd.name, current_stock: stockToSend }),
         })
       } catch (err) {
         console.warn('Mode hors-ligne : ajustement stock enregistré localement.', err)
       }
     }, 400)
+
+    debounceTimersRef.current.set(id, timer)
   }, [shopId])
 
   const handleDeleteProduct = async (id: string) => {

@@ -28,7 +28,8 @@ interface ServicesAnalyticsWidgetProps {
 }
 
 function formatPrice(price: number): string {
-  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(price) + ' F'
+  const safe = Number.isFinite(price) ? price : 0
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(safe) + ' F'
 }
 
 export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopName = 'Salon & Services' }: ServicesAnalyticsWidgetProps) {
@@ -49,8 +50,10 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
 
       if (s.articles && s.articles.length > 0) {
         s.articles.forEach(art => {
-          const rev = art.unit_price * art.quantity
-          const nameLower = art.name.toLowerCase()
+          const unitPrice = Number(art.unit_price || 0)
+          const qty = Number(art.quantity || 1)
+          const rev = unitPrice * qty
+          const nameLower = (art.name || '').toLowerCase()
           const isProduit = nameLower.includes('huile') || nameLower.includes('tissu') || nameLower.includes('pièce') || nameLower.includes('produit') || nameLower.includes('savon') || nameLower.includes('crème')
 
           if (isProduit) {
@@ -59,15 +62,15 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
             totalServices += rev
           }
 
-          const key = art.name.trim().toLowerCase()
+          const key = (art.name || 'Prestation').trim().toLowerCase()
           if (!serviceMap[key]) {
-            serviceMap[key] = { name: art.name.trim(), qty: 0, revenue: 0 }
+            serviceMap[key] = { name: (art.name || 'Prestation').trim(), qty: 0, revenue: 0 }
           }
-          serviceMap[key].qty += art.quantity
+          serviceMap[key].qty += qty
           serviceMap[key].revenue += rev
         })
       } else {
-        totalServices += s.total
+        totalServices += Number(s.total || s.paid || 0)
       }
     })
 

@@ -205,7 +205,7 @@ export function generateWhatsAppPerformanceReport(
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5)
 
-  const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(p) + ' F'
+  const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(Number.isFinite(p) ? p : 0) + ' F'
 
   let msg = `📈 *SYNTHÈSE DE PERFORMANCE (${periodLabel.toUpperCase()})*\n`
   msg += `🏪 *Commerce* : ${shopName}\n`
@@ -256,7 +256,7 @@ export function exportSalesToPDF(
   const pureExpenses = validSales.filter(s => ['cash_out', 'purchase_cash', 'payment_supplier'].includes(s.type) || s.pen_color === 'red' || s.pen_color === 'green')
   const totalExpenses = pureExpenses.reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
 
-  const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(p) + ' FCFA'
+  const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(Number.isFinite(p) ? p : 0) + ' FCFA'
   const todayStr = new Date().toLocaleDateString('fr-FR')
 
   const rowsHtml = sales.map(s => {
@@ -399,7 +399,7 @@ export function generateWhatsAppHouseholdReport(
 
   const bilan = revenueMonth - depenseMonth - reserveMonth
 
-  const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(p) + ' F'
+  const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(Number.isFinite(p) ? p : 0) + ' F'
 
   let msg = `🏡 *BILAN BUDGET DU FOYER (${monthLabel.toUpperCase()})*\n`
   msg += `🏠 *Foyer* : ${foyerName}\n`
