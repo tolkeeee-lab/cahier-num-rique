@@ -70,13 +70,13 @@ export function DebtsBook({
         names.forEach(name => {
           const lowerName = name.toLowerCase()
           const sSales = filteredSales.filter(s => (s.client_name || s.client || '').toLowerCase().trim() === lowerName)
-          const owed = sSales.filter(s => s.type === (type === 'client' ? 'sale_credit' : 'purchase_credit')).reduce((sum, s) => sum + (s.debt_amount ?? s.debt ?? s.total_amount ?? s.total ?? 0), 0)
-          const paid = sSales.filter(s => s.type === (type === 'client' ? 'payment_client' : 'payment_supplier')).reduce((sum, s) => sum + (s.paid_amount ?? s.paid ?? s.total_amount ?? s.total ?? 0), 0)
+          const owed = sSales.filter(s => s.type === (type === 'client' ? 'sale_credit' : 'purchase_credit')).reduce((sum, s) => sum + Number(s.debt_amount ?? s.debt ?? s.total_amount ?? s.total ?? 0), 0)
+          const paid = sSales.filter(s => s.type === (type === 'client' ? 'payment_client' : 'payment_supplier')).reduce((sum, s) => sum + Number(s.paid_amount ?? s.paid ?? s.total_amount ?? s.total ?? 0), 0)
           
           const existingIdx = mergedDebts.findIndex(d => (d.client_name || '').toLowerCase().trim() === lowerName && d.debt_type === type)
           if (existingIdx >= 0) {
-            mergedDebts[existingIdx].amount_owed = Math.max(0, (mergedDebts[existingIdx].amount_owed || 0) + owed - paid)
-            mergedDebts[existingIdx].paid_amount = (mergedDebts[existingIdx].paid_amount || 0) + paid
+            mergedDebts[existingIdx].amount_owed = Math.max(0, Number(mergedDebts[existingIdx].amount_owed || 0) + owed - paid)
+            mergedDebts[existingIdx].paid_amount = Number(mergedDebts[existingIdx].paid_amount || 0) + paid
             mergedDebts[existingIdx].status = mergedDebts[existingIdx].amount_owed <= 0 ? 'settled' : 'pending'
           } else {
             const balance = Math.max(0, owed - paid)
@@ -209,11 +209,11 @@ export function DebtsBook({
 
   const totalClientDebts = debts
     .filter((d) => (d.status === 'pending' && (d as any).status !== 'paid') && d.debt_type !== 'supplier')
-    .reduce((sum, d) => sum + (d.amount_owed || 0), 0)
+    .reduce((sum, d) => sum + Number(d.amount_owed || 0), 0)
 
   const totalSupplierDebts = debts
     .filter((d) => (d.status === 'pending' && (d as any).status !== 'paid') && d.debt_type === 'supplier')
-    .reduce((sum, d) => sum + (d.amount_owed || 0), 0)
+    .reduce((sum, d) => sum + Number(d.amount_owed || 0), 0)
 
   return (
     <div className="space-y-4">

@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     } catch {}
 
     // 3. Consolider le stock initial du produit cible (si le produit source avait du stock)
-    const combinedInitialStock = (targetProduct.initial_stock || 0) + (sourceProduct.initial_stock || 0)
+    const combinedInitialStock = Number(targetProduct.initial_stock || 0) + Number(sourceProduct.initial_stock || 0)
     const isTracked = targetProduct.stock_tracked || sourceProduct.stock_tracked || combinedInitialStock > 0
     const { data: updatedTarget, error: updateTargetErr } = await supabase
       .from('products')

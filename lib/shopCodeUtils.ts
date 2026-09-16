@@ -1,3 +1,5 @@
+import { supabaseClient } from './supabaseClient'
+
 /**
  * shopCodeUtils.ts — Formate et résout les codes courts de boutique (ex: BTQ-58C54)
  */
@@ -42,8 +44,6 @@ export function matchShopByCode(inputCode: string, shops: Array<{ id: string; na
 
   return shortMatch ? shortMatch.id : null
 }
-
-import { supabaseClient } from './supabaseClient'
 
 /**
  * Vérifie si un identifiant de boutique est un vrai UUID Supabase long

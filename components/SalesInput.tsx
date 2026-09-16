@@ -29,6 +29,16 @@ export function SalesInput({
   const pens = getPens(shopActivity)
   const currentPen = pens.find(p => p.id === activePenColor) || pens[0]
 
+  const extractedTotalAmount = React.useMemo(() => {
+    if (!text.trim()) return 0
+    const match = text.match(/(?:à\s*|:\s*|\s+)?(\d+)\s*(?:f|fcfa)?\s*$/i)
+    if (match) {
+      const val = parseInt(match[1], 10)
+      return Number.isFinite(val) ? val : 0
+    }
+    return 0
+  }, [text])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!text.trim() || isSubmitting) return
@@ -107,7 +117,7 @@ export function SalesInput({
       <ChangeCalculatorModal
         isOpen={showCalculator}
         onClose={() => setShowCalculator(false)}
-        totalAmount={0}
+        totalAmount={extractedTotalAmount}
       />
     </div>
   )

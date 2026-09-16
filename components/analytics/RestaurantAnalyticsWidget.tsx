@@ -131,7 +131,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
               <button
                 key={p.id}
                 onClick={() => onPeriodChange(p.id as any)}
-                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all active:scale-95 ${
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all active:scale-[0.97] cursor-pointer ${
                   period === p.id 
                     ? 'bg-gray-900 text-white shadow-sm' 
                     : 'text-gray-600 hover:bg-gray-200'
@@ -146,7 +146,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
             href={generateWhatsAppPerformanceReport(sales, period === 'all' ? 'Tout' : period === 'month' ? 'Ce Mois' : period === '7days' ? '7 Jours' : 'Aujourd\'hui', shopName)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm active:scale-[0.97] cursor-pointer"
           >
             <Share2 className="w-3 h-3" />
             <span>Rapport Resto WhatsApp</span>
@@ -208,16 +208,16 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
           {/* Barre de répartition */}
           <div className="h-6 w-full bg-gray-100 rounded-2xl overflow-hidden flex shadow-inner border border-gray-200">
             <div
-              className="bg-amber-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all"
+              className="bg-amber-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all overflow-hidden"
               style={{ width: `${restoStats.ratioCuisine}%` }}
             >
-              Cuisine {restoStats.ratioCuisine}%
+              {restoStats.ratioCuisine >= 12 ? `Cuisine ${restoStats.ratioCuisine}%` : ''}
             </div>
             <div
-              className="bg-sky-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all"
+              className="bg-sky-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all overflow-hidden"
               style={{ width: `${restoStats.ratioBar}%` }}
             >
-              Bar {restoStats.ratioBar}%
+              {restoStats.ratioBar >= 12 ? `Bar ${restoStats.ratioBar}%` : ''}
             </div>
           </div>
 
