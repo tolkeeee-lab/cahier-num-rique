@@ -431,11 +431,19 @@ export function BarcodeScannerModal({
     }
   }
 
-  const totalCartAmount = cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0)
-  const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+  const totalCartAmount = cart.reduce((sum, item) => sum + (Number(item.unit_price || 0) * Number(item.quantity || 1)), 0)
+  const totalItemsCount = cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-2 sm:p-4 backdrop-blur-xs">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-2 sm:p-4 backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          stopScanner()
+          onClose()
+        }
+      }}
+    >
       <div className="bg-[#fbf9f4] border-2 border-amber-300 rounded-[28px] max-w-lg w-full max-h-[95vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}

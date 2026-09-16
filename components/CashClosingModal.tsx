@@ -82,19 +82,23 @@ export function CashClosingModal({
   const theoreticalCash = calculateCash(activeSales)
 
   // Parsing robuste des montants (espaces et virgules)
+  const rawActual = parseFloat(actualCashInput.replace(/\s/g, '').replace(/,/g, '.'))
   const actualCash = actualCashInput !== ''
-    ? (parseFloat(actualCashInput.replace(/\s/g, '').replace(/,/g, '.')) || 0)
+    ? (Number.isFinite(rawActual) ? rawActual : 0)
     : theoreticalCash
 
-  const difference = actualCash - theoreticalCash
+  const difference = Math.round((actualCash - theoreticalCash) * 100) / 100
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR').format(price) + ' F'
+    const safe = Number.isFinite(price) ? price : 0
+    return new Intl.NumberFormat('fr-FR').format(safe) + ' F'
   }
 
   // Calcul du billetage
   const totalBilletage = Object.entries(bills).reduce((sum, [denom, count]) => {
-    return sum + Number(denom) * (count || 0)
+    const d = Number(denom)
+    const c = Number(count || 0)
+    return sum + (Number.isFinite(d) && Number.isFinite(c) ? d * c : 0)
   }, 0)
 
   const handleApplyBilletage = () => {

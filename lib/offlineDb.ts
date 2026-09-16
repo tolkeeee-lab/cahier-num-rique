@@ -417,6 +417,40 @@ export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
   sales.push(sale)
   writeJson(salesKey(shopId), sales)
   idbSaveSale(sale).catch(() => {})
+
+  // Répercussion immédiate sur le stock local pour tout mouvement de marchandise
+  if (sale.status !== 'crossed_out' && sale.articles && sale.articles.length > 0) {
+    const isOut = ['cash_in', 'sale', 'sale_cash', 'sale_credit', 'stock_damage', 'personal_use'].includes(sale.type)
+    const isIn = ['purchase_cash', 'purchase_credit', 'stock_cash', 'stock_in'].includes(sale.type)
+    if (isOut || isIn) {
+      try {
+        const products = getOfflineProducts(shopId)
+        let changed = false
+        for (const art of sale.articles) {
+          if (!art.name) continue
+          const normName = normalizeProductName(art.name).toLowerCase().trim()
+          const prod = products.find(p => normalizeProductName(p.name).toLowerCase().trim() === normName)
+          if (prod) {
+            const isUnlimited = prod.is_service || prod.is_unlimited || prod.category === 'Cuisine' || prod.category === 'Service'
+            if (!isUnlimited) {
+              const curr = typeof prod.current_stock === 'number' ? prod.current_stock : (prod.initial_stock || 0)
+              const qty = Number(art.quantity || 1)
+              const next = isOut ? Math.max(0, Math.round((curr - qty) * 100) / 100) : Math.round((curr + qty) * 100) / 100
+              prod.current_stock = next
+              prod.stock_tracked = true
+              changed = true
+            }
+          }
+        }
+        if (changed) {
+          replaceOfflineProducts(shopId, products)
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+          }
+        }
+      } catch {}
+    }
+  }
 }
 
 export function updateOfflineSale(
@@ -680,10 +714,22 @@ export function deleteOfflineProduct(shopId: string, productId: string, productN
 // ─── Calcul du stock offline ──────────────────────────────────────────────────
 
 export function computeOfflineStock(
-  shopId: string
+  shopId: string,
+  productsList?: OfflineProduct[]
 ): Record<string, { total_in: number; total_out: number; movements: Array<{ date: string; created_at: string; type: 'in' | 'out'; quantity: number; unit_price: number; notes: string }> }> {
   const sales = getOfflineSales(shopId)
   const stockMap: Record<string, { total_in: number; total_out: number; movements: any[] }> = {}
+
+  const prods = productsList || getOfflineProducts(shopId)
+  const trackingStartMap: Record<string, number> = {}
+  for (const p of prods) {
+    const k = normalizeProductName(p.name).toLowerCase().trim()
+    if ((p as any).tracking_started_at) {
+      trackingStartMap[k] = new Date((p as any).tracking_started_at).getTime()
+    } else if (p.initial_stock && p.created_at) {
+      trackingStartMap[k] = new Date(p.created_at).getTime()
+    }
+  }
 
   for (const sale of sales) {
     if (sale.status === 'crossed_out') continue
@@ -691,30 +737,42 @@ export function computeOfflineStock(
     const isOut = sale.type === 'cash_in' || sale.type === 'sale_credit' || sale.type === 'sale' || sale.type === 'sale_cash' || sale.type === 'stock_damage' || sale.type === 'personal_use'
     if (!isIn && !isOut) continue
 
+    const saleTime = sale.created_at ? new Date(sale.created_at).getTime() : new Date(sale.date).getTime()
+
     for (const article of sale.articles) {
       if (!article.name) continue
       const cleanName = normalizeProductName(article.name)
       const key = cleanName.toLowerCase().trim()
+
+      const trackingStart = trackingStartMap[key] || 0
+      if (trackingStart > 0 && saleTime <= trackingStart) {
+        // Mouvement antérieur à la consolidation manuelle : ignoré (conforme serveur /api/stock)
+        continue
+      }
+
       if (!stockMap[key]) stockMap[key] = { total_in: 0, total_out: 0, movements: [] }
+      const qty = Number(article.quantity || 1)
+      const price = Number(article.unit_price || 0)
+
       if (isIn) {
-        stockMap[key].total_in += article.quantity
+        stockMap[key].total_in += qty
         stockMap[key].movements.push({ 
           date: sale.date, 
           created_at: sale.created_at,
           type: 'in', 
-          quantity: article.quantity, 
-          unit_price: article.unit_price, 
-          notes: `${article.quantity} ${cleanName} à ${article.unit_price} F` 
+          quantity: qty, 
+          unit_price: price, 
+          notes: `${qty} ${cleanName} à ${price} F` 
         })
       } else {
-        stockMap[key].total_out += article.quantity
+        stockMap[key].total_out += qty
         stockMap[key].movements.push({ 
           date: sale.date, 
           created_at: sale.created_at,
           type: 'out', 
-          quantity: article.quantity, 
-          unit_price: article.unit_price, 
-          notes: `${article.quantity} ${cleanName} à ${article.unit_price} F` 
+          quantity: qty, 
+          unit_price: price, 
+          notes: `${qty} ${cleanName} à ${price} F` 
         })
       }
     }

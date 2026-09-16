@@ -28,7 +28,8 @@ interface RestaurantAnalyticsWidgetProps {
 }
 
 function formatPrice(price: number): string {
-  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(price) + ' F'
+  const safe = Number.isFinite(price) ? price : 0
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(safe) + ' F'
 }
 
 export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopName = 'Restaurant & Bar' }: RestaurantAnalyticsWidgetProps) {
@@ -51,27 +52,29 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
 
       if (s.articles && s.articles.length > 0) {
         s.articles.forEach(art => {
-          const nameLower = art.name.toLowerCase()
-          const rev = art.unit_price * art.quantity
+          const nameLower = (art.name || '').toLowerCase()
+          const unitPrice = Number(art.unit_price || 0)
+          const qty = Number(art.quantity || 1)
+          const rev = unitPrice * qty
           const isBar = nameLower.includes('bière') || nameLower.includes('coca') || nameLower.includes('fanta') || nameLower.includes('sprite') || nameLower.includes('jus') || nameLower.includes('eau') || nameLower.includes('boisson') || nameLower.includes('vin') || nameLower.includes('bouteille') || art.category === 'Boissons'
 
           if (isBar) {
             totalBar += rev
-            totalBoissonsServies += art.quantity
+            totalBoissonsServies += qty
           } else {
             totalCuisine += rev
-            totalPlatsServis += art.quantity
+            totalPlatsServis += qty
           }
 
-          const key = art.name.trim().toLowerCase()
+          const key = (art.name || 'Article').trim().toLowerCase()
           if (!itemMap[key]) {
-            itemMap[key] = { name: art.name.trim(), qty: 0, revenue: 0, isBar }
+            itemMap[key] = { name: (art.name || 'Article').trim(), qty: 0, revenue: 0, isBar }
           }
-          itemMap[key].qty += art.quantity
+          itemMap[key].qty += qty
           itemMap[key].revenue += rev
         })
       } else {
-        totalCuisine += s.total
+        totalCuisine += Number(s.total || s.paid || 0)
       }
     })
 

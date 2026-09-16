@@ -43,33 +43,36 @@ export const EMPTY_FORM: StockFormState = {
 }
 
 export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('fr-FR').format(price) + ' F'
+  const safe = Number.isFinite(price) ? price : 0
+  return new Intl.NumberFormat('fr-FR').format(safe) + ' F'
 }
 
 export function getItemPurchaseValue(item: StockItem): number {
-  if (!item.unit_cost || item.current_stock <= 0) return 0
-  const stock = Math.max(0, item.current_stock)
-  const mult = item.multiplier && item.multiplier > 1 ? item.multiplier : 1
+  const cost = Number(item.unit_cost || 0)
+  const rawStock = Number(item.current_stock || 0)
+  if (!cost || rawStock <= 0) return 0
+  const stock = Math.max(0, rawStock)
+  const mult = item.multiplier && item.multiplier > 1 ? Math.max(1, Math.round(item.multiplier)) : 1
 
   if (mult > 1) {
     const wholeCartons = Math.floor(stock / mult)
     const extraUnits = stock % mult
-    let cartonCost = Math.round(item.unit_cost * mult)
+    let cartonCost = Math.round(cost * mult)
 
     // Reconstitution du prix exact du carton sans artefact d'arrondi de division
     // Ex: 333 F x 30 = 9990 F -> Vrai prix carton = 10 000 F (car 10000 / 30 = 333 F)
     for (const step of [500, 100, 50, 25, 10, 5]) {
       const candidate = Math.round(cartonCost / step) * step
-      if (candidate > 0 && Math.abs(candidate - cartonCost) < mult && Math.round(candidate / mult) === Math.round(item.unit_cost)) {
+      if (candidate > 0 && Math.abs(candidate - cartonCost) < mult && Math.round(candidate / mult) === Math.round(cost)) {
         cartonCost = candidate
         break
       }
     }
 
-    return Math.round((wholeCartons * cartonCost) + (extraUnits * item.unit_cost))
+    return Math.round((wholeCartons * cartonCost) + (extraUnits * cost))
   }
 
-  return Math.round(stock * item.unit_cost)
+  return Math.round(stock * cost)
 }
 
 export function getStockStatus(item: StockItem): StockStatus {
@@ -114,9 +117,13 @@ export function getStatusColors(status: StockStatus) {
 }
 
 export function getBarWidth(item: StockItem): number {
-  if (item.current_stock <= 0) return 0
-  const max = Math.max(item.initial_stock + item.total_in, item.alert_threshold * 3, item.current_stock * 2, 1)
-  return Math.min(100, (item.current_stock / max) * 100)
+  const curr = Number(item.current_stock || 0)
+  if (curr <= 0) return 0
+  const init = Number(item.initial_stock || 0)
+  const totalIn = Number(item.total_in || 0)
+  const alertThresh = Number(item.alert_threshold || 5)
+  const max = Math.max(init + totalIn, alertThresh * 3, curr * 2, 1)
+  return Math.min(100, Math.max(0, (curr / max) * 100))
 }
 
 export function exportStockToCSV(items: StockItem[], shopId: string) {
@@ -144,7 +151,7 @@ export function exportStockToCSV(items: StockItem[], shopId: string) {
     const st = getStockStatus(item)
     const status = st === 'untracked' ? 'Non suivi' : st === 'out' ? 'Rupture' : st === 'low' ? 'Stock Bas' : 'OK'
     const valAchat = getItemPurchaseValue(item)
-    const valVente = Math.max(0, item.current_stock) * (item.unit_price || 0)
+    const valVente = Math.round(Math.max(0, Number(item.current_stock || 0)) * Number(item.unit_price || 0))
 
     return [
       `"${item.name.replace(/"/g, '""')}"`,
