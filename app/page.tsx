@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Calculator, Sparkles, CheckCircle2, ShieldCheck, AlertTriangle, Package, Clock } from 'lucide-react'
+import { ArrowRight, BookOpen, Calculator, Sparkles, CheckCircle2, ShieldCheck, AlertTriangle, Package, Clock, Play } from 'lucide-react'
 
 export default function LandingPage() {
   const [authError, setAuthError] = useState<string | null>(null)
@@ -44,12 +44,21 @@ export default function LandingPage() {
             Cahier Numérique
           </span>
         </div>
-        <Link 
-          href="/journal"
-          className="px-5 py-2.5 bg-gradient-to-r from-[#064e3b] to-[#043c2d] hover:from-[#085a44] hover:to-[#054937] text-[#f59e0b] text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] border border-[#024c34]"
-        >
-          Ouvrir mon Cahier
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/presentation"
+            className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-[#f59e0b] border border-amber-500/30 hover:border-amber-500/60 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-[0.97]"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Démo Motion</span>
+          </Link>
+          <Link 
+            href="/journal"
+            className="px-5 py-2.5 bg-gradient-to-r from-[#064e3b] to-[#043c2d] hover:from-[#085a44] hover:to-[#054937] text-[#f59e0b] text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] border border-[#024c34]"
+          >
+            Ouvrir mon Cahier
+          </Link>
+        </div>
       </nav>
 
       {/* Hero Section */}
@@ -72,20 +81,28 @@ export default function LandingPage() {
             Spécialement conçu pour les boutiquiers, commerçants de proximité et grossistes en Afrique de l'Ouest. Écrivez vos ventes comme sur un vrai cahier Seyes avec vos stylos Bic de couleur, l'application s'occupe de faire les calculs et de sécuriser votre tiroir-caisse.
           </p>
 
-          <div className="pt-4 flex flex-col sm:flex-row gap-4">
+          <div className="pt-4 flex flex-col sm:flex-row gap-3">
             <Link
               href="/journal"
-              className="px-8 py-4 bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#fbbf24] hover:to-[#f59e0b] text-[#141210] text-sm font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 group"
+              className="px-7 py-4 bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#fbbf24] hover:to-[#f59e0b] text-[#141210] text-sm font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 group"
             >
               <span>Accéder à l'application</span>
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Link>
             
+            <Link
+              href="/presentation"
+              className="px-6 py-4 bg-[#1e1a18] hover:bg-[#2a2421] border border-[#f59e0b]/40 hover:border-[#f59e0b] text-[#f59e0b] text-sm font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              <span>Voir le Motion Design</span>
+            </Link>
+
             <a
               href="#features"
-              className="px-6 py-4 bg-[#1e1a18] hover:bg-[#2a2421] border border-gray-800 text-gray-300 text-sm font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center"
+              className="px-5 py-4 bg-transparent hover:bg-white/5 border border-gray-800 text-gray-400 hover:text-gray-200 text-sm font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center"
             >
-              Découvrir les fonctionnalités
+              Fonctionnalités
             </a>
           </div>
 
