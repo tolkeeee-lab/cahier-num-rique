@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { Calendar } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronUp, Calculator, Coins, AlertTriangle, Clock } from 'lucide-react'
 import { SalesFilterBar } from '@/components/sales/SalesFilterBar'
 import { SaleItemCard } from '@/components/sales/SaleItemCard'
 import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
@@ -94,6 +94,14 @@ export function SalesHistory({
   const [activeShareSale, setActiveShareSale] = useState<Sale | null>(null)
   const [activeRepaymentSale, setActiveRepaymentSale] = useState<Sale | null>(null)
   const [editingSale, setEditingSale] = useState<Sale | null>(null)
+  const [expandedBilans, setExpandedBilans] = useState<Record<string, boolean>>({})
+
+  const toggleBilan = (dateKey: string) => {
+    setExpandedBilans(prev => ({
+      ...prev,
+      [dateKey]: !prev[dateKey]
+    }))
+  }
 
   const filteredSales = useMemo(() => {
     return sales.filter(s => {
@@ -248,27 +256,219 @@ export function SalesHistory({
         <div className="space-y-6">
           {salesByDate.map(([dateKey, dateSales]) => {
             const validDateSales = dateSales.filter(s => s.status !== 'crossed_out')
+
+            // 1. Chiffre d'Affaires brut (Ventes effectives de la journée)
             const salesTotal = validDateSales
               .filter(s => (s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit' || s.type === 'sale') && s.type !== 'payment_client' && s.type !== 'client_request')
               .reduce((sum, s) => sum + Number(s.total || 0), 0)
 
+            // 2. Encaissements Ventes au comptant (argent liquide entré en caisse)
+            const salesCashTotal = validDateSales
+              .filter(s => (s.pen_color === 'blue' || s.type === 'sale' || s.type === 'cash_in') && s.type !== 'payment_client' && s.type !== 'client_request')
+              .reduce((sum, s) => sum + Number(s.paid || s.total || 0), 0)
+
+            // 3. Règlements de dettes reçus des clients
+            const repaymentsReceivedTotal = validDateSales
+              .filter(s => s.type === 'payment_client')
+              .reduce((sum, s) => sum + Number(s.paid || s.total || 0), 0)
+
+            // Total des rentrées de caisse du jour
+            const totalCashIn = salesCashTotal + repaymentsReceivedTotal
+
+            // 4. Dépenses diverses réglées
+            const expensesTotal = validDateSales
+              .filter(s => s.pen_color === 'red' || s.type === 'cash_out' || (s.type === 'cash_adjustment' && ((s.notes || '').toLowerCase().includes('retrait') || s.pen_color === 'red')))
+              .reduce((sum, s) => sum + Number(s.total || s.paid || 0), 0)
+
+            // 5. Achats stock au comptant
+            const stockCashTotal = validDateSales
+              .filter(s => s.pen_color === 'green' || s.type === 'purchase_cash')
+              .reduce((sum, s) => sum + Number(s.total || s.paid || 0), 0)
+
+            // 6. Règlements fournisseurs payés
+            const supplierPaymentsTotal = validDateSales
+              .filter(s => s.type === 'payment_supplier')
+              .reduce((sum, s) => sum + Number(s.paid || s.total || 0), 0)
+
+            // Total des sorties de caisse du jour
+            const totalCashOut = expensesTotal + stockCashTotal + supplierPaymentsTotal
+
+            // 7. Solde net de caisse de la journée
+            const dayNet = totalCashIn - totalCashOut
+            const expensesExceedCA = totalCashOut > totalCashIn
+
+            // 8. Crédits accordés et dettes contractées ce jour
+            const creditsGivenTotal = validDateSales
+              .filter(s => s.pen_color === 'yellow' || s.type === 'sale_credit')
+              .reduce((sum, s) => sum + Number(s.debt || s.total || 0), 0)
+
+            const supplierDebtsContracted = validDateSales
+              .filter(s => s.pen_color === 'purple' || s.type === 'purchase_credit')
+              .reduce((sum, s) => sum + Number(s.debt || s.total || 0), 0)
+
+            const isExpanded = !!expandedBilans[dateKey]
+
             return (
               <div key={dateKey} className="space-y-2.5">
-                {/* ── Séparateur de Date avec CA de la journée ── */}
-                <div className="flex items-center justify-between gap-2 py-2 px-3.5 bg-gradient-to-r from-amber-100/90 via-yellow-50 to-amber-100/90 border border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs select-none">
+                {/* ── Séparateur de Date Interactif avec CA & Déclencheur du Bilan ── */}
+                <button
+                  type="button"
+                  onClick={() => toggleBilan(dateKey)}
+                  className="w-full text-left flex items-center justify-between gap-2 py-2 px-3.5 bg-gradient-to-r from-amber-100/95 via-yellow-50 to-amber-100/95 hover:from-amber-200/90 hover:via-yellow-100 hover:to-amber-200/90 border border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs transition-all active:scale-[0.99] cursor-pointer group select-none"
+                  title="Cliquer pour ouvrir ou fermer le bilan financier détaillé de cette journée"
+                >
                   <div className="flex items-center gap-2 font-handwritten font-black text-sm sm:text-base text-amber-950">
                     <Calendar className="w-4 h-4 text-amber-900 flex-shrink-0" strokeWidth={1.75} />
                     <span>{formatLongDateFr(dateKey)}</span>
                   </div>
-                  <div className="flex items-center gap-2 font-mono text-xs">
+
+                  <div className="flex items-center gap-2 font-mono text-xs flex-wrap justify-end">
                     <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-2xs tabular-nums">
                       CA : +{formatPrice(salesTotal)}
                     </span>
+
+                    {expensesExceedCA ? (
+                      <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-rose-600 text-white border border-rose-700 shadow-2xs tabular-nums flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-white" strokeWidth={2} />
+                        <span>Dépenses &gt; CA ({dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`})</span>
+                      </span>
+                    ) : dayNet > 0 ? (
+                      <span className="px-2.5 py-0.5 rounded-full font-extrabold text-xs bg-emerald-600 text-white shadow-2xs tabular-nums hidden sm:inline-flex">
+                        Net : +{formatPrice(dayNet)}
+                      </span>
+                    ) : null}
+
                     <span className="px-2.5 py-0.5 rounded-full font-extrabold bg-amber-900/10 text-amber-950 border border-amber-300 text-[11px] tabular-nums">
                       {validDateSales.length} écriture(s)
                     </span>
+
+                    <span className="px-2 py-0.5 rounded-lg bg-amber-200 text-amber-950 group-hover:bg-amber-300 border border-amber-400/80 transition-colors flex items-center gap-1 text-[11px] font-bold shadow-2xs">
+                      <span>Bilan</span>
+                      {isExpanded ? (
+                        <ChevronUp className="w-3.5 h-3.5 text-amber-950" strokeWidth={2.2} />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5 text-amber-950" strokeWidth={2.2} />
+                      )}
+                    </span>
                   </div>
-                </div>
+                </button>
+
+                {/* ── Bilan Financier & Flux de Caisse Déroulant ── */}
+                {isExpanded && (
+                  <div className="p-3.5 sm:p-4 bg-gradient-to-br from-amber-50/95 via-[#fffdf9] to-yellow-50/90 border-2 border-amber-300/90 rounded-2xl font-mono text-xs shadow-md space-y-3">
+                    <div className="flex items-center justify-between border-b-2 border-dashed border-amber-300/80 pb-2 font-handwritten font-black text-amber-950 text-sm sm:text-base">
+                      <div className="flex items-center gap-2">
+                        <Calculator className="w-4 h-4 text-emerald-800" strokeWidth={1.75} />
+                        <span className="tracking-wide uppercase">Bilan & Flux de Caisse de la Journée</span>
+                      </div>
+                      <span className="font-mono text-xs text-amber-950 bg-amber-200/80 px-2.5 py-0.5 rounded-full font-bold border border-amber-300">
+                        {formatLongDateFr(dateKey)}
+                      </span>
+                    </div>
+
+                    {/* Alerte explicite si les dépenses dépassent les rentrées */}
+                    {expensesExceedCA && (
+                      <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-rose-950 flex items-start gap-2.5 shadow-2xs">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
+                        <div className="text-xs space-y-0.5">
+                          <p className="font-extrabold text-rose-900">
+                            Attention : Les dépenses du jour dépassent le Chiffre d'Affaires !
+                          </p>
+                          <p className="text-[11px] text-rose-800 font-sans leading-relaxed">
+                            Même si le Chiffre d'Affaires affiche <span className="font-mono font-bold">+{formatPrice(salesTotal)}</span>, le total des sorties réelles de caisse (dépenses, achats stock, règlements fournisseurs) s'élève à <span className="font-mono font-bold">-{formatPrice(totalCashOut)}</span>, laissant un déficit net de caisse de <span className="font-mono font-extrabold text-rose-950">-{formatPrice(Math.abs(dayNet))}</span>.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lignes de décomposition arithmétique */}
+                    <div className="space-y-1.5 pt-1">
+                      {/* Ventes encaissées */}
+                      <div className="flex justify-between items-center bg-blue-100/70 p-2 rounded-xl border border-blue-300/80">
+                        <span className="text-blue-950 font-bold flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
+                          <span>(+) Ventes au comptant (encaissées en caisse)</span>
+                        </span>
+                        <span className="font-black text-blue-950 text-sm font-mono tabular-nums">+{formatPrice(salesCashTotal)}</span>
+                      </div>
+
+                      {/* Règlements clients */}
+                      {repaymentsReceivedTotal > 0 && (
+                        <div className="flex justify-between items-center bg-sky-100/70 p-2 rounded-xl border border-sky-300/80">
+                          <span className="text-sky-950 font-bold flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-sky-600 inline-block" />
+                            <span>(+) Dettes clients remboursées (cash reçu)</span>
+                          </span>
+                          <span className="font-black text-sky-950 text-sm font-mono tabular-nums">+{formatPrice(repaymentsReceivedTotal)}</span>
+                        </div>
+                      )}
+
+                      {/* Dépenses */}
+                      <div className="flex justify-between items-center bg-rose-100/70 p-2 rounded-xl border border-rose-300/80">
+                        <span className="text-rose-950 font-bold flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
+                          <span>(-) Dépenses diverses payées</span>
+                        </span>
+                        <span className="font-black text-rose-950 text-sm font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
+                      </div>
+
+                      {/* Achats Stock Cash */}
+                      {stockCashTotal > 0 && (
+                        <div className="flex justify-between items-center bg-emerald-100/70 p-2 rounded-xl border border-emerald-300/80">
+                          <span className="text-emerald-950 font-bold flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
+                            <span>(-) Achats marchandises / stock (cash décaissé)</span>
+                          </span>
+                          <span className="font-black text-emerald-950 text-sm font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
+                        </div>
+                      )}
+
+                      {/* Règlements fournisseurs */}
+                      {supplierPaymentsTotal > 0 && (
+                        <div className="flex justify-between items-center bg-rose-100/70 p-2 rounded-xl border border-rose-300/80">
+                          <span className="text-rose-950 font-bold flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
+                            <span>(-) Dettes fournisseurs remboursées (cash sorti)</span>
+                          </span>
+                          <span className="font-black text-rose-950 text-sm font-mono tabular-nums">-{formatPrice(supplierPaymentsTotal)}</span>
+                        </div>
+                      )}
+
+                      {/* Ligne Maîtresse : Solde Net de Caisse */}
+                      <div className={`mt-2 pt-2.5 pb-2.5 px-3 border-2 flex items-center justify-between font-black text-sm sm:text-base rounded-xl shadow-xs ${
+                        dayNet >= 0
+                          ? 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-300/60'
+                          : 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-300/60'
+                      }`}>
+                        <span className="flex items-center gap-2 font-handwritten text-base sm:text-lg">
+                          <Coins className="w-5 h-5 text-white" />
+                          <span>SOLDE NET DE CAISSE DU JOUR</span>
+                        </span>
+                        <span className="font-mono font-black text-base sm:text-lg tabular-nums">
+                          {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
+                        </span>
+                      </div>
+
+                      {/* Crédits et Dettes contractés aujourd'hui */}
+                      {(creditsGivenTotal > 0 || supplierDebtsContracted > 0) && (
+                        <div className="pt-2 border-t border-dashed border-amber-300 flex items-center justify-between text-[11px] font-bold text-gray-700 flex-wrap gap-2">
+                          {creditsGivenTotal > 0 && (
+                            <span className="text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 font-mono tabular-nums">
+                              <Clock className="w-3.5 h-3.5 text-amber-700" />
+                              <span>Crédits accordés aux clients : {formatPrice(creditsGivenTotal)}</span>
+                            </span>
+                          )}
+                          {supplierDebtsContracted > 0 && (
+                            <span className="text-fuchsia-900 bg-fuchsia-100 px-2.5 py-1 rounded-lg border border-fuchsia-300 flex items-center gap-1 font-mono tabular-nums">
+                              <Clock className="w-3.5 h-3.5 text-fuchsia-700" />
+                              <span>Dettes contractées (fournisseurs) : {formatPrice(supplierDebtsContracted)}</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Grille des ventes pour cette date */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
