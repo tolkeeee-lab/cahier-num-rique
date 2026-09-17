@@ -92,24 +92,29 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
       if (!isClientSale) return
 
       clientSalesCount += 1
-      const debtAmount = sale.debt ?? Math.max(0, (sale.total || 0) - (sale.paid || 0))
-      totalCash += (sale.type === 'sale_credit' ? (sale.paid || 0) : (sale.total || sale.paid || 0))
+      const debtAmount = Number(sale.debt ?? Math.max(0, (sale.total || 0) - (sale.paid || 0))) || 0
+      totalCash += Number(sale.type === 'sale_credit' ? (sale.paid || 0) : (sale.total || sale.paid || 0)) || 0
       totalCreditDehors += debtAmount
 
-      if (sale.articles && sale.articles.length > 0) {
+      if (Array.isArray(sale.articles) && sale.articles.length > 0) {
         sale.articles.forEach(art => {
-          const key = art.name.trim().toLowerCase()
+          if (!art) return
+          const rawName = (art.name || '').trim()
+          if (!rawName) return
+          const key = rawName.toLowerCase()
           if (!map[key]) {
             map[key] = {
-              name: art.name.trim(),
+              name: rawName,
               totalQuantity: 0,
               totalRevenue: 0,
               frequency: 0,
               category: art.category || 'Divers'
             }
           }
-          map[key].totalQuantity += art.quantity
-          map[key].totalRevenue += (art.unit_price * art.quantity)
+          const q = Number(art.quantity || 1)
+          const p = Number(art.unit_price || 0)
+          map[key].totalQuantity += q
+          map[key].totalRevenue += (p * q)
           map[key].frequency += 1
         })
       }

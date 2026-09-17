@@ -6,6 +6,7 @@ import { SupplierComparisonModal } from '@/components/shopping/SupplierCompariso
 import { ShoppingListToolbar } from '@/components/shopping/ShoppingListToolbar'
 import { formatPrice } from '@/lib/penUtils'
 import { ShoppingBag, Plus } from 'lucide-react'
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 interface ShoppingItem {
   id: string
@@ -43,25 +44,33 @@ export function ShoppingListManager({
   const [showSupplierModal, setShowSupplierModal] = useState(false)
   const [selectedItemForSupplier] = useState<string>('')
 
-  const storageKey = `cahier_shopping_list_${shopId}`
+  const targetShopIds = getDualShopIds(shopId)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(storageKey)
-      if (saved) {
-        try {
-          setItems(JSON.parse(saved))
-        } catch (e) {
-          console.error('Erreur lecture liste courses:', e)
+      for (const sId of targetShopIds) {
+        const saved = localStorage.getItem(`cahier_shopping_list_${sId}`)
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setItems(parsed)
+              return
+            }
+          } catch (e) {
+            console.error('Erreur lecture liste courses:', e)
+          }
         }
       }
     }
-  }, [storageKey])
+  }, [shopId])
 
   const saveItems = (newItems: ShoppingItem[]) => {
     setItems(newItems)
     if (typeof window !== 'undefined') {
-      localStorage.setItem(storageKey, JSON.stringify(newItems))
+      for (const sId of targetShopIds) {
+        localStorage.setItem(`cahier_shopping_list_${sId}`, JSON.stringify(newItems))
+      }
     }
   }
 
@@ -72,7 +81,7 @@ export function ShoppingListManager({
     const newItem: ShoppingItem = {
       id: `shop_item_${Date.now()}`,
       name: nameInput.trim(),
-      quantity: parseInt(qtyInput) || 1,
+      quantity: parseInt(qtyInput, 10) || 1,
       unitCost: parseFloat(costInput) || 0,
       isChecked: false,
     }
@@ -96,14 +105,14 @@ export function ShoppingListManager({
 
   const filteredItems = items.filter(it => {
     if (!searchQuery.trim()) return true
-    return it.name.toLowerCase().includes(searchQuery.toLowerCase())
+    return (it?.name || '').toLowerCase().includes(searchQuery.toLowerCase().trim())
   })
 
   const totalEstimated = items.reduce((sum, it) => {
     const cost = it.isWholesale && it.wholesaleQty && it.wholesalePrice
-      ? it.wholesaleQty * it.wholesalePrice
-      : it.quantity * it.unitCost
-    return sum + cost
+      ? Number(it.wholesaleQty) * Number(it.wholesalePrice)
+      : Number(it.quantity || 1) * Number(it.unitCost || 0)
+    return sum + (Number(cost) || 0)
   }, 0)
 
   const handleSendWhatsApp = () => {

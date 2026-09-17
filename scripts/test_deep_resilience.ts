@@ -254,6 +254,63 @@ assert(btqIds.includes('58C54') && btqIds.includes('SHOP-58C54') && btqIds.inclu
 assert(shopPrefixIds.includes('58C54') && shopPrefixIds.includes('SHOP-58C54') && shopPrefixIds.includes('BTQ-58C54'), `getDualShopIds(SHOP-58C54) doit inclure tous les alias`)
 assert(cleanBareIds.includes('58C54') && cleanBareIds.includes('SHOP-58C54') && cleanBareIds.includes('BTQ-58C54'), `getDualShopIds(58C54) doit inclure tous les alias`)
 
+// ── Test 29 : Aggrégation RetailAnalytics avec articles nulls / malformés ──
+console.log('\n29. Aggrégation RetailAnalytics avec articles malformés...')
+const malformedSales: any[] = [
+  { id: 'm1', type: 'sale', pen_color: 'blue', total: 1000, paid: 1000, articles: [null, { name: null, quantity: 2, unit_price: 500 }, { name: '  Riz  ', quantity: undefined, unit_price: null }] }
+]
+
+const retailMap: Record<string, any> = {}
+malformedSales.forEach(s => {
+  if (Array.isArray(s.articles)) {
+    s.articles.forEach((art: any) => {
+      if (!art) return
+      const rawName = (art.name || '').trim()
+      if (!rawName) return
+      const key = rawName.toLowerCase()
+      if (!retailMap[key]) {
+        retailMap[key] = { name: rawName, totalQuantity: 0, totalRevenue: 0 }
+      }
+      const q = Number(art.quantity || 1)
+      const p = Number(art.unit_price || 0)
+      retailMap[key].totalQuantity += q
+      retailMap[key].totalRevenue += (p * q)
+    })
+  }
+})
+
+assert(retailMap['riz'] !== undefined, `L'article 'Riz' doit être extrait malgré les articles nulls`)
+assert(!isNaN(retailMap['riz'].totalQuantity), `totalQuantity ne doit pas être NaN`)
+assert(!isNaN(retailMap['riz'].totalRevenue), `totalRevenue ne doit pas être NaN`)
+
+// ── Test 30 : Calcul bon de commande avec valeurs manquantes / types strings ──
+console.log('\n30. Calcul ShoppingListManager sans NaN...')
+const shoppingItems: any[] = [
+  { name: 'Huile', quantity: '3', unitCost: '1200' },
+  { name: 'Savon', quantity: undefined, unitCost: null },
+  { name: 'Lait', isWholesale: true, wholesaleQty: '2', wholesalePrice: '5000' }
+]
+
+const shoppingTotal = shoppingItems.reduce((sum, it) => {
+  const cost = it.isWholesale && it.wholesaleQty && it.wholesalePrice
+    ? Number(it.wholesaleQty) * Number(it.wholesalePrice)
+    : Number(it.quantity || 1) * Number(it.unitCost || 0)
+  return sum + (Number(cost) || 0)
+}, 0)
+
+assert(!isNaN(shoppingTotal), `Le total du bon de commande ne doit jamais être NaN (${shoppingTotal})`)
+assert(shoppingTotal === (3 * 1200 + 0 + 2 * 5000), `Total calculé doit valoir 13600, obtenu: ${shoppingTotal}`)
+
+// ── Test 31 : Rapport WhatsApp avec données financières sécurisées ──
+console.log('\n31. Rapport WhatsApp performance sans NaN...')
+import { generateWhatsAppPerformanceReport } from '../lib/exportUtils'
+const reportSales: any[] = [
+  { id: 'r1', type: 'sale', total: '15000', paid: '10000', debt: '5000', articles: [{ name: 'Farine', quantity: '5', unit_price: '3000' }] }
+]
+const reportUrl = generateWhatsAppPerformanceReport(reportSales, 'Aujourd\'hui', 'Boutique Test')
+assert(!reportUrl.includes('NaN'), `L'URL du rapport WhatsApp ne doit pas contenir de NaN`)
+assert(reportUrl.includes('15%E2%80%AF000') || reportUrl.includes('15000') || reportUrl.includes('Farine'), `L'URL du rapport WhatsApp doit contenir les données formatées`)
+
 console.log('\n============================================================')
 console.log(`📊 RÉSULTAT DU CONTRÔLE DE RÉSILIENCE : ${passed} SUCCÈS / ${failed} ÉCHECS`)
 console.log('============================================================\n')

@@ -181,22 +181,27 @@ export function generateWhatsAppPerformanceReport(
   periodLabel: string = 'Cette Période',
   shopName: string = 'Cahier Numérique'
 ): string {
-  const validSales = sales.filter(s => s.status !== 'crossed_out' && ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type))
-  const totalRevenue = validSales.reduce((sum, s) => sum + s.total, 0)
-  const totalPaid = validSales.reduce((sum, s) => sum + s.paid, 0)
-  const totalDebt = validSales.reduce((sum, s) => sum + s.debt, 0)
+  const validSales = sales.filter(s => s && s.status !== 'crossed_out' && ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type))
+  const totalRevenue = validSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0)
+  const totalPaid = validSales.reduce((sum, s) => sum + (Number(s.paid) || 0), 0)
+  const totalDebt = validSales.reduce((sum, s) => sum + (Number(s.debt) || 0), 0)
 
   // Aggrégation top 5 des articles
   const productMap: Record<string, { name: string; qty: number; revenue: number }> = {}
   validSales.forEach(s => {
-    if (s.articles && s.articles.length > 0) {
+    if (Array.isArray(s.articles) && s.articles.length > 0) {
       s.articles.forEach(a => {
-        const key = a.name.toLowerCase().trim()
+        if (!a) return
+        const rawName = (a.name || '').trim()
+        if (!rawName) return
+        const key = rawName.toLowerCase()
         if (!productMap[key]) {
-          productMap[key] = { name: a.name.trim(), qty: 0, revenue: 0 }
+          productMap[key] = { name: rawName, qty: 0, revenue: 0 }
         }
-        productMap[key].qty += a.quantity
-        productMap[key].revenue += a.quantity * a.unit_price
+        const q = Number(a.quantity || 1)
+        const p = Number(a.unit_price || 0)
+        productMap[key].qty += q
+        productMap[key].revenue += (q * p)
       })
     }
   })
@@ -244,17 +249,17 @@ export function exportSalesToPDF(
     return
   }
 
-  const validSales = sales.filter(s => s.status !== 'crossed_out')
+  const validSales = sales.filter(s => s && s.status !== 'crossed_out')
   
   // Ventes pures (chiffre d'affaires réel)
   const pureSales = validSales.filter(s => ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type) || s.pen_color === 'blue' || s.pen_color === 'yellow')
-  const totalRevenue = pureSales.reduce((sum, s) => sum + (s.total || 0), 0)
-  const totalPaid = pureSales.reduce((sum, s) => sum + (s.paid || 0), 0)
-  const totalDebt = pureSales.reduce((sum, s) => sum + (s.debt || 0), 0)
+  const totalRevenue = pureSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0)
+  const totalPaid = pureSales.reduce((sum, s) => sum + (Number(s.paid) || 0), 0)
+  const totalDebt = pureSales.reduce((sum, s) => sum + (Number(s.debt) || 0), 0)
 
   // Dépenses & Achats de marchandises
   const pureExpenses = validSales.filter(s => ['cash_out', 'purchase_cash', 'payment_supplier'].includes(s.type) || s.pen_color === 'red' || s.pen_color === 'green')
-  const totalExpenses = pureExpenses.reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
+  const totalExpenses = pureExpenses.reduce((sum, s) => sum + (Number(s.total ?? s.paid) || 0), 0)
 
   const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(Number.isFinite(p) ? p : 0) + ' FCFA'
   const todayStr = new Date().toLocaleDateString('fr-FR')
@@ -265,23 +270,25 @@ export function exportSalesToPDF(
     const statusText = isCrossed ? '#991b1b' : s.debt > 0 ? '#92400e' : '#166534'
     const statusLabel = isCrossed ? 'Annulée' : s.debt > 0 ? 'Crédit' : 'Payée'
 
-    const articlesStr = s.articles && s.articles.length > 0
-      ? s.articles.map(a => `${a.quantity}x ${a.name} (${formatPrice(a.unit_price)})`).join(', ')
-      : s.notes || '—'
+    const articlesStr = Array.isArray(s.articles) && s.articles.length > 0
+      ? s.articles.map(a => `${Number(a?.quantity || 1)}x ${String(a?.name || 'Article').replace(/</g, '&lt;').replace(/>/g, '&gt;')} (${formatPrice(Number(a?.unit_price || 0))})`).join(', ')
+      : (s.notes || '—').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+    const clientSafe = (s.client || 'Client anonyme').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
     return `
       <tr style="${isCrossed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-family: monospace;">${s.date} ${s.time || ''}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>${s.client || 'Client anonyme'}</strong></td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>${clientSafe}</strong></td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 11px;">${articlesStr}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">
           <span style="background: ${statusBg}; color: ${statusText}; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">
             ${statusLabel}
           </span>
         </td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-family: monospace; font-weight: bold;">${formatPrice(s.total || 0)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-family: monospace; color: #166534;">${formatPrice(s.paid || 0)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-family: monospace; color: #991b1b;">${s.debt > 0 ? formatPrice(s.debt) : '—'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-family: monospace; font-weight: bold;">${formatPrice(Number(s.total) || 0)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-family: monospace; color: #166534;">${formatPrice(Number(s.paid) || 0)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-family: monospace; color: #991b1b;">${Number(s.debt) > 0 ? formatPrice(Number(s.debt)) : '—'}</td>
       </tr>
     `
   }).join('')
@@ -384,18 +391,18 @@ export function generateWhatsAppHouseholdReport(
   monthLabel: string = 'Ce Mois',
   foyerName: string = 'Mon Foyer'
 ): string {
-  const validSales = sales.filter(s => s.status !== 'crossed_out')
+  const validSales = sales.filter(s => s && s.status !== 'crossed_out')
   const revenueMonth = validSales
     .filter(s => ['cash_in', 'sale', 'sale_cash', 'payment_client'].includes(s.type) || s.pen_color === 'blue' || s.notes?.toLowerCase().includes('revenu'))
-    .reduce((sum, s) => sum + (s.paid || s.total || 0), 0)
+    .reduce((sum, s) => sum + (Number(s.paid ?? s.total) || 0), 0)
 
   const depenseMonth = validSales
     .filter(s => ['cash_out', 'expense', 'payment_supplier'].includes(s.type) || s.pen_color === 'red' || s.notes?.toLowerCase().includes('dépense'))
-    .reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
+    .reduce((sum, s) => sum + (Number(s.total ?? s.paid) || 0), 0)
 
   const reserveMonth = validSales
     .filter(s => ['purchase_cash', 'purchase_credit', 'stock_cash', 'stock_purchase'].includes(s.type) || s.pen_color === 'green' || s.notes?.toLowerCase().includes('réserve'))
-    .reduce((sum, s) => sum + (s.total || s.paid || 0), 0)
+    .reduce((sum, s) => sum + (Number(s.total ?? s.paid) || 0), 0)
 
   const bilan = revenueMonth - depenseMonth - reserveMonth
 
