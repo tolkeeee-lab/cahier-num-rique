@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { X, Save, Sparkles } from 'lucide-react'
 import { ProductFastForm } from './ProductFastForm'
 import { ProductAdvancedForm } from './ProductAdvancedForm'
+import { ProductMagicForm } from './ProductMagicForm'
 import { StockItem, StockFormState } from './types'
 
 interface ProductModalProps {
@@ -17,7 +18,7 @@ interface ProductModalProps {
   orphanPastSales?: number
   deductPastSales?: boolean
   setDeductPastSales?: (val: boolean) => void
-  initialMode?: 'fast' | 'advanced'
+  initialMode?: 'magic' | 'fast' | 'advanced'
 }
 
 export function ProductModal({
@@ -28,9 +29,9 @@ export function ProductModal({
   setFormData,
   saving = false,
   onSave,
-  initialMode = 'fast',
+  initialMode = 'magic',
 }: ProductModalProps) {
-  const [mode, setMode] = useState<'fast' | 'advanced'>(editingItem ? 'advanced' : initialMode)
+  const [mode, setMode] = useState<'magic' | 'fast' | 'advanced'>(editingItem ? 'advanced' : initialMode)
 
   useEffect(() => {
     if (!isOpen) return
@@ -71,14 +72,24 @@ export function ProductModal({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Toggle Mode Rapide / Avancé */}
+            {/* Toggle Mode Magique / Rapide / Avancé */}
             {!editingItem && (
               <div className="flex items-center gap-1 bg-amber-100/80 p-1 rounded-xl border border-amber-300 text-[11px] font-mono">
                 <button
                   type="button"
+                  onClick={() => setMode('magic')}
+                  className={`px-2.5 py-1 rounded-lg transition-all active:scale-[0.97] cursor-pointer flex items-center gap-1 ${
+                    mode === 'magic' ? 'bg-amber-800 text-white font-extrabold shadow-xs' : 'text-amber-900 font-bold hover:bg-amber-200/60'
+                  }`}
+                >
+                  <span>🪄</span>
+                  <span>Magique</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setMode('fast')}
                   className={`px-2.5 py-1 rounded-lg transition-all active:scale-[0.97] cursor-pointer ${
-                    mode === 'fast' ? 'bg-amber-800 text-white font-extrabold shadow-xs' : 'text-amber-900 font-bold'
+                    mode === 'fast' ? 'bg-amber-800 text-white font-extrabold shadow-xs' : 'text-amber-900 font-bold hover:bg-amber-200/60'
                   }`}
                 >
                   Rapide
@@ -87,7 +98,7 @@ export function ProductModal({
                   type="button"
                   onClick={() => setMode('advanced')}
                   className={`px-2.5 py-1 rounded-lg transition-all active:scale-[0.97] cursor-pointer ${
-                    mode === 'advanced' ? 'bg-amber-800 text-white font-extrabold shadow-xs' : 'text-amber-900 font-bold'
+                    mode === 'advanced' ? 'bg-amber-800 text-white font-extrabold shadow-xs' : 'text-amber-900 font-bold hover:bg-amber-200/60'
                   }`}
                 >
                   Avancé
@@ -109,7 +120,13 @@ export function ProductModal({
         {/* Formulaire avec scroll interne fluide */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto pr-1 sm:pr-1.5 space-y-4 scrollbar-thin">
-            {mode === 'fast' ? (
+            {mode === 'magic' ? (
+              <ProductMagicForm
+                formData={formData}
+                setFormData={setFormData}
+                onSwitchToAdvanced={() => setMode('advanced')}
+              />
+            ) : mode === 'fast' ? (
               <ProductFastForm formData={formData} setFormData={setFormData} />
             ) : (
               <ProductAdvancedForm formData={formData} setFormData={setFormData} />

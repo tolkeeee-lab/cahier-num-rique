@@ -7,6 +7,7 @@ import { StockTable } from '@/components/stock/StockTable'
 import { ProductModal } from '@/components/stock/ProductModal'
 import { RestockAdvisorModal } from '@/components/stock/RestockAdvisorModal'
 import { ProductMergeModal } from '@/components/stock/ProductMergeModal'
+import { SmartProductQuickAdd } from '@/components/stock/SmartProductQuickAdd'
 import { StockFormState } from '@/components/stock/types'
 import { exportProductsToCSV } from '@/lib/exportUtils'
 import { clearOfflineProducts, saveOfflineProduct, deleteOfflineProduct, getOfflineSales, getOfflineProducts, replaceOfflineProducts } from '@/lib/offlineDb'
@@ -223,10 +224,84 @@ export function StockManager({
       } catch (netErr) {
         console.warn('Mode hors-ligne : produit enregistré localement, synchronisation en attente.', netErr)
       }
-    } catch (err) {
+      } catch (err) {
       console.error('Erreur sauvegarde produit:', err)
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Ajout rapide magique (1 phrase) avec détection de réapprovisionnement automatique
+  const handleSmartAddProduct = async (productData: StockFormState, existingIdToRestock?: string) => {
+    try {
+      const existing = existingIdToRestock ? products.find(p => p.id === existingIdToRestock) : null
+      const currentStock = existing ? (existing.current_stock ?? existing.initial_stock ?? 0) : 0
+      const addedStock = Number(productData.initial_stock) || 0
+      const newTotalStock = existing ? currentStock + addedStock : addedStock
+
+      const body = {
+        id: existing?.id,
+        name: productData.name,
+        initial_stock: newTotalStock,
+        current_stock: newTotalStock,
+        unit_cost: Number(productData.unit_cost) || (existing?.unit_cost || 0),
+        unit_price: Number(productData.unit_price) || (existing?.unit_price || 0),
+        alert_threshold: Number(productData.alert_threshold) || (existing?.alert_threshold || 5),
+        category: productData.category || existing?.category || 'Divers',
+        unit: productData.unit || existing?.unit || 'unité',
+        multiplier: Number(productData.multiplier) || (existing?.multiplier || 1),
+        packaging_name: productData.packaging_name || existing?.packaging_name || '',
+        lot_quantity: Number(productData.lot_quantity) || (existing?.lot_quantity || 0),
+        lot_price: Number(productData.lot_price) || (existing?.lot_price || 0),
+        trade_type: productData.trade_type || existing?.trade_type || 'retail',
+      }
+
+      const finalProduct: Product = {
+        ...body,
+        id: existing?.id || `stk_${Date.now()}`,
+        shop_id: shopId,
+        stock_tracked: true,
+        current_stock: newTotalStock,
+      }
+
+      // 1. Sauvegarde locale immédiate (Offline-First)
+      saveOfflineProduct(shopId, finalProduct as any)
+
+      // 2. Mise à jour optimiste immédiate dans la liste affichée
+      setProducts(prev => {
+        const targetId = existing?.id || finalProduct.id
+        const index = prev.findIndex(p => p.id === targetId || p.name.toLowerCase() === finalProduct.name.toLowerCase())
+        if (index >= 0) {
+          const next = [...prev]
+          next[index] = { ...next[index], ...finalProduct, current_stock: newTotalStock }
+          return next
+        }
+        return [finalProduct, ...prev]
+      })
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+      }
+
+      // 3. Synchronisation serveur en arrière-plan
+      try {
+        const res = await fetch('/api/stock', {
+          method: existing ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+          body: JSON.stringify(body),
+        })
+        if (res.ok) {
+          const savedData = await res.json()
+          if (savedData?.product) {
+            saveOfflineProduct(shopId, savedData.product as any)
+          }
+        }
+      } catch (netErr) {
+        console.warn('Mode hors-ligne : produit enregistré localement, synchronisation en attente.', netErr)
+      }
+    } catch (err) {
+      console.error('Erreur ajout rapide produit:', err)
+      if (onError && err instanceof Error) onError(err.message)
     }
   }
 
@@ -402,6 +477,20 @@ export function StockManager({
         outOfStockCount={outOfStockCount}
         onFilterLowStock={() => setIsLowStockOnly((prev) => !prev)}
       />
+
+      {/* Saisie Magique de Produit en 1 seule ligne */}
+      {!isEmployee && (
+        <SmartProductQuickAdd
+          existingProducts={products}
+          onAddProduct={handleSmartAddProduct}
+          onOpenAdvancedModalWithData={(data) => {
+            setEditingProduct(null)
+            setFormData(data)
+            setIsProductModalOpen(true)
+          }}
+          disabled={saving}
+        />
+      )}
 
       <StockToolbar
         searchQuery={searchQuery}
