@@ -87,6 +87,8 @@ function getBadgeClass(penId: string, type?: string) {
 
 function getPenLabel(penId: string, type?: string) {
   if (type === 'client_request') return 'DEMANDE'
+  if (type === 'payment_client') return 'RÈGLEMENT REÇU'
+  if (type === 'payment_supplier') return 'RÈGLEMENT PAYÉ'
   switch (penId) {
     case 'red':    return 'DÉPENSE'
     case 'green':  return 'ACHAT STOCK'
@@ -396,12 +398,18 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                               </span>
                             </div>
 
-                            {/* Reste dû */}
-                            {sale.debt > 0 && !isCrossedOut && (
-                              <div className="pl-4 text-[11px] text-amber-800 font-bold flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                <span>Dû : {formatPrice(sale.debt)} — {sale.client}</span>
-                              </div>
+                            {/* Reste dû ou dette soldée */}
+                            {!isCrossedOut && (
+                              sale.debt > 0 ? (
+                                <div className="pl-4 text-[11px] text-amber-800 font-bold flex items-center gap-1 font-mono">
+                                  <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                  <span>Dû : {formatPrice(sale.debt)} — {sale.client}</span>
+                                </div>
+                              ) : (sale.type === 'sale_credit' || sale.type === 'purchase_credit' || sale.pen_color === 'yellow' || sale.pen_color === 'purple') ? (
+                                <div className="pl-4 text-[11px] text-emerald-800 font-bold flex items-center gap-1 font-mono">
+                                  <span>✓ Crédit soldé ({sale.client})</span>
+                                </div>
+                              ) : null
                             )}
                           </div>
 

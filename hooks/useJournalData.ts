@@ -38,6 +38,79 @@ export interface Sale {
   is_synced?: boolean
 }
 
+// Réconciliation chronologique (FIFO) : alloue les paiements reçus/émis aux ventes/achats à crédit
+export function reconcileDebts(salesList: Sale[]): Sale[] {
+  const clientRepayments = new Map<string, number>()
+  const supplierRepayments = new Map<string, number>()
+
+  salesList.forEach(s => {
+    if (s.status === 'crossed_out') return
+    const name = (s.client || '').trim().toLowerCase()
+    if (!name) return
+    const p = Number(s.paid || s.total || 0)
+    if (s.type === 'payment_client') {
+      clientRepayments.set(name, (clientRepayments.get(name) || 0) + p)
+    } else if (s.type === 'payment_supplier') {
+      supplierRepayments.set(name, (supplierRepayments.get(name) || 0) + p)
+    }
+  })
+
+  if (clientRepayments.size === 0 && supplierRepayments.size === 0) {
+    return salesList
+  }
+
+  const remainingClientRepay = new Map(clientRepayments)
+  const remainingSuppRepay = new Map(supplierRepayments)
+
+  // Du plus ancien au plus récent pour apurer les dettes les plus anciennes
+  const sortedOldestFirst = [...salesList].sort((a, b) => 
+    new Date(a.created_at || a.date).getTime() - new Date(b.created_at || b.date).getTime()
+  )
+
+  const updatedSalesMap = new Map<string, { debt: number; status: 'paid' | 'debt' }>()
+
+  for (const s of sortedOldestFirst) {
+    if (s.status === 'crossed_out') continue
+    const name = (s.client || '').trim().toLowerCase()
+    if (!name) continue
+
+    const isSupp = s.type === 'purchase_credit' || s.pen_color === 'purple'
+    const isClientCredit = s.type === 'sale_credit' || s.pen_color === 'yellow' || (Number(s.debt || 0) > 0 && s.type !== 'payment_client' && s.type !== 'payment_supplier')
+
+    if (isSupp) {
+      const availableRepay = remainingSuppRepay.get(name) || 0
+      const currentDebt = Number(s.debt ?? s.total ?? 0)
+      if (currentDebt > 0) {
+        const deduction = Math.min(currentDebt, availableRepay)
+        const newDebt = Math.max(0, currentDebt - deduction)
+        remainingSuppRepay.set(name, Math.max(0, availableRepay - deduction))
+        updatedSalesMap.set(s.id, { debt: newDebt, status: newDebt <= 0 ? 'paid' : 'debt' })
+      }
+    } else if (isClientCredit) {
+      const availableRepay = remainingClientRepay.get(name) || 0
+      const currentDebt = Number(s.debt ?? s.total ?? 0)
+      if (currentDebt > 0) {
+        const deduction = Math.min(currentDebt, availableRepay)
+        const newDebt = Math.max(0, currentDebt - deduction)
+        remainingClientRepay.set(name, Math.max(0, availableRepay - deduction))
+        updatedSalesMap.set(s.id, { debt: newDebt, status: newDebt <= 0 ? 'paid' : 'debt' })
+      }
+    }
+  }
+
+  return salesList.map(s => {
+    const update = updatedSalesMap.get(s.id)
+    if (update) {
+      return {
+        ...s,
+        debt: update.debt,
+        status: update.status,
+      }
+    }
+    return s
+  })
+}
+
 export function useJournalData(shopId: string, isOnline: boolean) {
   const [sales, setSales] = useState<Sale[]>([])
   const [allSales, setAllSales] = useState<Sale[]>([])
@@ -155,10 +228,11 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
 
             combinedSales.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
+            const reconciledSales = reconcileDebts(combinedSales)
 
-            // Mettre à jour le cache local avec la vérité du Cloud Supabase
+            // Mettre à jour le cache local avec la vérité du Cloud Supabase (incluant les dettes réconciliées)
             try {
-              const offlineFormatted: OfflineSale[] = combinedSales.map(cs => ({
+              const offlineFormatted: OfflineSale[] = reconciledSales.map(cs => ({
                 id: cs.id,
                 shop_id: cs.shop_id || shopId,
                 date: cs.date,
@@ -183,10 +257,10 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               replaceOfflineSales(shopId, offlineFormatted)
             } catch {}
 
-            setAllSales(combinedSales)
-            const todays = combinedSales.filter(s => s.date === today)
+            setAllSales(reconciledSales)
+            const todays = reconciledSales.filter(s => s.date === today)
             setSales(todays)
-            calculateSummary(combinedSales, todays)
+            calculateSummary(reconciledSales, todays)
             setIsLoading(false)
             return
           }
@@ -234,10 +308,11 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         }
 
         cleanOffline.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
-        setAllSales(cleanOffline)
-        const todays = cleanOffline.filter(s => s.date === today)
+        const reconciledOffline = reconcileDebts(cleanOffline)
+        setAllSales(reconciledOffline)
+        const todays = reconciledOffline.filter(s => s.date === today)
         setSales(todays)
-        calculateSummary(cleanOffline, todays)
+        calculateSummary(reconciledOffline, todays)
         setIsLoading(false)
       }
     }
@@ -281,11 +356,10 @@ export function useJournalData(shopId: string, isOnline: boolean) {
   const calculateSummary = useCallback((all: Sale[], todays: Sale[]) => {
     let cash = 0
     let todayBalance = 0
+    let totalClientDebts = 0
+    let totalSupplierDebts = 0
 
-    // Regrouper les créances par client / fournisseur pour une cohérence parfaite avec DebtsBook et /api/debts
-    const clientDebtMap = new Map<string, number>()
-    const supplierDebtMap = new Map<string, number>()
-
+    // Les ventes passées dans all étant réconciliées via FIFO, s.debt reflète le solde restant réel
     all.forEach(s => {
       if (s.status === 'crossed_out') return
       const type = s.type
@@ -293,34 +367,13 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       // Calcul unifié du tiroir-caisse (gestion apports, retraits, ventes, dépenses, règlements)
       cash += getItemCashDelta(s)
 
-      const clientName = (s.client || (s as any).client_name || '').trim().toLowerCase()
       const d = Number(s.debt || 0)
-      const p = Number(s.paid || s.total || 0)
-
       if (type === 'purchase_credit' || s.pen_color === 'purple') {
-        if (clientName) {
-          supplierDebtMap.set(clientName, (supplierDebtMap.get(clientName) || 0) + (d > 0 ? d : Number(s.total || 0)))
-        }
-      } else if (type === 'payment_supplier') {
-        if (clientName) {
-          supplierDebtMap.set(clientName, Math.max(0, (supplierDebtMap.get(clientName) || 0) - p))
-        }
-      } else if (type === 'sale_credit' || (d > 0 && type !== 'payment_client')) {
-        if (clientName) {
-          clientDebtMap.set(clientName, (clientDebtMap.get(clientName) || 0) + d)
-        }
-      } else if (type === 'payment_client') {
-        if (clientName) {
-          clientDebtMap.set(clientName, Math.max(0, (clientDebtMap.get(clientName) || 0) - p))
-        }
+        totalSupplierDebts += d
+      } else if (type === 'sale_credit' || s.pen_color === 'yellow' || (d > 0 && type !== 'payment_client' && type !== 'payment_supplier')) {
+        totalClientDebts += d
       }
     })
-
-    let totalClientDebts = 0
-    clientDebtMap.forEach(val => { if (val > 0) totalClientDebts += val })
-
-    let totalSupplierDebts = 0
-    supplierDebtMap.forEach(val => { if (val > 0) totalSupplierDebts += val })
 
     todays.forEach(s => {
       if (s.status === 'crossed_out') return
@@ -561,13 +614,33 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     // Sauvegarder dans offlineDb
     saveOfflineSale(shopId, repaymentSale)
 
-    // Mettre à jour l'état local allSales & sales en mémoire immédiatement
+    // Mettre à jour l'état local allSales & sales en mémoire immédiatement avec réconciliation FIFO
     setAllSales(prev => {
-      const updated = [repaymentSale, ...prev.filter(s => s.id !== repaymentSaleId)]
-      const todays = updated.filter(s => s.date === today)
+      const combined = [repaymentSale, ...prev.filter(s => s.id !== repaymentSaleId)]
+      const reconciled = reconcileDebts(combined)
+      const todays = reconciled.filter(s => s.date === today)
       setSales(todays)
-      calculateSummary(updated, todays)
-      return updated
+      calculateSummary(reconciled, todays)
+
+      // Persister l'apurement de dette dans le cache offlineDb
+      try {
+        const offlineSales = getOfflineSales(shopId)
+        const recMap = new Map(reconciled.map(r => [r.id, r]))
+        let changed = false
+        for (const os of offlineSales) {
+          const rec = recMap.get(os.id)
+          if (rec && (os.debt !== rec.debt || os.status !== rec.status)) {
+            os.debt = rec.debt
+            os.status = rec.status as any
+            changed = true
+          }
+        }
+        if (changed) {
+          replaceOfflineSales(shopId, offlineSales)
+        }
+      } catch {}
+
+      return reconciled
     })
 
     if (typeof window !== 'undefined') {

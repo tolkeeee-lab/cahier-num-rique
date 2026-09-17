@@ -12,6 +12,7 @@ import { exportSalesToCSV, exportSalesToPDF } from '@/lib/exportUtils'
 import { formatPrice } from '@/lib/penUtils'
 import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
 import { getTodayDateString } from '@/lib/dateUtils'
+import { reconcileDebts } from '@/hooks/useJournalData'
 
 function formatLongDateFr(dateStr?: string): string {
   if (!dateStr) return 'Date inconnue'
@@ -111,6 +112,21 @@ export function SalesHistory({
       if (dateFilter === 'today') {
         const today = getTodayDateString()
         if (s.date !== today) return false
+      } else if (dateFilter === 'yesterday') {
+        const d = new Date()
+        d.setDate(d.getDate() - 1)
+        const yStr = d.toISOString().split('T')[0]
+        if (s.date !== yStr) return false
+      } else if (dateFilter === 'week') {
+        const d = new Date()
+        d.setDate(d.getDate() - 7)
+        const minStr = d.toISOString().split('T')[0]
+        if (s.date < minStr) return false
+      } else if (dateFilter === 'month') {
+        const d = new Date()
+        d.setDate(d.getDate() - 30)
+        const minStr = d.toISOString().split('T')[0]
+        if (s.date < minStr) return false
       }
 
       return true
@@ -133,19 +149,15 @@ export function SalesHistory({
   // Calcul des dettes restantes par client/fournisseur pour affichage en temps réel dans l'historique
   const clientDebtMap = useMemo(() => {
     const map = new Map<string, number>()
-    sales.forEach(s => {
+    const reconciled = reconcileDebts(sales as any)
+    reconciled.forEach(s => {
       if (s.status === 'crossed_out') return
       const name = (s.client || '').trim().toLowerCase()
       if (!name) return
-      const current = map.get(name) || 0
-      if (s.type === 'sale_credit' || (s.debt || 0) > 0) {
-        map.set(name, current + Number(s.debt || s.total || 0))
-      } else if (s.type === 'payment_client') {
-        map.set(name, Math.max(0, current - Number(s.paid || s.total || 0)))
-      } else if (s.type === 'purchase_credit' || s.pen_color === 'purple') {
-        map.set(name, current + Number(s.debt || s.total || 0))
-      } else if (s.type === 'payment_supplier') {
-        map.set(name, Math.max(0, current - Number(s.paid || s.total || 0)))
+      const isClientCredit = s.type === 'sale_credit' || s.pen_color === 'yellow' || (Number(s.debt || 0) > 0 && s.type !== 'payment_client' && s.type !== 'payment_supplier')
+      const isSupplierCredit = s.type === 'purchase_credit' || s.pen_color === 'purple'
+      if (isClientCredit || isSupplierCredit) {
+        map.set(name, (map.get(name) || 0) + Number(s.debt || 0))
       }
     })
     return map
@@ -237,7 +249,7 @@ export function SalesHistory({
           {salesByDate.map(([dateKey, dateSales]) => {
             const validDateSales = dateSales.filter(s => s.status !== 'crossed_out')
             const salesTotal = validDateSales
-              .filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit' || s.type === 'sale')
+              .filter(s => (s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale_credit' || s.type === 'sale') && s.type !== 'payment_client' && s.type !== 'client_request')
               .reduce((sum, s) => sum + Number(s.total || 0), 0)
 
             return (
@@ -253,7 +265,7 @@ export function SalesHistory({
                       CA : +{formatPrice(salesTotal)}
                     </span>
                     <span className="px-2.5 py-0.5 rounded-full font-extrabold bg-amber-900/10 text-amber-950 border border-amber-300 text-[11px] tabular-nums">
-                      {validDateSales.length} vente(s)
+                      {validDateSales.length} écriture(s)
                     </span>
                   </div>
                 </div>

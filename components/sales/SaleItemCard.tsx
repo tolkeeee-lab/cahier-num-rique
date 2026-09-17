@@ -43,7 +43,8 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
 }) => {
   const isCrossedOut = sale.status === 'crossed_out'
 
-  const getBadgeStyle = (color: string) => {
+  const getBadgeStyle = (color: string, type?: string) => {
+    if (type === 'client_request') return 'bg-amber-100 text-amber-950 border-amber-300'
     switch (color) {
       case 'red':
         return 'bg-rose-100 text-rose-800 border-rose-300'
@@ -58,6 +59,15 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
     }
   }
 
+  const isExpenseOrStock = sale.pen_color === 'red' || sale.pen_color === 'green' || sale.type === 'cash_out' || sale.type === 'purchase_cash'
+  const cardTitle = isExpenseOrStock
+    ? (sale.notes || sale.client || (sale.pen_color === 'green' ? 'Achat stock' : 'Dépense'))
+    : (sale.client || sale.notes || 'Client anonyme')
+
+  const cardSubtitle = isExpenseOrStock
+    ? (sale.client && sale.client !== 'Client anonyme' && sale.client !== cardTitle ? sale.client : (sale.notes && sale.notes !== cardTitle ? sale.notes : null))
+    : (sale.notes && sale.notes !== cardTitle ? sale.notes : null)
+
   return (
     <div
       className={`p-4 rounded-2xl border transition-all ${
@@ -69,28 +79,32 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
       <div className="flex items-start justify-between gap-3">
         {/* Infos Vente */}
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono text-gray-500 font-bold">{sale.time}</span>
-            <span className="font-extrabold text-sm text-gray-900">{sale.client || 'Client anonyme'}</span>
-            <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase font-extrabold border ${getBadgeStyle(sale.pen_color)}`}>
+            <span className="font-extrabold text-sm text-gray-900">{cardTitle}</span>
+            <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase font-extrabold border ${getBadgeStyle(sale.pen_color, sale.type)}`}>
               {sale.type === 'payment_client'
                 ? 'RÈGLEMENT REÇU'
                 : sale.type === 'payment_supplier'
                 ? 'RÈGLEMENT PAYÉ'
-                : sale.pen_color === 'red'
+                : sale.type === 'client_request'
+                ? 'DEMANDE'
+                : sale.pen_color === 'red' || sale.type === 'cash_out'
                 ? 'DÉPENSE'
-                : sale.pen_color === 'green'
-                ? 'STOCK'
-                : sale.pen_color === 'purple'
-                ? 'DETTE'
-                : 'VENTE'}
+                : sale.pen_color === 'green' || sale.type === 'purchase_cash'
+                ? 'ACHAT STOCK'
+                : sale.pen_color === 'purple' || sale.type === 'purchase_credit'
+                ? 'ACHAT CRÉDIT'
+                : sale.pen_color === 'yellow' || sale.type === 'sale_credit'
+                ? 'VENTE CRÉDIT'
+                : 'VENTE CASH'}
             </span>
           </div>
 
-          {/* Note / Détail */}
-          {sale.notes && (
+          {/* Note / Sous-titre */}
+          {cardSubtitle && (
             <p className="text-xs text-gray-600 font-mono italic">
-              {sale.notes}
+              {cardSubtitle}
             </p>
           )}
 
@@ -106,9 +120,9 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
           )}
 
           {/* Information dette si existante */}
-          {(sale.debt > 0 || sale.type === 'sale_credit' || sale.type === 'purchase_credit') && !isCrossedOut && (
+          {(sale.debt > 0 || sale.type === 'sale_credit' || sale.type === 'purchase_credit' || sale.pen_color === 'yellow' || sale.pen_color === 'purple') && !isCrossedOut && (
             <div className="pt-1">
-              {typeof remainingDebt === 'number' && remainingDebt <= 0 ? (
+              {(typeof remainingDebt === 'number' ? remainingDebt <= 0 : sale.debt <= 0) ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-lg shadow-2xs">
                   ✓ Dette entièrement soldée
                 </span>
@@ -117,7 +131,7 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
                   <div className="flex items-center gap-1 text-xs text-amber-900 font-bold font-mono">
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.75} />
                     <span>
-                      {sale.type === 'purchase_credit' ? 'Dette fournisseur :' : 'Dette client :'} <span className="tabular-nums">{formatPrice(typeof remainingDebt === 'number' ? remainingDebt : sale.debt)}</span>
+                      {sale.type === 'purchase_credit' || sale.pen_color === 'purple' ? 'Dette fournisseur :' : 'Dette client :'} <span className="tabular-nums">{formatPrice(typeof remainingDebt === 'number' ? remainingDebt : sale.debt)}</span>
                     </span>
                   </div>
                   {onSettleDebt && (
@@ -136,10 +150,40 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
         </div>
 
         {/* Montant total & Actions */}
-        <div className="flex flex-col items-end gap-2">
-          <span className="text-base font-black text-gray-900 font-mono tabular-nums tracking-tight">
-            {formatPrice(sale.total)}
-          </span>
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          {sale.type === 'client_request' ? (
+            <span className="text-xs font-black px-2 py-0.5 rounded-lg font-mono bg-amber-100 text-amber-950 border border-amber-300">
+              Demande
+            </span>
+          ) : (
+            (() => {
+              let badgeClass = 'bg-gray-100 text-gray-800 border-gray-200'
+              let prefix = ''
+
+              if (sale.pen_color === 'blue' || sale.type === 'sale' || sale.type === 'cash_in' || sale.type === 'payment_client') {
+                badgeClass = 'bg-blue-50 text-blue-800 border-blue-200'
+                prefix = '+'
+              } else if (sale.pen_color === 'yellow' || sale.type === 'sale_credit') {
+                badgeClass = 'bg-amber-50 text-amber-800 border-amber-200'
+                prefix = ''
+              } else if (sale.pen_color === 'red' || sale.type === 'cash_out' || sale.type === 'payment_supplier' || (sale.type === 'cash_adjustment' && ((sale.notes || '').toLowerCase().includes('retrait') || sale.pen_color === 'red'))) {
+                badgeClass = 'bg-rose-50 text-rose-800 border-rose-200'
+                prefix = '-'
+              } else if (sale.pen_color === 'green' || sale.type === 'purchase_cash') {
+                badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                prefix = '-'
+              } else if (sale.pen_color === 'purple' || sale.type === 'purchase_credit') {
+                badgeClass = 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
+                prefix = ''
+              }
+
+              return (
+                <span className={`text-sm sm:text-base font-black px-2 py-0.5 rounded-lg font-mono tabular-nums tracking-tight border ${badgeClass}`}>
+                  {prefix}{formatPrice(sale.total)}
+                </span>
+              )
+            })()
+          )}
 
           {!isCrossedOut && (
             <div className="flex items-center gap-1">
