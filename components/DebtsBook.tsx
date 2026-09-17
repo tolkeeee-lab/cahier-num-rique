@@ -21,6 +21,7 @@ interface Debt {
 export interface DebtsBookProps {
   shopId?: string
   sales?: any[]
+  currentCash?: number
   onSettleDebt?: (debtId: string, amount: number) => Promise<void>
   onRefreshTotals?: () => void
   onError?: (err: string) => void
@@ -29,6 +30,7 @@ export interface DebtsBookProps {
 export function DebtsBook({
   shopId = 'default-shop',
   sales,
+  currentCash,
   onSettleDebt,
   onRefreshTotals,
   onError,
@@ -255,7 +257,10 @@ export function DebtsBook({
             id: activeRepayDebt.id,
             client: activeRepayDebt.client_name,
             debt: activeRepayDebt.amount_owed,
+            debt_type: activeRepayDebt.debt_type,
           }}
+          debtType={activeRepayDebt.debt_type}
+          currentCash={currentCash}
           onConfirmRepayment={async (_id, amount, notes) => handleConfirmRepayment(amount, notes)}
         />
       )}

@@ -530,6 +530,27 @@ export default function JournalPage() {
     saleCreation.setInput(prefix ? `${prefix}, ${entry}` : entry)
   }
 
+  // ── Nombre de créances en attente pour le badge de l'onglet ───────────────
+  const pendingDebtsCount = useMemo(() => {
+    const debtMap = new Map<string, number>()
+    journalData.allSales.forEach(s => {
+      if (s.status === 'crossed_out') return
+      const name = (s.client || (s as any).client_name || '').trim().toLowerCase()
+      if (!name) return
+      const current = debtMap.get(name) || 0
+      if (s.type === 'sale_credit' || (s.debt || 0) > 0) {
+        debtMap.set(name, current + Number(s.debt || s.total || 0))
+      } else if (s.type === 'payment_client') {
+        debtMap.set(name, Math.max(0, current - Number(s.paid || s.total || 0)))
+      }
+    })
+    let count = 0
+    debtMap.forEach(val => {
+      if (val > 0) count++
+    })
+    return count
+  }, [journalData.allSales])
+
   // ── Horloge ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const update = () => setCurrentTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
@@ -712,6 +733,7 @@ export default function JournalPage() {
               onTabChange={setActiveTab}
               activity={shopManager.shopActivity}
               userRole={effectiveRole}
+              pendingDebtsCount={pendingDebtsCount}
             />
           </div>
 
@@ -861,7 +883,13 @@ export default function JournalPage() {
             )}
             {activeTab === 'dettes' && (
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <DebtsBook shopId={shopManager.shopId} sales={journalData.allSales} onRefreshTotals={journalData.reloadData} onError={setPostItMessage} />
+                <DebtsBook 
+                  shopId={shopManager.shopId} 
+                  sales={journalData.allSales} 
+                  currentCash={journalData.tiroirCaisse}
+                  onRefreshTotals={journalData.reloadData} 
+                  onError={setPostItMessage} 
+                />
               </div>
             )}
             {activeTab === 'stock' && (

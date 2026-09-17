@@ -9,6 +9,8 @@ interface DebtRepaymentModalProps {
   onClose: () => void
   sale: any
   onConfirmRepayment: (saleId: string, amount: number, notes: string) => Promise<void>
+  debtType?: 'client' | 'supplier'
+  currentCash?: number
 }
 
 export const DebtRepaymentModal: React.FC<DebtRepaymentModalProps> = ({
@@ -16,18 +18,22 @@ export const DebtRepaymentModal: React.FC<DebtRepaymentModalProps> = ({
   onClose,
   sale,
   onConfirmRepayment,
+  debtType,
+  currentCash,
 }) => {
   const [repayAmount, setRepayAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const isSupplier = debtType === 'supplier' || sale?.debt_type === 'supplier'
   const parsedVal = parseFloat(repayAmount.replace(/\s/g, '').replace(/,/g, '.')) || 0
   const maxDebt = sale ? Number(sale.debt ?? sale.debt_amount ?? 0) : 0
   const isOverpaid = parsedVal > maxDebt
+  const isCashShortage = isSupplier && typeof currentCash === 'number' && parsedVal > currentCash
 
   const handleConfirm = async () => {
-    if (parsedVal <= 0 || isSubmitting || !sale) return
+    if (parsedVal <= 0 || isSubmitting || !sale || isOverpaid || isCashShortage) return
 
     setIsSubmitting(true)
     try {
@@ -70,8 +76,10 @@ export const DebtRepaymentModal: React.FC<DebtRepaymentModalProps> = ({
         {/* Entête */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
-            <Calculator className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-            <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">Règlement de Dette Client</h3>
+            <Calculator className={`w-5 h-5 ${isSupplier ? 'text-fuchsia-700' : 'text-amber-700'}`} strokeWidth={1.75} />
+            <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">
+              {isSupplier ? 'Règlement Dette Grossiste / Fournisseur' : 'Règlement de Dette Client'}
+            </h3>
           </div>
           <button
             type="button"
@@ -83,15 +91,25 @@ export const DebtRepaymentModal: React.FC<DebtRepaymentModalProps> = ({
         </div>
 
         {/* Détails dette */}
-        <div className="bg-amber-100/90 p-4 rounded-xl border border-amber-300 space-y-1 font-mono text-xs shadow-xs">
-          <div className="flex justify-between text-amber-950 font-bold">
-            <span>Client :</span>
-            <span className="font-extrabold text-gray-900">{sale.client || sale.client_name || 'Client anonyme'}</span>
+        <div className={`${isSupplier ? 'bg-fuchsia-100/90 border-fuchsia-300' : 'bg-amber-100/90 border-amber-300'} p-4 rounded-xl border space-y-1 font-mono text-xs shadow-xs`}>
+          <div className="flex justify-between text-gray-900 font-bold">
+            <span className={isSupplier ? 'text-fuchsia-950' : 'text-amber-950'}>
+              {isSupplier ? 'Fournisseur / Grossiste :' : 'Client :'}
+            </span>
+            <span className="font-extrabold text-gray-900">{sale.client || sale.client_name || (isSupplier ? 'Fournisseur divers' : 'Client anonyme')}</span>
           </div>
           <div className="flex justify-between text-rose-800 font-bold">
             <span>Dette Actuelle :</span>
             <span className="font-black tabular-nums tracking-tight">{formatPrice(maxDebt)}</span>
           </div>
+          {isSupplier && typeof currentCash === 'number' && (
+            <div className="flex justify-between text-gray-600 text-[11px] pt-1 border-t border-fuchsia-200/80">
+              <span>Disponible en Caisse :</span>
+              <span className={`font-bold tabular-nums ${currentCash < maxDebt ? 'text-amber-700' : 'text-emerald-700'}`}>
+                {formatPrice(currentCash)}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Formulaire */}
@@ -114,6 +132,13 @@ export const DebtRepaymentModal: React.FC<DebtRepaymentModalProps> = ({
               <div className="flex items-center gap-1.5 mt-1.5 text-rose-600 text-[11px] font-bold">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.75} />
                 <span>Le montant dépasse la dette restante ({formatPrice(maxDebt)}).</span>
+              </div>
+            )}
+
+            {isCashShortage && (
+              <div className="flex items-center gap-1.5 mt-1.5 text-rose-700 bg-rose-50 p-2 rounded-xl border border-rose-200 text-[11px] font-bold">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-rose-600" strokeWidth={1.75} />
+                <span>Solde insuffisant en caisse ({formatPrice(currentCash!)} disponible) pour payer ce montant.</span>
               </div>
             )}
 
@@ -184,10 +209,17 @@ export const DebtRepaymentModal: React.FC<DebtRepaymentModalProps> = ({
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={!repayAmount || parsedVal <= 0 || isSubmitting || isOverpaid}
-            className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all active:scale-[0.97] disabled:opacity-50 cursor-pointer shadow-md"
+            disabled={!repayAmount || parsedVal <= 0 || isSubmitting || isOverpaid || isCashShortage}
+            className={`px-5 py-2 text-white text-xs font-extrabold rounded-xl transition-all active:scale-[0.97] disabled:opacity-50 cursor-pointer shadow-md ${
+              isSupplier
+                ? 'bg-gradient-to-r from-fuchsia-700 to-rose-700 hover:from-fuchsia-600 hover:to-rose-600'
+                : 'bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#fbbf24] hover:to-[#f59e0b]'
+            }`}
           >
-            {isSubmitting ? 'Enregistrement...' : 'Valider le Règlement'}
+            {isSubmitting 
+              ? (isSupplier ? 'Décaissement...' : 'Enregistrement...') 
+              : (isSupplier ? 'Valider le Décaissement' : 'Valider le Règlement')
+            }
           </button>
         </div>
       </div>

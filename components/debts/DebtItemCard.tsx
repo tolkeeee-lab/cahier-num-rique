@@ -3,6 +3,7 @@
 import React from 'react'
 import { formatPrice } from '@/lib/penUtils'
 import { Share2, Calculator, AlertTriangle, Bell, Calendar } from 'lucide-react'
+import { getTodayDateString } from '@/lib/dateUtils'
 
 interface Debt {
   id: string
@@ -28,7 +29,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
   const isSettled = debt.status === 'settled' || debt.amount_owed <= 0
   const isSupplier = debt.debt_type === 'supplier'
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = getTodayDateString()
   const isOverdue = !isSettled && debt.due_date && debt.due_date < todayStr
   const isDueToday = !isSettled && debt.due_date && debt.due_date === todayStr
 
