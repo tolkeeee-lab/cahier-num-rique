@@ -88,7 +88,11 @@ export async function POST(request: NextRequest) {
     const saleId = body.id || randomUUID()
     const createdAtStr = body.created_at || now.toISOString()
 
-    const calculatedDebt = parsedData?.montant_dette ?? overrideData?.debt_amount ?? 0
+    const finalTotal = overrideData?.total ?? overrideData?.total_amount ?? parsedData?.total_facture ?? 0
+    const finalPaid = overrideData?.paid ?? overrideData?.paid_amount ?? parsedData?.montant_paye ?? 0
+    const calculatedDebt = overrideData?.debt ?? overrideData?.debt_amount ?? parsedData?.montant_dette ?? 0
+    const finalClient = overrideData?.client ?? overrideData?.client_name ?? parsedData?.nom_client ?? 'Client'
+    const finalNotes = overrideData?.notes ?? text ?? ''
     const resolvedStatus = body.status || overrideData?.status || ((calculatedDebt > 0 && (type === 'sale_credit' || type === 'purchase_credit')) ? 'debt' : 'paid')
 
     const saleRecord = {
@@ -98,12 +102,12 @@ export async function POST(request: NextRequest) {
       date: dateStr,
       time: timeStr,
       type,
-      raw_text: text,
-      notes: text,
-      total_amount: parsedData?.total_facture || 0,
-      paid_amount: parsedData?.montant_paye || 0,
+      raw_text: overrideData?.raw_text ?? text ?? finalNotes,
+      notes: finalNotes,
+      total_amount: finalTotal,
+      paid_amount: finalPaid,
       debt_amount: calculatedDebt,
-      client_name: parsedData?.nom_client || 'Client',
+      client_name: finalClient,
       status: resolvedStatus,
       category: body.category || overrideData?.category || parsedData?.categorie || 'Général',
       pen_color: color,
@@ -111,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     const newSale = {
       ...saleRecord,
-      articles: parsedData?.articles || [],
+      articles: overrideData?.articles || parsedData?.articles || [],
       synced: true,
     }
 
@@ -337,6 +341,28 @@ export async function PATCH(request: NextRequest) {
       const idx = localSales.findIndex((s: any) => s.id === id && (targetShopIds.includes(s.shop_id) || !s.shop_id))
       if (idx !== -1) {
         localSales[idx].category = category
+        saveLocalDb(localSales)
+        return NextResponse.json({ success: true })
+      }
+      return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
+    }
+
+    if (action === 'settle_debt') {
+      const { debt_amount, paid_amount, status: newStatus } = body
+      if (isSupabaseConfigured() && supabase) {
+        await supabase.from('sales').update({
+          debt_amount: Number(debt_amount || 0),
+          paid_amount: Number(paid_amount || 0),
+          status: newStatus || (Number(debt_amount || 0) <= 0 ? 'paid' : 'debt'),
+        }).eq('id', id).in('shop_id', targetShopIds)
+        return NextResponse.json({ success: true })
+      }
+      const localSales = getLocalDb()
+      const idx = localSales.findIndex((s: any) => s.id === id && (targetShopIds.includes(s.shop_id) || !s.shop_id))
+      if (idx !== -1) {
+        localSales[idx].debt_amount = Number(debt_amount || 0)
+        localSales[idx].paid_amount = Number(paid_amount || 0)
+        localSales[idx].status = newStatus || (Number(debt_amount || 0) <= 0 ? 'paid' : 'debt')
         saveLocalDb(localSales)
         return NextResponse.json({ success: true })
       }

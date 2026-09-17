@@ -61,6 +61,7 @@ interface SalesHistoryProps {
   onAddArticle?: (saleId: string, text: string) => Promise<void>
   onUpdateSale?: (saleId: string, updatedArticles: Article[], clientName?: string) => Promise<void>
   onUpdateCategory?: (saleId: string, category: string) => Promise<void>
+  onSettleDebt?: (saleId: string, amount: number, notes?: string, clientName?: string, isSupplier?: boolean) => Promise<void>
   onError?: (err: string) => void
   shopId?: string
   isEmployee?: boolean
@@ -79,6 +80,7 @@ export function SalesHistory({
   sales,
   onSaleCrossedOut,
   onUpdateSale,
+  onSettleDebt,
   shopId = 'default-shop',
   isEmployee = false,
 }: SalesHistoryProps) {
@@ -128,12 +130,40 @@ export function SalesHistory({
     return Array.from(map.entries())
   }, [filteredSales])
 
+  // Calcul des dettes restantes par client/fournisseur pour affichage en temps réel dans l'historique
+  const clientDebtMap = useMemo(() => {
+    const map = new Map<string, number>()
+    sales.forEach(s => {
+      if (s.status === 'crossed_out') return
+      const name = (s.client || '').trim().toLowerCase()
+      if (!name) return
+      const current = map.get(name) || 0
+      if (s.type === 'sale_credit' || (s.debt || 0) > 0) {
+        map.set(name, current + Number(s.debt || s.total || 0))
+      } else if (s.type === 'payment_client') {
+        map.set(name, Math.max(0, current - Number(s.paid || s.total || 0)))
+      } else if (s.type === 'purchase_credit' || s.pen_color === 'purple') {
+        map.set(name, current + Number(s.debt || s.total || 0))
+      } else if (s.type === 'payment_supplier') {
+        map.set(name, Math.max(0, current - Number(s.paid || s.total || 0)))
+      }
+    })
+    return map
+  }, [sales])
+
   const handleConfirmRepayment = async (saleId: string, amount: number, notes: string) => {
     const target = sales.find(s => s.id === saleId)
     const clientName = target?.client || 'Client'
+    const isSupplier = target?.type === 'purchase_credit' || target?.pen_color === 'purple'
+
+    if (onSettleDebt) {
+      await onSettleDebt(saleId, amount, notes, clientName, isSupplier)
+      setActiveRepaymentSale(null)
+      return
+    }
+
     const newSaleId = generateOfflineId()
     const now = new Date()
-    const isSupplier = target?.type === 'purchase_credit' || target?.pen_color === 'purple'
 
     const repaymentSale: any = {
       id: newSaleId,
@@ -177,8 +207,11 @@ export function SalesHistory({
       console.warn('Règlement sauvegardé hors-ligne:', e)
     }
 
+    setActiveRepaymentSale(null)
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
     }
   }
 
@@ -227,17 +260,23 @@ export function SalesHistory({
 
                 {/* Grille des ventes pour cette date */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {dateSales.map((sale) => (
-                    <SaleItemCard
-                      key={sale.id}
-                      sale={sale}
-                      onCrossOut={onSaleCrossedOut}
-                      onPrintReceipt={(s) => setActiveReceiptSale(s)}
-                      onShareWhatsApp={(s) => setActiveShareSale(s)}
-                      onEdit={(s) => setEditingSale(s)}
-                      isEmployee={isEmployee}
-                    />
-                  ))}
+                  {dateSales.map((sale) => {
+                    const clientKey = (sale.client || '').trim().toLowerCase()
+                    const remDebt = clientKey ? clientDebtMap.get(clientKey) : undefined
+                    return (
+                      <SaleItemCard
+                        key={sale.id}
+                        sale={sale}
+                        remainingDebt={remDebt}
+                        onSettleDebt={(s) => setActiveRepaymentSale(s)}
+                        onCrossOut={onSaleCrossedOut}
+                        onPrintReceipt={(s) => setActiveReceiptSale(s)}
+                        onShareWhatsApp={(s) => setActiveShareSale(s)}
+                        onEdit={(s) => setEditingSale(s)}
+                        isEmployee={isEmployee}
+                      />
+                    )
+                  })}
                 </div>
               </div>
             )

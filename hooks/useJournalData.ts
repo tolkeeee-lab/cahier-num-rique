@@ -280,9 +280,11 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
   const calculateSummary = useCallback((all: Sale[], todays: Sale[]) => {
     let cash = 0
-    let clientDebts = 0
-    let supplierDebts = 0
     let todayBalance = 0
+
+    // Regrouper les créances par client / fournisseur pour une cohérence parfaite avec DebtsBook et /api/debts
+    const clientDebtMap = new Map<string, number>()
+    const supplierDebtMap = new Map<string, number>()
 
     all.forEach(s => {
       if (s.status === 'crossed_out') return
@@ -291,35 +293,47 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       // Calcul unifié du tiroir-caisse (gestion apports, retraits, ventes, dépenses, règlements)
       cash += getItemCashDelta(s)
 
+      const clientName = (s.client || (s as any).client_name || '').trim().toLowerCase()
       const d = Number(s.debt || 0)
-      if (d > 0) {
-        if (type === 'purchase_credit' || s.pen_color === 'purple') {
-          supplierDebts += d
-        } else {
-          clientDebts += d
+      const p = Number(s.paid || s.total || 0)
+
+      if (type === 'purchase_credit' || s.pen_color === 'purple') {
+        if (clientName) {
+          supplierDebtMap.set(clientName, (supplierDebtMap.get(clientName) || 0) + (d > 0 ? d : Number(s.total || 0)))
         }
-      }
-      
-      // Déduire les paiements des dettes correspondantes
-      if (type === 'payment_client') {
-        clientDebts -= Number(s.paid || s.total || 0)
       } else if (type === 'payment_supplier') {
-        supplierDebts -= Number(s.paid || s.total || 0)
+        if (clientName) {
+          supplierDebtMap.set(clientName, Math.max(0, (supplierDebtMap.get(clientName) || 0) - p))
+        }
+      } else if (type === 'sale_credit' || (d > 0 && type !== 'payment_client')) {
+        if (clientName) {
+          clientDebtMap.set(clientName, (clientDebtMap.get(clientName) || 0) + d)
+        }
+      } else if (type === 'payment_client') {
+        if (clientName) {
+          clientDebtMap.set(clientName, Math.max(0, (clientDebtMap.get(clientName) || 0) - p))
+        }
       }
     })
 
+    let totalClientDebts = 0
+    clientDebtMap.forEach(val => { if (val > 0) totalClientDebts += val })
+
+    let totalSupplierDebts = 0
+    supplierDebtMap.forEach(val => { if (val > 0) totalSupplierDebts += val })
+
     todays.forEach(s => {
       if (s.status === 'crossed_out') return
-      if (s.pen_color === 'blue' || s.type === 'sale') {
+      if (s.pen_color === 'blue' || s.type === 'sale' || s.type === 'cash_in' || s.type === 'payment_client') {
         todayBalance += Number(s.paid ?? s.total ?? 0)
-      } else if (s.pen_color === 'red' || s.type === 'cash_out') {
-        todayBalance -= Number(s.total ?? 0)
+      } else if (s.pen_color === 'red' || s.type === 'cash_out' || s.type === 'payment_supplier') {
+        todayBalance -= Number(s.total ?? s.paid ?? 0)
       }
     })
 
     setTiroirCaisse(Math.round(cash * 100) / 100)
-    setArgentDehors(Math.max(0, Math.round(clientDebts * 100) / 100))
-    setNosDettes(Math.max(0, Math.round(supplierDebts * 100) / 100))
+    setArgentDehors(Math.max(0, Math.round(totalClientDebts * 100) / 100))
+    setNosDettes(Math.max(0, Math.round(totalSupplierDebts * 100) / 100))
     setSoldeDuJour(Math.round(todayBalance * 100) / 100)
   }, [])
 
@@ -509,6 +523,91 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     }
   }, [reloadData, isOnline, shopId])
 
+  const settleDebt = useCallback(async (
+    clientOrSupplierName: string,
+    amount: number,
+    isSupplier = false,
+    customNotes?: string
+  ) => {
+    if (!clientOrSupplierName || amount <= 0) return
+
+    const trimmedName = clientOrSupplierName.trim()
+    const today = getTodayDateString()
+    const now = new Date()
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const repaymentSaleId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `rep_${Date.now()}`
+
+    const repaymentSale: OfflineSale = {
+      id: repaymentSaleId,
+      shop_id: shopId || 'default-shop',
+      date: today,
+      time: timeStr,
+      client: trimmedName,
+      articles: [],
+      total: amount,
+      paid: amount,
+      debt: 0,
+      status: 'paid',
+      type: isSupplier ? 'payment_supplier' : 'payment_client',
+      pen_color: isSupplier ? 'red' : 'blue',
+      notes: customNotes || (isSupplier
+        ? `Remboursement dette fournisseur (${trimmedName})`
+        : `Règlement dette client (${trimmedName})`),
+      category: 'Règlement Dette',
+      created_at: now.toISOString(),
+      is_synced: false,
+    }
+
+    // Sauvegarder dans offlineDb
+    saveOfflineSale(shopId, repaymentSale)
+
+    // Mettre à jour l'état local allSales & sales en mémoire immédiatement
+    setAllSales(prev => {
+      const updated = [repaymentSale, ...prev.filter(s => s.id !== repaymentSaleId)]
+      const todays = updated.filter(s => s.date === today)
+      setSales(todays)
+      calculateSummary(updated, todays)
+      return updated
+    })
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+    }
+
+    // Synchronisation en ligne
+    try {
+      const res = await fetch('/api/debts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-shop-id': shopId,
+        },
+        body: JSON.stringify({
+          id: repaymentSaleId,
+          date: today,
+          time: timeStr,
+          created_at: repaymentSale.created_at,
+          name: trimmedName,
+          amount,
+          type: isSupplier ? 'supplier' : 'client',
+          action: 'pay',
+          description: repaymentSale.notes,
+        }),
+      })
+      if (res.ok) {
+        const currentOffline = getOfflineSales(shopId)
+        const match = currentOffline.find(s => s.id === repaymentSaleId)
+        if (match) {
+          match.is_synced = true
+          replaceOfflineSales(shopId, currentOffline)
+        }
+      }
+    } catch (e) {
+      console.warn('Règlement enregistré en local (mode hors-ligne):', e)
+    }
+  }, [calculateSummary, shopId])
+
   return {
     sales,
     allSales,
@@ -522,5 +621,6 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     addArticleToSale,
     updateSale,
     updateCategory,
+    settleDebt,
   }
 }

@@ -26,6 +26,8 @@ interface SaleItemCardProps {
   onPrintReceipt?: (sale: any) => void
   onShareWhatsApp?: (sale: any) => void
   onEdit?: (sale: any) => void
+  onSettleDebt?: (sale: any) => void
+  remainingDebt?: number
   isEmployee?: boolean
 }
 
@@ -35,6 +37,8 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
   onPrintReceipt,
   onShareWhatsApp,
   onEdit,
+  onSettleDebt,
+  remainingDebt,
   isEmployee,
 }) => {
   const isCrossedOut = sale.status === 'crossed_out'
@@ -69,7 +73,17 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
             <span className="text-xs font-mono text-gray-500 font-bold">{sale.time}</span>
             <span className="font-extrabold text-sm text-gray-900">{sale.client || 'Client anonyme'}</span>
             <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase font-extrabold border ${getBadgeStyle(sale.pen_color)}`}>
-              {sale.pen_color === 'red' ? 'DÉPENSE' : sale.pen_color === 'green' ? 'STOCK' : sale.pen_color === 'purple' ? 'DETTE' : 'VENTE'}
+              {sale.type === 'payment_client'
+                ? 'RÈGLEMENT REÇU'
+                : sale.type === 'payment_supplier'
+                ? 'RÈGLEMENT PAYÉ'
+                : sale.pen_color === 'red'
+                ? 'DÉPENSE'
+                : sale.pen_color === 'green'
+                ? 'STOCK'
+                : sale.pen_color === 'purple'
+                ? 'DETTE'
+                : 'VENTE'}
             </span>
           </div>
 
@@ -92,10 +106,31 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
           )}
 
           {/* Information dette si existante */}
-          {sale.debt > 0 && !isCrossedOut && (
-            <div className="flex items-center gap-1.5 text-xs text-amber-900 font-bold font-mono pt-1">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.75} />
-              <span>Dette client : <span className="tabular-nums">{formatPrice(sale.debt)}</span></span>
+          {(sale.debt > 0 || sale.type === 'sale_credit' || sale.type === 'purchase_credit') && !isCrossedOut && (
+            <div className="pt-1">
+              {typeof remainingDebt === 'number' && remainingDebt <= 0 ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-lg shadow-2xs">
+                  ✓ Dette entièrement soldée
+                </span>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1 text-xs text-amber-900 font-bold font-mono">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.75} />
+                    <span>
+                      {sale.type === 'purchase_credit' ? 'Dette fournisseur :' : 'Dette client :'} <span className="tabular-nums">{formatPrice(typeof remainingDebt === 'number' ? remainingDebt : sale.debt)}</span>
+                    </span>
+                  </div>
+                  {onSettleDebt && (
+                    <button
+                      type="button"
+                      onClick={() => onSettleDebt(sale)}
+                      className="px-2 py-0.5 rounded-md bg-amber-200 hover:bg-amber-300 active:scale-95 text-amber-950 border border-amber-400 font-mono text-[10px] font-black transition-all cursor-pointer shadow-2xs"
+                    >
+                      Solder
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

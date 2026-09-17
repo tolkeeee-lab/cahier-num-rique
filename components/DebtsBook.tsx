@@ -22,7 +22,7 @@ export interface DebtsBookProps {
   shopId?: string
   sales?: any[]
   currentCash?: number
-  onSettleDebt?: (debtId: string, amount: number) => Promise<void>
+  onSettleDebt?: (debtId: string, amount: number, notes?: string, clientName?: string, isSupplier?: boolean) => Promise<void>
   onRefreshTotals?: () => void
   onError?: (err: string) => void
 }
@@ -153,13 +153,11 @@ export function DebtsBook({
       created_at: now.toISOString(),
     }
 
-    saveOfflineSale(shopId, newSale)
-
     try {
       if (onSettleDebt) {
-        await onSettleDebt(debt.id, repayAmount)
-        markAsSynced(shopId, saleId)
+        await onSettleDebt(debt.id, repayAmount, customNotes, debt.client_name, isSupplier)
       } else {
+        saveOfflineSale(shopId, newSale)
         const response = await fetch('/api/sales', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },

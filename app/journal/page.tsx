@@ -878,6 +878,9 @@ export default function JournalPage() {
                   onUpdateCategory={async (saleId: string, cat: string) => {
                     await journalData.updateCategory(saleId, cat)
                   }}
+                  onSettleDebt={async (_saleId, amount, notes, clientName, isSupplier) => {
+                    await journalData.settleDebt(clientName || '', amount, isSupplier, notes)
+                  }}
                 />
               </div>
             )}
@@ -887,6 +890,9 @@ export default function JournalPage() {
                   shopId={shopManager.shopId} 
                   sales={journalData.allSales} 
                   currentCash={journalData.tiroirCaisse}
+                  onSettleDebt={async (_debtId, amount, notes, clientName, isSupplier) => {
+                    await journalData.settleDebt(clientName || '', amount, isSupplier, notes)
+                  }}
                   onRefreshTotals={journalData.reloadData} 
                   onError={setPostItMessage} 
                 />
