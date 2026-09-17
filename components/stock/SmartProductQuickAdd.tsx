@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Sparkles, Check, CornerDownLeft, X, Layers, Truck, Store, AlertCircle, ArrowUpRight } from 'lucide-react'
+import { Sparkles, Check, CornerDownLeft, X, AlertCircle, ArrowUpRight } from 'lucide-react'
 import { parseSmartProductText, ParsedProductResult } from '@/lib/stock/smartProductParser'
 import { formatPrice } from '@/lib/penUtils'
 import { StockFormState } from './types'
@@ -81,6 +81,11 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         unit: parsed.unit,
         multiplier: parsed.multiplier,
         packaging_name: parsed.packaging_name,
+        packages_count: parsed.packages_count,
+        package_cost: parsed.package_cost,
+        wholesale_price: parsed.wholesale_price,
+        half_package_price: parsed.half_package_price,
+        quarter_package_price: parsed.quarter_package_price,
         lot_quantity: parsed.lot_quantity,
         lot_price: parsed.lot_price,
         trade_type: parsed.trade_type,
@@ -121,6 +126,11 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         unit: parsed.unit,
         multiplier: parsed.multiplier,
         packaging_name: parsed.packaging_name,
+        packages_count: parsed.packages_count,
+        package_cost: parsed.package_cost,
+        wholesale_price: parsed.wholesale_price,
+        half_package_price: parsed.half_package_price,
+        quarter_package_price: parsed.quarter_package_price,
         lot_quantity: parsed.lot_quantity,
         lot_price: parsed.lot_price,
         trade_type: parsed.trade_type,
@@ -229,61 +239,79 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               <span>{parsed.name || '...'}</span>
             </span>
 
-            {/* Quantité & Unité */}
+            {/* Quantité & Contenance */}
             <span className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-950 font-black tabular-nums flex items-center gap-1">
               <span className="text-[10px] text-blue-700 uppercase font-extrabold">Stock :</span>
               <span>
-                {parsed.initial_stock} {parsed.unit}
-                {parsed.multiplier > 1 ? ` (x${parsed.multiplier})` : ''}
+                {parsed.packages_count && parsed.packages_count > 0 && parsed.multiplier > 1 ? (
+                  <>
+                    {parsed.packages_count} {parsed.packaging_name || 'cartons'} × {parsed.multiplier} = <span className="text-blue-700 font-extrabold">{parsed.initial_stock} pièces</span>
+                  </>
+                ) : (
+                  <>
+                    {parsed.initial_stock} {parsed.unit}
+                    {parsed.multiplier > 1 ? ` (x${parsed.multiplier})` : ''}
+                  </>
+                )}
               </span>
-            </span>
-
-            {/* Mode commercial */}
-            <span className={`px-2 py-1 rounded-lg border font-black text-[11px] flex items-center gap-1 ${
-              parsed.trade_type === 'wholesale'
-                ? 'bg-purple-50 text-purple-950 border-purple-200'
-                : parsed.trade_type === 'semi_wholesale'
-                ? 'bg-emerald-50 text-emerald-950 border-emerald-200'
-                : 'bg-stone-50 text-stone-900 border-stone-200'
-            }`}>
-              {parsed.trade_type === 'wholesale' ? (
-                <>
-                  <Truck className="w-3 h-3 text-purple-700" />
-                  <span>Grossiste (Carton/Sac)</span>
-                </>
-              ) : parsed.trade_type === 'semi_wholesale' ? (
-                <>
-                  <Layers className="w-3 h-3 text-emerald-700" />
-                  <span>Demi-Gros (Pack de {parsed.lot_quantity || 6})</span>
-                </>
-              ) : (
-                <>
-                  <Store className="w-3 h-3 text-stone-700" />
-                  <span>Détail (Pièce)</span>
-                </>
-              )}
             </span>
 
             {/* Prix d'achat */}
-            {parsed.unit_cost > 0 && (
+            {(parsed.package_cost ? parsed.package_cost > 0 : parsed.unit_cost > 0) && (
               <span className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-950 font-black tabular-nums flex items-center gap-1">
                 <span className="text-[10px] text-rose-700 uppercase font-extrabold">Achat :</span>
-                <span>{formatPrice(parsed.unit_cost)}</span>
+                {parsed.package_cost && parsed.package_cost > 0 && parsed.multiplier > 1 ? (
+                  <span>{formatPrice(parsed.package_cost)} / {parsed.packaging_name || 'carton'} <span className="text-rose-700 font-bold">({formatPrice(Math.round(parsed.unit_cost))} / pc)</span></span>
+                ) : (
+                  <span>{formatPrice(parsed.unit_cost)}</span>
+                )}
               </span>
             )}
 
-            {/* Prix de vente */}
+            {/* Prix de vente Détail (Pièce) */}
             {parsed.unit_price > 0 && (
               <span className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-950 font-black tabular-nums flex items-center gap-1">
-                <span className="text-[10px] text-emerald-700 uppercase font-extrabold">Vente :</span>
+                <span className="text-[10px] text-emerald-700 uppercase font-extrabold">Détail (1 pc) :</span>
                 <span>{formatPrice(parsed.unit_price)}</span>
+              </span>
+            )}
+
+            {/* Prix Quart de carton (1/4) */}
+            {parsed.quarter_package_price && parsed.quarter_package_price > 0 && (
+              <span className="px-2 py-1 rounded-lg bg-teal-50 border border-teal-300 text-teal-950 font-black tabular-nums flex items-center gap-1 text-[11px]">
+                <span className="text-[10px] text-teal-700 uppercase font-extrabold">1/4 ctn :</span>
+                <span>{formatPrice(parsed.quarter_package_price)}</span>
+              </span>
+            )}
+
+            {/* Prix Demi-carton (1/2) */}
+            {parsed.half_package_price && parsed.half_package_price > 0 && (
+              <span className="px-2 py-1 rounded-lg bg-indigo-50 border border-indigo-300 text-indigo-950 font-black tabular-nums flex items-center gap-1 text-[11px]">
+                <span className="text-[10px] text-indigo-700 uppercase font-extrabold">1/2 ctn :</span>
+                <span>{formatPrice(parsed.half_package_price)}</span>
+              </span>
+            )}
+
+            {/* Seuil Dégressif / Lot */}
+            {parsed.lot_quantity > 0 && parsed.lot_price > 0 && (
+              <span className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-950 font-black tabular-nums flex items-center gap-1 text-[11px]">
+                <span className="text-[10px] text-emerald-700 uppercase font-extrabold">Lot de {parsed.lot_quantity} :</span>
+                <span>{formatPrice(parsed.lot_price)}</span>
+              </span>
+            )}
+
+            {/* Prix Carton Complet */}
+            {parsed.wholesale_price && parsed.wholesale_price > 0 && (
+              <span className="px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-300 text-purple-950 font-black tabular-nums flex items-center gap-1">
+                <span className="text-[10px] text-purple-700 uppercase font-extrabold">Carton Entier :</span>
+                <span>{formatPrice(parsed.wholesale_price)}</span>
               </span>
             )}
 
             {/* Marge estimée */}
             {estimatedMargin && (
               <span className="px-2.5 py-1 rounded-lg bg-amber-100/80 border border-amber-300 text-amber-950 font-extrabold tabular-nums flex items-center gap-1 text-[11px]">
-                <span className="text-[10px] text-amber-800 uppercase">Marge :</span>
+                <span className="text-[10px] text-amber-800 uppercase">Marge Détail :</span>
                 <span className="text-emerald-800">+{formatPrice(estimatedMargin.margin)} (+{estimatedMargin.percent}%)</span>
               </span>
             )}

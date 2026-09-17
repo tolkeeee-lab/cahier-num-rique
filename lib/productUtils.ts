@@ -214,6 +214,11 @@ export interface CleanableProduct {
   packaging_name?: string
   lot_quantity?: number
   lot_price?: number
+  packages_count?: number
+  package_cost?: number
+  wholesale_price?: number
+  half_package_price?: number
+  quarter_package_price?: number
   [key: string]: any
 }
 
@@ -273,6 +278,22 @@ export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
 
   copy.lot_quantity = lotQty
   copy.lot_price = lotPr
+
+  if (copy.wholesale_price !== undefined) {
+    copy.wholesale_price = Math.max(0, Math.round(Number(copy.wholesale_price) || 0))
+  }
+  if (copy.half_package_price !== undefined) {
+    copy.half_package_price = Math.max(0, Math.round(Number(copy.half_package_price) || 0))
+  }
+  if (copy.quarter_package_price !== undefined) {
+    copy.quarter_package_price = Math.max(0, Math.round(Number(copy.quarter_package_price) || 0))
+  }
+  if (copy.package_cost !== undefined) {
+    copy.package_cost = Math.max(0, Math.round(Number(copy.package_cost) || 0))
+  }
+  if (copy.packages_count !== undefined) {
+    copy.packages_count = Math.max(0, Math.round(Number(copy.packages_count) || 0))
+  }
 
   const explicitTradeType = (copy as any).trade_type
   if (explicitTradeType) {

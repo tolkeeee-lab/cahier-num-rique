@@ -219,6 +219,11 @@ export interface OfflineProduct {
   is_unlimited?: boolean
   lot_quantity?: number
   lot_price?: number
+  packages_count?: number
+  package_cost?: number
+  wholesale_price?: number
+  half_package_price?: number
+  quarter_package_price?: number
   trade_type?: 'retail' | 'semi_wholesale' | 'wholesale'
   is_synced?: boolean
   sync_error?: string

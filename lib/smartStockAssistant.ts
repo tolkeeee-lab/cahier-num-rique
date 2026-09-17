@@ -20,6 +20,11 @@ export interface StockProductCard {
   packaging_name?: string  // Nom du lot/conditionnement (ex: carton, sac, pack)
   lot_quantity?: number    // Quantité du lot dégressif (ex: 3)
   lot_price?: number       // Prix global du lot dégressif (ex: 275 FCFA)
+  packages_count?: number
+  package_cost?: number
+  wholesale_price?: number
+  half_package_price?: number
+  quarter_package_price?: number
 }
 
 export interface AssistantAnalysisResult {
@@ -126,6 +131,12 @@ export function analyzeNotebookInputWithMasterCatalog(
       cleanText = qtyMatch[2].trim()
     } else {
       cleanText = cleanText.replace(/^(?:stock|achat)\s+/i, '').trim()
+    }
+
+    // Détecter et retirer le mot de conditionnement en tête (ex: "carton", "pack", "casier", "sac")
+    const pkgWordMatch = cleanText.match(/^(?:cartons?|packs?|casiers?|sacs?|bidons?|fardeaux?)\s*(?:de\s+)?/i)
+    if (pkgWordMatch) {
+      cleanText = cleanText.replace(pkgWordMatch[0], '').trim()
     }
   }
 
@@ -259,11 +270,29 @@ export function analyzeNotebookInputWithMasterCatalog(
 
   let totalAmount = calculatedItemsCount * finalUnitPrice
 
-  if (kind === 'sale' && bestMatch.lot_quantity && bestMatch.lot_quantity > 1 && bestMatch.lot_price && bestMatch.lot_price > 0 && calculatedItemsCount >= bestMatch.lot_quantity) {
-    const numLots = Math.floor(calculatedItemsCount / bestMatch.lot_quantity)
-    const remainder = calculatedItemsCount % bestMatch.lot_quantity
-    totalAmount = (numLots * bestMatch.lot_price) + (remainder * (bestMatch.unit_price || finalUnitPrice))
-    finalUnitPrice = bestMatch.unit_price || finalUnitPrice
+  if (kind === 'sale' && !typedPrice) {
+    // 1. Si fraction demi-carton et prix demi-carton configuré
+    if (fractionMultiplier === 0.5 && bestMatch.half_package_price && bestMatch.half_package_price > 0) {
+      totalAmount = qty * bestMatch.half_package_price
+      finalUnitPrice = Math.round(bestMatch.half_package_price / (multiplier * 0.5))
+    }
+    // 2. Si fraction quart-carton et prix quart configuré
+    else if (fractionMultiplier === 0.25 && bestMatch.quarter_package_price && bestMatch.quarter_package_price > 0) {
+      totalAmount = qty * bestMatch.quarter_package_price
+      finalUnitPrice = Math.round(bestMatch.quarter_package_price / (multiplier * 0.25))
+    }
+    // 3. Si carton complet et prix carton de gros configuré
+    else if (fractionMultiplier === 1 && multiplier > 1 && (lower.includes('carton') || lower.includes('pack') || lower.includes('casier') || lower.includes('sac')) && bestMatch.wholesale_price && bestMatch.wholesale_price > 0) {
+      totalAmount = qty * bestMatch.wholesale_price
+      finalUnitPrice = Math.round(bestMatch.wholesale_price / multiplier)
+    }
+    // 4. Si palier par lot dégressif configuré
+    else if (bestMatch.lot_quantity && bestMatch.lot_quantity > 1 && bestMatch.lot_price && bestMatch.lot_price > 0 && calculatedItemsCount >= bestMatch.lot_quantity) {
+      const numLots = Math.floor(calculatedItemsCount / bestMatch.lot_quantity)
+      const remainder = calculatedItemsCount % bestMatch.lot_quantity
+      totalAmount = (numLots * bestMatch.lot_price) + (remainder * (bestMatch.unit_price || finalUnitPrice))
+      finalUnitPrice = bestMatch.unit_price || finalUnitPrice
+    }
   }
 
   const confidence = bestScore === 0 ? 98 : 88

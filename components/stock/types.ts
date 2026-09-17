@@ -36,6 +36,11 @@ export interface StockFormState {
   unit_price: number
   multiplier: number
   packaging_name: string
+  packages_count?: number
+  package_cost?: number
+  wholesale_price?: number
+  half_package_price?: number
+  quarter_package_price?: number
   lot_quantity: number
   lot_price: number
   barcode?: string

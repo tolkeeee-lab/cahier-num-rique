@@ -199,6 +199,11 @@ function filterProductDbColumns(obj: Record<string, any>): Record<string, any> {
     'unit_price',
     'multiplier',
     'packaging_name',
+    'packages_count',
+    'package_cost',
+    'wholesale_price',
+    'half_package_price',
+    'quarter_package_price',
     'is_service',
     'lot_quantity',
     'lot_price',
@@ -225,7 +230,28 @@ export async function POST(request: Request) {
   }
   try {
     const body = await request.json()
-    const { name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, trade_type, barcode, created_at } = body
+    const {
+      name,
+      category,
+      unit,
+      alert_threshold,
+      initial_stock,
+      unit_cost,
+      unit_price,
+      multiplier,
+      packaging_name,
+      packages_count,
+      package_cost,
+      wholesale_price,
+      half_package_price,
+      quarter_package_price,
+      is_service,
+      lot_quantity,
+      lot_price,
+      trade_type,
+      barcode,
+      created_at,
+    } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Le nom du produit est obligatoire' }, { status: 400 })
@@ -247,6 +273,11 @@ export async function POST(request: Request) {
       unit_price: unit_price ?? 0,
       multiplier: multiplier ?? 1,
       packaging_name: packaging_name || '',
+      packages_count: packages_count ?? 0,
+      package_cost: package_cost ?? 0,
+      wholesale_price: wholesale_price ?? 0,
+      half_package_price: half_package_price ?? 0,
+      quarter_package_price: quarter_package_price ?? 0,
       is_service: is_service ?? false,
       lot_quantity: lot_quantity ?? 0,
       lot_price: lot_price ?? 0,
@@ -315,7 +346,28 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json()
-    const { id, name, category, unit, alert_threshold, initial_stock, unit_cost, unit_price, multiplier, packaging_name, is_service, lot_quantity, lot_price, trade_type, barcode } = body
+    const {
+      id,
+      name,
+      category,
+      unit,
+      alert_threshold,
+      initial_stock,
+      unit_cost,
+      unit_price,
+      multiplier,
+      packaging_name,
+      packages_count,
+      package_cost,
+      wholesale_price,
+      half_package_price,
+      quarter_package_price,
+      is_service,
+      lot_quantity,
+      lot_price,
+      trade_type,
+      barcode,
+    } = body
 
     if (!id && !name) {
       return NextResponse.json({ error: 'ID ou nom du produit manquant' }, { status: 400 })
@@ -355,6 +407,11 @@ export async function PATCH(request: Request) {
     if (unit_price !== undefined) updates.unit_price = unit_price
     if (multiplier !== undefined) updates.multiplier = multiplier
     if (packaging_name !== undefined) updates.packaging_name = packaging_name
+    if (packages_count !== undefined) updates.packages_count = packages_count
+    if (package_cost !== undefined) updates.package_cost = package_cost
+    if (wholesale_price !== undefined) updates.wholesale_price = wholesale_price
+    if (half_package_price !== undefined) updates.half_package_price = half_package_price
+    if (quarter_package_price !== undefined) updates.quarter_package_price = quarter_package_price
     if (is_service !== undefined) updates.is_service = is_service
     if (lot_quantity !== undefined) updates.lot_quantity = lot_quantity
     if (lot_price !== undefined) updates.lot_price = lot_price

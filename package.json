@@ -11,6 +11,7 @@
     "test-stock": "npx -y tsx scripts/test_stock_flow.ts",
     "test-debts": "npx -y tsx scripts/test_debts_multitable_sync.ts",
     "test-product-parser": "npx -y tsx scripts/test_smart_product_parser.ts",
+    "test-multi-tier": "npx -y tsx scripts/test_multi_tier_stock_nlp.ts",
     "verify": "npx -y tsx scripts/verify_fixes.ts"
   },
   "dependencies": {

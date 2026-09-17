@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Sparkles, Check, Truck, Layers, Store, ArrowRight, HelpCircle } from 'lucide-react'
+import { Sparkles, Check, ArrowRight, HelpCircle } from 'lucide-react'
 import { parseSmartProductText, ParsedProductResult } from '@/lib/stock/smartProductParser'
 import { formatPrice } from '@/lib/penUtils'
 import { StockFormState } from './types'
@@ -13,13 +13,13 @@ interface ProductMagicFormProps {
 }
 
 const EXAMPLE_PHRASES = [
-  'Savon BF 50 cartons achat 8000 vente 10000',
-  'Coca Cola 33cl 10 packs de 6 achat 2500 vente 3200',
-  'Sucre Saint Louis 30 paquets à 900',
+  'Savon BF 10 cartons de 24 achat 8000 vente piece 500 carton 10000 demi 5200 quart 2650',
+  'Coca Cola 33cl 10 packs de 6 achat 2500 vente piece 600 pack 3200 a partir de 3 a 550',
+  'Mayonnaise Calvé 5 cartons de 12 achat 12000 vente 1200 demi 6500 carton 13000',
   'Riz Papillon 25 sacs achat 18500 vente 21000 seuil 5',
   'Huile Dinor 5L 20 bidons achat 6000 vente 7500',
+  'Sucre Saint Louis 30 paquets à 900',
   'Lait Nido 400g 15 boîtes pa 2500 pv 3200 alerte 3',
-  'Mayonnaise Calvé 40 pots à 1200',
 ]
 
 export const ProductMagicForm: React.FC<ProductMagicFormProps> = ({
@@ -47,6 +47,11 @@ export const ProductMagicForm: React.FC<ProductMagicFormProps> = ({
         unit: parsed.unit,
         multiplier: parsed.multiplier,
         packaging_name: parsed.packaging_name,
+        packages_count: parsed.packages_count,
+        package_cost: parsed.package_cost,
+        wholesale_price: parsed.wholesale_price,
+        half_package_price: parsed.half_package_price,
+        quarter_package_price: parsed.quarter_package_price,
         lot_quantity: parsed.lot_quantity,
         lot_price: parsed.lot_price,
         trade_type: parsed.trade_type,
@@ -130,65 +135,87 @@ export const ProductMagicForm: React.FC<ProductMagicFormProps> = ({
               <span className="font-black text-amber-950 text-sm">{parsed.name || 'En attente...'}</span>
             </div>
 
-            {/* Quantité & Unité */}
+            {/* Quantité & Contenance */}
             <div className="p-2 bg-blue-50/70 border border-blue-200 rounded-xl">
-              <span className="block text-[10px] text-blue-800 font-bold uppercase">Stock Initial</span>
+              <span className="block text-[10px] text-blue-800 font-bold uppercase">Stock Déduit en Rayon</span>
               <span className="font-black text-blue-950 text-sm tabular-nums">
-                {parsed.initial_stock} {parsed.unit}
-                {parsed.multiplier > 1 ? ` (x${parsed.multiplier})` : ''}
-              </span>
-            </div>
-
-            {/* Mode commercial */}
-            <div className="p-2 bg-purple-50/70 border border-purple-200 rounded-xl">
-              <span className="block text-[10px] text-purple-800 font-bold uppercase">Mode de Vente</span>
-              <span className="font-bold text-purple-950 flex items-center gap-1 text-[11px] mt-0.5">
-                {parsed.trade_type === 'wholesale' ? (
-                  <>
-                    <Truck className="w-3 h-3 text-purple-700" />
-                    <span>Grossiste (Carton / Sac)</span>
-                  </>
-                ) : parsed.trade_type === 'semi_wholesale' ? (
-                  <>
-                    <Layers className="w-3 h-3 text-emerald-700" />
-                    <span>Demi-Gros (Pack de {parsed.lot_quantity || 6})</span>
-                  </>
+                {parsed.packages_count && parsed.packages_count > 0 && parsed.multiplier > 1 ? (
+                  <span>{parsed.packages_count} ctn × {parsed.multiplier} = <span className="text-blue-700">{parsed.initial_stock} pcs</span></span>
                 ) : (
-                  <>
-                    <Store className="w-3 h-3 text-stone-700" />
-                    <span>Détail (À l'unité)</span>
-                  </>
+                  <span>{parsed.initial_stock} {parsed.unit}</span>
                 )}
               </span>
             </div>
 
-            {/* Catégorie */}
-            <div className="p-2 bg-amber-50/70 border border-amber-200 rounded-xl">
-              <span className="block text-[10px] text-amber-800 font-bold uppercase">Catégorie</span>
-              <span className="font-bold text-amber-950 text-xs">📁 {parsed.category}</span>
-            </div>
-
-            {/* Prix d'Achat */}
+            {/* Prix d'Achat Carton / Unitaire */}
             <div className="p-2 bg-rose-50/70 border border-rose-200 rounded-xl">
               <span className="block text-[10px] text-rose-800 font-bold uppercase">Prix d'Achat (PA)</span>
               <span className="font-black text-rose-950 text-sm tabular-nums">
-                {parsed.unit_cost > 0 ? formatPrice(parsed.unit_cost) : '0 FCFA'}
+                {parsed.package_cost && parsed.package_cost > 0 && parsed.multiplier > 1 ? (
+                  <span>{formatPrice(parsed.package_cost)} / ctn <span className="text-[10px] font-bold text-rose-700">({formatPrice(Math.round(parsed.unit_cost))}/pc)</span></span>
+                ) : (
+                  <span>{parsed.unit_cost > 0 ? formatPrice(parsed.unit_cost) : '0 FCFA'}</span>
+                )}
               </span>
             </div>
 
-            {/* Prix de Vente */}
+            {/* Prix de Vente Détail (1 pc) */}
             <div className="p-2 bg-emerald-50/70 border border-emerald-200 rounded-xl">
-              <span className="block text-[10px] text-emerald-800 font-bold uppercase">Prix de Vente (PV)</span>
+              <span className="block text-[10px] text-emerald-800 font-bold uppercase">Prix Détail (1 pc)</span>
               <span className="font-black text-emerald-950 text-sm tabular-nums">
                 {parsed.unit_price > 0 ? formatPrice(parsed.unit_price) : '0 FCFA'}
               </span>
             </div>
           </div>
 
+          {/* Grille des paliers détectés (Détail, Quart, Demi, Carton complet) */}
+          {(Boolean(parsed.quarter_package_price) || Boolean(parsed.half_package_price) || Boolean(parsed.wholesale_price) || (parsed.lot_quantity > 0 && parsed.lot_price > 0)) && (
+            <div className="p-2.5 bg-amber-50/80 border border-amber-300/80 rounded-xl space-y-1.5">
+              <span className="block text-[10px] font-extrabold text-amber-900 uppercase tracking-wider">
+                🏷️ Grille de Vente Multi-Paliers Automatique :
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-mono">
+                {/* 1 Pièce */}
+                <div className="p-1.5 bg-white border border-amber-200 rounded-lg">
+                  <span className="block text-[9px] text-gray-500 uppercase">1 Pièce (Détail)</span>
+                  <span className="font-black text-gray-900">{formatPrice(parsed.unit_price)}</span>
+                </div>
+                {/* 1/4 Carton */}
+                {parsed.quarter_package_price ? (
+                  <div className="p-1.5 bg-white border border-teal-200 rounded-lg">
+                    <span className="block text-[9px] text-teal-700 uppercase font-bold">1/4 Carton</span>
+                    <span className="font-black text-teal-950">{formatPrice(parsed.quarter_package_price)}</span>
+                  </div>
+                ) : null}
+                {/* 1/2 Carton */}
+                {parsed.half_package_price ? (
+                  <div className="p-1.5 bg-white border border-indigo-200 rounded-lg">
+                    <span className="block text-[9px] text-indigo-700 uppercase font-bold">1/2 Carton</span>
+                    <span className="font-black text-indigo-950">{formatPrice(parsed.half_package_price)}</span>
+                  </div>
+                ) : null}
+                {/* Carton Complet */}
+                {parsed.wholesale_price ? (
+                  <div className="p-1.5 bg-white border border-purple-200 rounded-lg">
+                    <span className="block text-[9px] text-purple-700 uppercase font-bold">Carton Entier</span>
+                    <span className="font-black text-purple-950">{formatPrice(parsed.wholesale_price)}</span>
+                  </div>
+                ) : null}
+                {/* Lot dégressif */}
+                {parsed.lot_quantity > 0 && parsed.lot_price > 0 && (
+                  <div className="p-1.5 bg-white border border-emerald-200 rounded-lg col-span-2">
+                    <span className="block text-[9px] text-emerald-700 uppercase font-bold">Seuil dégressif</span>
+                    <span className="font-black text-emerald-950">{formatPrice(parsed.lot_price)} les {parsed.lot_quantity} pcs ({formatPrice(Math.round(parsed.lot_price / parsed.lot_quantity))}/pc)</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Marge estimée */}
           {marginInfo && (
             <div className="p-2 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between text-xs">
-              <span className="font-bold text-emerald-950">Marge bénéficiaire unitaire estimée :</span>
+              <span className="font-bold text-emerald-950">Marge brute au détail :</span>
               <span className="font-black text-emerald-800 font-mono tabular-nums">
                 +{formatPrice(marginInfo.margin)} (+{marginInfo.percent}%)
               </span>

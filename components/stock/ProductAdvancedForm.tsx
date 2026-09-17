@@ -65,6 +65,9 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
   })
 
   const [cartonPrice, setCartonPrice] = useState<string>(() => {
+    if (formData.wholesale_price && formData.wholesale_price > 0) {
+      return String(formData.wholesale_price)
+    }
     if (mult > 1 && formData.unit_price > 0) {
       return String(Math.round(formData.unit_price * mult))
     }
@@ -85,10 +88,12 @@ export const ProductAdvancedForm: React.FC<ProductAdvancedFormProps> = ({
     if (m > 1 && formData.unit_cost > 0) {
       setCartonCost(String(Math.round(formData.unit_cost * m)))
     }
-    if (m > 1 && formData.unit_price > 0) {
+    if (formData.wholesale_price && formData.wholesale_price > 0) {
+      setCartonPrice(String(formData.wholesale_price))
+    } else if (m > 1 && formData.unit_price > 0) {
       setCartonPrice(String(Math.round(formData.unit_price * m)))
     }
-  }, [formData.multiplier, formData.initial_stock, formData.unit_cost, formData.unit_price])
+  }, [formData.multiplier, formData.initial_stock, formData.unit_cost, formData.unit_price, formData.wholesale_price])
 
   const handleSelectTradeType = (type: TradeType) => {
     setTradeType(type)

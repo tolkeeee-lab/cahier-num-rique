@@ -19,6 +19,11 @@ export interface ParsedProductResult {
   trade_type: TradeType
   multiplier: number
   packaging_name: string
+  packages_count?: number
+  package_cost?: number
+  wholesale_price?: number
+  half_package_price?: number
+  quarter_package_price?: number
   lot_quantity: number
   lot_price: number
   barcode?: string
@@ -30,6 +35,9 @@ export interface ParsedProductResult {
     unit?: string
     cost?: string
     price?: string
+    wholesalePrice?: string
+    halfPrice?: string
+    quarterPrice?: string
     lot?: string
     alert?: string
     category?: string
@@ -105,7 +113,7 @@ export function detectProductCategory(name: string): string {
 }
 
 /**
- * Parseur principal de texte pour création de produit
+ * Parseur principal de texte pour création de produit avec gestion multi-paliers
  */
 export function parseSmartProductText(input: string): ParsedProductResult {
   const raw = (input || '').trim()
@@ -121,6 +129,11 @@ export function parseSmartProductText(input: string): ParsedProductResult {
       trade_type: 'retail',
       multiplier: 1,
       packaging_name: '',
+      packages_count: 0,
+      package_cost: 0,
+      wholesale_price: 0,
+      half_package_price: 0,
+      quarter_package_price: 0,
       lot_quantity: 0,
       lot_price: 0,
       confidence: 0,
@@ -132,39 +145,151 @@ export function parseSmartProductText(input: string): ParsedProductResult {
   let text = raw
   const detectedTokens: ParsedProductResult['detectedTokens'] = {}
 
-  // ── 1. EXTRACTION DU PRIX D'ACHAT (Coût / PA) ──
+  let multiplier = 1
+  let packagesCount = 0
+  let packageCost = 0
+  let wholesalePrice = 0
+  let halfPackagePrice = 0
+  let quarterPackagePrice = 0
   let unitCost = 0
-  const costRegex = /\b(?:prix\s*d['’]?\s*achat|prix\s*achat|co[uû]t|achat|pa|p\.a|revient)\s*[:=]?\s*(\d+(?:[\s_]\d+)*)\b/i
+  let unitPrice = 0
+  let lotQuantity = 0
+  let lotPrice = 0
+  let initialStock = 0
+  let unit = 'unité'
+  let packagingName = ''
+  let tradeType: TradeType = 'retail'
+
+  // ── 1. EXTRACTION DES CONTENANCES COMPOSÉES (ex: "10 cartons de 24", "5 packs de 6") ──
+  const compoundPkgRegex = /\b(\d+(?:[.,]\d+)?)\s*(cartons?|ctns?|sacs?|casiers?|packs?|fardeaux?|bidons?)\s+(?:de|par|x)\s*(\d+)\b/i
+  const compoundMatch = text.match(compoundPkgRegex)
+  if (compoundMatch) {
+    packagesCount = Number(compoundMatch[1].replace(',', '.')) || 0
+    const rawPkg = compoundMatch[2].toLowerCase()
+    multiplier = Number(compoundMatch[3]) || 1
+
+    if (/^cartons?|ctns?$/.test(rawPkg)) {
+      unit = 'carton'
+      packagingName = 'carton'
+      tradeType = 'wholesale'
+    } else if (/^sacs?$/.test(rawPkg)) {
+      unit = 'sac'
+      packagingName = 'sac'
+      tradeType = 'wholesale'
+    } else if (/^casiers?$/.test(rawPkg)) {
+      unit = 'casier'
+      packagingName = 'casier'
+      tradeType = 'wholesale'
+    } else if (/^packs?|fardeaux?$/.test(rawPkg)) {
+      unit = 'pack'
+      packagingName = 'pack'
+      tradeType = 'semi_wholesale'
+      lotQuantity = multiplier
+    } else if (/^bidons?$/.test(rawPkg)) {
+      unit = 'bidon'
+      packagingName = 'bidon'
+      tradeType = 'wholesale'
+    }
+
+    detectedTokens.stock = `${packagesCount} ${rawPkg}`
+    detectedTokens.lot = `de ${multiplier}`
+    text = text.replace(compoundMatch[0], ' ')
+  }
+
+  // ── 2. EXTRACTION DU PRIX QUART DE CARTON (ex: "quart 2650", "1/4 carton 2650") ──
+  const quarterRegex = /\b(?:quart\s*(?:de\s*)?(?:carton)?|1\/4\s*(?:de\s*)?(?:carton)?)\s*[:=àa@]?\s*(\d+(?:[\s_]\d+)*)\b/i
+  const quarterMatch = text.match(quarterRegex)
+  if (quarterMatch) {
+    quarterPackagePrice = Number(quarterMatch[1].replace(/[\s_]/g, '')) || 0
+    detectedTokens.quarterPrice = quarterMatch[0]
+    text = text.replace(quarterMatch[0], ' ')
+  }
+
+  // ── 3. EXTRACTION DU PRIX DEMI-CARTON (ex: "demi 5200", "1/2 carton 5200", "demi-carton 5200") ──
+  const halfRegex = /\b(?:demi\s*(?:de\s*)?(?:carton)?|demi-carton|1\/2\s*(?:de\s*)?(?:carton)?)\s*[:=àa@]?\s*(\d+(?:[\s_]\d+)*)\b/i
+  const halfMatch = text.match(halfRegex)
+  if (halfMatch) {
+    halfPackagePrice = Number(halfMatch[1].replace(/[\s_]/g, '')) || 0
+    detectedTokens.halfPrice = halfMatch[0]
+    text = text.replace(halfMatch[0], ' ')
+  }
+
+  // ── 4. EXTRACTION DU SEUIL DÉGRESSIF / PAR LOT (ex: "a partir de 6 a 450", "par 6 a 450", "3 pour 1000") ──
+  const thresholdRegex = /\b(?:[àa]\s*partir\s*de|lot\s*de)\s*(\d+)\s*(?:[àa@:]\s*(\d+(?:[\s_]\d+)*)|\s+pour\s+(\d+(?:[\s_]\d+)*))\b/i
+  const thresholdMatch = text.match(thresholdRegex)
+  if (thresholdMatch) {
+    lotQuantity = Number(thresholdMatch[1]) || 0
+    if (thresholdMatch[2]) {
+      // Prix unitaire dégressif par pièce (ex: à partir de 6 à 450)
+      const unitLotPrice = Number(thresholdMatch[2].replace(/[\s_]/g, '')) || 0
+      lotPrice = unitLotPrice * lotQuantity
+    } else if (thresholdMatch[3]) {
+      // Prix global du lot (ex: 3 pour 1000)
+      lotPrice = Number(thresholdMatch[3].replace(/[\s_]/g, '')) || 0
+    }
+    detectedTokens.lot = thresholdMatch[0]
+    text = text.replace(thresholdMatch[0], ' ')
+  }
+
+  // ── 5. EXTRACTION DU PRIX CARTON COMPLET DE VENTE (ex: "carton 10000", "vente carton 10000", "pack 3200", "gros 10000") ──
+  const wholesalePriceRegex = /\b(?:vente\s*carton|pv\s*carton|carton|vente\s*pack|pv\s*pack|pack|vente\s*sac|pv\s*sac|sac|vente\s*casier|pv\s*casier|casier|vente\s*gros|pv\s*gros|gros)\s*[:=àa@]?\s*(\d+(?:[\s_]\d+)*)\b/i
+  const wholesaleMatch = text.match(wholesalePriceRegex)
+  if (wholesaleMatch) {
+    wholesalePrice = Number(wholesaleMatch[1].replace(/[\s_]/g, '')) || 0
+    detectedTokens.wholesalePrice = wholesaleMatch[0]
+    text = text.replace(wholesaleMatch[0], ' ')
+  }
+
+  // ── 6. EXTRACTION DU PRIX DE REVENTE À LA PIÈCE / DÉTAIL (ex: "piece 500", "détail 500", "bouteille 600") ──
+  const piecePriceRegex = /\b(?:pi[eè]ces?|pcs?|unit[eé]s?|d[eé]tails?|bouteilles?|bo[iî]tes?)\s*[:=àa@]?\s*(\d+(?:[\s_]\d+)*)\b/i
+  const piecePriceMatch = text.match(piecePriceRegex)
+  if (piecePriceMatch) {
+    unitPrice = Number(piecePriceMatch[1].replace(/[\s_]/g, '')) || 0
+    detectedTokens.price = piecePriceMatch[0]
+    text = text.replace(piecePriceMatch[0], ' ')
+  }
+
+  // ── 7. EXTRACTION DU PRIX D'ACHAT (Coût / PA) ──
+  const costRegex = /\b(?:prix\s*d['’]?\s*achat|prix\s*achat|achat\s*carton|pa\s*carton|co[uû]t|achat|pa|p\.a|revient)\s*[:=]?\s*(\d+(?:[\s_]\d+)*)\b/i
   const costMatch = text.match(costRegex)
   if (costMatch) {
     const rawVal = costMatch[1].replace(/[\s_]/g, '')
-    unitCost = Number(rawVal) || 0
+    const costVal = Number(rawVal) || 0
     detectedTokens.cost = costMatch[0]
+
+    if (multiplier > 1) {
+      packageCost = costVal
+      unitCost = Math.round((costVal / multiplier) * 100) / 100
+    } else {
+      unitCost = costVal
+      packageCost = costVal
+    }
     text = text.replace(costMatch[0], ' ')
   }
 
-  // ── 2. EXTRACTION DU PRIX DE VENTE (PV / Vente / à X) ──
-  let unitPrice = 0
-  const priceRegex = /\b(?:prix\s*de\s*vente|prix\s*vente|vente|pv|p\.v|prix)\s*[:=]?\s*(\d+(?:[\s_]\d+)*)\b/i
-  const priceMatch = text.match(priceRegex)
-  if (priceMatch) {
-    const rawVal = priceMatch[1].replace(/[\s_]/g, '')
-    unitPrice = Number(rawVal) || 0
-    detectedTokens.price = priceMatch[0]
-    text = text.replace(priceMatch[0], ' ')
-  } else {
-    // Essayer "à 900" ou "@ 900" (attention au caractère unicode 'à')
-    const aPriceRegex = /(?:^|\s)(?:[àa@])\s*(\d+(?:[\s_]\d+)*)(?:\s|$)/i
-    const aPriceMatch = text.match(aPriceRegex)
-    if (aPriceMatch) {
-      const rawVal = aPriceMatch[1].replace(/[\s_]/g, '')
+  // ── 8. EXTRACTION DU PRIX DE VENTE GÉNÉRIQUE (si non extrait via les paliers spécifiques) ──
+  if (unitPrice === 0) {
+    const priceRegex = /\b(?:prix\s*de\s*vente|prix\s*vente|vente|pv|p\.v|prix)\s*[:=]?\s*(\d+(?:[\s_]\d+)*)\b/i
+    const priceMatch = text.match(priceRegex)
+    if (priceMatch) {
+      const rawVal = priceMatch[1].replace(/[\s_]/g, '')
       unitPrice = Number(rawVal) || 0
-      detectedTokens.price = aPriceMatch[0].trim()
-      text = text.replace(aPriceMatch[0], ' ')
+      detectedTokens.price = priceMatch[0]
+      text = text.replace(priceMatch[0], ' ')
+    } else {
+      // Essayer "à 900" ou "@ 900"
+      const aPriceRegex = /(?:^|\s)(?:[àa@])\s*(\d+(?:[\s_]\d+)*)(?:\s|$)/i
+      const aPriceMatch = text.match(aPriceRegex)
+      if (aPriceMatch) {
+        const rawVal = aPriceMatch[1].replace(/[\s_]/g, '')
+        unitPrice = Number(rawVal) || 0
+        detectedTokens.price = aPriceMatch[0].trim()
+        text = text.replace(aPriceMatch[0], ' ')
+      }
     }
   }
 
-  // ── 3. EXTRACTION DU SEUIL D'ALERTE ──
+  // ── 9. EXTRACTION DU SEUIL D'ALERTE ──
   let alertThreshold = 5
   const alertRegex = /\b(?:seuil|alerte|min|minimum)\s*[:=]?\s*(\d+)\b/i
   const alertMatch = text.match(alertRegex)
@@ -174,115 +299,124 @@ export function parseSmartProductText(input: string): ParsedProductResult {
     text = text.replace(alertMatch[0], ' ')
   }
 
-  // ── 4. EXTRACTION DU MULTIPLICATEUR / PACKAGING LOT (ex: "de 24", "par 6", "x12") ──
-  let multiplier = 1
-  let lotQuantity = 0
-  let lotPrice = 0
-  const lotRegex = /\b(?:de|par|x)\s*(\d+)\b/i
-  const lotMatch = text.match(lotRegex)
-  if (lotMatch) {
-    const extractedLot = Number(lotMatch[1]) || 0
-    if (extractedLot > 1) {
-      multiplier = extractedLot
-      lotQuantity = extractedLot
-      detectedTokens.lot = lotMatch[0]
-      text = text.replace(lotMatch[0], ' ')
+  // ── 10. MULTIPLICATEUR ISOLÉ SI PAS ENCORE DÉTECTÉ (ex: "de 24", "par 6") ──
+  if (multiplier === 1) {
+    const lotRegex = /\b(?:de|par|x)\s*(\d+)\b/i
+    const lotMatch = text.match(lotRegex)
+    if (lotMatch) {
+      const extractedLot = Number(lotMatch[1]) || 0
+      if (extractedLot > 1) {
+        multiplier = extractedLot
+        if (lotQuantity === 0) lotQuantity = extractedLot
+        detectedTokens.lot = lotMatch[0]
+        text = text.replace(lotMatch[0], ' ')
+      }
     }
   }
 
-  // ── 5. EXTRACTION DE LA QUANTITÉ ET DE L'UNITÉ / CONDITIONNEMENT ──
-  let initialStock = 0
-  let unit = 'unité'
-  let packagingName = ''
-  let tradeType: TradeType = 'retail'
+  // ── 11. EXTRACTION QUANTITÉ / UNITÉ SIMPLE (si pas compound) ──
+  if (packagesCount === 0) {
+    const qtyUnitRegex = /\b(\d+(?:[.,]\d+)?)\s*(cartons?|ctns?|sacs?|casiers?|ballots?|bidons?|packs?|fardeaux?|fardeau|bouteilles?|btls?|paquets?|pqts?|bo[iî]tes?|pots?|sachets?|pi[eè]ces?|pcs?|unit[eé]s?)\b/i
+    const qtyUnitMatch = text.match(qtyUnitRegex)
+    if (qtyUnitMatch) {
+      const parsedQty = Number(qtyUnitMatch[1].replace(',', '.')) || 0
+      const rawUnit = qtyUnitMatch[2].toLowerCase()
+      detectedTokens.stock = qtyUnitMatch[1]
+      detectedTokens.unit = rawUnit
 
-  // Regex pour quantité + unité combinée (ex: "50 cartons", "25 sacs", "10 packs", "30 paquets")
-  const qtyUnitRegex = /\b(\d+(?:[.,]\d+)?)\s*(cartons?|ctns?|sacs?|casiers?|ballots?|bidons?|packs?|fardeaux?|fardeau|bouteilles?|btls?|paquets?|pqts?|bo[iî]tes?|pots?|sachets?|pi[eè]ces?|pcs?|unit[eé]s?)\b/i
-  const qtyUnitMatch = text.match(qtyUnitRegex)
-
-  if (qtyUnitMatch) {
-    initialStock = Number(qtyUnitMatch[1].replace(',', '.')) || 0
-    const rawUnit = qtyUnitMatch[2].toLowerCase()
-    detectedTokens.stock = qtyUnitMatch[1]
-    detectedTokens.unit = rawUnit
-
-    if (/^cartons?|ctns?$/.test(rawUnit)) {
-      unit = 'carton'
-      packagingName = 'carton'
-      tradeType = 'wholesale'
-      if (multiplier === 1) multiplier = 24
-    } else if (/^sacs?$/.test(rawUnit)) {
-      unit = 'sac'
-      packagingName = 'sac'
-      tradeType = 'wholesale'
-      if (multiplier === 1) multiplier = 1
-    } else if (/^casiers?$/.test(rawUnit)) {
-      unit = 'casier'
-      packagingName = 'casier'
-      tradeType = 'wholesale'
-      if (multiplier === 1) multiplier = 24
-    } else if (/^ballots?$/.test(rawUnit)) {
-      unit = 'ballot'
-      packagingName = 'ballot'
-      tradeType = 'wholesale'
-    } else if (/^packs?|fardeaux?|fardeau$/.test(rawUnit)) {
-      unit = 'pack'
-      packagingName = 'pack'
-      tradeType = 'semi_wholesale'
-      if (lotQuantity === 0) lotQuantity = multiplier > 1 ? multiplier : 6
-    } else if (/^bidons?$/.test(rawUnit)) {
-      unit = 'bidon'
-      packagingName = 'bidon'
-      tradeType = initialStock >= 10 ? 'wholesale' : 'retail'
-    } else if (/^bouteilles?|btls?$/.test(rawUnit)) {
-      unit = 'bouteille'
-      tradeType = 'retail'
-    } else if (/^paquets?|pqts?$/.test(rawUnit)) {
-      unit = 'paquet'
-      tradeType = 'retail'
-    } else if (/^bo[iî]tes?$/.test(rawUnit)) {
-      unit = 'boîte'
-      tradeType = 'retail'
-    } else if (/^pots?$/.test(rawUnit)) {
-      unit = 'pot'
-      tradeType = 'retail'
-    } else if (/^sachets?$/.test(rawUnit)) {
-      unit = 'sachet'
-      tradeType = 'retail'
+      if (/^cartons?|ctns?$/.test(rawUnit)) {
+        unit = 'carton'
+        packagingName = 'carton'
+        tradeType = 'wholesale'
+        packagesCount = parsedQty
+      } else if (/^sacs?$/.test(rawUnit)) {
+        unit = 'sac'
+        packagingName = 'sac'
+        tradeType = 'wholesale'
+        packagesCount = parsedQty
+      } else if (/^casiers?$/.test(rawUnit)) {
+        unit = 'casier'
+        packagingName = 'casier'
+        tradeType = 'wholesale'
+        packagesCount = parsedQty
+      } else if (/^ballots?$/.test(rawUnit)) {
+        unit = 'ballot'
+        packagingName = 'ballot'
+        tradeType = 'wholesale'
+        packagesCount = parsedQty
+      } else if (/^packs?|fardeaux?|fardeau$/.test(rawUnit)) {
+        unit = 'pack'
+        packagingName = 'pack'
+        tradeType = 'semi_wholesale'
+        packagesCount = parsedQty
+        if (lotQuantity === 0) lotQuantity = multiplier > 1 ? multiplier : 6
+      } else if (/^bidons?$/.test(rawUnit)) {
+        unit = 'bidon'
+        packagingName = 'bidon'
+        packagesCount = parsedQty
+        tradeType = parsedQty >= 10 ? 'wholesale' : 'retail'
+      } else if (/^bouteilles?|btls?$/.test(rawUnit)) {
+        unit = 'bouteille'
+        tradeType = 'retail'
+        initialStock = parsedQty
+      } else if (/^paquets?|pqts?$/.test(rawUnit)) {
+        unit = 'paquet'
+        tradeType = 'retail'
+        initialStock = parsedQty
+      } else if (/^bo[iî]tes?$/.test(rawUnit)) {
+        unit = 'boîte'
+        tradeType = 'retail'
+        initialStock = parsedQty
+      } else if (/^pots?$/.test(rawUnit)) {
+        unit = 'pot'
+        tradeType = 'retail'
+        initialStock = parsedQty
+      } else if (/^sachets?$/.test(rawUnit)) {
+        unit = 'sachet'
+        tradeType = 'retail'
+        initialStock = parsedQty
+      } else {
+        unit = 'unité'
+        tradeType = 'retail'
+        initialStock = parsedQty
+      }
+      text = text.replace(qtyUnitMatch[0], ' ')
     } else {
-      unit = 'unité'
-      tradeType = 'retail'
-    }
-
-    text = text.replace(qtyUnitMatch[0], ' ')
-  } else {
-    // Si pas d'unité explicite, chercher un nombre en tête de phrase (ex: "100 cahiers à 250")
-    const leadingQtyRegex = /^\s*(\d+(?:[.,]\d+)?)\s+/
-    const leadingQtyMatch = text.match(leadingQtyRegex)
-    if (leadingQtyMatch) {
-      initialStock = Number(leadingQtyMatch[1].replace(',', '.')) || 0
-      detectedTokens.stock = leadingQtyMatch[1]
-      text = text.replace(leadingQtyMatch[0], ' ')
-    } else {
-      // Ou un nombre isolé pour la quantité
-      const loneQtyRegex = /\b(\d+)\b/
-      const loneQtyMatch = text.match(loneQtyRegex)
-      if (loneQtyMatch) {
-        const val = Number(loneQtyMatch[1])
-        if (val < 1000 || (unitPrice > 0 && val !== unitPrice)) {
-          initialStock = val
-          detectedTokens.stock = loneQtyMatch[1]
-          text = text.replace(loneQtyMatch[0], ' ')
+      // Nombre en tête de phrase (ex: "100 cahiers à 250")
+      const leadingQtyRegex = /^\s*(\d+(?:[.,]\d+)?)\s+/
+      const leadingQtyMatch = text.match(leadingQtyRegex)
+      if (leadingQtyMatch) {
+        initialStock = Number(leadingQtyMatch[1].replace(',', '.')) || 0
+        detectedTokens.stock = leadingQtyMatch[1]
+        text = text.replace(leadingQtyMatch[0], ' ')
+      } else {
+        const loneQtyRegex = /\b(\d+)\b/
+        const loneQtyMatch = text.match(loneQtyRegex)
+        if (loneQtyMatch) {
+          const val = Number(loneQtyMatch[1])
+          if (val < 1000 || (unitPrice > 0 && val !== unitPrice)) {
+            initialStock = val
+            detectedTokens.stock = loneQtyMatch[1]
+            text = text.replace(loneQtyMatch[0], ' ')
+          }
         }
       }
     }
   }
 
-  // ── 6. DÉTECTION DES NOMBRES RESTANTS (PRIX NON BALISÉS) ──
-  // Si le prix de vente ou d'achat n'a pas été trouvé mais qu'il reste 1 ou 2 nombres dans le texte
+  // ── 12. CALCUL DU STOCK TOTAL EN UNITÉS (Déconditionnement direct) ──
+  if (packagesCount > 0) {
+    if (multiplier > 1) {
+      initialStock = packagesCount * multiplier
+    } else {
+      initialStock = packagesCount
+    }
+  }
+
+  // ── 13. DÉTECTION DES NOMBRES RESTANTS (PRIX NON BALISÉS) ──
   const remainingNumbers = Array.from(text.matchAll(/\b(\d+(?:[\s_]\d+)*)\b/g))
     .map(m => Number(m[1].replace(/[\s_]/g, '')))
-    .filter(n => n >= 25) // Éviter de prendre des petits chiffres comme des prix en FCFA
+    .filter(n => n >= 25)
 
   if (unitPrice === 0 && remainingNumbers.length >= 1) {
     if (remainingNumbers.length === 1) {
@@ -290,7 +424,6 @@ export function parseSmartProductText(input: string): ParsedProductResult {
       detectedTokens.price = String(remainingNumbers[0])
       text = text.replace(String(remainingNumbers[0]), ' ')
     } else if (remainingNumbers.length >= 2) {
-      // Deux nombres : le plus petit est souvent le coût d'achat, le plus grand est le prix de vente
       const [n1, n2] = [remainingNumbers[0], remainingNumbers[1]]
       if (unitCost === 0) {
         unitCost = Math.min(n1, n2)
@@ -305,37 +438,57 @@ export function parseSmartProductText(input: string): ParsedProductResult {
     }
   }
 
-  // ── 7. NETTOYAGE FINAL DU NOM DU PRODUIT ──
+  // ── 14. HARMONISATION AUTOMATIQUE DES PALIERS SI NON EXPLICITES ──
+  // Si on a un carton (ex: multiplier = 24)
+  if (multiplier > 1) {
+    // Si wholesalePrice a été tapé mais pas unitPrice
+    if (wholesalePrice > 0 && unitPrice === 0) {
+      unitPrice = Math.round(wholesalePrice / multiplier)
+    }
+    // Si unitPrice a été tapé mais pas wholesalePrice
+    if (wholesalePrice === 0 && unitPrice > 0) {
+      wholesalePrice = unitPrice * multiplier
+    }
+    // Si demi carton pas spécifié et carton présent
+    if (halfPackagePrice === 0 && wholesalePrice > 0) {
+      // Déduction suggérée du demi-carton (légèrement supérieur à la moitié du gros)
+      halfPackagePrice = Math.round((wholesalePrice / 2) * 1.04 / 50) * 50
+    }
+    // Si quart carton pas spécifié et carton présent
+    if (quarterPackagePrice === 0 && wholesalePrice > 0) {
+      quarterPackagePrice = Math.round((wholesalePrice / 4) * 1.06 / 25) * 25
+    }
+  }
+
+  // ── 15. NETTOYAGE DU NOM DU PRODUIT ──
   let cleanName = text
     .replace(/[;,\-_:]/g, ' ')
-    .replace(/(?:^|\s)(?:[àa@]|prix|vente|achat|pa|pv|cout|coût|seuil|alerte|min)(?:\s|$)/gi, ' ')
+    .replace(/(?:^|\s)(?:[àa@]|prix|vente|achat|pa|pv|cout|coût|seuil|alerte|min|demi|quart|carton|pack|casier|sac)(?:\s|$)/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 
-  // Supprimer les mots de liaison en début
   cleanName = cleanName.replace(/^(?:à|a|de|du|des|le|la|les|en|pour)\s+/i, '').trim()
 
   const normalizedName = normalizeProductName(cleanName)
   detectedTokens.name = normalizedName
 
-  // ── 8. DÉTECTION DE LA CATÉGORIE ──
+  // Catégorie
   const category = detectProductCategory(normalizedName)
   detectedTokens.category = category
 
-  // ── 9. AJUSTEMENTS DEMI-GROS / GROSSISTE ──
+  // Ajustement tradeType
   if (tradeType === 'semi_wholesale') {
-    if (lotQuantity === 0) lotQuantity = 6
-    if (lotPrice === 0 && unitPrice > 0) {
-      lotPrice = unitPrice // Le prix saisi pour un pack est le prix du pack
+    if (lotQuantity === 0) lotQuantity = multiplier > 1 ? multiplier : 6
+    if (lotPrice === 0 && wholesalePrice > 0) {
+      lotPrice = wholesalePrice
     }
   }
 
-  // Calcul du score de confiance
   let confidence = 20
   if (normalizedName.length >= 2) confidence += 30
   if (initialStock > 0) confidence += 20
-  if (unitPrice > 0) confidence += 20
-  if (unitCost > 0) confidence += 10
+  if (unitPrice > 0 || wholesalePrice > 0) confidence += 20
+  if (unitCost > 0 || packageCost > 0) confidence += 10
 
   return {
     name: normalizedName,
@@ -348,6 +501,11 @@ export function parseSmartProductText(input: string): ParsedProductResult {
     trade_type: tradeType,
     multiplier,
     packaging_name: packagingName,
+    packages_count: packagesCount,
+    package_cost: packageCost,
+    wholesale_price: wholesalePrice,
+    half_package_price: halfPackagePrice,
+    quarter_package_price: quarterPackagePrice,
     lot_quantity: lotQuantity,
     lot_price: lotPrice,
     confidence: Math.min(100, confidence),
@@ -355,3 +513,4 @@ export function parseSmartProductText(input: string): ParsedProductResult {
     detectedTokens,
   }
 }
+
