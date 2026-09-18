@@ -14,6 +14,10 @@ export interface ParsedSaleArticle {
   prix_vente_unitaire?: number
   seuil_alerte?: number
   categorie?: string
+  packaging_type?: 'quarter' | 'half' | 'carton' | 'lot' | 'unit'
+  packaging_label?: string
+  pieces_count?: number
+  canonical_name?: string
 }
 
 export interface ParsedSale {

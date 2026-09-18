@@ -87,8 +87,9 @@ export function checkIfInputHasPrice(text: string): boolean {
     return true
   }
 
-  // 3. Analyse des nombres dans la chaîne
-  const numbers = text.match(/\d+/g)
+  // 3. Analyse des nombres dans la chaîne (en excluant les fractions de conditionnement 1/2, 1/4, 3/4)
+  const textWithoutFractions = text.replace(/\b\d+\/\d+\b/g, '')
+  const numbers = textWithoutFractions.match(/\d+/g)
   if (!numbers) return false
 
   // Plus d'un nombre (ex: "2 flag 600" ou "3 oeufs 275") -> au moins l'un est le prix
@@ -190,13 +191,61 @@ function findInCatalog(
   nameToSearch: string,
   offlineProducts: any[],
   menuItems: Array<{ name: string; price: number }>
-): { name: string; unit_price: number; unit_cost: number; multiplier?: number } | null {
+): any | null {
   const sLower = nameToSearch.toLowerCase().trim()
   const p1 = offlineProducts.find(p => p.name.toLowerCase().trim() === sLower)
-  if (p1) return { name: p1.name, unit_price: p1.unit_price || 0, unit_cost: p1.unit_cost || 0, multiplier: p1.multiplier }
+  if (p1) return p1
   const p2 = menuItems.find(m => m.name.toLowerCase().trim() === sLower)
   if (p2) return { name: p2.name, unit_price: p2.price, unit_cost: p2.price, multiplier: 1 }
   return null
+}
+
+function resolveProductPricing(
+  product: any,
+  packagingType: 'quarter' | 'half' | 'carton' | 'lot' | 'unit',
+  isPurchase: boolean,
+  lotSize?: number
+): number {
+  const mult = product.multiplier && product.multiplier > 1 ? product.multiplier : 24
+
+  if (isPurchase) {
+    if (packagingType === 'carton') {
+      return product.package_cost || (product.unit_cost * mult)
+    }
+    if (packagingType === 'half') {
+      return Math.round((product.package_cost || (product.unit_cost * mult)) * 0.5)
+    }
+    if (packagingType === 'quarter') {
+      return Math.round((product.package_cost || (product.unit_cost * mult)) * 0.25)
+    }
+    return product.unit_cost || 0
+  }
+
+  // Vente
+  if (packagingType === 'quarter') {
+    if (product.quarter_package_price && product.quarter_package_price > 0) return product.quarter_package_price
+    if (product.wholesale_price && product.wholesale_price > 0) return Math.round(product.wholesale_price / 4)
+    return Math.round((product.unit_price || 0) * mult * 0.27)
+  }
+
+  if (packagingType === 'half') {
+    if (product.half_package_price && product.half_package_price > 0) return product.half_package_price
+    if (product.wholesale_price && product.wholesale_price > 0) return Math.round(product.wholesale_price / 2)
+    return Math.round((product.unit_price || 0) * mult * 0.52)
+  }
+
+  if (packagingType === 'carton') {
+    if (product.wholesale_price && product.wholesale_price > 0) return product.wholesale_price
+    return (product.unit_price || 0) * mult
+  }
+
+  if (packagingType === 'lot') {
+    if (product.lot_price && product.lot_price > 0) return product.lot_price
+    const count = lotSize || product.lot_quantity || 3
+    return (product.unit_price || 0) * count
+  }
+
+  return product.unit_price || 0
 }
 
 /**
@@ -230,29 +279,51 @@ export function resolveTransactionPricesFromCatalog(
     if (!part) return null
 
     let qty = 1
-    let productName = part
+    let rawItem = part
     const qtyMatch = part.match(/^(\d+)\s+(.+)$/)
-    if (qtyMatch) { qty = parseInt(qtyMatch[1], 10); productName = qtyMatch[2].trim() }
+    if (qtyMatch) { qty = parseInt(qtyMatch[1], 10); rawItem = qtyMatch[2].trim() }
 
-    let searchName = productName
-    const packMatch = productName.match(/^(caissier|carton|sac|boite|boîte|paquet|unité|unite)\s+(?:de\s+)?(.+)$/i)
-    if (packMatch) searchName = packMatch[2].trim()
+    let packagingType: 'quarter' | 'half' | 'carton' | 'lot' | 'unit' = 'unit'
+    let packagingLabel: string | undefined = undefined
+    let searchName = rawItem
+
+    // Détection quart de carton
+    const quarterMatch = searchName.match(/^(?:1\/4|quart|quart\s+de)\s*(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?|boites?|boîtes?|paquets?)?\s*(?:de\s+)?(.+)$/i)
+    if (quarterMatch) {
+      packagingType = 'quarter'
+      packagingLabel = '1/4 carton'
+      searchName = quarterMatch[1].trim()
+    } else {
+      // Détection demi carton
+      const halfMatch = searchName.match(/^(?:1\/2|demi|demi-carton|demi\s+de)\s*(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?|boites?|boîtes?|paquets?)?\s*(?:de\s+)?(.+)$/i)
+      if (halfMatch) {
+        packagingType = 'half'
+        packagingLabel = '1/2 carton'
+        searchName = halfMatch[1].trim()
+      } else {
+        // Détection carton entier
+        const cartonMatch = searchName.match(/^(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?|boites?|boîtes?|paquets?)\s*(?:de\s+)?(.+)$/i)
+        if (cartonMatch) {
+          packagingType = 'carton'
+          packagingLabel = 'Carton'
+          searchName = cartonMatch[1].trim()
+        }
+      }
+    }
 
     const product = findInCatalog(searchName, offlineProducts, menuItems)
     if (!product) return null
 
-    let unitPrice = isPurchase
-      ? (packMatch ? product.unit_cost * (product.multiplier || 1) : product.unit_cost)
-      : (packMatch ? product.unit_price * (product.multiplier || 1) : product.unit_price)
+    const unitPrice = resolveProductPricing(product, packagingType, isPurchase)
     if (!unitPrice || unitPrice <= 0) return null
 
-    const textOut = packMatch
-      ? `${qty} ${packMatch[1]} de ${product.name} à ${unitPrice}`
+    const textOut = packagingLabel
+      ? `${qty} ${packagingLabel} de ${product.name} à ${unitPrice}`
       : `${qty} ${product.name} à ${unitPrice}`
 
     return {
       resolvedText: textOut,
-      articles: [{ nom: product.name, quantite: qty, prix_unitaire: unitPrice }],
+      articles: [{ nom: packagingLabel ? `${product.name} (${packagingLabel})` : product.name, quantite: qty, prix_unitaire: unitPrice }],
       unresolvedNames: [],
     }
   }

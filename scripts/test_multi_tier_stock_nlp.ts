@@ -105,6 +105,68 @@ if (saleLot) {
   assert(saleLot.stockAfter === 234, `Stock restant 234 (obtenu: ${saleLot.stockAfter})`)
 }
 
+// ── 8. TEST PARSE_TEXT_LOCALLY AVEC CONDITIONNEMENTS ──
+console.log('\n--- 7. TEST PARSE_TEXT_LOCALLY SUR CONDITIONNEMENTS ---')
+import { parseTextLocally } from '../lib/sales/offlineSaleParser'
+import { resolveTransactionPricesFromCatalog } from '../hooks/useInputPipeline'
+
+const localCatalog = [
+  {
+    id: 'prod_bf_01',
+    name: 'Savon BF',
+    unit_price: 500,
+    unit_cost: 333,
+    multiplier: 24,
+    packaging_name: 'carton',
+    wholesale_price: 10000,
+    half_package_price: 5200,
+    quarter_package_price: 2650,
+    lot_quantity: 3,
+    lot_price: 1400,
+  }
+]
+
+const localHalfSale = parseTextLocally('1/2 carton de Savon BF 5200', 'blue', localCatalog)
+assert(localHalfSale.articles.length === 1, '1 article extrait')
+assert(localHalfSale.articles[0].canonical_name === 'Savon BF', `Nom canonique Savon BF attendu (obtenu: ${localHalfSale.articles[0].canonical_name})`)
+assert(localHalfSale.articles[0].packaging_type === 'half', 'Type packaging half attendu')
+assert(localHalfSale.articles[0].pieces_count === 12, `12 pièces décomptées pour demi-carton (obtenu: ${localHalfSale.articles[0].pieces_count})`)
+assert(localHalfSale.articles[0].prix_unitaire === 5200, 'Prix 5200 F attendu')
+
+const localQuarterSale = parseTextLocally('1/4 carton de Savon BF 2650', 'blue', localCatalog)
+assert(localQuarterSale.articles[0].pieces_count === 6, `6 pièces décomptées pour quart de carton (obtenu: ${localQuarterSale.articles[0].pieces_count})`)
+
+const localCartonSale = parseTextLocally('1 carton de Savon BF 10000', 'blue', localCatalog)
+assert(localCartonSale.articles[0].pieces_count === 24, `24 pièces décomptées pour carton entier (obtenu: ${localCartonSale.articles[0].pieces_count})`)
+
+// ── 9. TEST RESOLUTION AUTO DE PRIX SANS PRIX EXPLICITE ──
+console.log('\n--- 8. TEST RESOLUTION AUTO DE PRIX DU CATALOGUE ---')
+// En créant un faux environnement localStorage pour getOfflineProducts
+if (typeof global !== 'undefined') {
+  (global as any).localStorage = {
+    getItem: (key: string) => {
+      if (key.includes('cahier_offline_products_shop_test')) {
+        return JSON.stringify(localCatalog)
+      }
+      return null
+    },
+    setItem: () => {},
+  }
+}
+
+const resolvedHalf = resolveTransactionPricesFromCatalog('demi carton de Savon BF', 'blue', 'shop_test', [])
+assert(resolvedHalf !== null, 'Résolution demi carton réussie')
+if (resolvedHalf) {
+  assert(resolvedHalf.resolvedText.includes('5200'), `Prix résolu 5200 F attendu (obtenu: ${resolvedHalf.resolvedText})`)
+}
+
+const resolvedQuarter = resolveTransactionPricesFromCatalog('1/4 carton de Savon BF', 'blue', 'shop_test', [])
+assert(resolvedQuarter !== null, 'Résolution quart carton réussie')
+if (resolvedQuarter) {
+  assert(resolvedQuarter.resolvedText.includes('2650'), `Prix résolu 2650 F attendu (obtenu: ${resolvedQuarter.resolvedText})`)
+}
+
 console.log('\n============================================================')
-console.log('🎉 TOUS LES TESTS MULTI-PALIERS ET VENTES ONT RÉUSSI !')
+console.log('🎉 TOUS LES TESTS MULTI-PALIERS, PARSER ET CATALOGUE ONT RÉUSSI !')
 console.log('============================================================\n')
+

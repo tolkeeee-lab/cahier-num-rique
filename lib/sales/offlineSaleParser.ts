@@ -1,7 +1,125 @@
 import { normalizeProductName, adjustLotRoundingArtifact } from '@/lib/productUtils'
 import { ParsedSale } from './openAiSaleParser'
 
-export function parseTextLocally(text: string, penColor: string): ParsedSale {
+export interface ExtractedPackagingInfo {
+  cleanName: string
+  packagingType?: 'quarter' | 'half' | 'carton' | 'lot' | 'unit'
+  packagingLabel?: string
+  multiplierFraction?: number
+  lotSize?: number
+}
+
+export function extractPackagingFromText(rawName: string): ExtractedPackagingInfo {
+  let name = rawName.trim()
+  
+  // 1. Quarts (1/4 carton, quart carton, quart de carton, 1/4 pack, quart sac)
+  const quarterMatch = name.match(/^(?:1\/4|quart|quart\s+de)\s*(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?|boites?|boîtes?|paquets?)?\s*(?:de\s+)?(.+)$/i)
+  if (quarterMatch) {
+    return {
+      cleanName: quarterMatch[1].trim(),
+      packagingType: 'quarter',
+      packagingLabel: '1/4 carton',
+      multiplierFraction: 0.25,
+    }
+  }
+
+  // 2. Demis (1/2 carton, demi carton, demi-carton, demi sac, 1/2 pack)
+  const halfMatch = name.match(/^(?:1\/2|demi|demi-carton|demi\s+de)\s*(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?|boites?|boîtes?|paquets?)?\s*(?:de\s+)?(.+)$/i)
+  if (halfMatch) {
+    return {
+      cleanName: halfMatch[1].trim(),
+      packagingType: 'half',
+      packagingLabel: '1/2 carton',
+      multiplierFraction: 0.5,
+    }
+  }
+
+  // 3. Trois-quarts (3/4 carton)
+  const threeQuarterMatch = name.match(/^(?:3\/4)\s*(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?)?\s*(?:de\s+)?(.+)$/i)
+  if (threeQuarterMatch) {
+    return {
+      cleanName: threeQuarterMatch[1].trim(),
+      packagingType: 'quarter',
+      packagingLabel: '3/4 carton',
+      multiplierFraction: 0.75,
+    }
+  }
+
+  // 4. Cartons / Packs / Sacs entiers
+  const cartonMatch = name.match(/^(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?|boites?|boîtes?|paquets?)\s*(?:de\s+)?(.+)$/i)
+  if (cartonMatch) {
+    return {
+      cleanName: cartonMatch[1].trim(),
+      packagingType: 'carton',
+      packagingLabel: 'Carton',
+      multiplierFraction: 1,
+    }
+  }
+
+  // 5. Lots dégressifs (lot de 3, lot 6)
+  const lotMatch = name.match(/^(?:lot\s+de\s+(\d+)|lot\s+(\d+)|par\s+(\d+))\s*(?:de\s+)?(.+)$/i)
+  if (lotMatch) {
+    const lotCount = parseInt(lotMatch[1] || lotMatch[2] || lotMatch[3], 10) || 3
+    return {
+      cleanName: lotMatch[4].trim(),
+      packagingType: 'lot',
+      packagingLabel: `Lot de ${lotCount}`,
+      lotSize: lotCount,
+    }
+  }
+
+  return { cleanName: name, packagingType: 'unit' }
+}
+
+function resolveArticleWithPackaging(
+  rawProdName: string,
+  qty: number,
+  unitPrice: number,
+  catalog?: any[]
+) {
+  const packInfo = extractPackagingFromText(rawProdName)
+  const canonicalName = normalizeProductName(packInfo.cleanName)
+  
+  let piecesCount = qty
+  let matchedProd: any = undefined
+
+  if (catalog && catalog.length > 0) {
+    const norm = canonicalName.toLowerCase().trim()
+    matchedProd = catalog.find(p => normalizeProductName(p.name).toLowerCase().trim() === norm)
+  }
+
+  const multiplier = matchedProd?.multiplier && matchedProd.multiplier > 1 ? matchedProd.multiplier : 24
+
+  if (packInfo.packagingType === 'quarter') {
+    piecesCount = Math.max(1, Math.round(multiplier * (packInfo.multiplierFraction || 0.25))) * qty
+  } else if (packInfo.packagingType === 'half') {
+    piecesCount = Math.max(1, Math.round(multiplier * (packInfo.multiplierFraction || 0.5))) * qty
+  } else if (packInfo.packagingType === 'carton') {
+    piecesCount = multiplier * qty
+  } else if (packInfo.packagingType === 'lot') {
+    piecesCount = (packInfo.lotSize || matchedProd?.lot_quantity || 3) * qty
+  }
+
+  const displayName = packInfo.packagingLabel
+    ? `${canonicalName} (${packInfo.packagingLabel})`
+    : canonicalName
+
+  return {
+    nom: displayName,
+    canonical_name: canonicalName,
+    quantite: qty,
+    prix_unitaire: unitPrice,
+    packaging_type: packInfo.packagingType,
+    packaging_label: packInfo.packagingLabel,
+    pieces_count: piecesCount,
+    unite_achat: undefined as string | undefined,
+    unite_vente: undefined as string | undefined,
+    quantite_par_boite: undefined as number | undefined,
+    prix_vente_unitaire: undefined as number | undefined,
+  }
+}
+
+export function parseTextLocally(text: string, penColor: string, catalog?: any[]): ParsedSale {
   const articles: any[] = []
   let totalFacture = 0
   
@@ -21,22 +139,71 @@ export function parseTextLocally(text: string, penColor: string): ParsedSale {
 
     const hasExplicitSeparator = /(?:^|\s)(?:à|a|@)(?:\s|$)/i.test(cleanedText)
     let segmentMatched = false
+    // Détection explicite des fractions en tête : "1/2 carton de Savon BF 5200", "demi carton Savon BF 5200", "1/4 carton Savon BF 2650"
+    const fractionPriceRegex = /^(?:(\d+)\s+)?(1\/2|demi|demi-carton|1\/4|quart|3\/4)\s*(?:de\s+)?(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?|boites?|boîtes?|paquets?)?\s*(?:de\s+)?([A-Za-zÀ-ÿ0-9\s'-]+?)\s+(?:à|a|@|pour)?\s*(\d{1,6})\s*(?:f|fcfa|cfa|francs)?$/i
+    const matchFractionPrice = cleanedText.match(fractionPriceRegex)
+    if (matchFractionPrice) {
+      const outerQty = matchFractionPrice[1] ? parseInt(matchFractionPrice[1], 10) : 1
+      const fracWord = matchFractionPrice[2].toLowerCase()
+      const prodName = matchFractionPrice[3].trim()
+      const givenPrice = parseInt(matchFractionPrice[4], 10)
 
-    const matchLotPour = cleanedText.match(lotPourRegex)
-    if (matchLotPour) {
-      const qty = parseInt(matchLotPour[1], 10)
-      const lotPrice = parseInt(matchLotPour[2], 10)
-      const prodName = matchLotPour[3].trim()
+      if (prodName && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
+        let fracLabel = '1/2 carton'
+        let fracType: 'half' | 'quarter' = 'half'
+        let fracMult = 0.5
 
-      if (qty >= 1 && !isNaN(lotPrice) && lotPrice > 0) {
-        const unitPrice = Math.round(lotPrice / qty)
+        if (fracWord === '1/4' || fracWord.startsWith('quart')) {
+          fracLabel = '1/4 carton'
+          fracType = 'quarter'
+          fracMult = 0.25
+        } else if (fracWord === '3/4') {
+          fracLabel = '3/4 carton'
+          fracType = 'quarter'
+          fracMult = 0.75
+        }
+
+        const canonicalName = normalizeProductName(prodName)
+        let matchedProd: any = undefined
+        if (catalog && catalog.length > 0) {
+          const norm = canonicalName.toLowerCase().trim()
+          matchedProd = catalog.find(p => normalizeProductName(p.name).toLowerCase().trim() === norm)
+        }
+        const mult = matchedProd?.multiplier && matchedProd.multiplier > 1 ? matchedProd.multiplier : 24
+        const piecesCount = Math.max(1, Math.round(mult * fracMult)) * outerQty
+
         articles.push({
-          nom: normalizeProductName(prodName),
-          quantite: qty,
-          prix_unitaire: unitPrice
+          nom: `${canonicalName} (${fracLabel})`,
+          canonical_name: canonicalName,
+          quantite: outerQty,
+          prix_unitaire: givenPrice,
+          packaging_type: fracType,
+          packaging_label: fracLabel,
+          pieces_count: piecesCount,
+          unite_achat: undefined,
+          unite_vente: undefined,
+          quantite_par_boite: undefined,
+          prix_vente_unitaire: undefined,
         })
-        totalFacture += lotPrice
+        totalFacture += givenPrice * outerQty
         segmentMatched = true
+      }
+    }
+
+    if (!segmentMatched) {
+      const matchLotPour = cleanedText.match(lotPourRegex)
+      if (matchLotPour) {
+        const qty = parseInt(matchLotPour[1], 10)
+        const lotPrice = parseInt(matchLotPour[2], 10)
+        const prodName = matchLotPour[3].trim()
+
+        if (qty >= 1 && !isNaN(lotPrice) && lotPrice > 0) {
+          const unitPrice = Math.round(lotPrice / qty)
+          const art = resolveArticleWithPackaging(prodName, qty, unitPrice, catalog)
+          articles.push(art)
+          totalFacture += lotPrice
+          segmentMatched = true
+        }
       }
     }
 
@@ -54,11 +221,8 @@ export function parseTextLocally(text: string, penColor: string): ParsedSale {
           lotTotal = adjustLotRoundingArtifact(qty, givenPrice, lotTotal)
           const unitPrice = isLotPrice ? Math.round(givenPrice / qty) : givenPrice
 
-          articles.push({
-            nom: normalizeProductName(prodName),
-            quantite: qty,
-            prix_unitaire: unitPrice
-          })
+          const art = resolveArticleWithPackaging(prodName, qty, unitPrice, catalog)
+          articles.push(art)
           totalFacture += lotTotal
           segmentMatched = true
         }
@@ -72,11 +236,8 @@ export function parseTextLocally(text: string, penColor: string): ParsedSale {
         const price = parseInt(matchSingleNoQty[2], 10)
 
         if (prodName && isNaN(Number(prodName)) && !['demande', 'stock', 'achat', 'recette'].includes(prodName.toLowerCase())) {
-          articles.push({
-            nom: normalizeProductName(prodName),
-            quantite: 1,
-            prix_unitaire: price
-          })
+          const art = resolveArticleWithPackaging(prodName, 1, price, catalog)
+          articles.push(art)
           totalFacture += price
           segmentMatched = true
         }
@@ -126,15 +287,13 @@ export function parseTextLocally(text: string, penColor: string): ParsedSale {
           finalUnitPrice = Math.round(price / multiplier)
         }
 
-        articles.push({
-          nom: simplifiedName,
-          quantite: finalQty,
-          prix_unitaire: finalUnitPrice,
-          unite_achat: uniteAchat,
-          unite_vente: uniteVente,
-          quantite_par_boite: quantiteParBoite,
-          prix_vente_unitaire: prixVenteUnitaire
-        })
+        const art = resolveArticleWithPackaging(simplifiedName, finalQty, finalUnitPrice, catalog)
+        art.unite_achat = uniteAchat
+        art.unite_vente = uniteVente
+        art.quantite_par_boite = quantiteParBoite
+        art.prix_vente_unitaire = prixVenteUnitaire
+
+        articles.push(art)
         const segmentTotal = isLotSale ? price : (qty * price)
         totalFacture += adjustLotRoundingArtifact(finalQty, finalUnitPrice, segmentTotal)
       }

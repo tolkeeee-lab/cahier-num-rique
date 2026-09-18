@@ -76,7 +76,8 @@ export function useSaleCreation({
       setPostItWarning(`✓ Demande client enregistrée pour « ${reqMatch.cleanName} » !`)
     }
 
-    const parsed = parseTextLocally(text, activePen)
+    const offlineCatalog = getOfflineProducts(shopId) || []
+    const parsed = parseTextLocally(text, activePen, offlineCatalog)
 
     let type: OfflineSale['type'] = 'cash_in'
     if (isClientRequest) {
@@ -103,6 +104,11 @@ export function useSaleCreation({
             name: a.nom,
             quantity: a.quantite,
             unit_price: a.prix_unitaire,
+            category: a.categorie,
+            packaging_type: a.packaging_type,
+            packaging_label: a.packaging_label,
+            pieces_count: a.pieces_count,
+            canonical_name: a.canonical_name,
           })),
       total: isClientRequest ? 0 : (parsed.total_facture || 0),
       paid: isClientRequest ? 0 : (parsed.montant_paye || 0),
@@ -124,13 +130,18 @@ export function useSaleCreation({
       const warnings: string[] = []
       
       for (const art of sale.articles || []) {
-        const stockItem = offlineStock.find((p: any) => p.name.toLowerCase().trim() === (art.name || '').toLowerCase().trim())
+        const lookup = (art.canonical_name || art.name || '').toLowerCase().trim()
+        const stockItem = offlineStock.find((p: any) => {
+          const pName = (p.name || '').toLowerCase().trim()
+          return pName === lookup || lookup.includes(pName)
+        })
         if (stockItem) {
           const currentStock = stockItem.current_stock ?? stockItem.initial_stock ?? 0
+          const neededPieces = art.pieces_count || art.quantity || 1
           if (currentStock <= 0) {
-            warnings.push(`⚠️ Le produit "${art.name}" est déjà en rupture de stock (0).`)
-          } else if (currentStock - (art.quantity || 1) <= 0) {
-            warnings.push(`⚠️ Attention : Le stock de "${art.name}" est maintenant épuisé.`)
+            warnings.push(`⚠️ Le produit "${stockItem.name}" est déjà en rupture de stock (0).`)
+          } else if (currentStock - neededPieces <= 0) {
+            warnings.push(`⚠️ Attention : Le stock de "${stockItem.name}" est maintenant épuisé.`)
           }
         }
       }

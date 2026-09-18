@@ -21,7 +21,7 @@ import { NotebookModals } from '@/components/journal/NotebookModals'
 import { NewShopModal } from '@/components/journal/NewShopModal'
 import { CashAdjustmentModal } from '@/components/journal/CashAdjustmentModal'
 import { JournalPostIt } from '@/components/journal/JournalPostIt'
-import { StockSuggestionsBubble, StockSuggestionItem } from '@/components/journal/StockSuggestionsBubble'
+import { StockSuggestionsBubble, StockSuggestionItem, SelectedTierPayload } from '@/components/journal/StockSuggestionsBubble'
 import { TactileMenuModal } from '@/components/journal/TactileMenuModal'
 import { AddToExistingSaleBar } from '@/components/journal/AddToExistingSaleBar'
 import { StockWizardModal } from '@/components/journal/StockWizardModal'
@@ -512,6 +512,14 @@ export default function JournalPage() {
         price: p.unit_price || 0,
         category: p.category,
         stock: (p as any).current_stock ?? p.initial_stock,
+        multiplier: p.multiplier,
+        packaging_name: p.packaging_name,
+        unit: p.unit,
+        wholesale_price: (p as any).wholesale_price,
+        half_package_price: (p as any).half_package_price,
+        quarter_package_price: (p as any).quarter_package_price,
+        lot_quantity: (p as any).lot_quantity,
+        lot_price: (p as any).lot_price,
       }))
   }, [saleCreation.input, shopManager.shopId])
 
@@ -522,11 +530,11 @@ export default function JournalPage() {
     return m ? parseInt(m[1], 10) : 1
   }, [saleCreation.input])
 
-  const handleAppendStockSuggestion = (item: StockSuggestionItem) => {
+  const handleAppendStockSuggestion = (item: StockSuggestionItem, tier?: SelectedTierPayload) => {
     const parts = saleCreation.input.split(/(?:,|\+|\bet\b)/i)
     parts.pop()
     const prefix = parts.join(', ').trim()
-    const entry = `${activeQty} ${item.name} à ${item.price}`
+    const entry = tier?.inputText || `${activeQty} ${item.name} à ${item.price * activeQty}`
     saleCreation.setInput(prefix ? `${prefix}, ${entry}` : entry)
   }
 

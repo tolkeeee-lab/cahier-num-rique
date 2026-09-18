@@ -21,6 +21,36 @@ interface StockItemRowProps {
   onDelete: (item: StockItem) => void
 }
 
+function formatStockDisplay(item: StockItem): string {
+  const stock = item.current_stock ?? 0
+  const mult = item.multiplier && item.multiplier > 1 ? item.multiplier : 1
+  const pkg = item.packaging_name || 'carton'
+  const unit = item.unit || 'pcs'
+
+  if (mult <= 1) {
+    return `${stock} ${unit}`
+  }
+
+  const fullCartons = Math.floor(stock / mult)
+  const remainder = stock % mult
+
+  if (fullCartons === 0) {
+    if (remainder === Math.round(mult * 0.5)) return `${stock} ${unit} (1/2 ${pkg})`
+    if (remainder === Math.round(mult * 0.25)) return `${stock} ${unit} (1/4 ${pkg})`
+    return `${stock} ${unit}`
+  }
+
+  if (remainder === 0) {
+    return `${stock} ${unit} (${fullCartons} ${pkg}${fullCartons > 1 ? 's' : ''})`
+  }
+
+  if (remainder === Math.round(mult * 0.5)) {
+    return `${stock} ${unit} (${fullCartons} ${pkg}${fullCartons > 1 ? 's' : ''} et demi)`
+  }
+
+  return `${stock} ${unit} (${fullCartons} ${pkg}${fullCartons > 1 ? 's' : ''} + ${remainder} ${unit})`
+}
+
 export function StockItemRow({
   item,
   isExpanded,
@@ -75,7 +105,7 @@ export function StockItemRow({
                     <span>RUPTURE</span>
                   </span>
                 ) : (
-                  `${item.current_stock} ${item.multiplier && item.multiplier > 1 ? (item.unit === 'carton' || item.unit === 'sac' || item.unit === 'colis' ? 'unités' : (item.unit || 'unités')) : (item.unit || 'unités')} ${item.multiplier && item.multiplier > 1 ? `(${Math.floor(item.current_stock / item.multiplier)} ${item.packaging_name || 'cartons'})` : ''}`
+                  formatStockDisplay(item)
                 )}
               </span>
               {!item.stock_tracked && (
@@ -220,17 +250,81 @@ export function StockItemRow({
                 <Gift className="w-3 h-3 text-amber-800" /> Lot de {item.lot_quantity} à {formatPrice(item.lot_price)}
               </span>
             ) : null}
+            {/* Grille Tarifaire Multi-Paliers (Détail / 1/4 / 1/2 / Carton / Lot) */}
             {item.multiplier && item.multiplier > 1 && (
-              <>
-                <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
-                  <Package className="w-3 h-3 text-amber-800" /> 1 {item.packaging_name || 'carton'} = {item.multiplier} {!item.unit || item.unit === 'carton' || item.unit === (item.packaging_name || 'carton') ? 'unités' : `${item.unit}s`}
-                </span>
-                {canViewFinancialMargins(userRole) && item.unit_cost > 0 && (
-                  <span className="text-amber-800 font-bold">
-                    Coût Achat ({item.packaging_name || 'Carton'}): <strong>{formatPrice(Math.round(item.unit_cost * item.multiplier))}</strong>
+              <div className="w-full mb-3 p-3 bg-gradient-to-b from-amber-50/90 to-amber-100/50 border border-amber-300 rounded-2xl space-y-2 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-amber-200/80 pb-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-amber-950 uppercase tracking-wide">
+                    <Package className="w-3.5 h-3.5 text-amber-800" />
+                    <span>Grille Tarifaire & Marges ({item.packaging_name || 'Carton'})</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-amber-800">
+                    1 {item.packaging_name || 'carton'} = {item.multiplier} {item.unit || 'pièces'}
                   </span>
-                )}
-              </>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  {/* 1. Détail (1 pc) */}
+                  <div className="p-2 bg-white border border-amber-200/80 rounded-xl space-y-0.5 shadow-2xs">
+                    <div className="text-[10px] font-bold text-gray-500 uppercase">Détail (1 pc)</div>
+                    <div className="font-mono font-extrabold text-amber-950 tabular-nums">
+                      {formatPrice(item.unit_price)}
+                    </div>
+                    {item.unit_cost > 0 && canViewFinancialMargins(userRole) && (
+                      <div className="text-[9px] font-mono font-bold text-emerald-700">
+                        Marge: +{formatPrice(item.unit_price - item.unit_cost)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Quart de carton */}
+                  {item.multiplier >= 4 && (
+                    <div className="p-2 bg-white border border-amber-200/80 rounded-xl space-y-0.5 shadow-2xs">
+                      <div className="text-[10px] font-bold text-gray-500 uppercase">
+                        1/4 {item.packaging_name || 'carton'} ({Math.round(item.multiplier * 0.25)} pcs)
+                      </div>
+                      <div className="font-mono font-extrabold text-amber-950 tabular-nums">
+                        {formatPrice(item.quarter_package_price || (item.wholesale_price ? Math.round(item.wholesale_price / 4) : Math.round(item.unit_price * item.multiplier * 0.27)))}
+                      </div>
+                      {item.unit_cost > 0 && canViewFinancialMargins(userRole) && (
+                        <div className="text-[9px] font-mono font-bold text-emerald-700">
+                          Marge: +{formatPrice((item.quarter_package_price || (item.wholesale_price ? Math.round(item.wholesale_price / 4) : Math.round(item.unit_price * item.multiplier * 0.27))) - Math.round(item.unit_cost * item.multiplier * 0.25))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 3. Demi carton */}
+                  <div className="p-2 bg-white border border-amber-200/80 rounded-xl space-y-0.5 shadow-2xs">
+                    <div className="text-[10px] font-bold text-gray-500 uppercase">
+                      1/2 {item.packaging_name || 'carton'} ({Math.round(item.multiplier * 0.5)} pcs)
+                    </div>
+                    <div className="font-mono font-extrabold text-amber-950 tabular-nums">
+                      {formatPrice(item.half_package_price || (item.wholesale_price ? Math.round(item.wholesale_price / 2) : Math.round(item.unit_price * item.multiplier * 0.52)))}
+                    </div>
+                    {item.unit_cost > 0 && canViewFinancialMargins(userRole) && (
+                      <div className="text-[9px] font-mono font-bold text-emerald-700">
+                        Marge: +{formatPrice((item.half_package_price || (item.wholesale_price ? Math.round(item.wholesale_price / 2) : Math.round(item.unit_price * item.multiplier * 0.52))) - Math.round(item.unit_cost * item.multiplier * 0.5))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4. Carton entier */}
+                  <div className="p-2 bg-amber-950 text-amber-100 border border-amber-950 rounded-xl space-y-0.5 shadow-xs">
+                    <div className="text-[10px] font-bold text-amber-300 uppercase">
+                      1 {item.packaging_name || 'carton'} ({item.multiplier} pcs)
+                    </div>
+                    <div className="font-mono font-black text-white tabular-nums">
+                      {formatPrice(item.wholesale_price || (item.unit_price * item.multiplier))}
+                    </div>
+                    {item.unit_cost > 0 && canViewFinancialMargins(userRole) && (
+                      <div className="text-[9px] font-mono font-bold text-emerald-300">
+                        Marge: +{formatPrice((item.wholesale_price || (item.unit_price * item.multiplier)) - Math.round(item.unit_cost * item.multiplier))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
             {item.stock_tracked && !item.is_unlimited && item.current_stock > 0 && item.current_stock < 999900 && (
               <>

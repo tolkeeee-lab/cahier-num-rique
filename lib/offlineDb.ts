@@ -34,6 +34,10 @@ export interface OfflineSale {
     quantity: number
     unit_price: number
     category?: string
+    packaging_type?: 'quarter' | 'half' | 'carton' | 'lot' | 'unit'
+    packaging_label?: string
+    pieces_count?: number
+    canonical_name?: string
   }>
   created_at: string
   updated_at?: string   // Horodatage de la dernière modification (pour résoudre les conflits)
@@ -432,15 +436,41 @@ export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
         const products = getOfflineProducts(shopId)
         let changed = false
         for (const art of sale.articles) {
-          if (!art.name) continue
-          const normName = normalizeProductName(art.name).toLowerCase().trim()
-          const prod = products.find(p => normalizeProductName(p.name).toLowerCase().trim() === normName)
+          if (!art.name && !art.canonical_name) continue
+          const searchName = (art.canonical_name || art.name)
+          const normName = normalizeProductName(searchName).toLowerCase().trim()
+          
+          let prod = products.find(p => normalizeProductName(p.name).toLowerCase().trim() === normName)
+          if (!prod) {
+            const stripped = normName.replace(/^(?:1\/2|demi|1\/4|quart|3\/4)?\s*(?:de\s+)?(?:cartons?|packs?|sacs?|fardeaux?|casiers?|caisses?|boites?|boîtes?|paquets?|lots?\s*(?:de\s+\d+)?)\s*(?:de\s+)?/i, '').trim()
+            prod = products.find(p => normalizeProductName(p.name).toLowerCase().trim() === stripped)
+          }
+
           if (prod) {
             const isUnlimited = prod.is_service || prod.is_unlimited || prod.category === 'Cuisine' || prod.category === 'Service'
             if (!isUnlimited) {
               const curr = typeof prod.current_stock === 'number' ? prod.current_stock : (prod.initial_stock || 0)
-              const qty = Number(art.quantity || 1)
-              const next = isOut ? Math.max(0, Math.round((curr - qty) * 100) / 100) : Math.round((curr + qty) * 100) / 100
+              
+              let piecesDeducted = Number(art.quantity || 1)
+              if (typeof art.pieces_count === 'number' && art.pieces_count > 0) {
+                piecesDeducted = art.pieces_count
+              } else if (prod.multiplier && prod.multiplier > 1) {
+                const lowerArtName = (art.name || '').toLowerCase()
+                const lowerNotes = (sale.notes || '').toLowerCase()
+                const combined = `${lowerArtName} ${lowerNotes}`
+                
+                if (art.packaging_type === 'quarter' || /^(?:1\/4|quart)\b/i.test(combined)) {
+                  piecesDeducted = Math.max(1, Math.round(prod.multiplier * 0.25)) * Number(art.quantity || 1)
+                } else if (art.packaging_type === 'half' || /^(?:1\/2|demi)\b/i.test(combined)) {
+                  piecesDeducted = Math.max(1, Math.round(prod.multiplier * 0.5)) * Number(art.quantity || 1)
+                } else if (art.packaging_type === 'carton' || /\b(?:carton|pack|sac|casier|fardeau|caisse)\b/i.test(combined)) {
+                  piecesDeducted = prod.multiplier * Number(art.quantity || 1)
+                } else if (art.packaging_type === 'lot') {
+                  piecesDeducted = (prod.lot_quantity || 3) * Number(art.quantity || 1)
+                }
+              }
+
+              const next = isOut ? Math.max(0, Math.round((curr - piecesDeducted) * 100) / 100) : Math.round((curr + piecesDeducted) * 100) / 100
               prod.current_stock = next
               prod.stock_tracked = true
               changed = true
