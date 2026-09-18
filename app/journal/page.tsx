@@ -22,6 +22,7 @@ import { NewShopModal } from '@/components/journal/NewShopModal'
 import { CashAdjustmentModal } from '@/components/journal/CashAdjustmentModal'
 import { JournalPostIt } from '@/components/journal/JournalPostIt'
 import { StockSuggestionsBubble, StockSuggestionItem, SelectedTierPayload } from '@/components/journal/StockSuggestionsBubble'
+import { TactileSaleSheet } from '@/components/journal/TactileSaleSheet'
 import { TactileMenuModal } from '@/components/journal/TactileMenuModal'
 import { AddToExistingSaleBar } from '@/components/journal/AddToExistingSaleBar'
 import { StockWizardModal } from '@/components/journal/StockWizardModal'
@@ -354,6 +355,7 @@ export default function JournalPage() {
   // État de modification d'une vente & modale menu tactile
   const [editingSale, setEditingSale] = useState<any | null>(null)
   const [showTactileMenuModal, setShowTactileMenuModal] = useState(false)
+  const [tactileSheetProduct, setTactileSheetProduct] = useState<StockSuggestionItem | null>(null)
 
   const shopManager = useShopManager(mappedUser)
   const effectiveRole = shopManager.employeeRole || mappedUser?.role || 'owner'
@@ -806,6 +808,7 @@ export default function JournalPage() {
                       suggestions={stockSuggestions}
                       activeQty={activeQty}
                       onSelectSuggestion={handleAppendStockSuggestion}
+                      onOpenTactileSheet={(item) => setTactileSheetProduct(item)}
                     />
 
                     {/* Bouton Raccourcis 1-Tap dédié à la saisie */}
@@ -1166,6 +1169,15 @@ export default function JournalPage() {
         onClose={() => { setShowShareReceiptModal(false); setShareReceiptSale(null) }}
         sale={shareReceiptSale}
         shopName={shopManager.userShops?.find(s => s.id === shopManager.shopId)?.name || 'Ma Boutique'}
+      />
+      <TactileSaleSheet
+        isOpen={Boolean(tactileSheetProduct)}
+        product={tactileSheetProduct}
+        initialQty={activeQty}
+        onClose={() => setTactileSheetProduct(null)}
+        onConfirmSale={async (text) => {
+          await processInput(text)
+        }}
       />
     </div>
   )

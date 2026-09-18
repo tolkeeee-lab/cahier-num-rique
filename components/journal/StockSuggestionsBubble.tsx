@@ -2,7 +2,8 @@
 
 import React from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { Sparkles, Package, Tag } from 'lucide-react'
+import { Sparkles, Package, Tag, SlidersHorizontal } from 'lucide-react'
+import { audioFeedback } from '@/lib/audioFeedback'
 
 export interface StockSuggestionItem {
   id: string
@@ -31,12 +32,14 @@ interface StockSuggestionsBubbleProps {
   suggestions: StockSuggestionItem[]
   activeQty: number
   onSelectSuggestion: (item: StockSuggestionItem, tier?: SelectedTierPayload) => void
+  onOpenTactileSheet?: (item: StockSuggestionItem) => void
 }
 
 export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
   suggestions,
   activeQty,
   onSelectSuggestion,
+  onOpenTactileSheet,
 }) => {
   if (suggestions.length === 0) return null
 
@@ -107,19 +110,37 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                   )}
                 </div>
 
-                {item.stock !== undefined && (
-                  <span
-                    className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${
-                      item.stock <= 0
-                        ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                        : item.stock <= 5
-                        ? 'bg-amber-200/80 text-amber-900 border border-amber-300'
-                        : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                    }`}
-                  >
-                    Stock : {stockLabel}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {onOpenTactileSheet && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        audioFeedback.playTick()
+                        onOpenTactileSheet(item)
+                      }}
+                      className="px-1.5 py-0.5 bg-amber-200/60 hover:bg-amber-300/80 border border-amber-300/80 text-amber-950 rounded-md transition-all active:scale-95 flex items-center gap-1 text-[10px] font-bold cursor-pointer"
+                      title="Ouvrir la feuille de vente tactile avancée"
+                    >
+                      <SlidersHorizontal className="w-3 h-3 text-amber-800" />
+                      <span>Tactile</span>
+                    </button>
+                  )}
+
+                  {item.stock !== undefined && (
+                    <span
+                      className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${
+                        item.stock <= 0
+                          ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                          : item.stock <= 5
+                          ? 'bg-amber-200/80 text-amber-900 border border-amber-300'
+                          : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      }`}
+                    >
+                      Stock : {stockLabel}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Puces de conditionnement 1-Clic */}
@@ -128,6 +149,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                 <button
                   type="button"
                   onClick={() => {
+                    audioFeedback.playPenClick()
                     const total = item.price * qty
                     onSelectSuggestion(item, {
                       label: 'Détail',
@@ -149,6 +171,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      audioFeedback.playPenClick()
                       const total = quarterPrice * qty
                       const pieces = Math.max(1, Math.round(mult * 0.25)) * qty
                       onSelectSuggestion(item, {
@@ -174,6 +197,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      audioFeedback.playPenClick()
                       const total = halfPrice * qty
                       const pieces = Math.max(1, Math.round(mult * 0.5)) * qty
                       onSelectSuggestion(item, {
@@ -199,6 +223,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      audioFeedback.playPenClick()
                       const total = cartonPrice * qty
                       const pieces = mult * qty
                       onSelectSuggestion(item, {
@@ -224,6 +249,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      audioFeedback.playPenClick()
                       const total = item.lot_price! * qty
                       const pieces = item.lot_quantity! * qty
                       onSelectSuggestion(item, {

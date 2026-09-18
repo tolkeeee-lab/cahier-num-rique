@@ -9,6 +9,7 @@ import {
 import { StockItem } from './types'
 import { getStockStatus, getStatusColors, getBarWidth, formatPrice, getItemPurchaseValue } from './stockUtils'
 import { canViewFinancialMargins } from '@/lib/roleUtils'
+import { VisualCartonDecomposer } from './VisualCartonDecomposer'
 
 interface StockItemRowProps {
   item: StockItem
@@ -323,6 +324,17 @@ export function StockItemRow({
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Décomposition Visuelle Physique du Carton */}
+                <div className="pt-2 border-t border-amber-200/60">
+                  <VisualCartonDecomposer
+                    currentStock={item.current_stock ?? 0}
+                    multiplier={item.multiplier}
+                    packagingName={item.packaging_name || 'carton'}
+                    unit={item.unit || 'pcs'}
+                    readOnly
+                  />
                 </div>
               </div>
             )}
