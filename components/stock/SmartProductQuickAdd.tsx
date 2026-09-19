@@ -17,11 +17,20 @@ import {
   Layers,
   CheckCircle2,
   History,
+  ScanBarcode,
+  Wallet,
 } from 'lucide-react'
 import { parseSmartProductText, ParsedProductResult } from '@/lib/stock/smartProductParser'
 import { formatPrice } from '@/lib/penUtils'
 import { audioFeedback } from '@/lib/audioFeedback'
+import { VoiceInputButton } from '@/components/sales/VoiceInputButton'
 import { StockFormState } from './types'
+
+export interface FinancialImpactOption {
+  type: 'none' | 'cash_expense' | 'supplier_credit'
+  amount: number
+  supplierName?: string
+}
 
 interface ProductCandidate {
   id: string
@@ -37,12 +46,18 @@ interface ProductCandidate {
   half_package_price?: number
   quarter_package_price?: number
   alert_threshold?: number
+  barcode?: string
 }
 
 interface SmartProductQuickAddProps {
   existingProducts: ProductCandidate[]
-  onAddProduct: (productData: StockFormState, existingIdToRestock?: string) => Promise<void>
+  onAddProduct: (
+    productData: StockFormState,
+    existingIdToRestock?: string,
+    financialImpact?: FinancialImpactOption
+  ) => Promise<void>
   onOpenAdvancedModalWithData?: (data: StockFormState) => void
+  onOpenBarcodeScanner?: () => void
   disabled?: boolean
 }
 
@@ -50,6 +65,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
   existingProducts,
   onAddProduct,
   onOpenAdvancedModalWithData,
+  onOpenBarcodeScanner,
   disabled = false,
 }) => {
   const [inputText, setInputText] = useState('')
@@ -57,6 +73,10 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
   const [justAddedName, setJustAddedName] = useState<string | null>(null)
   const [overrides, setOverrides] = useState<Partial<ParsedProductResult>>({})
   const [isPackagingCarton, setIsPackagingCarton] = useState(false)
+
+  // Options de trésorerie / décaissement lié à l'approvisionnement
+  const [financialImpactType, setFinancialImpactType] = useState<'cash_expense' | 'supplier_credit' | 'none'>('cash_expense')
+  const [supplierName, setSupplierName] = useState('')
 
   // Références d'input pour le focus fluide au clavier
   const inputRef = useRef<HTMLInputElement>(null)
@@ -126,13 +146,12 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       } else if (pkgCount === 0 && totalPieces > 0) {
         pkgCount = Math.floor(totalPieces / mult)
       } else if (pkgCount === 0 && totalPieces === 0) {
-        // Défaut convivial de 1 carton si le mode carton est actif
         pkgCount = 1
         totalPieces = mult
       }
     } else {
       if (totalPieces === 0) {
-        totalPieces = 1 // 1 unité par défaut pour faciliter la saisie
+        totalPieces = 1
       }
     }
 
@@ -140,7 +159,6 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     let pkgCost = overrides.package_cost ?? parsed.package_cost ?? 0
     let uCost = overrides.unit_cost ?? parsed.unit_cost ?? 0
 
-    // Si le produit existe déjà et que le coût n'a pas été tapé dans le texte, on pré-remplit
     if (uCost === 0 && pkgCost === 0 && matchingExistingProduct?.unit_cost) {
       uCost = matchingExistingProduct.unit_cost
       pkgCost = mult > 1 ? uCost * mult : 0
@@ -180,7 +198,6 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       matchingExistingProduct?.quarter_package_price ??
       0
 
-    // Déduction automatique douce des tarifs dégressifs si non spécifiés
     if (mult > 1 && uPrice > 0) {
       if (!wPrice) wPrice = Math.round((uPrice * mult * 0.88) / 100) * 100
       if (!hPrice) hPrice = Math.round((uPrice * (mult / 2) * 0.92) / 50) * 50
@@ -223,6 +240,14 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     }
   }, [parsed, overrides, isPackagingCarton, matchingExistingProduct, inputText])
 
+  // Coût total de la commande / du lot acheté pour décaissement caisse
+  const totalBatchCost = useMemo(() => {
+    if (isPackagingCarton && activeData.package_cost > 0) {
+      return activeData.package_cost * (activeData.packages_count || 1)
+    }
+    return (activeData.unit_cost || 0) * (activeData.initial_stock || 1)
+  }, [isPackagingCarton, activeData.package_cost, activeData.packages_count, activeData.unit_cost, activeData.initial_stock])
+
   // La table se déplie dès qu'un nom commence à être saisi (>= 2 caractères)
   const isTableUnfolded = inputText.trim().length >= 2 || (activeData.name && activeData.name.trim().length >= 2)
 
@@ -256,6 +281,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     if (!inputText.trim()) {
       setOverrides({})
       setIsPackagingCarton(false)
+      setSupplierName('')
     }
   }, [inputText])
 
@@ -310,13 +336,23 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         barcode: '',
       }
 
+      const financialImpact: FinancialImpactOption | undefined =
+        totalBatchCost > 0
+          ? {
+              type: financialImpactType,
+              amount: totalBatchCost,
+              supplierName: supplierName.trim() || undefined,
+            }
+          : undefined
+
       const existingId = matchingExistingProduct ? matchingExistingProduct.id : undefined
-      await onAddProduct(formState, existingId)
+      await onAddProduct(formState, existingId, financialImpact)
 
       setJustAddedName(activeData.name)
       setInputText('')
       setOverrides({})
       setIsPackagingCarton(false)
+      setSupplierName('')
       if (inputRef.current) inputRef.current.focus()
     } finally {
       setIsSubmitting(false)
@@ -335,6 +371,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       setInputText('')
       setOverrides({})
       setIsPackagingCarton(false)
+      setSupplierName('')
     }
   }
 
@@ -394,7 +431,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               Ligne de Saisie Magique du Cahier
             </h4>
             <p className="text-[11px] text-amber-900/80 font-mono">
-              Tapez juste le nom : la table se déplie pour compléter les infos en 1 clin d'œil
+              Tapez un nom, parlez au micro ou scannez un code : la table s'adapte instantanément
             </p>
           </div>
         </div>
@@ -407,64 +444,89 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         )}
       </div>
 
-      {/* ── CHAMP UNIQUE DE SAISIE INITIALE ── */}
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputText}
-          onChange={(e) => {
-            setInputText(e.target.value)
-            setOverrides({})
-          }}
-          onKeyDown={handleMainInputKeyDown}
-          disabled={disabled || isSubmitting}
-          placeholder="Tapez un nom de produit (ex: Savon BF) ou la formule rapide (ex: 10 ctn bf 25 20k 500)..."
-          className="w-full pl-3.5 pr-24 sm:pr-32 py-2.5 bg-white border-2 border-amber-300 rounded-xl text-xs sm:text-sm text-gray-900 placeholder-amber-900/40 font-mono font-bold focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-400/40 shadow-inner transition-all"
-        />
+      {/* ── BARRE DE SAISIE INITIALE MULTI-MODALE (TEXTE + VOCAL + SCANNER) ── */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-grow">
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputText}
+            onChange={(e) => {
+              setInputText(e.target.value)
+              setOverrides({})
+            }}
+            onKeyDown={handleMainInputKeyDown}
+            disabled={disabled || isSubmitting}
+            placeholder="Tapez un nom (ex: Savon BF), parlez au micro ou formule rapide (10 ctn bf 20k 500)..."
+            className="w-full pl-3.5 pr-20 py-2.5 bg-white border-2 border-amber-300 rounded-xl text-xs sm:text-sm text-gray-900 placeholder-amber-900/40 font-mono font-bold focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-400/40 shadow-inner transition-all"
+          />
 
-        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {inputText && (
-            <button
-              type="button"
-              onClick={() => {
-                setInputText('')
-                setOverrides({})
-                setIsPackagingCarton(false)
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {inputText && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInputText('')
+                  setOverrides({})
+                  setIsPackagingCarton(false)
+                  setSupplierName('')
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg active:scale-95 transition-all cursor-pointer"
+                title="Effacer (Échap)"
+              >
+                <X className="w-3.5 h-3.5" strokeWidth={2} />
+              </button>
+            )}
+
+            {/* Micro Vocal */}
+            <VoiceInputButton
+              onTranscript={(transcript) => {
+                setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript))
               }}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded-lg active:scale-95 transition-all cursor-pointer"
-              title="Effacer (Échap)"
-            >
-              <X className="w-3.5 h-3.5" strokeWidth={2} />
-            </button>
-          )}
+              disabled={disabled || isSubmitting}
+            />
+          </div>
+        </div>
 
+        {/* Bouton Scanner Code-barres Caméra */}
+        {onOpenBarcodeScanner && (
           <button
             type="button"
-            onClick={isReadyToSave ? handleConfirm : focusFirstMissingField}
-            disabled={!activeData.name.trim() || isSubmitting || disabled}
-            className={`px-3 py-1.5 rounded-lg text-white font-mono text-xs font-black flex items-center gap-1 shadow-xs active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
-              isReadyToSave
-                ? 'bg-emerald-800 hover:bg-emerald-900'
-                : 'bg-amber-900 hover:bg-amber-950'
-            }`}
-            title="Valider ou aller au champ suivant (Entrée)"
+            onClick={onOpenBarcodeScanner}
+            disabled={disabled || isSubmitting}
+            className="p-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 shadow-2xs active:scale-95 transition-all cursor-pointer flex-shrink-0"
+            title="Scanner le code-barres d'un carton ou d'un produit"
           >
-            {isSubmitting ? (
-              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : isReadyToSave ? (
-              <>
-                <span>Valider</span>
-                <Check className="w-3 h-3 text-emerald-200" strokeWidth={3} />
-              </>
-            ) : (
-              <>
-                <span>Remplir</span>
-                <CornerDownLeft className="w-3 h-3 text-amber-200 hidden sm:inline" strokeWidth={2.5} />
-              </>
-            )}
+            <ScanBarcode className="w-4 h-4 text-amber-800" strokeWidth={2} />
           </button>
-        </div>
+        )}
+
+        {/* Bouton Valider / Remplir */}
+        <button
+          type="button"
+          onClick={isReadyToSave ? handleConfirm : focusFirstMissingField}
+          disabled={!activeData.name.trim() || isSubmitting || disabled}
+          className={`px-3.5 sm:px-4 py-2.5 rounded-xl text-white font-mono text-xs font-black flex items-center gap-1.5 shadow-xs active:scale-[0.97] transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex-shrink-0 ${
+            isReadyToSave
+              ? 'bg-emerald-800 hover:bg-emerald-900'
+              : 'bg-amber-900 hover:bg-amber-950'
+          }`}
+          title="Valider ou aller au champ suivant (Entrée)"
+        >
+          {isSubmitting ? (
+            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : isReadyToSave ? (
+            <>
+              <span>Valider</span>
+              <Check className="w-3.5 h-3.5 text-emerald-200" strokeWidth={3} />
+            </>
+          ) : (
+            <>
+              <span>Remplir</span>
+              <CornerDownLeft className="w-3.5 h-3.5 text-amber-200 hidden sm:inline" strokeWidth={2.5} />
+            </>
+          )}
+        </button>
       </div>
 
       {/* ── SUGGESTIONS DE PRODUITS HABITUELS (AUTO-COMPLÉTION DU BOUT DU DOIGT) ── */}
@@ -527,7 +589,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
 
           {/* TABLEAU RESPONSIVE (GRILLE SEYÈS DE HAUTE PRÉCISION) */}
           <div className="p-3 grid grid-cols-1 md:grid-cols-12 gap-3 text-xs font-mono">
-            {/* 1. COLONNE : NOM DU PRODUIT (Col 1-3 sur desktop) */}
+            {/* 1. COLONNE : NOM DU PRODUIT */}
             <div className="md:col-span-3 p-2 bg-amber-50/40 border border-amber-200/80 rounded-xl space-y-1">
               <label className="text-[10px] text-amber-900 font-extrabold uppercase flex items-center gap-1">
                 <Tag className="w-3 h-3 text-amber-700" />
@@ -547,7 +609,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               </div>
             </div>
 
-            {/* 2. COLONNE : CONDITIONNEMENT & QUANTITÉ (Col 4-6 sur desktop) */}
+            {/* 2. COLONNE : CONDITIONNEMENT & QUANTITÉ */}
             <div className="md:col-span-3 p-2 bg-blue-50/40 border border-blue-200/80 rounded-xl space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[10px] text-blue-900 font-extrabold uppercase flex items-center gap-1">
@@ -679,7 +741,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               )}
             </div>
 
-            {/* 3. COLONNE : COÛT D'ACHAT (Col 7-9 sur desktop) */}
+            {/* 3. COLONNE : COÛT D'ACHAT */}
             <div
               className={`md:col-span-3 p-2 rounded-xl space-y-1 transition-all ${
                 activeData.unit_cost === 0
@@ -736,7 +798,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               </div>
             </div>
 
-            {/* 4. COLONNE : PRIX DE VENTE DÉTAIL (Col 10-12 sur desktop) */}
+            {/* 4. COLONNE : PRIX DE VENTE DÉTAIL */}
             <div
               className={`md:col-span-3 p-2 rounded-xl space-y-1 transition-all ${
                 activeData.unit_price === 0
@@ -790,62 +852,141 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
             </div>
           </div>
 
-          {/* ── BARRE INFÉRIEURE : PALIERS GROS + BÉNÉFICE TOTAL + BOUTON D'ENREGISTREMENT ── */}
-          <div className="bg-amber-50/70 border-t border-amber-200 p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 font-mono">
-            {/* Paliers demi-carton et carton plein si conditionnement */}
-            {isPackagingCarton ? (
-              <div className="flex items-center gap-2 flex-wrap text-xs">
-                <span className="text-[10px] text-amber-900 font-extrabold uppercase flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-amber-700" />
-                  <span>Tarifs Gros :</span>
+          {/* ── BARRE PALIERS GROS (SI CARTON) ── */}
+          {isPackagingCarton && (
+            <div className="bg-amber-50/50 border-t border-amber-200 px-3 py-2 flex items-center gap-2 flex-wrap text-xs font-mono">
+              <span className="text-[10px] text-amber-900 font-extrabold uppercase flex items-center gap-1">
+                <Layers className="w-3 h-3 text-amber-700" />
+                <span>Tarifs Gros :</span>
+              </span>
+
+              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                <span className="text-[10px] text-indigo-700 font-bold">1/2 ctn :</span>
+                <input
+                  type="number"
+                  value={activeData.half_package_price || ''}
+                  onChange={(e) =>
+                    setOverrides((prev) => ({
+                      ...prev,
+                      half_package_price: parseFloat(e.target.value) || 0,
+                    }))
+                  }
+                  className="w-14 text-center font-bold text-xs text-indigo-950 outline-none tabular-nums"
+                />
+                <span className="text-[10px] text-gray-400">F</span>
+              </div>
+
+              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                <span className="text-[10px] text-purple-700 font-bold">Carton :</span>
+                <input
+                  type="number"
+                  value={activeData.wholesale_price || ''}
+                  onChange={(e) =>
+                    setOverrides((prev) => ({
+                      ...prev,
+                      wholesale_price: parseFloat(e.target.value) || 0,
+                    }))
+                  }
+                  className="w-16 text-center font-bold text-xs text-purple-950 outline-none tabular-nums"
+                />
+                <span className="text-[10px] text-gray-400">F</span>
+              </div>
+            </div>
+          )}
+
+          {/* ── MODULE DE LIAISON TRÉSORERIE & CAISSE (SI COÛT D'ACHAT DÉTECTÉ) ── */}
+          {totalBatchCost > 0 && (
+            <div className="bg-amber-100/50 border-t border-amber-200 p-2.5 space-y-1.5 font-mono text-xs">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[10px] text-amber-950 font-extrabold uppercase flex items-center gap-1">
+                  <Wallet className="w-3 h-3 text-amber-800" />
+                  <span>Règlement de l'approvisionnement ({formatPrice(totalBatchCost)}) :</span>
                 </span>
 
-                <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
-                  <span className="text-[10px] text-indigo-700 font-bold">1/2 ctn :</span>
-                  <input
-                    type="number"
-                    value={activeData.half_package_price || ''}
-                    onChange={(e) =>
-                      setOverrides((prev) => ({
-                        ...prev,
-                        half_package_price: parseFloat(e.target.value) || 0,
-                      }))
-                    }
-                    className="w-14 text-center font-bold text-xs text-indigo-950 outline-none tabular-nums"
-                  />
-                  <span className="text-[10px] text-gray-400">F</span>
-                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Option 1: Débiter la Caisse Cash */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioFeedback.playTick()
+                      setFinancialImpactType('cash_expense')
+                    }}
+                    className={`px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 ${
+                      financialImpactType === 'cash_expense'
+                        ? 'bg-emerald-800 text-white shadow-xs'
+                        : 'bg-white text-emerald-950 border border-emerald-300 hover:bg-emerald-50'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span>Débiter Caisse (-{formatPrice(totalBatchCost)})</span>
+                  </button>
 
-                <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
-                  <span className="text-[10px] text-purple-700 font-bold">Carton :</span>
-                  <input
-                    type="number"
-                    value={activeData.wholesale_price || ''}
-                    onChange={(e) =>
-                      setOverrides((prev) => ({
-                        ...prev,
-                        wholesale_price: parseFloat(e.target.value) || 0,
-                      }))
-                    }
-                    className="w-16 text-center font-bold text-xs text-purple-950 outline-none tabular-nums"
-                  />
-                  <span className="text-[10px] text-gray-400">F</span>
+                  {/* Option 2: Crédit Fournisseur */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioFeedback.playTick()
+                      setFinancialImpactType('supplier_credit')
+                    }}
+                    className={`px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 ${
+                      financialImpactType === 'supplier_credit'
+                        ? 'bg-purple-800 text-white shadow-xs'
+                        : 'bg-white text-purple-950 border border-purple-300 hover:bg-purple-50'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-purple-400" />
+                    <span>Dette Fournisseur</span>
+                  </button>
+
+                  {/* Option 3: Sans impact */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioFeedback.playTick()
+                      setFinancialImpactType('none')
+                    }}
+                    className={`px-2 py-1 rounded-lg font-bold text-[11px] cursor-pointer transition-all active:scale-95 ${
+                      financialImpactType === 'none'
+                        ? 'bg-gray-700 text-white'
+                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                    }`}
+                    title="Simple ajustement d'inventaire sans toucher à la caisse"
+                  >
+                    <span>Sans impact caisse</span>
+                  </button>
                 </div>
               </div>
-            ) : (
-              <div className="text-[11px] text-amber-900 font-sans">
-                {profitMetrics ? (
-                  <span>
-                    Bénéfice total attendu sur ce lot :{' '}
-                    <strong className="text-emerald-800 font-mono font-black">
-                      +{formatPrice(profitMetrics.totalExpectedProfit)}
-                    </strong>
-                  </span>
-                ) : (
-                  <span>Prêt à être inscrit sur les lignes de votre cahier</span>
-                )}
-              </div>
-            )}
+
+              {/* Si dette fournisseur : champ nom du grossiste */}
+              {financialImpactType === 'supplier_credit' && (
+                <div className="flex items-center gap-2 pt-1 animate-in fade-in duration-150">
+                  <span className="text-[11px] text-purple-900 font-bold whitespace-nowrap">Nom du grossiste :</span>
+                  <input
+                    type="text"
+                    value={supplierName}
+                    onChange={(e) => setSupplierName(e.target.value)}
+                    placeholder="Ex: SODIBE, Maman Chantal, Brasserie..."
+                    className="flex-grow px-2.5 py-1 bg-white border border-purple-300 rounded-lg text-xs font-bold text-purple-950 outline-none focus:border-purple-600"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── BARRE INFÉRIEURE : BÉNÉFICE TOTAL & BOUTON D'ENREGISTREMENT ── */}
+          <div className="bg-amber-50/70 border-t border-amber-200 p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 font-mono">
+            <div className="text-[11px] text-amber-900 font-sans">
+              {profitMetrics ? (
+                <span>
+                  Bénéfice total attendu sur ce lot :{' '}
+                  <strong className="text-emerald-800 font-mono font-black">
+                    +{formatPrice(profitMetrics.totalExpectedProfit)}
+                  </strong>
+                </span>
+              ) : (
+                <span>Prêt à être inscrit sur les lignes de votre cahier</span>
+              )}
+            </div>
 
             {/* Bouton de validation final */}
             <button

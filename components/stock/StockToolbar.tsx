@@ -1,5 +1,5 @@
 import React from 'react'
-import { Search, Plus, FileSpreadsheet, Trash2, ShoppingBag, GitMerge, X, Sparkles } from 'lucide-react'
+import { Search, Plus, FileSpreadsheet, Trash2, ShoppingBag, GitMerge, X, Sparkles, ScanBarcode } from 'lucide-react'
 
 interface StockToolbarProps {
   searchQuery: string
@@ -8,6 +8,7 @@ interface StockToolbarProps {
   onCategoryFilterChange: (cat: string) => void
   categories: string[]
   onAddProduct: () => void
+  onOpenBarcodeScanner?: () => void
   onOpenRestockAdvisor?: () => void
   onOpenCalculator?: () => void
   onExportCSV?: () => void
@@ -25,6 +26,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
   onCategoryFilterChange,
   categories,
   onAddProduct,
+  onOpenBarcodeScanner,
   onOpenRestockAdvisor,
   onOpenCalculator,
   onExportCSV,
@@ -81,6 +83,19 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
               </option>
             ))}
           </select>
+
+          {/* Scanner Code-barres Caméra */}
+          {onOpenBarcodeScanner && !isEmployee && (
+            <button
+              type="button"
+              onClick={onOpenBarcodeScanner}
+              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out shadow-xs cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold"
+              title="Scanner un code-barres"
+            >
+              <ScanBarcode className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
+              <span className="hidden sm:inline">Scanner</span>
+            </button>
+          )}
 
           {/* Conseil Réassort Grossiste */}
           {onOpenRestockAdvisor && (

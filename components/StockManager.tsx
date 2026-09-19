@@ -7,11 +7,24 @@ import { StockTable } from '@/components/stock/StockTable'
 import { ProductModal } from '@/components/stock/ProductModal'
 import { RestockAdvisorModal } from '@/components/stock/RestockAdvisorModal'
 import { ProductMergeModal } from '@/components/stock/ProductMergeModal'
-import { SmartProductQuickAdd } from '@/components/stock/SmartProductQuickAdd'
+import { SmartProductQuickAdd, FinancialImpactOption } from '@/components/stock/SmartProductQuickAdd'
 import { RealValueCalculatorModal } from '@/components/stock/RealValueCalculatorModal'
+import { BarcodeScannerModal } from '@/components/BarcodeScannerModal'
 import { StockFormState } from '@/components/stock/types'
 import { exportProductsToCSV } from '@/lib/exportUtils'
-import { clearOfflineProducts, saveOfflineProduct, deleteOfflineProduct, getOfflineSales, getOfflineProducts, replaceOfflineProducts } from '@/lib/offlineDb'
+import {
+  clearOfflineProducts,
+  saveOfflineProduct,
+  deleteOfflineProduct,
+  getOfflineSales,
+  getOfflineProducts,
+  replaceOfflineProducts,
+  saveOfflineSale,
+  generateOfflineId,
+  OfflineSale,
+} from '@/lib/offlineDb'
+import { getTodayDateString } from '@/lib/dateUtils'
+import { audioFeedback } from '@/lib/audioFeedback'
 import { findDuplicateCandidates } from '@/lib/productUtils'
 
 interface Product {
@@ -30,6 +43,10 @@ interface Product {
   lot_price?: number
   barcode?: string
   trade_type?: 'retail' | 'semi_wholesale' | 'wholesale'
+  wholesale_price?: number
+  half_package_price?: number
+  quarter_package_price?: number
+  package_cost?: number
   shop_id?: string
   stock_tracked?: boolean
 }
@@ -72,6 +89,7 @@ export function StockManager({
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
   const [calculatorProduct, setCalculatorProduct] = useState<Product | null>(null)
+  const [showBarcodeScannerModal, setShowBarcodeScannerModal] = useState(false)
   const [activePairIndex, setActivePairIndex] = useState(0)
   const [merging, setMerging] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -234,8 +252,57 @@ export function StockManager({
     }
   }
 
-  // Ajout rapide magique (1 phrase) avec détection de réapprovisionnement automatique
-  const handleSmartAddProduct = async (productData: StockFormState, existingIdToRestock?: string) => {
+  // Gestion de la détection de code-barres caméra
+  const handleBarcodeDetected = (codeOrText: string) => {
+    setShowBarcodeScannerModal(false)
+    const cleanCode = codeOrText.trim()
+    if (!cleanCode) return
+
+    // 1. Chercher si un produit en stock a déjà ce code-barres
+    const foundByBarcode = products.find(p => p.barcode && p.barcode.trim() === cleanCode)
+    if (foundByBarcode) {
+      setSearchQuery(foundByBarcode.name)
+      audioFeedback.playInkStamp()
+      return
+    }
+
+    // 2. Chercher par nom si le texte scanné correspond à un produit connu
+    const foundByName = products.find(p => p.name.toLowerCase().trim() === cleanCode.toLowerCase())
+    if (foundByName) {
+      setSearchQuery(foundByName.name)
+      audioFeedback.playInkStamp()
+      return
+    }
+
+    // 3. Produit inconnu : filtrer la liste avec le code pour faciliter l'ajout
+    setSearchQuery(cleanCode)
+    audioFeedback.playTick()
+  }
+
+  // Association rapide d'un code-barres à un produit existant
+  const handleAssociateBarcode = (productId: string, barcode: string) => {
+    const target = products.find(p => p.id === productId)
+    if (!target) return
+    const updated = { ...target, barcode }
+    setProducts(prev => prev.map(p => p.id === productId ? updated : p))
+    saveOfflineProduct(shopId, updated as any)
+    try {
+      fetch('/api/stock', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+        body: JSON.stringify({ id: productId, barcode }),
+      }).catch(() => {})
+    } catch {}
+    setShowBarcodeScannerModal(false)
+    audioFeedback.playInkStamp()
+  }
+
+  // Ajout rapide magique (1 phrase) avec détection de réapprovisionnement automatique et liaison trésorerie
+  const handleSmartAddProduct = async (
+    productData: StockFormState,
+    existingIdToRestock?: string,
+    financialImpact?: FinancialImpactOption
+  ) => {
     try {
       const existing = existingIdToRestock ? products.find(p => p.id === existingIdToRestock) : null
       const currentStock = existing ? (existing.current_stock ?? existing.initial_stock ?? 0) : 0
@@ -257,6 +324,9 @@ export function StockManager({
         lot_quantity: Number(productData.lot_quantity) || (existing?.lot_quantity || 0),
         lot_price: Number(productData.lot_price) || (existing?.lot_price || 0),
         trade_type: productData.trade_type || existing?.trade_type || 'retail',
+        wholesale_price: productData.wholesale_price || existing?.wholesale_price || 0,
+        half_package_price: productData.half_package_price || existing?.half_package_price || 0,
+        quarter_package_price: productData.quarter_package_price || existing?.quarter_package_price || 0,
       }
 
       const finalProduct: Product = {
@@ -286,7 +356,62 @@ export function StockManager({
         window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
       }
 
-      // 3. Synchronisation serveur en arrière-plan
+      // 3. Liaison automatique Trésorerie : Sortie de Caisse ou Crédit Fournisseur
+      if (financialImpact && financialImpact.type !== 'none' && financialImpact.amount > 0) {
+        const isCredit = financialImpact.type === 'supplier_credit'
+        const supplier = financialImpact.supplierName?.trim() || 'Fournisseur Grossiste'
+        const now = new Date()
+
+        const finSale: OfflineSale = {
+          id: generateOfflineId(),
+          shop_id: shopId,
+          date: getTodayDateString(),
+          time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          client: supplier,
+          articles: [
+            {
+              name: productData.name,
+              quantity: productData.packages_count || productData.initial_stock,
+              unit_price:
+                productData.multiplier > 1 && productData.package_cost
+                  ? productData.package_cost
+                  : productData.unit_cost,
+              category: productData.category || 'Approvisionnement',
+              packaging_type: productData.multiplier > 1 ? 'carton' : 'unit',
+              pieces_count: productData.initial_stock,
+            },
+          ],
+          total: financialImpact.amount,
+          paid: isCredit ? 0 : financialImpact.amount,
+          debt: isCredit ? financialImpact.amount : 0,
+          status: isCredit ? 'debt' : 'paid',
+          type: isCredit ? 'purchase_credit' : 'purchase_cash',
+          pen_color: isCredit ? 'purple' : 'green',
+          notes: isCredit
+            ? `Achat Crédit Fournisseur (${supplier}) : ${productData.name} (${productData.initial_stock} pcs)`
+            : `Achat Stock Cash : ${productData.name} (${productData.initial_stock} pcs)`,
+          category: 'Approvisionnement Stock',
+          created_at: now.toISOString(),
+          is_synced: false,
+        }
+
+        saveOfflineSale(shopId, finSale)
+
+        try {
+          fetch('/api/sales', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+            body: JSON.stringify(finSale),
+          }).catch(() => {})
+        } catch {}
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+          window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+        }
+      }
+
+      // 4. Synchronisation serveur du produit en arrière-plan
       try {
         const res = await fetch('/api/stock', {
           method: existing ? 'PATCH' : 'POST',
@@ -527,6 +652,7 @@ export function StockManager({
             setFormData(data)
             setIsProductModalOpen(true)
           }}
+          onOpenBarcodeScanner={() => setShowBarcodeScannerModal(true)}
           disabled={saving}
         />
       )}
@@ -538,6 +664,7 @@ export function StockManager({
         onCategoryFilterChange={setCategoryFilter}
         categories={categories}
         onAddProduct={handleOpenAddModal}
+        onOpenBarcodeScanner={() => setShowBarcodeScannerModal(true)}
         onOpenRestockAdvisor={() => setIsRestockModalOpen(true)}
         onOpenCalculator={() => handleOpenCalculator()}
         onExportCSV={() => exportProductsToCSV(filteredProducts, `Stock_${shopId}`)}
@@ -569,6 +696,16 @@ export function StockManager({
           }}
           product={calculatorProduct as any}
           onSaveProduct={handleSaveCalculator}
+        />
+      )}
+
+      {showBarcodeScannerModal && (
+        <BarcodeScannerModal
+          isOpen={showBarcodeScannerModal}
+          onClose={() => setShowBarcodeScannerModal(false)}
+          onDetected={handleBarcodeDetected}
+          products={products as any}
+          onAssociateBarcode={handleAssociateBarcode}
         />
       )}
 
