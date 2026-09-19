@@ -143,6 +143,16 @@ export function parseSmartProductText(input: string): ParsedProductResult {
   }
 
   let text = raw
+
+  // ── Normalisation des abréviations monétaires k / K (ex: 20k -> 20000, 6.5k -> 6500, 6k5 -> 6500) ──
+  text = text.replace(/\b(\d+)[kK](\d+)\b/g, (_, p1, p2) => {
+    const dec = p2.length === 1 ? Number(p2) * 100 : Number(p2)
+    return String(Number(p1) * 1000 + dec)
+  })
+  text = text.replace(/\b(\d+(?:[.,]\d+)?)\s*[kK]\b/g, (_, num) => {
+    return String(Math.round(parseFloat(num.replace(',', '.')) * 1000))
+  })
+
   const detectedTokens: ParsedProductResult['detectedTokens'] = {}
 
   let multiplier = 1
@@ -160,8 +170,8 @@ export function parseSmartProductText(input: string): ParsedProductResult {
   let packagingName = ''
   let tradeType: TradeType = 'retail'
 
-  // ── 1. EXTRACTION DES CONTENANCES COMPOSÉES (ex: "10 cartons de 24", "5 packs de 6") ──
-  const compoundPkgRegex = /\b(\d+(?:[.,]\d+)?)\s*(cartons?|ctns?|sacs?|casiers?|packs?|fardeaux?|bidons?)\s+(?:de|par|x)\s*(\d+)\b/i
+  // ── 1. EXTRACTION DES CONTENANCES COMPOSÉES (ex: "10 cartons de 24", "10 ctn 25", "5 packs de 6") ──
+  const compoundPkgRegex = /\b(\d+(?:[.,]\d+)?)\s*(cartons?|ctns?|sacs?|casiers?|packs?|fardeaux?|bidons?)(?:\s+(?:de|par|x)\s*|\s+)(\d{1,3})\b/i
   const compoundMatch = text.match(compoundPkgRegex)
   if (compoundMatch) {
     packagesCount = Number(compoundMatch[1].replace(',', '.')) || 0
@@ -426,10 +436,20 @@ export function parseSmartProductText(input: string): ParsedProductResult {
     } else if (remainingNumbers.length >= 2) {
       const [n1, n2] = [remainingNumbers[0], remainingNumbers[1]]
       if (unitCost === 0) {
-        unitCost = Math.min(n1, n2)
-        unitPrice = Math.max(n1, n2)
-        detectedTokens.cost = String(unitCost)
-        detectedTokens.price = String(unitPrice)
+        if (multiplier > 1 && Math.max(n1, n2) >= 1000 && Math.min(n1, n2) < Math.max(n1, n2) / 2) {
+          // Exemple : 20000 et 500 avec carton de 25
+          // Le grand nombre est le coût du carton, le petit est le prix détail de la pièce
+          packageCost = Math.max(n1, n2)
+          unitCost = Math.round(packageCost / multiplier)
+          unitPrice = Math.min(n1, n2)
+          detectedTokens.cost = String(packageCost)
+          detectedTokens.price = String(unitPrice)
+        } else {
+          unitCost = Math.min(n1, n2)
+          unitPrice = Math.max(n1, n2)
+          detectedTokens.cost = String(unitCost)
+          detectedTokens.price = String(unitPrice)
+        }
       } else {
         unitPrice = n2
         detectedTokens.price = String(n2)
