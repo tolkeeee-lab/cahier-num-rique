@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { Plus, Minus, Edit3, Trash2 } from 'lucide-react'
+import { Plus, Minus, Edit3, Trash2, Sparkles } from 'lucide-react'
 
 interface Product {
   id: string
@@ -26,6 +26,7 @@ interface StockTableProps {
   onAdjustStock: (id: string, delta: number) => void
   onEditProduct: (product: Product) => void
   onDeleteProduct: (id: string) => void
+  onOpenCalculator?: (product: Product) => void
   isEmployee?: boolean
 }
 
@@ -34,6 +35,7 @@ export const StockTable: React.FC<StockTableProps> = ({
   onAdjustStock,
   onEditProduct,
   onDeleteProduct,
+  onOpenCalculator,
   isEmployee = false,
 }) => {
   if (products.length === 0) {
@@ -131,6 +133,18 @@ export const StockTable: React.FC<StockTableProps> = ({
                   {/* Actions (Édition & Suppression) */}
                   <td className="p-3.5 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {onOpenCalculator && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenCalculator(prod)}
+                          className="px-2 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 active:scale-[0.97] text-amber-950 transition-all duration-100 ease-out border border-amber-500 shadow-2xs cursor-pointer flex items-center gap-1 font-bold text-[10px]"
+                          title="Calculateur de Valeur Réelle & Tarification Paliers"
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-950" strokeWidth={2} />
+                          <span className="hidden sm:inline">Valeur & Paliers</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => onEditProduct(prod)}

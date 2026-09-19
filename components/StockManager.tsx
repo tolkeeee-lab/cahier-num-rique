@@ -8,6 +8,7 @@ import { ProductModal } from '@/components/stock/ProductModal'
 import { RestockAdvisorModal } from '@/components/stock/RestockAdvisorModal'
 import { ProductMergeModal } from '@/components/stock/ProductMergeModal'
 import { SmartProductQuickAdd } from '@/components/stock/SmartProductQuickAdd'
+import { RealValueCalculatorModal } from '@/components/stock/RealValueCalculatorModal'
 import { StockFormState } from '@/components/stock/types'
 import { exportProductsToCSV } from '@/lib/exportUtils'
 import { clearOfflineProducts, saveOfflineProduct, deleteOfflineProduct, getOfflineSales, getOfflineProducts, replaceOfflineProducts } from '@/lib/offlineDb'
@@ -69,6 +70,8 @@ export function StockManager({
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false)
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false)
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
+  const [calculatorProduct, setCalculatorProduct] = useState<Product | null>(null)
   const [activePairIndex, setActivePairIndex] = useState(0)
   const [merging, setMerging] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -384,6 +387,42 @@ export function StockManager({
     }
   }
 
+  const handleOpenCalculator = (prod?: Product) => {
+    setCalculatorProduct(prod || products[0] || null)
+    setIsCalculatorOpen(true)
+  }
+
+  const handleSaveCalculator = async (updated: any) => {
+    if (!calculatorProduct) return
+    const updatedProd: Product = {
+      ...calculatorProduct,
+      ...updated,
+    }
+
+    // 1. Sauvegarde locale
+    saveOfflineProduct(shopId, updatedProd as any)
+
+    // 2. Mise à jour de la liste
+    setProducts((prev) => prev.map((p) => (p.id === calculatorProduct.id ? updatedProd : p)))
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+    }
+
+    // 3. Sync distante
+    try {
+      await fetch('/api/stock', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+        body: JSON.stringify(updatedProd),
+      })
+    } catch (err) {
+      console.warn('Mode hors-ligne : tarification enregistrée localement', err)
+    }
+
+    setIsCalculatorOpen(false)
+  }
+
   // ── Valeurs mémorisées (Zero lag sur mobile) ──
   const categories = useMemo(() => {
     return Array.from(new Set(products.map((p) => p.category || 'Divers')))
@@ -500,6 +539,7 @@ export function StockManager({
         categories={categories}
         onAddProduct={handleOpenAddModal}
         onOpenRestockAdvisor={() => setIsRestockModalOpen(true)}
+        onOpenCalculator={() => handleOpenCalculator()}
         onExportCSV={() => exportProductsToCSV(filteredProducts, `Stock_${shopId}`)}
         onClearAllStock={handleClearAllStock}
         hasProducts={products.length > 0}
@@ -516,8 +556,21 @@ export function StockManager({
         onAdjustStock={handleAdjustStock}
         onEditProduct={handleOpenEditModal}
         onDeleteProduct={handleDeleteProduct}
+        onOpenCalculator={handleOpenCalculator}
         isEmployee={isEmployee}
       />
+
+      {isCalculatorOpen && (
+        <RealValueCalculatorModal
+          isOpen={isCalculatorOpen}
+          onClose={() => {
+            setIsCalculatorOpen(false)
+            setCalculatorProduct(null)
+          }}
+          product={calculatorProduct as any}
+          onSaveProduct={handleSaveCalculator}
+        />
+      )}
 
       {isProductModalOpen && (
         <ProductModal

@@ -1,9 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { Package, Sparkles, TrendingUp } from 'lucide-react'
 import { StockFormState, TradeType } from '../types'
 import { formatPrice } from '../stockUtils'
+import { RealValueCalculatorModal } from '../RealValueCalculatorModal'
 
 interface PricingSectionProps {
   tradeType: TradeType
@@ -22,6 +23,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
   setCartonPrice,
   cartonCost,
 }) => {
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
   const mult = formData.multiplier && formData.multiplier > 1 ? formData.multiplier : 1
   const hasPackaging = mult > 1 || tradeType === 'wholesale'
 
@@ -74,17 +76,29 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
           <span>2. Prix de Vente & Marges :</span>
         </div>
 
-        {hasPackaging && formData.unit_price > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
-            onClick={handleAutoSuggestTiers}
-            className="px-2.5 py-1 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 font-extrabold text-[10px] rounded-lg border border-amber-400 shadow-2xs flex items-center gap-1 cursor-pointer transition-transform duration-100 ease-out active:scale-[0.97]"
-            title="Calculer automatiquement des remises de gros réalistes pour le quart, le demi et le carton"
+            onClick={() => setIsCalculatorOpen(true)}
+            className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold text-[10px] rounded-lg border border-amber-600 shadow-2xs flex items-center gap-1 cursor-pointer transition-transform duration-100 ease-out active:scale-[0.97]"
+            title="Calculateur physique de valeur réelle et des 6 paliers infaillibles"
           >
-            <Sparkles className="w-3 h-3 text-amber-950" />
-            <span>Suggérer tarifs 1/4, 1/2, Carton</span>
+            <Sparkles className="w-3 h-3 text-amber-200" />
+            <span>Calculateur Valeur & Paliers</span>
           </button>
-        )}
+
+          {hasPackaging && formData.unit_price > 0 && (
+            <button
+              type="button"
+              onClick={handleAutoSuggestTiers}
+              className="px-2.5 py-1 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 font-extrabold text-[10px] rounded-lg border border-amber-400 shadow-2xs flex items-center gap-1 cursor-pointer transition-transform duration-100 ease-out active:scale-[0.97]"
+              title="Calculer automatiquement des remises de gros réalistes pour le quart, le demi et le carton"
+            >
+              <Sparkles className="w-3 h-3 text-amber-950" />
+              <span>Suggérer tarifs 1/4, 1/2, Carton</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -296,6 +310,45 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {isCalculatorOpen && (
+        <RealValueCalculatorModal
+          isOpen={isCalculatorOpen}
+          onClose={() => setIsCalculatorOpen(false)}
+          product={{
+            id: 'temp',
+            name: formData.name || 'Produit',
+            current_stock: formData.initial_stock,
+            initial_stock: formData.initial_stock,
+            alert_threshold: formData.alert_threshold,
+            unit_cost: formData.unit_cost,
+            unit_price: formData.unit_price,
+            multiplier: formData.multiplier,
+            wholesale_price: formData.wholesale_price,
+            half_package_price: formData.half_package_price,
+            quarter_package_price: formData.quarter_package_price,
+            lot_price: formData.lot_price,
+          } as any}
+          onSaveProduct={(updated) => {
+            setFormData((prev) => ({
+              ...prev,
+              multiplier: updated.multiplier,
+              unit_cost: updated.unit_cost,
+              unit_price: updated.unit_price,
+              initial_stock: updated.current_stock,
+              wholesale_price: updated.wholesale_price,
+              half_package_price: updated.half_package_price,
+              quarter_package_price: updated.quarter_package_price,
+              lot_quantity: updated.lot_quantity ?? prev.lot_quantity ?? 0,
+              lot_price: updated.lot_price ?? prev.lot_price ?? 0,
+            }))
+            if (updated.wholesale_price) {
+              setCartonPrice(String(updated.wholesale_price))
+            }
+            setIsCalculatorOpen(false)
+          }}
+        />
       )}
     </div>
   )

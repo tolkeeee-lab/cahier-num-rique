@@ -1,5 +1,5 @@
 import React from 'react'
-import { Search, Plus, FileSpreadsheet, Trash2, ShoppingBag, GitMerge, X } from 'lucide-react'
+import { Search, Plus, FileSpreadsheet, Trash2, ShoppingBag, GitMerge, X, Sparkles } from 'lucide-react'
 
 interface StockToolbarProps {
   searchQuery: string
@@ -9,6 +9,7 @@ interface StockToolbarProps {
   categories: string[]
   onAddProduct: () => void
   onOpenRestockAdvisor?: () => void
+  onOpenCalculator?: () => void
   onExportCSV?: () => void
   onClearAllStock?: () => void
   hasProducts?: boolean
@@ -25,6 +26,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
   categories,
   onAddProduct,
   onOpenRestockAdvisor,
+  onOpenCalculator,
   onExportCSV,
   onClearAllStock,
   hasProducts = false,
@@ -127,6 +129,19 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
             >
               <Trash2 className="w-4 h-4 text-rose-600" strokeWidth={1.75} />
               <span className="hidden sm:inline">Vider le stock</span>
+            </button>
+          )}
+
+          {/* Bouton Calculateur de Valeur Réelle & Paliers */}
+          {onOpenCalculator && !isEmployee && (
+            <button
+              type="button"
+              onClick={onOpenCalculator}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-100 to-amber-200 hover:from-amber-200 hover:to-amber-300 text-amber-950 text-xs font-mono font-extrabold rounded-xl border border-amber-400 active:scale-[0.97] transition-all duration-100 ease-out whitespace-nowrap shadow-xs cursor-pointer"
+              title="Calculateur de Valeur Réelle & Tarification Paliers"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-800" strokeWidth={2} />
+              <span>Valeur & Paliers</span>
             </button>
           )}
 
