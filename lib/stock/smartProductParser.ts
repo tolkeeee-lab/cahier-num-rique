@@ -153,6 +153,10 @@ export function parseSmartProductText(input: string): ParsedProductResult {
     return String(Math.round(parseFloat(num.replace(',', '.')) * 1000))
   })
 
+  // ── Normalisation des séparateurs de milliers (ex: 20 000 -> 20000, 1 500 -> 1500) ──
+  text = text.replace(/\b(\d{1,3})[ _](\d{3})\b/g, '$1$2')
+  text = text.replace(/\b(\d{1,3})[ _](\d{3})\b/g, '$1$2')
+
   const detectedTokens: ParsedProductResult['detectedTokens'] = {}
 
   let multiplier = 1
@@ -171,14 +175,14 @@ export function parseSmartProductText(input: string): ParsedProductResult {
   let tradeType: TradeType = 'retail'
 
   // ── 1. EXTRACTION DES CONTENANCES COMPOSÉES (ex: "10 cartons de 24", "10 ctn 25", "5 packs de 6") ──
-  const compoundPkgRegex = /\b(\d+(?:[.,]\d+)?)\s*(cartons?|ctns?|sacs?|casiers?|packs?|fardeaux?|bidons?)(?:\s+(?:de|par|x)\s*|\s+)(\d{1,3})\b/i
+  const compoundPkgRegex = /\b(\d+(?:[.,]\d+)?)\s*(cartons?|catons?|ctns?|sacs?|casiers?|packs?|fardeaux?|bidons?)(?:\s+(?:de|par|x)\s*|\s+)(\d{1,3})\b/i
   const compoundMatch = text.match(compoundPkgRegex)
   if (compoundMatch) {
     packagesCount = Number(compoundMatch[1].replace(',', '.')) || 0
     const rawPkg = compoundMatch[2].toLowerCase()
     multiplier = Number(compoundMatch[3]) || 1
 
-    if (/^cartons?|ctns?$/.test(rawPkg)) {
+    if (/^cartons?|catons?|ctns?$/.test(rawPkg)) {
       unit = 'carton'
       packagingName = 'carton'
       tradeType = 'wholesale'
@@ -250,6 +254,21 @@ export function parseSmartProductText(input: string): ParsedProductResult {
     text = text.replace(wholesaleMatch[0], ' ')
   }
 
+  // ── 5.5 EXTRACTION CONTENANCE EN PIÈCES / LOT (ex: "25 piece", "24 pcs", "12 morceaux", "24 btls") ──
+  if (multiplier === 1) {
+    const capacityRegex = /\b(\d{1,3})\s*(?:pi[eè]ces?|pcs?|morceaux?|sachets?|unit[eé]s?|bouteilles?|btls?)\b/i
+    const capMatch = text.match(capacityRegex)
+    if (capMatch) {
+      const extractedCap = Number(capMatch[1]) || 0
+      if (extractedCap > 1) {
+        multiplier = extractedCap
+        if (lotQuantity === 0) lotQuantity = extractedCap
+        detectedTokens.lot = capMatch[0]
+        text = text.replace(capMatch[0], ' ')
+      }
+    }
+  }
+
   // ── 6. EXTRACTION DU PRIX DE REVENTE À LA PIÈCE / DÉTAIL (ex: "piece 500", "détail 500", "bouteille 600") ──
   const piecePriceRegex = /\b(?:pi[eè]ces?|pcs?|unit[eé]s?|d[eé]tails?|bouteilles?|bo[iî]tes?)\s*[:=àa@]?\s*(\d+(?:[\s_]\d+)*)\b/i
   const piecePriceMatch = text.match(piecePriceRegex)
@@ -309,7 +328,7 @@ export function parseSmartProductText(input: string): ParsedProductResult {
     text = text.replace(alertMatch[0], ' ')
   }
 
-  // ── 10. MULTIPLICATEUR ISOLÉ SI PAS ENCORE DÉTECTÉ (ex: "de 24", "par 6") ──
+  // ── 10. MULTIPLICATEUR ISOLÉ SI PAS ENCORE DÉTECTÉ (ex: "de 24", "par 6", "25 piece", "24 pcs") ──
   if (multiplier === 1) {
     const lotRegex = /\b(?:de|par|x)\s*(\d+)\b/i
     const lotMatch = text.match(lotRegex)
@@ -321,12 +340,24 @@ export function parseSmartProductText(input: string): ParsedProductResult {
         detectedTokens.lot = lotMatch[0]
         text = text.replace(lotMatch[0], ' ')
       }
+    } else {
+      const capacityRegex = /\b(\d{1,3})\s*(?:pi[eè]ces?|pcs?|morceaux?|sachets?|unit[eé]s?|bouteilles?|btls?)\b/i
+      const capMatch = text.match(capacityRegex)
+      if (capMatch) {
+        const extractedCap = Number(capMatch[1]) || 0
+        if (extractedCap > 1) {
+          multiplier = extractedCap
+          if (lotQuantity === 0) lotQuantity = extractedCap
+          detectedTokens.lot = capMatch[0]
+          text = text.replace(capMatch[0], ' ')
+        }
+      }
     }
   }
 
   // ── 11. EXTRACTION QUANTITÉ / UNITÉ SIMPLE (si pas compound) ──
   if (packagesCount === 0) {
-    const qtyUnitRegex = /\b(\d+(?:[.,]\d+)?)\s*(cartons?|ctns?|sacs?|casiers?|ballots?|bidons?|packs?|fardeaux?|fardeau|bouteilles?|btls?|paquets?|pqts?|bo[iî]tes?|pots?|sachets?|pi[eè]ces?|pcs?|unit[eé]s?)\b/i
+    const qtyUnitRegex = /\b(\d+(?:[.,]\d+)?)\s*(cartons?|catons?|ctns?|sacs?|casiers?|ballots?|bidons?|packs?|fardeaux?|fardeau|bouteilles?|btls?|paquets?|pqts?|bo[iî]tes?|pots?|sachets?|pi[eè]ces?|pcs?|unit[eé]s?)\b/i
     const qtyUnitMatch = text.match(qtyUnitRegex)
     if (qtyUnitMatch) {
       const parsedQty = Number(qtyUnitMatch[1].replace(',', '.')) || 0
@@ -334,7 +365,7 @@ export function parseSmartProductText(input: string): ParsedProductResult {
       detectedTokens.stock = qtyUnitMatch[1]
       detectedTokens.unit = rawUnit
 
-      if (/^cartons?|ctns?$/.test(rawUnit)) {
+      if (/^cartons?|catons?|ctns?$/.test(rawUnit)) {
         unit = 'carton'
         packagingName = 'carton'
         tradeType = 'wholesale'
@@ -424,23 +455,34 @@ export function parseSmartProductText(input: string): ParsedProductResult {
   }
 
   // ── 13. DÉTECTION DES NOMBRES RESTANTS (PRIX NON BALISÉS) ──
-  const remainingNumbers = Array.from(text.matchAll(/\b(\d+(?:[\s_]\d+)*)\b/g))
-    .map(m => Number(m[1].replace(/[\s_]/g, '')))
+  const remainingNumbers = Array.from(text.matchAll(/\b(\d+)\b/g))
+    .map(m => Number(m[1]))
     .filter(n => n >= 25)
 
-  if (unitPrice === 0 && remainingNumbers.length >= 1) {
-    if (remainingNumbers.length === 1) {
+  if (remainingNumbers.length >= 1) {
+    if (unitPrice === 0 && remainingNumbers.length === 1) {
       unitPrice = remainingNumbers[0]
       detectedTokens.price = String(remainingNumbers[0])
       text = text.replace(String(remainingNumbers[0]), ' ')
+    } else if (unitCost === 0 && remainingNumbers.length === 1) {
+      const single = remainingNumbers[0]
+      if ((multiplier > 1 || packagesCount > 0) && single >= 1000 && packageCost === 0) {
+        packageCost = single
+        unitCost = multiplier > 1 ? Math.round(packageCost / multiplier) : packageCost
+        detectedTokens.cost = String(packageCost)
+      } else {
+        unitCost = single
+        detectedTokens.cost = String(single)
+      }
+      text = text.replace(String(single), ' ')
     } else if (remainingNumbers.length >= 2) {
       const [n1, n2] = [remainingNumbers[0], remainingNumbers[1]]
-      if (unitCost === 0) {
-        if (multiplier > 1 && Math.max(n1, n2) >= 1000 && Math.min(n1, n2) < Math.max(n1, n2) / 2) {
-          // Exemple : 20000 et 500 avec carton de 25
+      if (unitCost === 0 && unitPrice === 0) {
+        if ((multiplier > 1 || packagesCount > 0) && Math.max(n1, n2) >= 1000 && Math.min(n1, n2) < Math.max(n1, n2) / 2) {
+          // Exemple : 20000 et 500 avec carton (ex: 10 ctn bf 20k 500)
           // Le grand nombre est le coût du carton, le petit est le prix détail de la pièce
           packageCost = Math.max(n1, n2)
-          unitCost = Math.round(packageCost / multiplier)
+          unitCost = multiplier > 1 ? Math.round(packageCost / multiplier) : packageCost
           unitPrice = Math.min(n1, n2)
           detectedTokens.cost = String(packageCost)
           detectedTokens.price = String(unitPrice)
@@ -450,7 +492,16 @@ export function parseSmartProductText(input: string): ParsedProductResult {
           detectedTokens.cost = String(unitCost)
           detectedTokens.price = String(unitPrice)
         }
-      } else {
+      } else if (unitCost === 0) {
+        if ((multiplier > 1 || packagesCount > 0) && n1 >= 1000 && packageCost === 0) {
+          packageCost = n1
+          unitCost = multiplier > 1 ? Math.round(packageCost / multiplier) : packageCost
+          detectedTokens.cost = String(packageCost)
+        } else {
+          unitCost = n1
+          detectedTokens.cost = String(n1)
+        }
+      } else if (unitPrice === 0) {
         unitPrice = n2
         detectedTokens.price = String(n2)
       }
@@ -483,7 +534,7 @@ export function parseSmartProductText(input: string): ParsedProductResult {
   // ── 15. NETTOYAGE DU NOM DU PRODUIT ──
   let cleanName = text
     .replace(/[;,\-_:]/g, ' ')
-    .replace(/(?:^|\s)(?:[àa@]|prix|vente|achat|pa|pv|cout|coût|seuil|alerte|min|demi|quart|carton|pack|casier|sac)(?:\s|$)/gi, ' ')
+    .replace(/(?:^|\s)(?:[àa@]|prix|vente|achat|pa|pv|cout|coût|seuil|alerte|min|demi|quart|carton|caton|ctn|pack|casier|sac)(?:\s|$)/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 

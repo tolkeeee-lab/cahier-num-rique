@@ -108,6 +108,24 @@ assert(t9.lot_price === 2700, `Prix lot de 6 attendu 2700 (6 * 450) (obtenu: ${t
 assert(t9.unit_price === 500, `Prix pièce attendu 500 (obtenu: ${t9.unit_price})`)
 assert(t9.wholesale_price === 10000, `Prix carton attendu 10000 (obtenu: ${t9.wholesale_price})`)
 
+// 10. Test syntaxe abrégée avec 'k' : 10 ctn bf 20k 500
+console.log('\n--- 10. TEST SYNTAXE ABRÉGÉE MARCHE AVEC K ---')
+const t10 = parseSmartProductText('10 ctn bf 20k 500')
+assert(t10.name.toLowerCase().includes('bf'), `Nom attendu contenant bf (obtenu: ${t10.name})`)
+assert(t10.packages_count === 10, `Nombre de cartons attendu 10 (obtenu: ${t10.packages_count})`)
+assert(t10.package_cost === 20000, `Coût carton attendu 20000 (obtenu: ${t10.package_cost})`)
+assert(t10.unit_price === 500, `Prix pièce attendu 500 (obtenu: ${t10.unit_price})`)
+
+// 11. Test phrase exacte utilisateur : 10 catons de bf 25 piece à 20000 vente 500
+console.log('\n--- 11. TEST PHRASE EXACTE UTILISATEUR AVEC CONTENANCE ---')
+const t11 = parseSmartProductText('10 catons de bf 25 piece à 20000 vente 500')
+assert(t11.name.toLowerCase().includes('bf'), `Nom attendu contenant bf (obtenu: ${t11.name})`)
+assert(t11.packages_count === 10, `Nombre de cartons attendu 10 (obtenu: ${t11.packages_count})`)
+assert(t11.multiplier === 25, `Contenance attendue 25 (obtenu: ${t11.multiplier})`)
+assert(t11.initial_stock === 250, `Stock initial attendu 250 (obtenu: ${t11.initial_stock})`)
+assert(t11.package_cost === 20000, `Coût carton attendu 20000 (obtenu: ${t11.package_cost})`)
+assert(t11.unit_price === 500, `Prix détail attendu 500 (obtenu: ${t11.unit_price})`)
+
 console.log('\n============================================================')
 console.log('📊 TOUS LES TESTS DE PARSING INTELLIGENT DE PRODUIT SONT PASSÉS !')
 console.log('============================================================\n')
