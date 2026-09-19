@@ -228,18 +228,27 @@ export function parseSmartProductText(input: string): ParsedProductResult {
     text = text.replace(halfMatch[0], ' ')
   }
 
-  // ── 4. EXTRACTION DU SEUIL DÉGRESSIF / PAR LOT (ex: "a partir de 6 a 450", "par 6 a 450", "3 pour 1000") ──
-  const thresholdRegex = /\b(?:[àa]\s*partir\s*de|lot\s*de)\s*(\d+)\s*(?:[àa@:]\s*(\d+(?:[\s_]\d+)*)|\s+pour\s+(\d+(?:[\s_]\d+)*))\b/i
+  // ── 4. EXTRACTION DU SEUIL DÉGRESSIF / PAR LOT (ex: "a partir de 6 a 450", "par 6 a 450", "3 pour 1000", "lot de 3 a 1400", "lot 3 1400") ──
+  const thresholdRegex = /\b(?:(?:[àa]\s*partir\s*de|lot\s*(?:de)?|par)\s+(\d+)\s*(?:[àa@:]\s*(\d+(?:[\s_]\d+)*)|\s+pour\s+(\d+(?:[\s_]\d+)*)|\s+(\d{3,}(?:[\s_]\d+)*))|(\d+)\s+pour\s+(\d+(?:[\s_]\d+)*))\b/i
   const thresholdMatch = text.match(thresholdRegex)
   if (thresholdMatch) {
-    lotQuantity = Number(thresholdMatch[1]) || 0
-    if (thresholdMatch[2]) {
-      // Prix unitaire dégressif par pièce (ex: à partir de 6 à 450)
-      const unitLotPrice = Number(thresholdMatch[2].replace(/[\s_]/g, '')) || 0
-      lotPrice = unitLotPrice * lotQuantity
-    } else if (thresholdMatch[3]) {
-      // Prix global du lot (ex: 3 pour 1000)
-      lotPrice = Number(thresholdMatch[3].replace(/[\s_]/g, '')) || 0
+    if (thresholdMatch[1]) {
+      lotQuantity = Number(thresholdMatch[1]) || 0
+      if (thresholdMatch[2]) {
+        // Prix unitaire dégressif par pièce (ex: à partir de 6 à 450)
+        const unitLotPrice = Number(thresholdMatch[2].replace(/[\s_]/g, '')) || 0
+        lotPrice = unitLotPrice * lotQuantity
+      } else if (thresholdMatch[3]) {
+        // Prix global du lot (ex: lot de 3 pour 1400)
+        lotPrice = Number(thresholdMatch[3].replace(/[\s_]/g, '')) || 0
+      } else if (thresholdMatch[4]) {
+        // Prix direct sans mot de liaison (ex: lot 3 1400)
+        lotPrice = Number(thresholdMatch[4].replace(/[\s_]/g, '')) || 0
+      }
+    } else if (thresholdMatch[5]) {
+      // Formule directe "3 pour 1000"
+      lotQuantity = Number(thresholdMatch[5]) || 0
+      lotPrice = Number(thresholdMatch[6].replace(/[\s_]/g, '')) || 0
     }
     detectedTokens.lot = thresholdMatch[0]
     text = text.replace(thresholdMatch[0], ' ')
@@ -526,8 +535,13 @@ export function parseSmartProductText(input: string): ParsedProductResult {
       halfPackagePrice = Math.round((wholesalePrice / 2) * 1.04 / 50) * 50
     }
     // Si quart carton pas spécifié et carton présent
-    if (quarterPackagePrice === 0 && wholesalePrice > 0) {
+    if (quarterPackagePrice === 0 && wholesalePrice > 0 && multiplier >= 8) {
       quarterPackagePrice = Math.round((wholesalePrice / 4) * 1.06 / 25) * 25
+    }
+    // Si lot dégressif (ex: lot de 3) pas spécifié et conditionnement présent
+    if (lotQuantity === 0 && multiplier >= 4 && unitPrice > 0) {
+      lotQuantity = 3
+      lotPrice = Math.round((unitPrice * 3 * 0.95) / 25) * 25
     }
   }
 

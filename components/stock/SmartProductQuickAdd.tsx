@@ -852,42 +852,79 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
             </div>
           </div>
 
-          {/* ── BARRE PALIERS GROS (SI CARTON) ── */}
-          {isPackagingCarton && (
+          {/* ── BARRE PALIERS GROS & LOTS DÉGRESSIFS ── */}
+          {(isPackagingCarton || activeData.lot_quantity > 0) && (
             <div className="bg-amber-50/50 border-t border-amber-200 px-3 py-2 flex items-center gap-2 flex-wrap text-xs font-mono">
               <span className="text-[10px] text-amber-900 font-extrabold uppercase flex items-center gap-1">
                 <Layers className="w-3 h-3 text-amber-700" />
-                <span>Tarifs Gros :</span>
+                <span>Paliers & Gros :</span>
               </span>
 
-              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
-                <span className="text-[10px] text-indigo-700 font-bold">1/2 ctn :</span>
-                <input
-                  type="number"
-                  value={activeData.half_package_price || ''}
-                  onChange={(e) =>
-                    setOverrides((prev) => ({
-                      ...prev,
-                      half_package_price: parseFloat(e.target.value) || 0,
-                    }))
-                  }
-                  className="w-14 text-center font-bold text-xs text-indigo-950 outline-none tabular-nums"
-                />
-                <span className="text-[10px] text-gray-400">F</span>
-              </div>
+              {isPackagingCarton && (
+                <>
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                    <span className="text-[10px] text-indigo-700 font-bold">1/2 ctn :</span>
+                    <input
+                      type="number"
+                      value={activeData.half_package_price || ''}
+                      onChange={(e) =>
+                        setOverrides((prev) => ({
+                          ...prev,
+                          half_package_price: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-14 text-center font-bold text-xs text-indigo-950 outline-none tabular-nums"
+                    />
+                    <span className="text-[10px] text-gray-400">F</span>
+                  </div>
 
-              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
-                <span className="text-[10px] text-purple-700 font-bold">Carton :</span>
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                    <span className="text-[10px] text-purple-700 font-bold">Carton :</span>
+                    <input
+                      type="number"
+                      value={activeData.wholesale_price || ''}
+                      onChange={(e) =>
+                        setOverrides((prev) => ({
+                          ...prev,
+                          wholesale_price: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-16 text-center font-bold text-xs text-purple-950 outline-none tabular-nums"
+                    />
+                    <span className="text-[10px] text-gray-400">F</span>
+                  </div>
+                </>
+              )}
+
+              {/* Lot dégressif (ex: lot de 3 à 1400F) */}
+              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-emerald-300">
+                <span className="text-[10px] text-emerald-800 font-bold flex items-center gap-0.5">
+                  <span>Lot</span>
+                  <input
+                    type="number"
+                    value={activeData.lot_quantity || ''}
+                    placeholder="3"
+                    onChange={(e) =>
+                      setOverrides((prev) => ({
+                        ...prev,
+                        lot_quantity: parseInt(e.target.value) || 0,
+                      }))
+                    }
+                    className="w-7 text-center font-bold text-xs text-emerald-950 outline-none tabular-nums bg-emerald-50 rounded"
+                  />
+                  <span>:</span>
+                </span>
                 <input
                   type="number"
-                  value={activeData.wholesale_price || ''}
+                  value={activeData.lot_price || ''}
+                  placeholder="Prix"
                   onChange={(e) =>
                     setOverrides((prev) => ({
                       ...prev,
-                      wholesale_price: parseFloat(e.target.value) || 0,
+                      lot_price: parseFloat(e.target.value) || 0,
                     }))
                   }
-                  className="w-16 text-center font-bold text-xs text-purple-950 outline-none tabular-nums"
+                  className="w-14 text-center font-bold text-xs text-emerald-950 outline-none tabular-nums"
                 />
                 <span className="text-[10px] text-gray-400">F</span>
               </div>
