@@ -11,17 +11,33 @@ const isSupabaseConfigured = () => {
 
 export async function GET(request: NextRequest) {
   try {
-    // Vérification de sécurité : Seul l'admin a le droit d'appeler cette API
-    const adminEmail = request.headers.get('x-admin-email') || ''
+    const authHeader = request.headers.get('authorization') || ''
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+    const headerAdminEmail = request.headers.get('x-admin-email') || ''
     
-    // En production, on restreint aux emails de confiance
-    const isAuthorized = adminEmail.endsWith('@cahier.admin') || adminEmail === 'admin@cahier.com' || adminEmail === 'tolkeeee@gmail.com' || adminEmail === 'tolkeeeee@gmail.com'
-    
-    // Bypass en mode développement local
-    const isDev = process.env.NODE_ENV === 'development'
-    
-    if (!isAuthorized && !isDev) {
-      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
+    let isAuthorized = false
+    let authenticatedEmail = ''
+
+    if (isSupabaseConfigured() && token) {
+      const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+      if (!authErr && user) {
+        authenticatedEmail = (user.email || '').toLowerCase().trim()
+        const role = user.app_metadata?.role || user.user_metadata?.role
+        const allowedEmails = ['admin@cahier.com', 'tolkeeee@gmail.com', 'tolkeeeee@gmail.com']
+        if (role === 'super_admin' || role === 'admin' || allowedEmails.includes(authenticatedEmail) || authenticatedEmail.endsWith('@cahier.admin')) {
+          isAuthorized = true
+        }
+      }
+    } else if (process.env.NODE_ENV === 'development' && !isSupabaseConfigured()) {
+      // Tolérance locale uniquement quand Supabase n'est pas encore provisionné
+      const allowedEmails = ['admin@cahier.com', 'tolkeeee@gmail.com', 'tolkeeeee@gmail.com']
+      if (allowedEmails.includes(headerAdminEmail) || headerAdminEmail.endsWith('@cahier.admin')) {
+        isAuthorized = true
+      }
+    }
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Accès non autorisé : session administrateur valide requise.' }, { status: 403 })
     }
 
     if (isSupabaseConfigured()) {

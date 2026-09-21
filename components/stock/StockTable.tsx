@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { Plus, Minus, Edit3, Trash2, Sparkles } from 'lucide-react'
+import { Plus, Minus, Edit3, Trash2, Sparkles, PackagePlus, PackageMinus } from 'lucide-react'
 
 interface Product {
   id: string
@@ -27,6 +27,7 @@ interface StockTableProps {
   onEditProduct: (product: Product) => void
   onDeleteProduct: (id: string) => void
   onOpenCalculator?: (product: Product) => void
+  onOpenExpressAdjustment?: (product: Product, type: 'in' | 'out') => void
   isEmployee?: boolean
 }
 
@@ -36,6 +37,7 @@ export const StockTable: React.FC<StockTableProps> = ({
   onEditProduct,
   onDeleteProduct,
   onOpenCalculator,
+  onOpenExpressAdjustment,
   isEmployee = false,
 }) => {
   if (products.length === 0) {
@@ -83,16 +85,28 @@ export const StockTable: React.FC<StockTableProps> = ({
 
                   {/* Quantité en Stock + Contrôles d'ajustement */}
                   <td className="p-3.5">
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-1.5">
                       {!isEmployee && (
-                        <button
-                          type="button"
-                          onClick={() => onAdjustStock(prod.id, -1)}
-                          className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
-                          title="Retirer 1 unité"
-                        >
-                          <Minus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          {onOpenExpressAdjustment && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenExpressAdjustment(prod, 'out')}
+                              className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-[0.97] text-rose-800 border border-rose-200 transition-all duration-100 ease-out cursor-pointer"
+                              title="Déclarer Casse, Perte ou Conso Personnelle"
+                            >
+                              <PackageMinus className="w-3.5 h-3.5" strokeWidth={1.75} />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onAdjustStock(prod.id, -1)}
+                            className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
+                            title="Retirer 1 unité"
+                          >
+                            <Minus className="w-3.5 h-3.5" strokeWidth={1.75} />
+                          </button>
+                        </div>
                       )}
 
                       <span className={`px-3 py-1 rounded-xl font-black text-sm font-mono tabular-nums tracking-tight border shadow-xs ${
@@ -106,14 +120,26 @@ export const StockTable: React.FC<StockTableProps> = ({
                       </span>
 
                       {!isEmployee && (
-                        <button
-                          type="button"
-                          onClick={() => onAdjustStock(prod.id, 1)}
-                          className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
-                          title="Ajouter 1 unité"
-                        >
-                          <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => onAdjustStock(prod.id, 1)}
+                            className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
+                            title="Ajouter 1 unité"
+                          >
+                            <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
+                          </button>
+                          {onOpenExpressAdjustment && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenExpressAdjustment(prod, 'in')}
+                              className="p-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:scale-[0.97] text-emerald-800 border border-emerald-200 transition-all duration-100 ease-out cursor-pointer"
+                              title="Entrée Express / Achat Carton"
+                            >
+                              <PackagePlus className="w-3.5 h-3.5" strokeWidth={1.75} />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </td>

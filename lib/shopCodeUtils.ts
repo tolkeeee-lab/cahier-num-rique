@@ -48,10 +48,13 @@ export function matchShopByCode(inputCode: string, shops: Array<{ id: string; na
 /**
  * Vérifie si un identifiant de boutique est un vrai UUID Supabase long
  */
+/**
+ * Vérifie si un identifiant de boutique est un vrai UUID v4 standard
+ */
 export function isRealUuid(str?: string | null): boolean {
   if (!str) return false
   const clean = str.trim()
-  return clean.length >= 30 && clean.includes('-') && !clean.toUpperCase().startsWith('BTQ-') && !clean.toUpperCase().startsWith('SHOP-')
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(clean)
 }
 
 /**
@@ -64,70 +67,48 @@ export async function findShopIdByCode(inputCode: string): Promise<string> {
   // Si c'est déjà un vrai UUID, le retourner directement
   if (isRealUuid(raw)) return raw
 
-  const clean = normalizeShopCode(raw).toLowerCase()
-  const formattedUpper = `BTQ-${clean.toUpperCase()}`
+  const clean = normalizeShopCode(raw).toUpperCase()
+  const formattedUpper = `BTQ-${clean}`
 
   try {
-    // 0. Priorité 0 : Chercher d'abord dans la table officielle `shops`
-    const { data: shopMatches } = await supabaseClient
+    // 0. Priorité 0 : Recherche par shop_code exact dans la table `shops`
+    const { data: codeMatches } = await supabaseClient
       .from('shops')
       .select('id')
-      .ilike('id', `${clean}%`)
+      .or(`shop_code.eq.${formattedUpper},shop_code.eq.${clean}`)
       .limit(1)
 
-    if (shopMatches && shopMatches.length > 0 && isRealUuid(shopMatches[0].id)) {
-      return shopMatches[0].id
+    if (codeMatches && codeMatches.length > 0 && isRealUuid(codeMatches[0].id)) {
+      return codeMatches[0].id
     }
 
-    // 1. Chercher dans `employees` par `shop_id`
+    // 1. Chercher dans `employees` par `shop_id` exact
     const { data: empMatches } = await supabaseClient
       .from('employees')
       .select('shop_id, role')
-      .ilike('shop_id', `${clean}%`)
-      .limit(20)
+      .or(`shop_id.eq.${formattedUpper},shop_id.eq.${clean}`)
+      .limit(10)
 
     if (empMatches && empMatches.length > 0) {
-      // Priorité 1 : Trouver une entrée avec un VRAI UUID (ex: 58c54b4a-4d32-4686-971e-b5f87985...)
       const realUuidMatch = empMatches.find(e => isRealUuid(e.shop_id))
-      if (realUuidMatch?.shop_id) {
-        return realUuidMatch.shop_id
-      }
-
-      // Priorité 2 : Trouver la ligne d'un Propriétaire
-      const ownerMatch = empMatches.find(e => e.role === 'owner' && e.shop_id)
-      if (ownerMatch?.shop_id && isRealUuid(ownerMatch.shop_id)) {
-        return ownerMatch.shop_id
-      }
+      if (realUuidMatch?.shop_id) return realUuidMatch.shop_id
     }
 
-    // 2. Chercher dans `products` par shop_id (ex: 58c54b4a-4d32...)
-    const { data: prodMatch } = await supabaseClient
-      .from('products')
-      .select('shop_id')
-      .ilike('shop_id', `${clean}%`)
-      .limit(10)
+    // 2. Recherche par préfixe sur la clé primaire `shops.id` uniquement si aucun match par code
+    const { data: idMatches } = await supabaseClient
+      .from('shops')
+      .select('id')
+      .ilike('id', `${clean.toLowerCase()}%`)
+      .limit(1)
 
-    if (prodMatch && prodMatch.length > 0) {
-      const realProd = prodMatch.find(p => isRealUuid(p.shop_id)) || prodMatch[0]
-      if (realProd?.shop_id) return realProd.shop_id
-    }
-
-    // 3. Chercher dans `sales` par shop_id
-    const { data: salesMatch } = await supabaseClient
-      .from('sales')
-      .select('shop_id')
-      .ilike('shop_id', `${clean}%`)
-      .limit(10)
-
-    if (salesMatch && salesMatch.length > 0) {
-      const realSale = salesMatch.find(s => isRealUuid(s.shop_id)) || salesMatch[0]
-      if (realSale?.shop_id) return realSale.shop_id
+    if (idMatches && idMatches.length > 0 && isRealUuid(idMatches[0].id)) {
+      return idMatches[0].id
     }
   } catch (err) {
     console.warn('Erreur recherche shop_id par code:', err)
   }
 
-  // Fallback propre
+  // Fallback
   return formattedUpper
 }
 

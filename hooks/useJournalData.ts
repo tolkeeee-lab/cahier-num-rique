@@ -9,6 +9,7 @@ import {
   OfflineSale,
 } from '@/lib/offlineDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
+import { logAuditEvent } from '@/lib/auditLogger'
 
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
@@ -323,17 +324,44 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     let channel: any = null
     if (isSupabaseClientConfigured() && isOnline && shopId) {
       try {
-        channel = supabaseClient
-          .channel(`realtime_sales_${shopId}`)
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${shopId}` },
-            () => {
-              if (isMounted) reloadData()
-            }
-          )
-          .subscribe()
-      } catch {}
+        const dualIds = getDualShopIds(shopId)
+        const activeIds = dualIds.length > 0 ? dualIds : [shopId]
+        channel = supabaseClient.channel(`realtime_shop_${shopId}`)
+
+        // Écoute sur les ventes, produits et courses pour chaque identifiant possible
+        activeIds.forEach(id => {
+          channel
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${id}` },
+              () => {
+                if (isMounted) reloadData()
+              }
+            )
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'products', filter: `shop_id=eq.${id}` },
+              () => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+                }
+              }
+            )
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'shopping_list', filter: `shop_id=eq.${id}` },
+              () => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
+                }
+              }
+            )
+        })
+
+        channel.subscribe()
+      } catch (err) {
+        console.warn('[Realtime] Souscription non active:', err)
+      }
     }
 
     // Polling de secours doux (120s) — uniquement si Realtime Supabase est indisponible
@@ -414,6 +442,17 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
     }
 
+    logAuditEvent({
+      shopId,
+      action: 'sale_crossed_out',
+      targetId: saleId,
+      details: {
+        total: target?.total,
+        client: target?.client,
+        articles: target?.articles,
+      },
+    })
+
     if (isSupabaseClientConfigured() && isOnline) {
       try {
         const targetShopIds = getDualShopIds(shopId)
@@ -424,6 +463,102 @@ export function useJournalData(shopId: string, isOnline: boolean) {
           .in('shop_id', targetShopIds)
       } catch (e) {
         console.warn('Erreur mise à jour status Supabase:', e)
+      }
+    }
+  }, [allSales, calculateSummary, isOnline, shopId])
+
+  const returnSale = useCallback(async (
+    originalSaleId: string,
+    returnedArticles: Array<{ name: string; quantity: number; unit_price: number }>,
+    refundAmount: number,
+    notes?: string
+  ) => {
+    const today = getTodayDateString()
+    const now = new Date()
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const returnSaleId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `ret_${Date.now()}`
+
+    const originalSale = allSales.find(s => s.id === originalSaleId)
+    const clientName = originalSale?.client || 'Client anonyme'
+
+    const returnSaleItem: OfflineSale = {
+      id: returnSaleId,
+      shop_id: shopId || 'default-shop',
+      date: today,
+      time: timeStr,
+      client: clientName,
+      articles: returnedArticles,
+      total: refundAmount,
+      paid: refundAmount,
+      debt: 0,
+      status: 'paid',
+      type: 'sale_return',
+      pen_color: 'red',
+      notes: notes || `Retour marchandise réf #${originalSaleId.slice(0, 8)} - Remboursement`,
+      category: 'Retour Marchandise',
+      created_at: now.toISOString(),
+      is_synced: false,
+    }
+
+    saveOfflineSale(shopId, returnSaleItem)
+
+    setAllSales(prev => {
+      const updated = [returnSaleItem, ...prev]
+      const todays = updated.filter(s => s.date === today)
+      setSales(todays)
+      calculateSummary(updated, todays)
+      return updated
+    })
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+      window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+    }
+
+    logAuditEvent({
+      shopId,
+      action: 'sale_returned',
+      targetId: returnSaleId,
+      details: {
+        originalSaleId,
+        refundAmount,
+        returnedArticles,
+      },
+    })
+
+    if (isSupabaseClientConfigured() && isOnline) {
+      try {
+        await fetch('/api/sales', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId,
+          },
+          body: JSON.stringify({
+            id: returnSaleId,
+            date: today,
+            time: timeStr,
+            created_at: returnSaleItem.created_at,
+            type: 'sale_return',
+            status: 'paid',
+            category: 'Retour Marchandise',
+            text: returnSaleItem.notes,
+            penColor: 'red',
+            overrideData: {
+              type: 'sale_return',
+              status: 'paid',
+              category: 'Retour Marchandise',
+              articles: returnedArticles,
+              total_amount: refundAmount,
+              paid_amount: refundAmount,
+              debt_amount: 0,
+              client_name: clientName,
+            },
+          }),
+        })
+      } catch (err) {
+        console.warn('Erreur synchronisation retour marchandise:', err)
       }
     }
   }, [allSales, calculateSummary, isOnline, shopId])
@@ -691,6 +826,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     isLoading,
     reloadData,
     crossOutSale,
+    returnSale,
     addArticleToSale,
     updateSale,
     updateCategory,

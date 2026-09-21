@@ -53,8 +53,8 @@ export async function GET(request: Request) {
 
     for (const sale of salesData || []) {
       if (sale.status === 'crossed_out') continue
-      const isIn = ['purchase_cash', 'purchase_credit', 'stock_cash', 'stock_in'].includes(sale.type)
-      const isOut = ['cash_in', 'sale_credit', 'sale', 'sale_cash', 'stock_damage', 'personal_use'].includes(sale.type)
+      const isIn = ['purchase_cash', 'purchase_credit', 'stock_cash', 'stock_in', 'sale_return'].includes(sale.type)
+      const isOut = ['cash_in', 'sale_credit', 'sale', 'sale_cash', 'stock_damage', 'personal_use', 'purchase_return'].includes(sale.type)
       if (!isIn && !isOut) continue
 
       for (const article of (sale.sold_articles as any[] | null) || []) {

@@ -5,7 +5,7 @@ import { answerBoutiqueQuestion, AnalyticsAnswer } from '@/lib/boutiqueAnalytics
 import {
   Sparkles, Mic, MicOff, Send, X,
   TrendingUp, Calendar, Wheat, CreditCard, AlertTriangle,
-  Lightbulb, MessageSquare
+  Lightbulb, MessageSquare, Bot
 } from 'lucide-react'
 
 interface BoutiqueAssistantModalProps {
@@ -13,17 +13,20 @@ interface BoutiqueAssistantModalProps {
   onClose: () => void
   sales: any[]
   products: any[]
+  shopName?: string
 }
 
 export default function BoutiqueAssistantModal({
   isOpen,
   onClose,
   sales,
-  products
+  products,
+  shopName = 'Ma Boutique'
 }: BoutiqueAssistantModalProps) {
   const [query, setQuery] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [currentAnswer, setCurrentAnswer] = useState<AnalyticsAnswer | null>(null)
+  const [isAiLoading, setIsAiLoading] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -36,11 +39,72 @@ export default function BoutiqueAssistantModal({
 
   if (!isOpen) return null
 
-  const handleAsk = (textToAsk?: string) => {
-    const q = textToAsk || query
-    if (!q.trim()) return
-    const result = answerBoutiqueQuestion(q, sales, products)
-    setCurrentAnswer(result)
+  const handleAsk = async (textToAsk?: string) => {
+    const q = (textToAsk || query).trim()
+    if (!q) return
+
+    // 1. Calcul local instantané (0 latence)
+    const localResult = answerBoutiqueQuestion(q, sales, products)
+    setCurrentAnswer(localResult)
+
+    // 2. Si l'intention locale est générique ou non reconnue précisément, interroger l'IA en renfort
+    if (localResult.type === 'general' && typeof window !== 'undefined' && navigator.onLine) {
+      setIsAiLoading(true)
+
+      try {
+        // Préparer un résumé compact des métriques clés de la boutique
+        const todayIso = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+        const activeSales = sales.filter(s => s.status !== 'crossed_out')
+        const todaySales = activeSales.filter(s => s.date === todayIso)
+        const todayRevenue = todaySales
+          .filter(s => ['cash_in', 'sale', 'sale_cash', 'payment_client'].includes(s.type) || s.pen_color === 'blue' || s.pen === 'blue')
+          .reduce((sum, s) => sum + (s.paid || s.total || 0), 0)
+        
+        const totalDebtsOut = activeSales
+          .filter(s => (s.debt || 0) > 0 && s.type !== 'purchase_credit')
+          .reduce((sum, s) => sum + (s.debt || 0), 0)
+
+        const lowStockCount = products.filter(p => (p.current_stock ?? p.initial_stock ?? 0) <= (p.alert_threshold ?? 5)).length
+
+        const contextSummary = `Boutique: ${shopName}. Recettes espèces aujourd'hui: ${todayRevenue.toLocaleString('fr-FR')} FCFA (${todaySales.length} opérations). Total dettes clients à recouvrer: ${totalDebtsOut.toLocaleString('fr-FR')} FCFA. Catalogue: ${products.length} produits, dont ${lowStockCount} en stock critique.`
+
+        const messages = [
+          {
+            role: 'system',
+            content: `Tu es le conseiller commercial et expert de gestion pour le commerçant gérant "${shopName}". Réponds à sa question en français simple, précis et encourageant. Utilise au maximum 3 phrases. Mets les chiffres et noms clés en gras avec **...**. Pas d'émojis superflus. Données actuelles de la boutique: ${contextSummary}`
+          },
+          {
+            role: 'user',
+            content: q
+          }
+        ]
+
+        const res = await fetch('/api/ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages, temperature: 0.4 })
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          const aiText = data?.choices?.[0]?.message?.content || data?.content
+          if (aiText && typeof aiText === 'string') {
+            setCurrentAnswer({
+              question: q,
+              answer: aiText.trim(),
+              type: 'general',
+              details: [
+                `Analyse intelligente générée à partir des données réelles de votre boutique.`
+              ]
+            })
+          }
+        }
+      } catch (err) {
+        console.warn('[BoutiqueAssistant] Fallback IA non disponible, conservation de la réponse locale:', err)
+      } finally {
+        setIsAiLoading(false)
+      }
+    }
   }
 
   const handleVoiceInput = () => {
@@ -94,11 +158,11 @@ export default function BoutiqueAssistantModal({
         <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-4 text-white flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-amber-100" strokeWidth={1.75} />
+              <Sparkles className="w-5 h-5 text-amber-100" strokeWidth={1.75} />
             </div>
             <div>
-              <h3 className="font-bold text-sm leading-tight">Assistant Bilan & Stock</h3>
-              <p className="text-[10px] text-amber-100 font-mono">Posez toutes vos questions en vocal ou texte (0 FCFA)</p>
+              <h3 className="font-bold text-sm leading-tight">Assistant Bilan & Intelligence Boutique</h3>
+              <p className="text-[10px] text-amber-100 font-mono">Posez vos questions en vocal ou écrit • Analyse instantanée</p>
             </div>
           </div>
           <button
@@ -163,7 +227,7 @@ export default function BoutiqueAssistantModal({
           {/* Quick Suggestions Chips */}
           <div className="space-y-1.5">
             <p className="text-[10px] uppercase font-bold text-gray-400 font-mono tracking-wider">
-              Exemples de questions rapides :
+              Exemples de questions fréquentes :
             </p>
             <div className="flex flex-wrap gap-1.5">
               {quickQuestions.map((item, idx) => {
@@ -188,9 +252,17 @@ export default function BoutiqueAssistantModal({
           {/* Display Answer Card */}
           {currentAnswer ? (
             <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300 rounded-2xl p-4 space-y-2 shadow-xs animate-in fade-in duration-200">
-              <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
-                <Lightbulb className="w-4 h-4 text-amber-700" strokeWidth={1.75} />
-                <span>Réponse de l'assistant :</span>
+              <div className="flex items-center justify-between text-amber-900 font-bold text-xs">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-amber-700" strokeWidth={1.75} />
+                  <span>Réponse :</span>
+                </div>
+                {isAiLoading && (
+                  <span className="flex items-center gap-1 text-[10px] text-amber-700 animate-pulse font-mono font-medium">
+                    <Bot className="w-3 h-3 text-amber-600" />
+                    <span>Analyse IA en cours...</span>
+                  </span>
+                )}
               </div>
 
               <div

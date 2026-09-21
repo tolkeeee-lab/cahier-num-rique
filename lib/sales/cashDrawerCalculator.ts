@@ -12,13 +12,13 @@ export function getItemCashDelta(item: any): number {
   const paid = Number.isFinite(rawPaid) ? rawPaid : 0
   const total = Number.isFinite(rawTotal) ? rawTotal : 0
 
-  if (type === 'cash_in' || type === 'payment_client' || type === 'sale' || type === 'sale_cash') {
-    return paid > 0 ? paid : (type === 'cash_in' || type === 'sale' ? total : 0)
+  if (type === 'cash_in' || type === 'payment_client' || type === 'sale' || type === 'sale_cash' || type === 'purchase_return') {
+    return paid > 0 ? paid : (type === 'cash_in' || type === 'sale' || type === 'purchase_return' ? total : 0)
   }
   if (type === 'sale_credit') {
     return paid > 0 ? paid : 0
   }
-  if (type === 'cash_out' || type === 'purchase_cash') {
+  if (type === 'cash_out' || type === 'purchase_cash' || type === 'sale_return') {
     return -(total > 0 ? total : paid)
   }
   if (type === 'payment_supplier') {

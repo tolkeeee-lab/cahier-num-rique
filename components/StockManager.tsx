@@ -9,6 +9,7 @@ import { RestockAdvisorModal } from '@/components/stock/RestockAdvisorModal'
 import { ProductMergeModal } from '@/components/stock/ProductMergeModal'
 import { SmartProductQuickAdd, FinancialImpactOption } from '@/components/stock/SmartProductQuickAdd'
 import { RealValueCalculatorModal } from '@/components/stock/RealValueCalculatorModal'
+import { ExpressAdjustmentModal } from '@/components/stock/ExpressAdjustmentModal'
 import { BarcodeScannerModal } from '@/components/BarcodeScannerModal'
 import { StockFormState } from '@/components/stock/types'
 import { exportProductsToCSV } from '@/lib/exportUtils'
@@ -96,6 +97,15 @@ export function StockManager({
   const [formData, setFormData] = useState<StockFormState>(defaultFormData)
   const [saving, setSaving] = useState(false)
   const [deductPastSales, setDeductPastSales] = useState(false)
+
+  // États pour l'Ajustement Express (Casse, Perte, Conso perso, Achat carton)
+  const [expressItem, setExpressItem] = useState<any | null>(null)
+  const [expressType, setExpressType] = useState<'in' | 'out'>('out')
+  const [expressQty, setExpressQty] = useState<number>(1)
+  const [expressReason, setExpressReason] = useState<string>('damage')
+  const [expressUnitCost, setExpressUnitCost] = useState<string>('')
+  const [expressNotes, setExpressNotes] = useState<string>('')
+  const [isAdjustingExpress, setIsAdjustingExpress] = useState<boolean>(false)
 
   // Références anti-rebond par produit pour ajustements de stock sur réseaux instables
   const debounceTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
@@ -477,6 +487,146 @@ export function StockManager({
     debounceTimersRef.current.set(id, timer)
   }, [shopId])
 
+  const handleOpenExpressAdjustment = (product: Product, type: 'in' | 'out') => {
+    setExpressItem(product)
+    setExpressType(type)
+    setExpressQty(1)
+    setExpressReason(type === 'in' ? 'purchase' : 'damage')
+    setExpressUnitCost(product.unit_cost ? String(product.unit_cost) : '')
+    setExpressNotes('')
+  }
+
+  const handleSubmitExpressAdjustment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!expressItem || expressQty <= 0) return
+    setIsAdjustingExpress(true)
+
+    try {
+      const isOut = expressType === 'out'
+      const delta = isOut ? -expressQty : expressQty
+      const currentStock = expressItem.current_stock ?? expressItem.initial_stock ?? 0
+      const nextStock = Math.max(0, currentStock + delta)
+      const costNum = parseFloat(expressUnitCost) || expressItem.unit_cost || 0
+
+      // 1. Mise à jour immédiate du produit en local
+      const updatedProduct = { ...expressItem, current_stock: nextStock }
+      saveOfflineProduct(shopId, updatedProduct as any)
+      setProducts(prev => prev.map(p => p.id === expressItem.id ? updatedProduct : p))
+      productsRef.current = productsRef.current.map(p => p.id === expressItem.id ? updatedProduct : p)
+
+      // 2. Création de l'écriture comptable correspondante
+      let saleType = 'stock_in'
+      let penColor = 'green'
+      let totalAmount = 0
+      let paidAmount = 0
+
+      if (isOut) {
+        if (expressReason === 'personal_use') {
+          saleType = 'personal_use'
+          penColor = 'red'
+        } else {
+          saleType = 'stock_damage'
+          penColor = 'red'
+        }
+      } else {
+        if (expressReason === 'purchase') {
+          saleType = 'purchase_cash'
+          penColor = 'green'
+          totalAmount = Math.round(costNum * expressQty)
+          paidAmount = totalAmount
+        } else {
+          saleType = 'stock_in'
+          penColor = 'green'
+        }
+      }
+
+      const todayIso = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+      const currentTime = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(new Date())
+
+      const reasonLabel = expressReason === 'purchase'
+        ? 'Achat / Reconstitution de stock'
+        : expressReason === 'damage'
+        ? 'Casse / Perte / Produit périmé'
+        : expressReason === 'personal_use'
+        ? 'Consommation personnelle / Équipe'
+        : 'Ajustement d\'inventaire'
+
+      const noteFull = `${reasonLabel} : ${expressItem.name} x${expressQty}${expressNotes ? ` (${expressNotes})` : ''}`
+
+      const offlineSaleRecord: OfflineSale = {
+        id: generateOfflineId(),
+        shop_id: shopId,
+        date: todayIso,
+        time: currentTime,
+        client: isOut ? (expressReason === 'personal_use' ? 'Consommation interne' : 'Avarie / Perte') : 'Fournisseur Stock',
+        total: totalAmount,
+        paid: paidAmount,
+        debt: 0,
+        status: 'paid',
+        type: saleType,
+        pen_color: penColor,
+        notes: noteFull,
+        category: expressItem.category || 'Stock',
+        articles: [{
+          name: expressItem.name,
+          quantity: expressQty,
+          unit_price: costNum || expressItem.unit_price || 0,
+          category: expressItem.category
+        }],
+        created_at: new Date().toISOString(),
+        is_synced: false
+      }
+
+      saveOfflineSale(shopId, offlineSaleRecord)
+
+      // Déclenchement des événements réactifs
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+        window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+      }
+
+      try {
+        audioFeedback.playInkStamp()
+      } catch {}
+
+      // 3. Synchronisation distante non-bloquante
+      fetch('/api/stock', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+        body: JSON.stringify({ id: expressItem.id, name: expressItem.name, current_stock: nextStock }),
+      }).catch(err => console.warn('Sync stock hors ligne:', err))
+
+      if (totalAmount > 0 || isOut) {
+        fetch('/api/sales', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+          body: JSON.stringify({
+            shop_id: shopId,
+            type: saleType,
+            pen_color: penColor,
+            overrideData: {
+              articles: [{ name: expressItem.name, quantity: expressQty, unit_price: costNum }],
+              total_amount: totalAmount,
+              paid_amount: paidAmount,
+              debt_amount: 0,
+              client_name: offlineSaleRecord.client,
+              category: expressItem.category || 'Stock',
+              type: saleType
+            },
+            notes: noteFull
+          })
+        }).catch(err => console.warn('Sync vente ajustement hors ligne:', err))
+      }
+
+      setExpressItem(null)
+    } catch (err: any) {
+      console.error('Erreur ajustement express:', err)
+      if (onError) onError(err.message)
+    } finally {
+      setIsAdjustingExpress(false)
+    }
+  }
+
   const handleDeleteProduct = async (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id))
     deleteOfflineProduct(shopId, id)
@@ -684,6 +834,7 @@ export function StockManager({
         onEditProduct={handleOpenEditModal}
         onDeleteProduct={handleDeleteProduct}
         onOpenCalculator={handleOpenCalculator}
+        onOpenExpressAdjustment={handleOpenExpressAdjustment}
         isEmployee={isEmployee}
       />
 
@@ -746,6 +897,24 @@ export function StockManager({
           activePairIndex={activePairIndex}
           merging={merging}
           onMergeProducts={handleMergeProducts}
+        />
+      )}
+
+      {expressItem && (
+        <ExpressAdjustmentModal
+          expressItem={expressItem}
+          expressType={expressType}
+          expressQty={expressQty}
+          setExpressQty={setExpressQty}
+          expressReason={expressReason}
+          setExpressReason={setExpressReason}
+          expressUnitCost={expressUnitCost}
+          setExpressUnitCost={setExpressUnitCost}
+          expressNotes={expressNotes}
+          setExpressNotes={setExpressNotes}
+          adjusting={isAdjustingExpress}
+          onClose={() => setExpressItem(null)}
+          onSubmit={handleSubmitExpressAdjustment}
         />
       )}
     </div>

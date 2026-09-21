@@ -5,6 +5,19 @@
 export type UserRole = 'owner' | 'admin' | 'employee' | string | null
 
 /**
+ * Vérifie si l'utilisateur est un super administrateur de la plateforme.
+ */
+export function isSuperAdmin(role?: UserRole | null, email?: string | null): boolean {
+  if (!role && !email) return false
+  const r = (role || '').toLowerCase().trim()
+  if (r === 'superadmin' || r === 'admin_global') return true
+  const e = (email || '').toLowerCase().trim()
+  if (e.endsWith('@cahier.admin')) return true
+  // Si c'est un rôle admin avec confirmation par variables d'environnement ou domaine admin
+  return false
+}
+
+/**
  * Vérifie si l'utilisateur actuel est un employé (caissier, vendeur, etc.).
  */
 export function isEmployeeRole(role?: UserRole | null): boolean {

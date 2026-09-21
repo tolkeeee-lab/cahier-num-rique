@@ -8,7 +8,7 @@
 import { OfflineSale, OfflineProduct } from './offlineDb'
 
 const DB_NAME = 'cahier_num_rique_db'
-const DB_VERSION = 1
+const DB_VERSION = 3
 
 export interface SyncQueueItem {
   id: string
@@ -18,6 +18,40 @@ export interface SyncQueueItem {
   timestamp: string
   retries: number
   lastError?: string
+}
+
+export interface OfflineCashClosing {
+  id: string
+  shop_id: string
+  date: string
+  closing_time?: string
+  opening_cash: number
+  theoretical_cash: number
+  actual_cash: number
+  difference: number
+  cash_receipts: number
+  expenses: number
+  credit_sales?: number
+  notes?: string
+  created_at?: string
+  is_synced?: boolean
+}
+
+export interface OfflineShoppingItem {
+  id: string
+  shop_id: string
+  name: string
+  quantity: number
+  unit_cost: number
+  is_wholesale?: boolean
+  wholesale_qty?: number
+  wholesale_price?: number
+  items_per_wholesale?: number
+  is_checked: boolean
+  category?: string
+  created_at?: string
+  updated_at?: string
+  is_synced?: boolean
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -67,11 +101,25 @@ export function getIDB(): Promise<IDBDatabase> {
           suppStore.createIndex('client_name', 'client_name', { unique: false })
         }
 
+        // Store de la Liste de Courses
+        if (!db.objectStoreNames.contains('shopping_list')) {
+          const shoppingStore = db.createObjectStore('shopping_list', { keyPath: 'id' })
+          shoppingStore.createIndex('shop_id', 'shop_id', { unique: false })
+          shoppingStore.createIndex('is_checked', 'is_checked', { unique: false })
+        }
+
         // Store de la File d'attente de Synchronisation Réseau
         if (!db.objectStoreNames.contains('sync_queue')) {
           const syncStore = db.createObjectStore('sync_queue', { keyPath: 'id' })
           syncStore.createIndex('shopId', 'shopId', { unique: false })
           syncStore.createIndex('timestamp', 'timestamp', { unique: false })
+        }
+
+        // Store des Clôtures de Caisse (Z)
+        if (!db.objectStoreNames.contains('cash_closings')) {
+          const closingStore = db.createObjectStore('cash_closings', { keyPath: 'id' })
+          closingStore.createIndex('shop_id', 'shop_id', { unique: false })
+          closingStore.createIndex('date', 'date', { unique: false })
         }
       }
 
@@ -283,6 +331,73 @@ export async function idbReplaceProducts(shopId: string, products: OfflineProduc
 
 export async function idbDeleteProduct(productId: string): Promise<void> {
   return deleteFromStore('products', productId)
+}
+
+// ─── API Shopping List (IDB) ──────────────────────────────────────────────────
+
+export async function idbGetShoppingItems(shopId?: string): Promise<OfflineShoppingItem[]> {
+  return getAllFromStore<OfflineShoppingItem>('shopping_list', shopId)
+}
+
+export async function idbSaveShoppingItem(item: OfflineShoppingItem): Promise<void> {
+  return putInStore<OfflineShoppingItem>('shopping_list', item)
+}
+
+export async function idbReplaceShoppingItems(shopId: string, items: OfflineShoppingItem[]): Promise<void> {
+  const db = await getIDB()
+  const tx = db.transaction('shopping_list', 'readwrite')
+  const store = tx.objectStore('shopping_list')
+  const index = store.index('shop_id')
+  const alt = getAltShopId(shopId)
+
+  return new Promise((resolve, reject) => {
+    const primaryKeysReq = index.getAllKeys(shopId)
+    primaryKeysReq.onsuccess = () => {
+      const keys = [...primaryKeysReq.result]
+      if (alt) {
+        const altKeysReq = index.getAllKeys(alt)
+        altKeysReq.onsuccess = () => {
+          const allKeys = Array.from(new Set([...keys, ...altKeysReq.result]))
+          allKeys.forEach(key => store.delete(key))
+          items.forEach(it => store.put(it))
+        }
+        altKeysReq.onerror = () => {
+          keys.forEach(key => store.delete(key))
+          items.forEach(it => store.put(it))
+        }
+      } else {
+        keys.forEach(key => store.delete(key))
+        items.forEach(it => store.put(it))
+      }
+    }
+    primaryKeysReq.onerror = () => reject(primaryKeysReq.error)
+
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+export async function idbDeleteShoppingItem(itemId: string): Promise<void> {
+  return deleteFromStore('shopping_list', itemId)
+}
+
+// ─── API Clôtures de Caisse Z (IDB) ──────────────────────────────────────────
+
+export async function idbGetCashClosings(shopId: string): Promise<OfflineCashClosing[]> {
+  const primary = await getAllFromStore<OfflineCashClosing>('cash_closings', shopId)
+  const alt = getAltShopId(shopId)
+  if (!alt) {
+    return primary.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+  }
+  const secondary = await getAllFromStore<OfflineCashClosing>('cash_closings', alt)
+  const map = new Map<string, OfflineCashClosing>()
+  for (const c of secondary) map.set(c.id, c)
+  for (const c of primary) map.set(c.id, c)
+  return Array.from(map.values()).sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+}
+
+export async function idbSaveCashClosing(closing: OfflineCashClosing): Promise<void> {
+  return putInStore<OfflineCashClosing>('cash_closings', closing)
 }
 
 // ─── API Sync Queue (IDB) ─────────────────────────────────────────────────────

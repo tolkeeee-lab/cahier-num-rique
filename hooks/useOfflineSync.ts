@@ -21,7 +21,12 @@ import {
   markSyncError,
   getPendingOfflineProducts,
   markProductAsSynced,
+  getOfflineCashClosings,
+  saveOfflineCashClosing,
+  getOfflineShoppingList,
+  replaceOfflineShoppingList,
 } from '@/lib/offlineDb'
+import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import type { SyncStatus } from '@/hooks/useNetworkStatus'
 
 interface UseOfflineSyncOptions {
@@ -62,8 +67,10 @@ export function useOfflineSync({
     const pendingIds = new Set(pending.map(s => s.id))
     const toSync = [...pending, ...errored.filter(s => !pendingIds.has(s.id))]
     const pendingProducts = getPendingOfflineProducts(shopId)
+    const pendingClosings = getOfflineCashClosings(shopId).filter(c => c.is_synced === false)
+    const pendingShopping = getOfflineShoppingList(shopId).filter(i => i.is_synced === false)
 
-    if (toSync.length === 0 && pendingProducts.length === 0) return
+    if (toSync.length === 0 && pendingProducts.length === 0 && pendingClosings.length === 0 && pendingShopping.length === 0) return
 
     isSyncing.current = true
     setSyncStatus('syncing')
@@ -94,7 +101,62 @@ export function useOfflineSync({
       }
     }
 
-    // 2. Synchronisation des Ventes hors-ligne
+    // 2. Synchronisation des Clôtures de Caisse hors-ligne (Z)
+    for (const closing of pendingClosings) {
+      try {
+        const response = await fetch('/api/cash-closings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId,
+          },
+          body: JSON.stringify(closing),
+        })
+        if (response.ok) {
+          saveOfflineCashClosing(shopId, { ...closing, is_synced: true })
+          successCount++
+        }
+      } catch (err) {
+        console.warn('[OfflineSync] Erreur sync clôture caisse:', closing.date, err)
+      }
+    }
+
+    // 3. Synchronisation de la Liste de Courses hors-ligne
+    if (pendingShopping.length > 0 && isSupabaseClientConfigured()) {
+      try {
+        const { error } = await supabaseClient
+          .from('shopping_list')
+          .upsert(
+            pendingShopping.map(item => ({
+              id: item.id,
+              shop_id: shopId,
+              name: item.name,
+              quantity: item.quantity,
+              unit_cost: item.unit_cost,
+              is_wholesale: item.is_wholesale || false,
+              wholesale_qty: item.wholesale_qty || 0,
+              wholesale_price: item.wholesale_price || 0,
+              items_per_wholesale: item.items_per_wholesale || 1,
+              is_checked: item.is_checked,
+              updated_at: new Date().toISOString(),
+            })),
+            { onConflict: 'id' }
+          )
+        if (!error) {
+          const currentShopping = getOfflineShoppingList(shopId)
+          const updatedShopping = currentShopping.map(item => {
+            const wasPending = pendingShopping.some(p => p.id === item.id)
+            return wasPending ? { ...item, is_synced: true } : item
+          })
+          replaceOfflineShoppingList(shopId, updatedShopping)
+          successCount++
+        }
+      } catch (err) {
+        console.warn('[OfflineSync] Erreur sync shopping list:', err)
+      }
+    }
+
+    // 4. Synchronisation des Ventes hors-ligne
     for (const sale of toSync) {
       try {
         const response = await fetch('/api/sales', {

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Sparkles, Check, ArrowRight, HelpCircle } from 'lucide-react'
+import { Sparkles, Check, ArrowRight, HelpCircle, Tag } from 'lucide-react'
 import { parseSmartProductText, ParsedProductResult } from '@/lib/stock/smartProductParser'
 import { formatPrice } from '@/lib/penUtils'
 import { StockFormState } from './types'
@@ -171,8 +171,9 @@ export const ProductMagicForm: React.FC<ProductMagicFormProps> = ({
           {/* Grille des paliers détectés (Détail, Quart, Demi, Carton complet) */}
           {(Boolean(parsed.quarter_package_price) || Boolean(parsed.half_package_price) || Boolean(parsed.wholesale_price) || (parsed.lot_quantity > 0 && parsed.lot_price > 0)) && (
             <div className="p-2.5 bg-amber-50/80 border border-amber-300/80 rounded-xl space-y-1.5">
-              <span className="block text-[10px] font-extrabold text-amber-900 uppercase tracking-wider">
-                🏷️ Grille de Vente Multi-Paliers Automatique :
+              <span className="flex items-center gap-1.5 text-[10px] font-extrabold text-amber-900 uppercase tracking-wider">
+                <Tag className="w-3 h-3 text-amber-700" strokeWidth={1.75} />
+                <span>Grille de Vente Multi-Paliers Automatique :</span>
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-mono">
                 {/* 1 Pièce */}

@@ -11,9 +11,14 @@
 import {
   idbGetSales, idbSaveSale, idbReplaceSales,
   idbGetProducts, idbSaveProduct, idbReplaceProducts, idbDeleteProduct,
-  migrateLocalStorageToIndexedDB
+  idbGetShoppingItems, idbSaveShoppingItem, idbReplaceShoppingItems, idbDeleteShoppingItem,
+  idbGetCashClosings, idbSaveCashClosing,
+  migrateLocalStorageToIndexedDB,
+  OfflineShoppingItem, OfflineCashClosing
 } from './indexedDb'
 import { normalizeProductName, sanitizeProductData } from './productUtils'
+
+export type { OfflineShoppingItem, OfflineCashClosing }
 
 export interface OfflineSale {
   id: string
@@ -768,8 +773,8 @@ export function computeOfflineStock(
 
   for (const sale of sales) {
     if (sale.status === 'crossed_out') continue
-    const isIn = sale.type === 'purchase_cash' || sale.type === 'purchase_credit' || sale.type === 'stock_cash' || sale.type === 'stock_in'
-    const isOut = sale.type === 'cash_in' || sale.type === 'sale_credit' || sale.type === 'sale' || sale.type === 'sale_cash' || sale.type === 'stock_damage' || sale.type === 'personal_use'
+    const isIn = sale.type === 'purchase_cash' || sale.type === 'purchase_credit' || sale.type === 'stock_cash' || sale.type === 'stock_in' || sale.type === 'sale_return'
+    const isOut = sale.type === 'cash_in' || sale.type === 'sale_credit' || sale.type === 'sale' || sale.type === 'sale_cash' || sale.type === 'stock_damage' || sale.type === 'personal_use' || sale.type === 'purchase_return'
     if (!isIn && !isOut) continue
 
     const saleTime = sale.created_at ? new Date(sale.created_at).getTime() : new Date(sale.date).getTime()
@@ -815,3 +820,84 @@ export function computeOfflineStock(
 
   return stockMap
 }
+
+// ─── Gestion Hors-Ligne de la Liste de Courses (Shopping List) ─────────────────
+
+function shoppingListKey(shopId: string): string {
+  return `cahier_shopping_list_${shopId}`
+}
+
+export function getOfflineShoppingList(shopId: string): OfflineShoppingItem[] {
+  if (typeof window === 'undefined') return []
+  const items = readJson<OfflineShoppingItem[]>(shoppingListKey(shopId), [])
+  
+  // Hydratation asynchrone non-bloquante depuis IndexedDB
+  idbGetShoppingItems(shopId).then(idbItems => {
+    if (idbItems && idbItems.length > 0 && items.length === 0) {
+      writeJson(shoppingListKey(shopId), idbItems)
+    }
+  }).catch(() => {})
+
+  return items
+}
+
+export function saveOfflineShoppingItem(shopId: string, item: OfflineShoppingItem): void {
+  const items = getOfflineShoppingList(shopId)
+  const idx = items.findIndex(i => i.id === item.id)
+  if (idx !== -1) {
+    items[idx] = item
+  } else {
+    items.unshift(item)
+  }
+  writeJson(shoppingListKey(shopId), items)
+  idbSaveShoppingItem(item).catch(() => {})
+}
+
+export function deleteOfflineShoppingItem(shopId: string, itemId: string): void {
+  const items = getOfflineShoppingList(shopId).filter(i => i.id !== itemId)
+  writeJson(shoppingListKey(shopId), items)
+  idbDeleteShoppingItem(itemId).catch(() => {})
+}
+
+export function replaceOfflineShoppingList(shopId: string, items: OfflineShoppingItem[]): void {
+  writeJson(shoppingListKey(shopId), items)
+  idbReplaceShoppingItems(shopId, items).catch(() => {})
+}
+
+// ─── Gestion Hors-Ligne des Clôtures de Caisse (Z) ───────────────────────────
+
+function cashClosingsKey(shopId: string): string {
+  return `cahier_cash_closings_${shopId}`
+}
+
+export function getOfflineCashClosings(shopId: string): OfflineCashClosing[] {
+  if (typeof window === 'undefined') return []
+  const closings = readJson<OfflineCashClosing[]>(cashClosingsKey(shopId), [])
+
+  // Hydratation asynchrone non-bloquante depuis IndexedDB
+  idbGetCashClosings(shopId).then(idbClosings => {
+    if (idbClosings && idbClosings.length > 0 && closings.length === 0) {
+      writeJson(cashClosingsKey(shopId), idbClosings)
+    }
+  }).catch(() => {})
+
+  return closings
+}
+
+export function saveOfflineCashClosing(shopId: string, closing: OfflineCashClosing): void {
+  const closings = getOfflineCashClosings(shopId)
+  const idx = closings.findIndex(c => c.id === closing.id || (c.date === closing.date && c.shop_id === closing.shop_id))
+  if (idx !== -1) {
+    closings[idx] = closing
+  } else {
+    closings.unshift(closing)
+  }
+  writeJson(cashClosingsKey(shopId), closings)
+  idbSaveCashClosing(closing).catch(() => {})
+}
+
+export function replaceOfflineCashClosings(shopId: string, closings: OfflineCashClosing[]): void {
+  writeJson(cashClosingsKey(shopId), closings)
+  Promise.all(closings.map(c => idbSaveCashClosing(c))).catch(() => {})
+}
+

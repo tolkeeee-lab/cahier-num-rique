@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Printer, X } from 'lucide-react'
+import { Printer, X, Share2, Copy, Check } from 'lucide-react'
 
 interface ReceiptArticle {
   name: string
@@ -39,6 +39,7 @@ export function ReceiptPrinterModal({
   shopName = 'Cahier Numérique',
 }: ReceiptPrinterModalProps) {
   const [paperWidth, setPaperWidth] = useState<'58mm' | '80mm'>('58mm')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -60,6 +61,67 @@ export function ReceiptPrinterModal({
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fr-FR').format(price) + ' F'
+  }
+
+  const generateReceiptText = () => {
+    const effectiveTotal = sale.total ?? (sale as any).total_amount ?? 0
+    const effectivePaid = sale.paid ?? (sale as any).paid_amount ?? 0
+    const debtAmount = (sale.debt !== undefined && sale.debt !== null)
+      ? Number(sale.debt)
+      : ((sale as any).debt_amount !== undefined && (sale as any).debt_amount !== null)
+        ? Number((sale as any).debt_amount)
+        : Math.max(0, effectiveTotal - effectivePaid)
+
+    const clientName = sale.client || (sale as any).client_name
+
+    const lines: string[] = [
+      `🧾 *${shopName.toUpperCase()}*`,
+      `Date : ${sale.date}${sale.time ? ` à ${sale.time}` : ''}`,
+      `Réf : #${sale.id.slice(0, 8)}`,
+    ]
+
+    if (clientName) {
+      lines.push(`Client : ${clientName}`)
+    }
+
+    lines.push('────────────────────────')
+
+    if (sale.articles && sale.articles.length > 0) {
+      sale.articles.forEach(art => {
+        lines.push(`• ${art.quantity}x ${art.name} (${formatPrice(art.unit_price)}) = ${formatPrice(art.quantity * art.unit_price)}`)
+      })
+    } else {
+      lines.push(`• ${sale.notes || 'Vente'} = ${formatPrice(effectiveTotal)}`)
+    }
+
+    lines.push('────────────────────────')
+    lines.push(`*TOTAL :* ${formatPrice(effectiveTotal)}`)
+    lines.push(`Payé : ${formatPrice(effectivePaid)}`)
+
+    if (debtAmount > 0) {
+      lines.push(`*Reste dû (Dette) :* ${formatPrice(debtAmount)}`)
+    }
+
+    lines.push('────────────────────────')
+    lines.push('Merci de votre confiance !')
+
+    return lines.join('\n')
+  }
+
+  const handleShareWhatsApp = () => {
+    const text = generateReceiptText()
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+  }
+
+  const handleCopyText = async () => {
+    try {
+      const text = generateReceiptText()
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.warn('[Receipt] Erreur copie presse-papier:', err)
+    }
   }
 
   return (
@@ -216,20 +278,47 @@ export function ReceiptPrinterModal({
         </div>
 
         {/* Boutons d'action */}
-        <div className="p-4 bg-[#f5f1e8] border-t border-gray-200 flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 active:scale-[0.97] transition-all cursor-pointer shadow-2xs"
-          >
-            Fermer
-          </button>
-          <button
-            onClick={handlePrint}
-            className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-all cursor-pointer shadow-xs"
-          >
-            <Printer className="w-3.5 h-3.5" strokeWidth={1.75} />
-            <span>Imprimer</span>
-          </button>
+        <div className="p-4 bg-[#f5f1e8] border-t border-gray-200 flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button
+              onClick={handleCopyText}
+              className="flex-1 py-2 px-3 border border-gray-300 bg-white hover:bg-gray-50 rounded-xl text-xs font-semibold text-gray-700 flex items-center justify-center gap-1.5 active:scale-[0.97] transition-all cursor-pointer shadow-2xs"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" strokeWidth={1.75} />
+                  <span className="text-emerald-700">Copié !</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-gray-500" strokeWidth={1.75} />
+                  <span>Copier</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleShareWhatsApp}
+              className="flex-1 py-2 px-3 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-all cursor-pointer shadow-2xs"
+            >
+              <Share2 className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
+              <span>WhatsApp</span>
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 border border-gray-300 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 active:scale-[0.97] transition-all cursor-pointer shadow-2xs"
+            >
+              Fermer
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-[0.97] transition-all cursor-pointer shadow-xs"
+            >
+              <Printer className="w-3.5 h-3.5" strokeWidth={1.75} />
+              <span>Imprimer</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

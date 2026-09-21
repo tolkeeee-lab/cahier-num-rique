@@ -25,6 +25,7 @@ interface NotebookModalsProps {
   products?: any[]
   currentShopName: string
   receiptSale?: any
+  shopId?: string
 }
 
 export const NotebookModals: React.FC<NotebookModalsProps> = ({
@@ -45,6 +46,7 @@ export const NotebookModals: React.FC<NotebookModalsProps> = ({
   products = [],
   currentShopName,
   receiptSale,
+  shopId,
 }) => {
   return (
     <>
@@ -55,6 +57,7 @@ export const NotebookModals: React.FC<NotebookModalsProps> = ({
           onClose={onCloseAssistantModal}
           sales={sales}
           products={products}
+          shopName={currentShopName}
         />
       )}
 
@@ -65,6 +68,7 @@ export const NotebookModals: React.FC<NotebookModalsProps> = ({
           onClose={onCloseCashClosingModal}
           sales={sales}
           shopName={currentShopName}
+          shopId={shopId}
         />
       )}
 

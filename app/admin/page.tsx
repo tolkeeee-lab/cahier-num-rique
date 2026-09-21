@@ -5,6 +5,7 @@ import { Store, Lock, LogOut, RefreshCw } from 'lucide-react'
 import { AdminStatsCards } from '@/components/admin/AdminStatsCards'
 import { AdminShopsTable } from '@/components/admin/AdminShopsTable'
 import { AdminSubscriptionModal } from '@/components/admin/AdminSubscriptionModal'
+import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
 interface AdminKPIs {
   totalBoutiques: number
@@ -42,14 +43,25 @@ export default function SuperAdminPage() {
   const [shopModalTab, setShopModalTab] = useState<'journal' | 'analytics'>('journal')
   const [loadingJournal, setLoadingJournal] = useState(false)
 
-  const loadAdminData = useCallback(async (emailToUse?: string) => {
+  const loadAdminData = useCallback(async (tokenToUse?: string) => {
     setLoading(true)
     setError('')
     try {
-      const email = emailToUse || adminEmail || localStorage.getItem('cahier_admin_email') || 'admin@cahier.com'
-      const response = await fetch('/api/admin', {
-        headers: { 'x-admin-email': email },
-      })
+      let token = tokenToUse
+      if (!token && isSupabaseClientConfigured()) {
+        const { data: { session } } = await supabaseClient.auth.getSession()
+        token = session?.access_token
+      }
+
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      if (adminEmail) {
+        headers['x-admin-email'] = adminEmail
+      }
+
+      const response = await fetch('/api/admin', { headers })
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.error || 'Impossible de récupérer les données d\'administration')
@@ -57,9 +69,6 @@ export default function SuperAdminPage() {
       setKpis(data.kpis)
       setShops(data.shops || [])
       setIsAdmin(true)
-      if (emailToUse) {
-        localStorage.setItem('cahier_admin_email', emailToUse)
-      }
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion')
       setIsAdmin(false)
@@ -69,22 +78,46 @@ export default function SuperAdminPage() {
   }, [adminEmail])
 
   useEffect(() => {
-    const saved = localStorage.getItem('cahier_admin_email')
-    if (saved) {
-      setAdminEmail(saved)
-      loadAdminData(saved)
+    if (isSupabaseClientConfigured()) {
+      supabaseClient.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          setAdminEmail(session.user.email || '')
+          loadAdminData(session.access_token)
+        }
+      }).catch(() => {})
     }
   }, [loadAdminData])
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     const email = adminEmail.trim().toLowerCase()
-    const validPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin2026'
-    const allowedAdmins = ['admin@cahier.com', 'tolkeeee@gmail.com', 'tolkeeeee@gmail.com']
-    if (allowedAdmins.includes(email) && adminPassword === validPassword) {
-      loadAdminData(email)
-    } else {
+    setLoading(true)
+    setError('')
+
+    try {
+      if (isSupabaseClientConfigured()) {
+        const { data, error: signErr } = await supabaseClient.auth.signInWithPassword({
+          email,
+          password: adminPassword,
+        })
+        if (signErr) throw signErr
+        if (data.session?.access_token) {
+          await loadAdminData(data.session.access_token)
+          return
+        }
+      } else {
+        // Mode développement local sans Supabase
+        const allowedAdmins = ['admin@cahier.com', 'tolkeeee@gmail.com', 'tolkeeeee@gmail.com']
+        if (allowedAdmins.includes(email)) {
+          await loadAdminData()
+          return
+        }
+      }
       setError('Identifiants administrateur incorrects.')
+    } catch (err: any) {
+      setError(err?.message || 'Erreur d\'authentification administrateur.')
+    } finally {
+      setLoading(false)
     }
   }
 

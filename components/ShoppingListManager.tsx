@@ -6,7 +6,6 @@ import { SupplierComparisonModal } from '@/components/shopping/SupplierCompariso
 import { ShoppingListToolbar } from '@/components/shopping/ShoppingListToolbar'
 import { formatPrice } from '@/lib/penUtils'
 import { ShoppingBag, Plus } from 'lucide-react'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 interface ShoppingItem {
   id: string
@@ -27,6 +26,14 @@ interface ShoppingListManagerProps {
   onError?: (err: string) => void
 }
 
+import { 
+  getOfflineShoppingList, 
+  deleteOfflineShoppingItem, 
+  replaceOfflineShoppingList,
+  OfflineShoppingItem 
+} from '@/lib/offlineDb'
+import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
+
 export function ShoppingListManager({ 
   shopId = 'default-shop', 
   onConvertToStockPurchase,
@@ -44,33 +51,134 @@ export function ShoppingListManager({
   const [showSupplierModal, setShowSupplierModal] = useState(false)
   const [selectedItemForSupplier] = useState<string>('')
 
-  const targetShopIds = getDualShopIds(shopId)
-
+  // Chargement initial unifié (Offline-first + Sync Supabase)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      for (const sId of targetShopIds) {
-        const saved = localStorage.getItem(`cahier_shopping_list_${sId}`)
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved)
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setItems(parsed)
-              return
-            }
-          } catch (e) {
-            console.error('Erreur lecture liste courses:', e)
+    if (typeof window === 'undefined') return
+
+    // 1. Charger immédiatement depuis la couche locale (offlineDb / IndexedDB)
+    const local = getOfflineShoppingList(shopId)
+    if (local && local.length > 0) {
+      setItems(local.map(l => ({
+        id: l.id,
+        name: l.name,
+        quantity: l.quantity,
+        unitCost: l.unit_cost,
+        isWholesale: l.is_wholesale,
+        wholesaleQty: l.wholesale_qty,
+        wholesalePrice: l.wholesale_price,
+        itemsPerWholesale: l.items_per_wholesale,
+        isChecked: l.is_checked,
+      })))
+    }
+
+    // 2. Si connecté à Supabase, synchroniser avec la table `shopping_list`
+    if (isSupabaseClientConfigured()) {
+      supabaseClient
+        .from('shopping_list')
+        .select('*')
+        .eq('shop_id', shopId)
+        .order('created_at', { ascending: false })
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0) {
+            const remoteMapped: ShoppingItem[] = data.map((d: any) => ({
+              id: d.id,
+              name: d.name,
+              quantity: Number(d.quantity) || 1,
+              unitCost: Number(d.unit_cost) || 0,
+              isWholesale: d.is_wholesale,
+              wholesaleQty: d.wholesale_qty,
+              wholesalePrice: d.wholesale_price,
+              itemsPerWholesale: d.items_per_wholesale,
+              isChecked: Boolean(d.is_checked),
+            }))
+            setItems(remoteMapped)
+            // Mettre à jour le cache local
+            const offlineMapped: OfflineShoppingItem[] = data.map((d: any) => ({
+              id: d.id,
+              shop_id: shopId,
+              name: d.name,
+              quantity: Number(d.quantity) || 1,
+              unit_cost: Number(d.unit_cost) || 0,
+              is_wholesale: d.is_wholesale,
+              wholesale_qty: d.wholesale_qty,
+              wholesale_price: d.wholesale_price,
+              items_per_wholesale: d.items_per_wholesale,
+              is_checked: Boolean(d.is_checked),
+              is_synced: true,
+            }))
+            replaceOfflineShoppingList(shopId, offlineMapped)
           }
-        }
+        })
+    }
+
+    const handleExternalUpdate = () => {
+      if (isSupabaseClientConfigured()) {
+        supabaseClient
+          .from('shopping_list')
+          .select('*')
+          .eq('shop_id', shopId)
+          .order('created_at', { ascending: false })
+          .then(({ data, error }) => {
+            if (!error && data) {
+              setItems(data.map((d: any) => ({
+                id: d.id,
+                name: d.name,
+                quantity: Number(d.quantity) || 1,
+                unitCost: Number(d.unit_cost) || 0,
+                isWholesale: d.is_wholesale,
+                wholesaleQty: d.wholesale_qty,
+                wholesalePrice: d.wholesale_price,
+                itemsPerWholesale: d.items_per_wholesale,
+                isChecked: Boolean(d.is_checked),
+              })))
+            }
+          })
       }
     }
+
+    window.addEventListener('cahier_shopping_updated', handleExternalUpdate)
+    return () => window.removeEventListener('cahier_shopping_updated', handleExternalUpdate)
   }, [shopId])
 
   const saveItems = (newItems: ShoppingItem[]) => {
     setItems(newItems)
-    if (typeof window !== 'undefined') {
-      for (const sId of targetShopIds) {
-        localStorage.setItem(`cahier_shopping_list_${sId}`, JSON.stringify(newItems))
-      }
+    const offlineItems: OfflineShoppingItem[] = newItems.map(i => ({
+      id: i.id,
+      shop_id: shopId,
+      name: i.name,
+      quantity: i.quantity,
+      unit_cost: i.unitCost,
+      is_wholesale: i.isWholesale,
+      wholesale_qty: i.wholesaleQty,
+      wholesale_price: i.wholesalePrice,
+      items_per_wholesale: i.itemsPerWholesale,
+      is_checked: i.isChecked,
+      is_synced: false,
+    }))
+    replaceOfflineShoppingList(shopId, offlineItems)
+
+    // Synchronisation en arrière-plan vers Supabase si en ligne
+    if (isSupabaseClientConfigured()) {
+      Promise.resolve(
+        supabaseClient
+          .from('shopping_list')
+          .upsert(
+            offlineItems.map(item => ({
+              id: item.id,
+              shop_id: shopId,
+              name: item.name,
+              quantity: item.quantity,
+              unit_cost: item.unit_cost,
+              is_wholesale: item.is_wholesale || false,
+              wholesale_qty: item.wholesale_qty || 0,
+              wholesale_price: item.wholesale_price || 0,
+              items_per_wholesale: item.items_per_wholesale || 1,
+              is_checked: item.is_checked,
+              updated_at: new Date().toISOString(),
+            })),
+            { onConflict: 'id' }
+          )
+      ).catch((err: any) => console.warn('[ShoppingList] Sync error:', err))
     }
   }
 
@@ -78,8 +186,9 @@ export function ShoppingListManager({
     e.preventDefault()
     if (!nameInput.trim()) return
 
+    const newItemId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `shop_item_${Date.now()}`
     const newItem: ShoppingItem = {
-      id: `shop_item_${Date.now()}`,
+      id: newItemId,
       name: nameInput.trim(),
       quantity: parseInt(qtyInput, 10) || 1,
       unitCost: parseFloat(costInput) || 0,
@@ -100,7 +209,13 @@ export function ShoppingListManager({
 
   const handleRemoveItem = (id: string) => {
     const updated = items.filter(it => it.id !== id)
-    saveItems(updated)
+    setItems(updated)
+    deleteOfflineShoppingItem(shopId, id)
+    if (isSupabaseClientConfigured()) {
+      Promise.resolve(
+        supabaseClient.from('shopping_list').delete().eq('id', id)
+      ).catch(() => {})
+    }
   }
 
   const filteredItems = items.filter(it => {

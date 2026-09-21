@@ -936,6 +936,7 @@ export default function JournalPage() {
                   phone={(mappedUser as any)?.user_metadata?.phone || (mappedUser as any)?.phone || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_phone_${shopManager.shopId}`) || '' : '')}
                   address={(mappedUser as any)?.user_metadata?.address || (mappedUser as any)?.address || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_address_${shopManager.shopId}`) || '' : '')}
                   userEmail={mappedUser?.email}
+                  userRole={effectiveRole}
                   userShops={shopManager.userShops}
                   onSaveProfile={shopManager.handleUpdateShopProfile}
                   onResetData={() => {
@@ -1002,6 +1003,7 @@ export default function JournalPage() {
         products={getOfflineProducts(shopManager.shopId)}
         currentShopName={shopManager.currentShop?.name || 'Cahier Numérique'}
         receiptSale={receiptSale}
+        shopId={shopManager.shopId}
       />
 
       <NewShopModal

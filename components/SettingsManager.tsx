@@ -3,6 +3,7 @@ import { Shield } from 'lucide-react'
 import { ShopProfileSettings } from '@/components/settings/ShopProfileSettings'
 import { EmployeeRoleManager } from '@/components/settings/EmployeeRoleManager'
 import { DataExportBackupSettings } from '@/components/settings/DataExportBackupSettings'
+import { isSuperAdmin } from '@/lib/roleUtils'
 
 interface Employee {
   id: string
@@ -20,6 +21,7 @@ export interface SettingsManagerProps {
   country?: string
   city?: string
   userEmail?: string
+  userRole?: string | null
   userShops?: any[]
   employees?: Employee[]
   onSaveProfile?: (data: { shopName: string; activity: string; phone: string; address: string; country: string; city: string }) => Promise<void>
@@ -39,6 +41,7 @@ export function SettingsManager({
   country = 'BJ',
   city = '',
   userEmail,
+  userRole,
   employees = [],
   onSaveProfile,
   onInviteEmployee,
@@ -46,7 +49,7 @@ export function SettingsManager({
   onExportBackup,
   onResetData,
 }: SettingsManagerProps) {
-  const isAdminUser = userEmail === 'tolkeeee@gmail.com' || userEmail === 'tolkeeeee@gmail.com' || userEmail === 'admin@cahier.com' || userEmail?.endsWith('@cahier.admin')
+  const isAdminUser = isSuperAdmin(userRole, userEmail)
 
   return (
     <div className="space-y-6">
