@@ -371,8 +371,17 @@ function readJson<T>(key: string, fallback: T): T {
 function writeJson<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))
-  } catch (e) {
-    console.error(`[offlineDb] Impossible d'écrire la clé "${key}":`, e)
+  } catch (e: any) {
+    console.warn(`[offlineDb] LocalStorage saturé ou inaccessible pour "${key}":`, e?.message)
+    // Si dépassement du quota LocalStorage (5 Mo), élaguer les plus anciennes entrées locales
+    // (IndexedDB v3 conserve l'intégralité sans limite)
+    if (e?.name === 'QuotaExceededError' && Array.isArray(value) && value.length > 400) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value.slice(0, 250)))
+      } catch {
+        // Ne jamais bloquer le fil d'exécution utilisateur
+      }
+    }
   }
 }
 

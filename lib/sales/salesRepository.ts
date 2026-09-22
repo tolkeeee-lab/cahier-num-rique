@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { isSupabaseConfigured } from './cashDrawerCalculator'
 import { getLocalDb } from '@/lib/localDb'
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export async function feedMarketKnowledge(
   articles: Array<{ nom: string; prix_unitaire: number; [key: string]: any }>,
@@ -33,8 +34,8 @@ export async function feedMarketKnowledge(
 
 export function getLocalSales(dateParam: string | null, shopId: string): any[] {
   const salesDatabase = getLocalDb()
-  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
-  let filtered = salesDatabase.filter(s => s.shop_id === shopId || s.shop_id === altShopId)
+  const validShopIds = new Set(getDualShopIds(shopId))
+  let filtered = salesDatabase.filter(s => validShopIds.has(s.shop_id))
   if (dateParam === 'today') {
     const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
     filtered = filtered.filter(s => s.date === today)
@@ -48,7 +49,11 @@ export async function fetchSalesHistory(dateParam: string | null, shopId: string
   }
 
   try {
-    const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
+    const targetShopIds = getDualShopIds(shopId)
+    const orFilter = targetShopIds.length > 1
+      ? targetShopIds.map(id => `shop_id.eq.${id}`).join(',')
+      : `shop_id.eq.${shopId}`
+
     let query = supabase
       .from('sales')
       .select(`
@@ -71,7 +76,7 @@ export async function fetchSalesHistory(dateParam: string | null, shopId: string
           category
         )
       `)
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .or(orFilter)
       .order('created_at', { ascending: false })
 
     if (dateParam === 'today') {

@@ -119,11 +119,38 @@ function resolveArticleWithPackaging(
   }
 }
 
+/**
+ * Développe les abréviations monétaires informelles (ex: 20k -> 20000, 1.5k -> 1500, 6k5 -> 6500, 20 mille -> 20000)
+ */
+export function expandShorthandThousands(input: string): string {
+  if (!input) return ''
+  let text = input
+
+  // 1. Notation 6k5 -> 6500, 1k2 -> 1200
+  text = text.replace(/\b(\d+)[kK](\d+)\b/g, (_, p1, p2) => {
+    const dec = p2.length === 1 ? Number(p2) * 100 : Number(p2)
+    return String(Number(p1) * 1000 + dec)
+  })
+
+  // 2. Notation 20k, 1.5k, 1,5k, 20 k
+  text = text.replace(/\b(\d+(?:[.,]\d+)?)\s*[kK]\b/g, (_, num) => {
+    return String(Math.round(parseFloat(num.replace(',', '.')) * 1000))
+  })
+
+  // 3. Notation 20 mille, 20 mil
+  text = text.replace(/\b(\d+(?:[.,]\d+)?)\s*(?:mille|milles|mil)\b/gi, (_, num) => {
+    return String(Math.round(parseFloat(num.replace(',', '.')) * 1000))
+  })
+
+  return text
+}
+
 export function parseTextLocally(text: string, penColor: string, catalog?: any[]): ParsedSale {
   const articles: any[] = []
   let totalFacture = 0
   
-  const rawCleaned = text.replace(/[,;\.\s]+$/, '').trim()
+  const expanded = expandShorthandThousands(text)
+  const rawCleaned = expanded.replace(/[,;\.\s]+$/, '').trim()
 
   const segments = rawCleaned.includes('\n') 
     ? rawCleaned.split('\n')

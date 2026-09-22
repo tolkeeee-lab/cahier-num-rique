@@ -222,7 +222,7 @@ export function StockItemRow({
           )}
 
           {/* Profitabilité & Marge (Masqué pour les employés ou si stock non suivi) */}
-          {canViewFinancialMargins(userRole) && item.stock_tracked && item.unit_price > 0 && item.unit_cost > 0 && item.unit_cost !== Math.round(item.unit_price * 0.6) && item.unit_cost !== Math.round(item.unit_price * 0.7) && (
+          {canViewFinancialMargins(userRole) && item.stock_tracked && item.unit_price > 0 && item.unit_cost > 0 && (
             <div className="mb-3 p-2 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between text-xs font-mono">
               <span className="text-amber-800 flex items-center gap-1.5">
                 <Coins className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
@@ -239,7 +239,7 @@ export function StockItemRow({
           {/* Seuil + Prix */}
           <div className="flex gap-4 text-[10px] font-mono mb-3 text-gray-500 flex-wrap">
             {canViewFinancialMargins(userRole) && (
-              item.stock_tracked && item.unit_cost > 0 && item.unit_cost !== Math.round(item.unit_price * 0.6) && item.unit_cost !== Math.round(item.unit_price * 0.7) ? (
+              item.stock_tracked && item.unit_cost > 0 ? (
                 <span>Achat: <strong className="text-gray-700">{formatPrice(item.unit_cost)}</strong></span>
               ) : (
                 <span className="text-gray-400 italic">Achat: Non renseigné</span>

@@ -1,9 +1,10 @@
-import React from 'react'
-import { Shield } from 'lucide-react'
+import React, { useState } from 'react'
+import { Shield, ShieldAlert } from 'lucide-react'
 import { ShopProfileSettings } from '@/components/settings/ShopProfileSettings'
 import { EmployeeRoleManager } from '@/components/settings/EmployeeRoleManager'
 import { DataExportBackupSettings } from '@/components/settings/DataExportBackupSettings'
-import { isSuperAdmin } from '@/lib/roleUtils'
+import { AuditLogsViewerModal } from '@/components/settings/AuditLogsViewerModal'
+import { isSuperAdmin, isEmployeeRole } from '@/lib/roleUtils'
 
 interface Employee {
   id: string
@@ -49,7 +50,9 @@ export function SettingsManager({
   onExportBackup,
   onResetData,
 }: SettingsManagerProps) {
+  const [showAuditLogs, setShowAuditLogs] = useState(false)
   const isAdminUser = isSuperAdmin(userRole, userEmail)
+  const isEmployee = isEmployeeRole(userRole)
 
   return (
     <div className="space-y-6">
@@ -88,6 +91,32 @@ export function SettingsManager({
         onSaveProfile={onSaveProfile}
       />
 
+      {/* Sécurité & Journal d'Audit Anti-Fraude (Réservé Propriétaire / Admin) */}
+      {!isEmployee && (
+        <div className="bg-amber-50/70 p-6 rounded-2xl border border-amber-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+              <ShieldAlert className="w-5 h-5" strokeWidth={1.75} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-amber-950 tracking-tight">
+                Journal d'Audit Anti-Fraude
+              </h3>
+              <p className="text-xs text-amber-800 mt-0.5 max-w-md">
+                Consultez l'historique immuable de toutes les actions sensibles : ventes biffées, retours marchandises, écarts de caisse Z et suppressions.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAuditLogs(true)}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs font-bold transition-all shadow-sm active:scale-[0.97] flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+          >
+            <ShieldAlert className="w-4 h-4 text-amber-300" />
+            <span>Consulter les Logs</span>
+          </button>
+        </div>
+      )}
 
       {/* Gestion de l'équipe d'employés */}
       <EmployeeRoleManager
@@ -104,6 +133,15 @@ export function SettingsManager({
         onExportBackup={onExportBackup}
         onResetData={onResetData}
       />
+
+      {/* Modale d'audit */}
+      <AuditLogsViewerModal
+        isOpen={showAuditLogs}
+        onClose={() => setShowAuditLogs(false)}
+        shopId={shopId}
+        shopName={shopName}
+      />
     </div>
   )
 }
+

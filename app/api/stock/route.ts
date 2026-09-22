@@ -137,8 +137,7 @@ export async function GET(request: Request) {
       if (mult > 1 && cleanUnitCost > (product.unit_price || 0) && (product.unit_price || 0) > 0) {
         cleanUnitCost = Math.round(cleanUnitCost / mult)
       }
-      const isFakeCost = cleanUnitCost === Math.round((product.unit_price || 0) * 0.6) || cleanUnitCost === Math.round((product.unit_price || 0) * 0.7)
-      if (!stockTracked || (isFakeCost && !hasPurchases)) {
+      if (!stockTracked && cleanUnitCost === 0) {
         cleanUnitCost = 0
       }
 
@@ -479,7 +478,7 @@ export async function PATCH(request: Request) {
         is_service: is_service ?? false,
         lot_quantity: lot_quantity ?? 0,
         lot_price: lot_price ?? 0,
-        stock_tracked: (initial_stock ?? 0) > 0,
+        stock_tracked: body.stock_tracked !== undefined ? Boolean(body.stock_tracked) : ((initial_stock ?? 0) > 0),
         created_at: new Date().toISOString(),
       }
 

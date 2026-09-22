@@ -10,9 +10,11 @@ import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
 import { ReceiptShareModal } from '@/components/sales/ReceiptShareModal'
 import { exportSalesToCSV, exportSalesToPDF } from '@/lib/exportUtils'
 import { formatPrice } from '@/lib/penUtils'
-import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
+import { generateOfflineId, saveOfflineSale, markAsSynced, getOfflineProducts, saveOfflineProduct } from '@/lib/offlineDb'
 import { getTodayDateString } from '@/lib/dateUtils'
 import { reconcileDebts } from '@/hooks/useJournalData'
+import { ProductReturnPayload } from '@/components/sales/ProductReturnModal'
+import { logAuditEvent } from '@/lib/auditLogger'
 
 function formatLongDateFr(dateStr?: string): string {
   if (!dateStr) return 'Date inconnue'
@@ -73,6 +75,7 @@ interface SalesHistoryProps {
   onExternalStartAdd?: (saleId: string) => void
   onExternalCancelAdd?: () => void
   onExternalConfirmAdd?: (saleId: string) => Promise<void>
+  onReturnItems?: (payload: ProductReturnPayload) => Promise<void>
 }
 
 import { EditSaleModal } from '@/components/journal/EditSaleModal'
@@ -82,8 +85,10 @@ export function SalesHistory({
   onSaleCrossedOut,
   onUpdateSale,
   onSettleDebt,
+  onError,
   shopId = 'default-shop',
   isEmployee = false,
+  onReturnItems,
 }: SalesHistoryProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState('all')
@@ -101,6 +106,75 @@ export function SalesHistory({
       ...prev,
       [dateKey]: !prev[dateKey]
     }))
+  }
+
+  const handleReturnItems = async (payload: ProductReturnPayload) => {
+    if (onReturnItems) {
+      await onReturnItems(payload)
+      return
+    }
+
+    try {
+      // 1. Audit log immuable
+      await logAuditEvent({
+        shopId,
+        action: 'sale_returned',
+        targetId: payload.saleId,
+        details: {
+          refundMode: payload.refundMode,
+          totalRefundAmount: payload.totalRefundAmount,
+          reason: payload.reason,
+          items: payload.items,
+          restock: payload.restock,
+        },
+      })
+
+      // 2. Remise en stock automatique si demandée
+      if (payload.restock && payload.items?.length > 0) {
+        const currentProducts = getOfflineProducts(shopId)
+        for (const item of payload.items) {
+          const normItem = item.name.toLowerCase().trim()
+          const matched = currentProducts.find(p => p.name.toLowerCase().trim() === normItem)
+          if (matched) {
+            const currentStock = (matched.current_stock ?? matched.initial_stock ?? 0) + item.quantity
+            const updated = { ...matched, current_stock: currentStock, is_synced: false }
+            saveOfflineProduct(shopId, updated)
+
+            // Tentative serveur en tâche de fond
+            fetch('/api/stock/adjust', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
+              body: JSON.stringify({
+                productId: matched.id,
+                quantity: item.quantity,
+                type: 'in',
+                reason: 'inventory_correction',
+                notes: `Retour client (${payload.reason})`,
+              }),
+            }).catch(() => {})
+          }
+        }
+      }
+
+      // 3. Mise à jour de la vente si onUpdateSale est disponible
+      if (onUpdateSale && activeDetailSale) {
+        const remainingArticles: Article[] = []
+        for (const art of (activeDetailSale.articles || [])) {
+          const ret = payload.items.find(i => i.name.toLowerCase().trim() === art.name.toLowerCase().trim())
+          if (ret) {
+            const remQty = Math.max(0, (art.quantity || 1) - ret.quantity)
+            if (remQty > 0) {
+              remainingArticles.push({ ...art, quantity: remQty })
+            }
+          } else {
+            remainingArticles.push(art)
+          }
+        }
+        await onUpdateSale(payload.saleId, remainingArticles, activeDetailSale.client)
+      }
+    } catch (err: any) {
+      if (onError) onError(err?.message || 'Erreur lors du traitement du retour.')
+    }
   }
 
   const filteredSales = useMemo(() => {
@@ -501,6 +575,7 @@ export function SalesHistory({
         onClose={() => setActiveDetailSale(null)}
         sale={activeDetailSale}
         onPrintReceipt={(s) => setActiveReceiptSale(s)}
+        onReturnItems={handleReturnItems}
       />
 
       <EditSaleModal

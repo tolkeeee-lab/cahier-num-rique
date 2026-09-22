@@ -250,10 +250,7 @@ export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
     cost = cost / mult
   }
 
-  const isFakeCost = Math.round(cost) === Math.round(price * 0.6) || Math.round(cost) === Math.round(price * 0.7)
-  if (isFakeCost && (!copy.total_in || copy.total_in === 0)) {
-    cost = 0
-  }
+  // Conserver le coût d'achat unitaire réel sans écrasement arbitraire
 
   // Précision décimale pour garantir les prix cartons exacts (ex: 10 000 F / 24 sans arrondi 9996 F)
   copy.unit_price = Math.round(price * 10000) / 10000

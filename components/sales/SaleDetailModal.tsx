@@ -1,14 +1,16 @@
 'use client'
 
-import React, { useEffect } from 'react'
-import { X, Printer, Receipt, Share2 } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { X, Printer, Receipt, Share2, RotateCcw } from 'lucide-react'
 import { formatPrice } from '@/lib/penUtils'
+import { ProductReturnModal, ProductReturnPayload } from '@/components/sales/ProductReturnModal'
 
 interface SaleDetailModalProps {
   isOpen: boolean
   onClose: () => void
   sale: any
   onPrintReceipt?: (sale: any) => void
+  onReturnItems?: (payload: ProductReturnPayload) => Promise<void>
   shopName?: string
 }
 
@@ -17,16 +19,22 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
   onClose,
   sale,
   onPrintReceipt,
+  onReturnItems,
   shopName = 'Cahier Numérique',
 }) => {
+  const [showReturnModal, setShowReturnModal] = useState(false)
+
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      setShowReturnModal(false)
+      return
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !showReturnModal) onClose()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen, showReturnModal, onClose])
 
   if (!isOpen || !sale) return null
 
@@ -141,37 +149,70 @@ ${debt > 0 ? `💳 *Reste à payer (Dette) :* ${formatPrice(debt)}\n` : ''}-----
         </div>
 
         {/* Boutons d'Action */}
-        <div className="flex items-center justify-end gap-2.5 pt-2">
-          <button
-            type="button"
-            onClick={handleShareWhatsApp}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97] shadow-xs"
-          >
-            <Share2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-            <span>WhatsApp</span>
-          </button>
-          {onPrintReceipt && (
+        <div className="flex items-center justify-between gap-2.5 pt-2 flex-wrap">
+          <div>
+            {onReturnItems && sale.status !== 'crossed_out' && (
+              <button
+                type="button"
+                onClick={() => setShowReturnModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97] shadow-xs"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600" strokeWidth={1.75} />
+                <span>Retour / Remboursement</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                onPrintReceipt(sale)
-                onClose()
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97]"
+              onClick={handleShareWhatsApp}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97] shadow-xs"
             >
-              <Printer className="w-3.5 h-3.5 text-amber-700" strokeWidth={1.75} />
-              <span>Imprimer</span>
+              <Share2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+              <span>WhatsApp</span>
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 transition-colors cursor-pointer active:scale-[0.97]"
-          >
-            Fermer
-          </button>
+            {onPrintReceipt && (
+              <button
+                type="button"
+                onClick={() => {
+                  onPrintReceipt(sale)
+                  onClose()
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97]"
+              >
+                <Printer className="w-3.5 h-3.5 text-amber-700" strokeWidth={1.75} />
+                <span>Imprimer</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 transition-colors cursor-pointer active:scale-[0.97]"
+            >
+              Fermer
+            </button>
+          </div>
         </div>
+
+        {/* Modale de retour marchandise */}
+        {showReturnModal && (
+          <ProductReturnModal
+            isOpen={showReturnModal}
+            onClose={() => setShowReturnModal(false)}
+            sale={sale}
+            shopName={shopName}
+            onConfirmReturn={async (payload) => {
+              if (onReturnItems) {
+                await onReturnItems(payload)
+                setShowReturnModal(false)
+                onClose()
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   )
 }
+

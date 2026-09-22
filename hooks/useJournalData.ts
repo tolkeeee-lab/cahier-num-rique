@@ -63,9 +63,15 @@ export function reconcileDebts(salesList: Sale[]): Sale[] {
   const remainingClientRepay = new Map(clientRepayments)
   const remainingSuppRepay = new Map(supplierRepayments)
 
-  // Du plus ancien au plus récent pour apurer les dettes les plus anciennes
+  // Du plus ancien au plus récent pour apurer les dettes les plus anciennes (sécurisé Safari/WebKit)
+  const safeTimestamp = (d?: string) => {
+    if (!d) return 0
+    const normalized = d.includes(' ') && !d.includes('T') ? d.replace(' ', 'T') : d
+    const t = new Date(normalized).getTime()
+    return isNaN(t) ? 0 : t
+  }
   const sortedOldestFirst = [...salesList].sort((a, b) => 
-    new Date(a.created_at || a.date).getTime() - new Date(b.created_at || b.date).getTime()
+    safeTimestamp(a.created_at || a.date) - safeTimestamp(b.created_at || b.date)
   )
 
   const updatedSalesMap = new Map<string, { debt: number; status: 'paid' | 'debt' }>()
