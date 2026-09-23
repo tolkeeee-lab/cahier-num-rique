@@ -101,6 +101,10 @@ export async function findShopIdByCode(inputCode: string): Promise<string> {
       .ilike('id', `${clean.toLowerCase()}%`)
       .limit(1)
 
+    if (idMatches && idMatches.length > 0 && isRealUuid(idMatches[0].id)) {
+      return idMatches[0].id
+    }
+
     // 3. Recherche dans le cache local du navigateur
     if (typeof window !== 'undefined') {
       for (let i = 0; i < localStorage.length; i++) {
