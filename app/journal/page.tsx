@@ -712,7 +712,7 @@ export default function JournalPage() {
           <div className="flex-shrink-0 z-30 relative">
             <JournalHeader
               user={mappedUser}
-              currentShopName={shopManager.currentShop?.name || 'Mon Point de Vente'}
+              currentShopName={shopManager.shopName}
               activity={shopManager.shopActivity}
               shops={shopManager.userShops}
               selectedShopId={shopManager.shopId}
@@ -932,7 +932,7 @@ export default function JournalPage() {
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <SettingsManager
                   shopId={shopManager.shopId}
-                  shopName={shopManager.currentShop?.name || 'Ma Boutique'}
+                  shopName={shopManager.shopName}
                   activity={shopManager.shopActivity}
                   phone={(mappedUser as any)?.user_metadata?.phone || (mappedUser as any)?.phone || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_phone_${shopManager.shopId}`) || '' : '')}
                   address={(mappedUser as any)?.user_metadata?.address || (mappedUser as any)?.address || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_address_${shopManager.shopId}`) || '' : '')}
@@ -951,7 +951,7 @@ export default function JournalPage() {
                   onRemoveEmployee={handleRemoveEmployee}
                   onExportBackup={() => exportFullBackupJSON(
                     shopManager.shopId,
-                    shopManager.currentShop?.name || 'Ma Boutique',
+                    shopManager.shopName,
                     journalData.allSales
                   )}
                 />

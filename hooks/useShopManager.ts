@@ -176,37 +176,78 @@ export function useShopManager(mappedUser: any) {
 
 
 
-      // ── 2. Pour le Propriétaire : Chargement des boutiques locales & distantes ──
-      const stored = localStorage.getItem(`cahier_user_shops_${uId}`)
-      if (stored) {
+      // ── 2. Pour le Propriétaire : Chargement des boutiques distantes & locales ──
+      let ownerShops: Shop[] = []
+
+      // A. Source 1 : Supabase `shops` table (Source de vérité Cloud)
+      if (isOnline && mappedUser?.id) {
         try {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
-            // Mettre à jour les boutiques en résolvant les codes courts éventuels
-            const resolvedShops = await Promise.all(parsed.map(async (s: Shop) => {
-              if (s.id && !isRealUuid(s.id) && isOnline) {
-                const realId = await findShopIdByCode(s.id)
-                if (isRealUuid(realId)) return { ...s, id: realId }
-              }
-              return s
+          const ownerUuid = isRealUuid(mappedUser.id) ? mappedUser.id : null
+          let query = supabaseClient.from('shops').select('id, name, activity, country, city, shop_code')
+          
+          const { data: dbShops, error: dbErr } = ownerUuid
+            ? await query.eq('owner_id', ownerUuid).order('created_at', { ascending: true })
+            : await query.or(`owner_id.eq.${mappedUser.id},id.eq.${uShopId}`).order('created_at', { ascending: true })
+
+          if (!dbErr && dbShops && dbShops.length > 0) {
+            ownerShops = dbShops.map(s => ({
+              id: s.id,
+              name: s.name || (mappedUser as any)?.shop_name || 'Mon Point de Vente',
+              activity: s.activity || (mappedUser as any)?.activity || 'boutique',
+              country: s.country || 'BJ',
+              city: s.city || '',
             }))
-            setUserShops(resolvedShops)
-            setSelectedShopId((prev) => prev || resolvedShops[0].id)
-            localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify(resolvedShops))
-            return
           }
-        } catch {}
+        } catch (e) {
+          console.warn('[ShopManager] Erreur lecture shops Supabase:', e)
+        }
       }
 
-      const userActivity = (mappedUser as any)?.activity || (mappedUser as any)?.user_metadata?.shop_activity || 'boutique'
-      const defaultShops: Shop[] = [
-        { id: uShopId, name: (mappedUser as any)?.shop_name || 'Mon Point de Vente', activity: userActivity },
-      ]
-      if (isMounted) {
-        setUserShops(defaultShops)
-        setSelectedShopId((prev) => prev || uShopId)
+      // B. Source 2 : LocalStorage `cahier_user_shops_${uId}`
+      if (ownerShops.length === 0) {
+        const stored = localStorage.getItem(`cahier_user_shops_${uId}`)
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              ownerShops = parsed
+            }
+          } catch {}
+        }
       }
-      localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify(defaultShops))
+
+      // C. Source 3 : Nom personnalisé unitaire dans localStorage `cahier_shop_name_*`
+      const savedName = typeof window !== 'undefined'
+        ? (localStorage.getItem(`cahier_shop_name_${uShopId}`) || 
+           localStorage.getItem(`cahier_shop_name_${uId}`) ||
+           (ownerShops[0]?.id ? localStorage.getItem(`cahier_shop_name_${ownerShops[0].id}`) : null))
+        : null
+
+      if (ownerShops.length === 0) {
+        const userActivity = (mappedUser as any)?.activity || (mappedUser as any)?.user_metadata?.shop_activity || 'boutique'
+        const initialName = savedName || (mappedUser as any)?.shop_name || 'Mon Point de Vente'
+        ownerShops = [{ id: uShopId, name: initialName, activity: userActivity }]
+      } else if (savedName && (ownerShops[0].name === 'Mon Point de Vente' || !ownerShops[0].name)) {
+        ownerShops[0].name = savedName
+      }
+
+      // Mettre à jour les boutiques en résolvant les codes courts éventuels
+      const resolvedShops = await Promise.all(ownerShops.map(async (s: Shop) => {
+        if (s.id && !isRealUuid(s.id) && isOnline) {
+          const realId = await findShopIdByCode(s.id)
+          if (isRealUuid(realId)) return { ...s, id: realId }
+        }
+        return s
+      }))
+
+      if (isMounted) {
+        setUserShops(resolvedShops)
+        setSelectedShopId((prev) => prev || resolvedShops[0].id)
+      }
+      localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify(resolvedShops))
+      if (resolvedShops[0]?.name && resolvedShops[0]?.id) {
+        localStorage.setItem(`cahier_shop_name_${resolvedShops[0].id}`, resolvedShops[0].name)
+      }
     }
 
     initializeShops()
@@ -217,8 +258,20 @@ export function useShopManager(mappedUser: any) {
   }, [mappedUser?.id, mappedUser?.email, mappedUser?.shop_id])
 
   const shopId = selectedShopId || mappedUser?.shop_id || 'default-shop'
-  const currentShop = userShops.find((s) => s.id === shopId)
+  
+  // Recherche tolérante de la boutique active (exact, UUID insensible à la casse, ou code court normalisé)
+  const currentShop = userShops.find((s) => 
+    s.id === shopId ||
+    (isRealUuid(s.id) && isRealUuid(shopId) && s.id.toLowerCase() === shopId.toLowerCase()) ||
+    normalizeShopCode(s.id) === normalizeShopCode(shopId)
+  ) || userShops[0]
+
   const shopActivity = currentShop?.activity || (mappedUser as any)?.activity || 'boutique'
+  
+  const shopName = currentShop?.name || 
+    (typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_name_${shopId}`) || localStorage.getItem(`cahier_shop_name_${userShops[0]?.id}`)) : null) ||
+    (mappedUser as any)?.shop_name ||
+    'Mon Point de Vente'
 
   const handleCreateShop = () => {
     if (!newShopName.trim() || !mappedUser?.id) return
@@ -247,31 +300,38 @@ export function useShopManager(mappedUser: any) {
     const targetCountry = data.country || 'BJ'
     const targetCity = data.city || ''
 
-    // 1. Mettre à jour dans la liste des boutiques
+    // 1. Mettre à jour dans la liste locale des boutiques
     let updatedShops = userShops.map((s) => {
-      if (s.id === targetShopId || s.id === selectedShopId || userShops.length === 1) {
+      if (
+        s.id === targetShopId || 
+        s.id === selectedShopId || 
+        (isRealUuid(s.id) && isRealUuid(targetShopId) && s.id.toLowerCase() === targetShopId.toLowerCase()) ||
+        normalizeShopCode(s.id) === normalizeShopCode(targetShopId) ||
+        userShops.length === 1
+      ) {
         return { ...s, name: data.shopName, activity: data.activity, country: targetCountry, city: targetCity }
       }
       return s
     })
 
-    if (!updatedShops.some(s => s.id === targetShopId)) {
+    if (!updatedShops.some(s => s.id === targetShopId || normalizeShopCode(s.id) === normalizeShopCode(targetShopId))) {
       updatedShops.push({ id: targetShopId, name: data.shopName, activity: data.activity, country: targetCountry, city: targetCity })
     }
 
     setUserShops(updatedShops)
     localStorage.setItem(`cahier_user_shops_${mappedUser.id}`, JSON.stringify(updatedShops))
 
-    // 2. Mettre à jour téléphone, adresse, pays & ville dans localStorage
-    localStorage.setItem(`cahier_shop_name_${targetShopId}`, data.shopName)
-    if (data.phone !== undefined) {
-      localStorage.setItem(`cahier_shop_phone_${targetShopId}`, data.phone)
+    // 2. Mettre à jour téléphone, adresse, pays & ville dans localStorage pour tous les alias
+    const aliases = [targetShopId, selectedShopId, normalizeShopCode(targetShopId), formatShortShopCode(targetShopId)]
+    for (const a of aliases) {
+      if (a) {
+        localStorage.setItem(`cahier_shop_name_${a}`, data.shopName)
+        if (data.phone !== undefined) localStorage.setItem(`cahier_shop_phone_${a}`, data.phone)
+        if (data.address !== undefined) localStorage.setItem(`cahier_shop_address_${a}`, data.address)
+        localStorage.setItem(`cahier_shop_country_${a}`, targetCountry)
+        localStorage.setItem(`cahier_shop_city_${a}`, targetCity)
+      }
     }
-    if (data.address !== undefined) {
-      localStorage.setItem(`cahier_shop_address_${targetShopId}`, data.address)
-    }
-    localStorage.setItem(`cahier_shop_country_${targetShopId}`, targetCountry)
-    localStorage.setItem(`cahier_shop_city_${targetShopId}`, targetCity)
 
     // 3. Si Supabase est actif, sauvegarder dans les différentes tables indépendamment
     if (isSupabaseClientConfigured()) {
@@ -291,45 +351,42 @@ export function useShopManager(mappedUser: any) {
         console.warn('[ShopManager] Erreur updateUser:', e)
       }
 
-      // b) Mise à jour Employees
+      // b) Mise à jour Shops (Table de référence Cloud)
       try {
-        await supabaseClient
-          .from('employees')
-          .update({ name: data.shopName })
-          .eq('id', mappedUser.id)
-      } catch (e) {
-        console.warn('[ShopManager] Erreur update employees:', e)
-      }
+        const validShopUuid = isRealUuid(targetShopId) 
+          ? targetShopId 
+          : (isRealUuid(mappedUser.id) ? mappedUser.id : undefined)
 
-      // c) Mise à jour Shops
-      try {
-        await supabaseClient.from('shops').upsert([
-          {
-            id: targetShopId,
-            owner_id: mappedUser.id,
-            name: data.shopName,
-            activity: data.activity,
-            phone: data.phone,
-            address: data.address,
-            country: targetCountry,
-            city: targetCity,
-            shop_code: formatShortShopCode(targetShopId),
-            updated_at: new Date().toISOString(),
-          }
-        ], { onConflict: 'id' })
+        const shopPayload: any = {
+          owner_id: isRealUuid(mappedUser.id) ? mappedUser.id : undefined,
+          name: data.shopName,
+          activity: data.activity,
+          phone: data.phone,
+          address: data.address,
+          country: targetCountry,
+          city: targetCity,
+          shop_code: formatShortShopCode(targetShopId),
+          updated_at: new Date().toISOString(),
+        }
+
+        if (validShopUuid) {
+          shopPayload.id = validShopUuid
+        }
+
+        await supabaseClient
+          .from('shops')
+          .upsert([shopPayload], { onConflict: validShopUuid ? 'id' : undefined })
       } catch (e) {
         console.warn('[ShopManager] Erreur upsert shops:', e)
       }
     }
   }
 
-
-
-
   return {
     selectedShopId,
     setSelectedShopId,
     shopId,
+    shopName,
     userShops,
     setUserShops,
     currentShop,

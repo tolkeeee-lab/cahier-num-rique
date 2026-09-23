@@ -414,6 +414,77 @@ export async function idbRemoveSyncItem(id: string): Promise<void> {
   return deleteFromStore('sync_queue', id)
 }
 
+export async function idbClearSyncQueue(shopId?: string): Promise<void> {
+  try {
+    const db = await getIDB()
+    const tx = db.transaction('sync_queue', 'readwrite')
+    const store = tx.objectStore('sync_queue')
+    return new Promise((resolve, reject) => {
+      if (!shopId) {
+        const req = store.clear()
+        req.onsuccess = () => resolve()
+        req.onerror = () => reject(req.error)
+      } else {
+        const index = store.index('shopId')
+        const req = index.getAllKeys(shopId)
+        req.onsuccess = () => {
+          req.result.forEach(k => store.delete(k))
+        }
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      }
+    })
+  } catch (err) {
+    console.warn('[IDB] Erreur vidage sync_queue:', err)
+  }
+}
+
+export async function idbClearStoreByShopId(storeName: string, shopId: string): Promise<void> {
+  try {
+    const db = await getIDB()
+    const tx = db.transaction(storeName, 'readwrite')
+    const store = tx.objectStore(storeName)
+    const indexName = store.indexNames.contains('shop_id') ? 'shop_id' : (store.indexNames.contains('shopId') ? 'shopId' : null)
+    const alt = getAltShopId(shopId)
+
+    return new Promise((resolve, reject) => {
+      if (!indexName) {
+        const req = store.openCursor()
+        req.onsuccess = () => {
+          const cursor = req.result
+          if (cursor) {
+            const val = cursor.value
+            if (val?.shop_id === shopId || val?.shopId === shopId || (alt && (val?.shop_id === alt || val?.shopId === alt))) {
+              cursor.delete()
+            }
+            cursor.continue()
+          }
+        }
+      } else {
+        const index = store.index(indexName)
+        const primaryReq = index.getAllKeys(shopId)
+        primaryReq.onsuccess = () => {
+          const keys = [...primaryReq.result]
+          if (alt) {
+            const altReq = index.getAllKeys(alt)
+            altReq.onsuccess = () => {
+              const allKeys = Array.from(new Set([...keys, ...altReq.result]))
+              allKeys.forEach(k => store.delete(k))
+            }
+            altReq.onerror = () => keys.forEach(k => store.delete(k))
+          } else {
+            keys.forEach(k => store.delete(k))
+          }
+        }
+      }
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+  } catch (err) {
+    console.warn(`[IDB] Erreur suppression shopId ${shopId} sur ${storeName}:`, err)
+  }
+}
+
 // ─── Migration Automatique localStorage -> IndexedDB ─────────────────────────
 
 export async function migrateLocalStorageToIndexedDB(shopId: string): Promise<void> {

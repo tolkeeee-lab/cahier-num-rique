@@ -3,8 +3,19 @@
  */
 
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
-import { idbReplaceSales, idbReplaceProducts } from '@/lib/indexedDb'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
+import {
+  idbReplaceSales,
+  idbReplaceProducts,
+  idbClearStoreByShopId,
+  idbClearSyncQueue,
+} from '@/lib/indexedDb'
+import {
+  getDualShopIds,
+  isRealUuid,
+  findShopIdByCode,
+  formatShortShopCode,
+  normalizeShopCode,
+} from '@/lib/shopCodeUtils'
 
 export interface PurgeOptions {
   deleteSales: boolean
@@ -16,12 +27,46 @@ export interface PurgeOptions {
 }
 
 /**
- * Construit un filtre Supabase OR couvrant tous les alias possibles d'un shopId
- * (UUID, code court, SHOP-XXX, BTQ-XXX)
+ * Résout de façon exhaustive tous les alias connus pour un shopId :
+ * Vrai UUID, code court (BTQ-XXXXX), préfixes SHOP-, code brut, etc.
  */
-function buildShopFilter(shopId: string): string {
-  const allIds = getDualShopIds(shopId)
-  return allIds.map(id => `shop_id.eq.${id}`).join(',')
+export async function getAllShopAliases(shopId: string): Promise<string[]> {
+  const ids = new Set<string>()
+  if (!shopId) return []
+  ids.add(shopId)
+
+  for (const d of getDualShopIds(shopId)) {
+    ids.add(d)
+  }
+
+  if (isRealUuid(shopId)) {
+    const short = formatShortShopCode(shopId)
+    ids.add(short)
+    const clean = normalizeShopCode(short)
+    if (clean) {
+      ids.add(clean)
+      ids.add(`SHOP-${clean}`)
+      ids.add(`BTQ-${clean}`)
+    }
+  } else {
+    try {
+      const realId = await findShopIdByCode(shopId)
+      if (realId && isRealUuid(realId)) {
+        ids.add(realId)
+        for (const d of getDualShopIds(realId)) ids.add(d)
+        const short = formatShortShopCode(realId)
+        ids.add(short)
+        const clean = normalizeShopCode(short)
+        if (clean) {
+          ids.add(clean)
+          ids.add(`SHOP-${clean}`)
+          ids.add(`BTQ-${clean}`)
+        }
+      }
+    } catch {}
+  }
+
+  return Array.from(ids)
 }
 
 export async function purgeShopData(shopId: string, options: PurgeOptions): Promise<{ success: boolean; message: string }> {
@@ -29,20 +74,37 @@ export async function purgeShopData(shopId: string, options: PurgeOptions): Prom
 
   try {
     const isOnline = isSupabaseClientConfigured()
-    const allIds = getDualShopIds(shopId)
-    const shopFilter = buildShopFilter(shopId)
+    const allIds = await getAllShopAliases(shopId)
 
     // 1. Ventes & Écritures du Journal
     if (options.deleteSales) {
-      // Suppression locale pour tous les alias connus
       for (const id of allIds) {
         localStorage.removeItem(`cahier_offline_sales_${id}`)
+        localStorage.removeItem(`cahier_cash_closings_${id}`)
+        localStorage.removeItem(`cahier_sync_errors_${id}`)
+        localStorage.removeItem(`cahier_offline_sync_queue_${id}`)
         try { await idbReplaceSales(id, []) } catch {}
+        try { await idbClearStoreByShopId('cash_closings', id) } catch {}
+        try { await idbClearSyncQueue(id) } catch {}
       }
+
       if (isOnline) {
-        try { await supabaseClient.from('sold_articles').delete().or(shopFilter) } catch {}
-        try { await supabaseClient.from('sales').delete().or(shopFilter) } catch {}
-        try { await supabaseClient.from('cash_closings').delete().or(shopFilter) } catch {}
+        try {
+          const { data: salesToDelete } = await supabaseClient
+            .from('sales')
+            .select('id')
+            .in('shop_id', allIds)
+
+          if (salesToDelete && salesToDelete.length > 0) {
+            const saleIds = salesToDelete.map(s => s.id)
+            await supabaseClient.from('sold_articles').delete().in('sale_id', saleIds)
+          }
+          await supabaseClient.from('sold_articles').delete().in('shop_id', allIds)
+          await supabaseClient.from('sales').delete().in('shop_id', allIds)
+          await supabaseClient.from('cash_closings').delete().in('shop_id', allIds)
+        } catch (e) {
+          console.warn('[dataPurge] Erreur suppression ventes en ligne:', e)
+        }
       }
     }
 
@@ -51,10 +113,16 @@ export async function purgeShopData(shopId: string, options: PurgeOptions): Prom
       for (const id of allIds) {
         localStorage.removeItem(`cahier_offline_clients_${id}`)
         localStorage.removeItem(`cahier_offline_suppliers_${id}`)
+        try { await idbClearStoreByShopId('clients', id) } catch {}
+        try { await idbClearStoreByShopId('suppliers', id) } catch {}
       }
       if (isOnline) {
-        try { await supabaseClient.from('debts').delete().or(shopFilter) } catch {}
-        try { await supabaseClient.from('supplier_debts').delete().or(shopFilter) } catch {}
+        try {
+          await supabaseClient.from('debts').delete().in('shop_id', allIds)
+          await supabaseClient.from('supplier_debts').delete().in('shop_id', allIds)
+        } catch (e) {
+          console.warn('[dataPurge] Erreur suppression dettes en ligne:', e)
+        }
       }
     }
 
@@ -63,9 +131,14 @@ export async function purgeShopData(shopId: string, options: PurgeOptions): Prom
       for (const id of allIds) {
         localStorage.removeItem(`cahier_offline_products_${id}`)
         try { await idbReplaceProducts(id, []) } catch {}
+        try { await idbClearStoreByShopId('products', id) } catch {}
       }
       if (isOnline) {
-        try { await supabaseClient.from('products').delete().or(shopFilter) } catch {}
+        try {
+          await supabaseClient.from('products').delete().in('shop_id', allIds)
+        } catch (e) {
+          console.warn('[dataPurge] Erreur suppression produits en ligne:', e)
+        }
       }
     }
 
@@ -74,6 +147,14 @@ export async function purgeShopData(shopId: string, options: PurgeOptions): Prom
       for (const id of allIds) {
         localStorage.removeItem(`cahier_shopping_list_${id}`)
         localStorage.removeItem(`cahier_shopping_${id}`)
+        try { await idbClearStoreByShopId('shopping_list', id) } catch {}
+      }
+      if (isOnline) {
+        try {
+          await supabaseClient.from('shopping_list').delete().in('shop_id', allIds)
+        } catch (e) {
+          console.warn('[dataPurge] Erreur suppression shopping_list en ligne:', e)
+        }
       }
     }
 
@@ -81,6 +162,11 @@ export async function purgeShopData(shopId: string, options: PurgeOptions): Prom
     if (options.deleteRequests) {
       for (const id of allIds) {
         localStorage.removeItem(`cahier_requested_products_${id}`)
+      }
+      if (isOnline) {
+        try {
+          await supabaseClient.from('requested_products').delete().in('shop_id', allIds)
+        } catch {}
       }
     }
 
@@ -90,6 +176,11 @@ export async function purgeShopData(shopId: string, options: PurgeOptions): Prom
         localStorage.removeItem(`cahier_tactile_menu_${id}`)
         localStorage.removeItem(`cahier_tactile_excluded_${id}`)
       }
+    }
+
+    // Réinitialiser les marqueurs de migration IDB pour forcer la synchronisation fraîche
+    for (const id of allIds) {
+      localStorage.removeItem(`cahier_migrated_idb_${id}`)
     }
 
     return {
