@@ -163,9 +163,17 @@ export default function JournalPage() {
         const rawCode = (shopCode || '').trim().toUpperCase()
         if (!rawCode) throw new Error('Le code boutique du propriétaire est obligatoire.')
         
-        // Résoudre l'ID réel de la boutique du patron dans Supabase (ex: BTQ-58C54 -> shop_id exact du patron)
+        // Résoudre l'UUID réel de la boutique du patron dans Supabase
         assignedShopId = await findShopIdByCode(rawCode)
-        assignedShopName = 'Boutique Assignée'
+        if (!assignedShopId || !isRealUuid(assignedShopId)) {
+          throw new Error('Code boutique introuvable ou incorrect. Demandez à votre patron de vérifier le Code Équipe affiché dans ses Paramètres.')
+        }
+
+        // Tenter de récupérer le vrai nom de la boutique du patron
+        try {
+          const { data: sRow } = await supabaseClient.from('shops').select('name').eq('id', assignedShopId).maybeSingle()
+          if (sRow?.name) assignedShopName = sRow.name
+        } catch {}
       }
 
       if (isConfigured && password) {
@@ -242,8 +250,22 @@ export default function JournalPage() {
                 role: role,
               }
             ], { onConflict: 'id' })
+
+            if (role === 'owner') {
+              const code = formatShortShopCode(signUpUser.id)
+              await supabaseClient.from('shops').upsert([
+                {
+                  id: signUpUser.id,
+                  owner_id: signUpUser.id,
+                  name: assignedShopName,
+                  shop_code: code,
+                  activity: 'boutique',
+                  updated_at: new Date().toISOString(),
+                }
+              ], { onConflict: 'id' })
+            }
           } catch (e) {
-            console.warn('Erreur insertion employés/patron:', e)
+            console.warn('Erreur insertion employés/patron/shops:', e)
           }
 
 

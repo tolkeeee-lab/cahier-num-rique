@@ -101,15 +101,33 @@ export async function findShopIdByCode(inputCode: string): Promise<string> {
       .ilike('id', `${clean.toLowerCase()}%`)
       .limit(1)
 
-    if (idMatches && idMatches.length > 0 && isRealUuid(idMatches[0].id)) {
-      return idMatches[0].id
+    // 3. Recherche dans le cache local du navigateur
+    if (typeof window !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith('cahier_user_shops_')) {
+          try {
+            const parsed = JSON.parse(localStorage.getItem(k) || '[]')
+            if (Array.isArray(parsed)) {
+              for (const s of parsed) {
+                if (s?.id && isRealUuid(s.id)) {
+                  const sClean = normalizeShopCode(s.id)
+                  if (sClean === clean || formatShortShopCode(s.id) === formattedUpper) {
+                    return s.id
+                  }
+                }
+              }
+            }
+          } catch {}
+        }
+      }
     }
   } catch (err) {
     console.warn('Erreur recherche shop_id par code:', err)
   }
 
-  // Fallback
-  return formattedUpper
+  // Ne jamais retourner un code court comme ID de base
+  return ''
 }
 
 /**
@@ -125,6 +143,19 @@ export function getDualShopIds(shopId: string): string[] {
     ids.add(`SHOP-${clean}`)
     ids.add(`BTQ-${clean}`)
   }
+
+  // Si c'est un UUID complet, inclure aussi les représentations en code court 5 chars
+  if (isRealUuid(shopId)) {
+    const short = formatShortShopCode(shopId)
+    ids.add(short)
+    const shortClean = normalizeShopCode(short)
+    if (shortClean) {
+      ids.add(shortClean)
+      ids.add(`SHOP-${shortClean}`)
+      ids.add(`BTQ-${shortClean}`)
+    }
+  }
+
   return Array.from(ids)
 }
 
