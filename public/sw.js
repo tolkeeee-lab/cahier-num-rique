@@ -1,6 +1,6 @@
 /* Service Worker PWA Robust Offline Shell — Cahier Numérique */
 
-const CACHE_NAME = 'cahier-pwa-v26'
+const CACHE_NAME = 'cahier-pwa-v27'
 const STATIC_ASSETS = [
   '/',
   '/journal',
@@ -66,44 +66,56 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 2. Navigation HTML (pages web, reload PWA) -> Network First avec Fallback Cache robuste
+  // 2. Navigation HTML (pages web, reload PWA) -> Fast Network (1200ms) avec Fallback Cache Instantané
   if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
+      (async () => {
+        // Tenter le réseau avec un timeout de 1200ms max pour éviter tout blocage d'écran blanc
+        try {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 1200)
+
+          const response = await fetch(event.request, { signal: controller.signal })
+          clearTimeout(timeoutId)
+
           if (response && response.ok) {
-            const responseClone = response.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone))
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+            return response
           }
-          return response
-        })
-        .catch(async () => {
-          console.log('[SW] Network failed, serving HTML shell from cache for:', event.request.url)
-          const cachedExact = await caches.match(event.request)
-          if (cachedExact) return cachedExact
+        } catch (err) {
+          // Timeout réseau ou absence de connexion : bascule instantanée sur le cache
+        }
 
-          // Secours universel : retourner la page /journal ou / depuis le cache
-          const cachedJournal = await caches.match('/journal')
-          if (cachedJournal) return cachedJournal
+        // Cache local immédiat (0 ms)
+        const cachedExact = await caches.match(event.request)
+        if (cachedExact) return cachedExact
 
-          const cachedHome = await caches.match('/')
-          if (cachedHome) return cachedHome
+        const cachedJournal = await caches.match('/journal')
+        if (cachedJournal) return cachedJournal
 
-          // Dernier recours : chercher n'importe quel HTML dans le cache
-          const cache = await caches.open(CACHE_NAME)
-          const keys = await cache.keys()
-          for (const key of keys) {
-            if (key.url.includes('/journal') || key.url.endsWith('/')) {
-              const res = await cache.match(key)
-              if (res) return res
-            }
+        const cachedHome = await caches.match('/')
+        if (cachedHome) return cachedHome
+
+        const cache = await caches.open(CACHE_NAME)
+        const keys = await cache.keys()
+        for (const key of keys) {
+          if (key.url.includes('/journal') || key.url.endsWith('/')) {
+            const res = await cache.match(key)
+            if (res) return res
           }
+        }
 
+        // Dernier recours : tenter le réseau sans timeout
+        try {
+          return await fetch(event.request)
+        } catch {
           return new Response(
             '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cahier Numérique</title></head><body style="background:#141210;color:#fff;font-family:sans-serif;text-align:center;padding:50px;"><h2>Cahier Numérique (Mode Hors Ligne)</h2><p>L\'application est chargée. Veuillez rafraîchir ou vous reconnecter.</p></body></html>',
             { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
           )
-        })
+        }
+      })()
     )
     return
   }

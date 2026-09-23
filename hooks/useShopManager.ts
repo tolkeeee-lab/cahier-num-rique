@@ -63,23 +63,50 @@ export function useShopManager(mappedUser: any) {
       const uShopId = mappedUser.shop_id || `${uId}-main`
       const isOnline = isSupabaseClientConfigured()
 
+      // ── 0. CHARGEMENT LOCAL INSTANTANÉ (0 ms) ──
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(`cahier_user_shops_${uId}`) : null
+      let cachedShops: Shop[] = []
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            cachedShops = parsed
+            if (isMounted) {
+              setUserShops(cachedShops)
+              setSelectedShopId((prev) => prev || cachedShops[0].id)
+            }
+          }
+        } catch {}
+      }
+
+      // Si l'utilisateur est totalement hors ligne, ne jamais bloquer sur le réseau
+      if (!isOnline) {
+        return
+      }
+
       // ── 1. Vérification si l'utilisateur est un Employé assigné à une Boutique Patron ──
       const isEmployeeFromMeta = (mappedUser as any)?.role === 'employee'
 
-      if (isEmployeeFromMeta || (isOnline && uEmail)) {
+      if (isEmployeeFromMeta || uEmail) {
         try {
           let assignedShopId = (mappedUser as any)?.shop_id
           let assignedRole = (mappedUser as any)?.role || 'employee'
           let assignedShopName = (mappedUser as any)?.shop_name || 'Boutique Assignée'
 
-          if (isOnline && uEmail) {
-            const { data: empRows, error: empErr } = await supabaseClient
+          if (uEmail) {
+            const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+              setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 3500)
+            )
+
+            const empPromise = supabaseClient
               .from('employees')
               .select('id, shop_id, name, role, created_at')
               .eq('email', uEmail)
               .order('created_at', { ascending: false })
 
-            if (empErr) console.warn('[ShopManager] employees query error:', empErr.message)
+            const { data: empRows, error: empErr } = await Promise.race([empPromise, timeoutPromise])
+
+            if (empErr && empErr.message !== 'timeout') console.warn('[ShopManager] employees query:', empErr.message)
 
             if (empRows && empRows.length > 0) {
               // 1. Chercher d'abord une ligne qui possède un VRAI UUID
@@ -158,6 +185,25 @@ export function useShopManager(mappedUser: any) {
                 }
 
 
+                if (isMounted) {
+                  setEmployeeRole(assignedRole)
+                  const empShopObj: Shop = {
+                    id: assignedShopId,
+                    name: assignedShopName,
+                    activity: (mappedUser as any)?.activity || 'boutique',
+                    country: 'BJ',
+                  }
+                  setUserShops([empShopObj])
+                  setSelectedShopId(assignedShopId)
+                }
+
+                localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify([{
+                  id: assignedShopId,
+                  name: assignedShopName,
+                  activity: (mappedUser as any)?.activity || 'boutique',
+                }]))
+                localStorage.setItem(`cahier_shop_name_${assignedShopId}`, assignedShopName)
+                return
               }
             }
           }
@@ -195,8 +241,8 @@ export function useShopManager(mappedUser: any) {
 
 
 
-      // ── 2. Pour le Propriétaire : Chargement des boutiques distantes & locales ──
-      let ownerShops: Shop[] = []
+      // ── 2. Pour le Propriétaire : Rafraîchissement Cloud des boutiques en tâche de fond ──
+      let ownerShops: Shop[] = cachedShops.length > 0 ? [...cachedShops] : []
 
       // A. Source 1 : Supabase `shops` table (Source de vérité Cloud)
       if (isOnline && mappedUser?.id) {
@@ -204,9 +250,15 @@ export function useShopManager(mappedUser: any) {
           const ownerUuid = isRealUuid(mappedUser.id) ? mappedUser.id : null
           let query = supabaseClient.from('shops').select('id, name, activity, country, city, shop_code')
           
-          const { data: dbShops, error: dbErr } = ownerUuid
-            ? await query.eq('owner_id', ownerUuid).order('created_at', { ascending: true })
-            : await query.or(`owner_id.eq.${mappedUser.id},id.eq.${uShopId}`).order('created_at', { ascending: true })
+          const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+            setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 3500)
+          )
+
+          const fetchPromise = ownerUuid
+            ? query.eq('owner_id', ownerUuid).order('created_at', { ascending: true })
+            : query.or(`owner_id.eq.${mappedUser.id},id.eq.${uShopId}`).order('created_at', { ascending: true })
+
+          const { data: dbShops, error: dbErr } = await Promise.race([fetchPromise, timeoutPromise])
 
           if (!dbErr && dbShops && dbShops.length > 0) {
             ownerShops = dbShops.map(s => ({

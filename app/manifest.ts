@@ -6,6 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Cahier Caisse',
     description: 'Cahier de caisse digital de proximité pour boutiquiers et grossistes en Afrique de l\'Ouest',
     start_url: '/journal',
+    scope: '/',
     display: 'standalone',
     background_color: '#141210',
     theme_color: '#064e3b',

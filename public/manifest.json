@@ -2,7 +2,7 @@
   "name": "Cahier de Caisse Intelligent",
   "short_name": "Cahier Caisse",
   "description": "Cahier de caisse digital de proximité pour boutiquiers et grossistes en Afrique de l'Ouest",
-  "start_url": "/journal",
+  "start_url": "/journal",`n  "scope": "/",
   "display": "standalone",
   "background_color": "#141210",
   "theme_color": "#064e3b",

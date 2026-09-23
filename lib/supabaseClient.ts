@@ -33,7 +33,16 @@ export async function testSupabaseConnection(): Promise<{ ok: boolean; message: 
   }
 
   try {
-    const { error } = await supabaseClient.from('sales').select('id', { count: 'exact', head: true })
+    const timeoutPromise = new Promise<{ error: { code: string; message: string } }>((resolve) =>
+      setTimeout(() => resolve({ error: { code: 'TIMEOUT', message: 'Délai d\'attente dépassé (3.5s)' } }), 3500)
+    )
+
+    const result = await Promise.race([
+      supabaseClient.from('sales').select('id', { count: 'exact', head: true }),
+      timeoutPromise
+    ])
+
+    const error = result.error
     if (error) {
       if (error.code === 'PGRST301' || error.message?.includes('401') || error.message?.includes('JWT')) {
         return {

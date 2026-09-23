@@ -176,16 +176,23 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       try {
         if (isSupabaseClientConfigured() && isOnline) {
           const targetShopIds = getDualShopIds(shopId)
+          const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+            setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 3500)
+          )
+
           // Requête principale avec les articles détaillés
-          let { data, error } = await supabaseClient
-            .from('sales')
-            .select('*, sold_articles(*)')
-            .in('shop_id', targetShopIds)
-            .order('created_at', { ascending: false })
+          let { data, error } = await Promise.race([
+            supabaseClient
+              .from('sales')
+              .select('*, sold_articles(*)')
+              .in('shop_id', targetShopIds)
+              .order('created_at', { ascending: false }),
+            timeoutPromise
+          ])
 
           // Si la jointure sold_articles échoue (400 / table inaccessible),
-          // on retente sans la jointure — la source de TOUS les doublons et 400
-          if (error) {
+          // on retente sans la jointure
+          if (error && error.message !== 'timeout') {
             console.warn('[Journal] Jointure sold_articles échouée, nouvelle tentative sans:', error.message)
             const fallback = await supabaseClient
               .from('sales')
