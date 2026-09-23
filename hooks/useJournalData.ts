@@ -139,6 +139,40 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     async function loadJournal() {
       const today = getTodayDateString()
 
+      // 0. CHARGEMENT INSTANTANÉ DU CACHE LOCAL (0 ms)
+      try {
+        const localRaw = getOfflineSales(shopId)
+        if (localRaw && localRaw.length > 0 && isMounted) {
+          const localClean: Sale[] = localRaw.map(s => ({
+            id: s.id,
+            shop_id: s.shop_id || shopId,
+            date: (s.date || '').split('T')[0] || today,
+            time: s.time || '00:00',
+            client: s.client || 'Client anonyme',
+            articles: (s.articles || []).map(a => ({
+              name: a.name || 'Produit',
+              quantity: Number(a.quantity) || 1,
+              unit_price: Number(a.unit_price) || 0,
+            })),
+            total: Number(s.total) || 0,
+            paid: Number(s.paid) || 0,
+            debt: Number(s.debt) || 0,
+            status: s.status || 'paid',
+            type: s.type || 'sale',
+            pen_color: s.pen_color || 'blue',
+            notes: s.notes || '',
+            category: s.category,
+            created_at: s.created_at || new Date().toISOString(),
+            is_synced: s.is_synced ?? true,
+          }))
+          const todaysLocal = localClean.filter(s => s.date === today)
+          setAllSales(localClean)
+          setSales(todaysLocal)
+          calculateSummary(localClean, todaysLocal)
+          setIsLoading(false)
+        }
+      } catch {}
+
       try {
         if (isSupabaseClientConfigured() && isOnline) {
           const targetShopIds = getDualShopIds(shopId)

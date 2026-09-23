@@ -16,8 +16,30 @@ export interface Shop {
 
 
 export function useShopManager(mappedUser: any) {
-  const [selectedShopId, setSelectedShopId] = useState<string>('')
-  const [userShops, setUserShops] = useState<Shop[]>([])
+  const [userShops, setUserShops] = useState<Shop[]>(() => {
+    if (typeof window === 'undefined' || !mappedUser?.id) return []
+    try {
+      const stored = localStorage.getItem(`cahier_user_shops_${mappedUser.id}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch {}
+    return []
+  })
+
+  const [selectedShopId, setSelectedShopId] = useState<string>(() => {
+    if (typeof window === 'undefined' || !mappedUser?.id) return ''
+    try {
+      const stored = localStorage.getItem(`cahier_user_shops_${mappedUser.id}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.id) return parsed[0].id
+      }
+    } catch {}
+    return mappedUser?.shop_id || ''
+  })
+
   const [employeeRole, setEmployeeRole] = useState<string | null>(null)
   const [showNewShopModal, setShowNewShopModal] = useState(false)
   const [newShopName, setNewShopName] = useState('')
@@ -60,41 +82,38 @@ export function useShopManager(mappedUser: any) {
             if (empErr) console.warn('[ShopManager] employees query error:', empErr.message)
 
             if (empRows && empRows.length > 0) {
-              // 1. Chercher d'abord une ligne qui possède un VRAI UUID (ex: 58c54b4a-4d32-4686-971e-b5f87985...)
+              // 1. Chercher d'abord une ligne qui possède un VRAI UUID
               let bestRow = empRows.find(r => isRealUuid(r.shop_id)) || empRows[0]
 
-              // 2. Si shop_id est un code court (ex: BTQ-58C54), le résoudre en UUID réel du patron
+              // 2. Si shop_id est un code court, le résoudre
               if (bestRow?.shop_id && !isRealUuid(bestRow.shop_id)) {
                 const resolvedRealUuid = await findShopIdByCode(bestRow.shop_id)
                 if (isRealUuid(resolvedRealUuid)) {
                   bestRow.shop_id = resolvedRealUuid
-                  await supabaseClient.from('employees').update({ shop_id: resolvedRealUuid }).eq('id', bestRow.id)
+                  supabaseClient.from('employees').update({ shop_id: resolvedRealUuid }).eq('id', bestRow.id).then(() => {})
                 }
               }
-
-              // 3. Nettoyer les doublons de lignes temporaires inutiles
-              if (empRows.length > 1 && isRealUuid(bestRow.shop_id)) {
-                const junkRows = empRows.filter(r => r.id !== bestRow.id && !isRealUuid(r.shop_id))
-                for (const junk of junkRows) {
-                  await supabaseClient.from('employees').delete().eq('id', junk.id)
-                }
-              }
-
 
               if (bestRow?.shop_id) {
                 assignedShopId = bestRow.shop_id
                 if (bestRow.role) assignedRole = bestRow.role
 
+                // Migration non-bloquante et unique en arrière-plan
                 if (isRealUuid(bestRow.shop_id)) {
-                  // Re-lier dans Supabase toute vente, produit ou dette inséré sous le code court littéral
                   const shortCode = formatShortShopCode(bestRow.shop_id)
                   if (shortCode && shortCode !== bestRow.shop_id) {
-                    await supabaseClient.from('sales').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
-                    await supabaseClient.from('sold_articles').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
-                    await supabaseClient.from('products').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
-                    await supabaseClient.from('debts').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
-                    await supabaseClient.from('supplier_debts').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
-                    await supabaseClient.from('cash_closings').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode)
+                    const migKey = `cahier_shortcode_synced_${bestRow.shop_id}`
+                    if (typeof window !== 'undefined' && !localStorage.getItem(migKey)) {
+                      localStorage.setItem(migKey, 'true')
+                      Promise.all([
+                        supabaseClient.from('sales').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode),
+                        supabaseClient.from('sold_articles').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode),
+                        supabaseClient.from('products').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode),
+                        supabaseClient.from('debts').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode),
+                        supabaseClient.from('supplier_debts').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode),
+                        supabaseClient.from('cash_closings').update({ shop_id: bestRow.shop_id }).eq('shop_id', shortCode),
+                      ]).catch(() => {})
+                    }
                   }
                 }
 
