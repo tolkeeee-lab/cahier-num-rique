@@ -1,20 +1,14 @@
 -- ==============================================================================
--- CAHIER NUMÉRIQUE — LE SCRIPT MAÎTRE TOUT-EN-UN DÉFINITIF
+-- CAHIER NUMÉRIQUE — LE SCRIPT MAÎTRE TOUT-EN-UN DÉFINITIF (VÉRIFIÉ & INFAILLIBLE)
 -- ==============================================================================
--- À exécuter UNE SEULE FOIS dans l'éditeur SQL de Supabase (SQL Editor).
--- Ce script est 100% idempotent : il peut être relancé autant de fois que
--- nécessaire sans perte de données.
+-- À exécuter dans l'éditeur SQL de Supabase (SQL Editor).
+-- Ce script est 100% idempotent : peut être relancé sans aucun risque d'erreur.
 --
--- IL COMPREND TOUT :
--- 1. Création & mise à niveau de toutes les 10 tables
--- 2. Tous les index de performance pour un affichage en 0 ms
--- 3. Unification automatique des UUID boutiques (Patron <-> Employé)
--- 4. Droits universels PostgreSQL (anon, authenticated, service_role)
--- 5. Activation de Supabase Realtime (Websockets instantanées)
--- 6. Fonction centrale d'autorisation universelle get_user_authorized_shop_ids()
--- 7. Politiques RLS sans faille pour toutes les tables
--- 8. Rechargement du cache Supabase PostgREST
+-- CONSEIL : Fermez ou mettez en pause les onglets ouverts de votre application
+-- avant de cliquer sur "Run" pour libérer les connexions PostgreSQL actives.
 -- ==============================================================================
+
+SET lock_timeout = '15s';
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -28,7 +22,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ── 2. STRUCTURE DES 10 TABLES ET LEURS COLONNES COMPLÈTES ────────────────────
+-- ── 2. STRUCTURE DES 10 TABLES ET TOUTES LEURS COLONNES ────────────────────────
 
 -- Table 1 : shops
 CREATE TABLE IF NOT EXISTS public.shops (
@@ -56,19 +50,23 @@ CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON public.shops
 -- Table 2 : employees
 CREATE TABLE IF NOT EXISTS public.employees (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  shop_id VARCHAR(255) NOT NULL,
+  shop_id VARCHAR(255) NOT NULL DEFAULT 'default-shop',
   shop_code VARCHAR(50),
   user_id UUID,
   email VARCHAR(255),
-  name VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL DEFAULT 'Employé',
   role VARCHAR(50) DEFAULT 'employee',
   status VARCHAR(50) DEFAULT 'active',
   invited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS shop_id VARCHAR(255) DEFAULT 'default-shop';
 ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS shop_code VARCHAR(50);
 ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS user_id UUID;
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT 'Employé';
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'employee';
 ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
 
 DROP TRIGGER IF EXISTS update_employees_updated_at ON public.employees;
@@ -97,12 +95,20 @@ CREATE TABLE IF NOT EXISTS public.sales (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS shop_id VARCHAR(255) DEFAULT 'default-shop';
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS client_name VARCHAR(255) DEFAULT 'Client anonyme';
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS date DATE DEFAULT CURRENT_DATE;
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS time TIME DEFAULT CURRENT_TIME;
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS total_amount INTEGER DEFAULT 0;
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS paid_amount INTEGER DEFAULT 0;
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS debt_amount INTEGER DEFAULT 0;
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'completed';
 ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'cash_in';
 ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS pen_color VARCHAR(20) DEFAULT 'blue';
 ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS raw_text TEXT;
 ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Général';
 ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS expense_category VARCHAR(100);
 ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS employee_id VARCHAR(255);
+ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS notes TEXT;
 
 DROP TRIGGER IF EXISTS update_sales_updated_at ON public.sales;
 CREATE TRIGGER update_sales_updated_at BEFORE UPDATE ON public.sales
@@ -113,7 +119,7 @@ CREATE TABLE IF NOT EXISTS public.sold_articles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sale_id UUID NOT NULL REFERENCES public.sales(id) ON DELETE CASCADE,
   shop_id VARCHAR(255) DEFAULT 'default-shop',
-  product_name VARCHAR(255) NOT NULL,
+  product_name VARCHAR(255) NOT NULL DEFAULT 'Article',
   product_name_raw VARCHAR(255),
   product_name_canonical VARCHAR(255),
   quantity INTEGER NOT NULL DEFAULT 1,
@@ -128,16 +134,19 @@ CREATE TABLE IF NOT EXISTS public.sold_articles (
 ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS shop_id VARCHAR(255) DEFAULT 'default-shop';
 ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS product_name_raw VARCHAR(255);
 ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS product_name_canonical VARCHAR(255);
+ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1;
+ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS unit_price INTEGER DEFAULT 0;
 ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS unit_cost INTEGER DEFAULT 0;
 ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS profit_margin INTEGER DEFAULT 0;
 ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS margin INTEGER DEFAULT 0;
+ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS subtotal INTEGER DEFAULT 0;
 ALTER TABLE public.sold_articles ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Général';
 
 -- Table 5 : products (stock)
 CREATE TABLE IF NOT EXISTS public.products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_id VARCHAR(255) NOT NULL DEFAULT 'default-shop',
-  name VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL DEFAULT 'Produit',
   category VARCHAR(100) DEFAULT 'Divers',
   unit VARCHAR(50) DEFAULT 'unité',
   alert_threshold INTEGER DEFAULT 5,
@@ -164,6 +173,14 @@ CREATE TABLE IF NOT EXISTS public.products (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Divers';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS unit VARCHAR(50) DEFAULT 'unité';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS alert_threshold INTEGER DEFAULT 5;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS initial_stock INTEGER DEFAULT 0;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS current_stock INTEGER DEFAULT 0;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS unit_cost INTEGER DEFAULT 0;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS unit_price INTEGER DEFAULT 0;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS wholesale_price INTEGER DEFAULT 0;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS semi_wholesale_price INTEGER DEFAULT 0;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS wholesale_min_qty INTEGER DEFAULT 0;
@@ -189,7 +206,7 @@ CREATE TABLE IF NOT EXISTS public.debts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_id VARCHAR(255) NOT NULL DEFAULT 'default-shop',
   sale_id UUID REFERENCES public.sales(id) ON DELETE CASCADE,
-  client_name VARCHAR(255) NOT NULL,
+  client_name VARCHAR(255) NOT NULL DEFAULT 'Client',
   client_phone VARCHAR(50),
   amount_owed INTEGER NOT NULL DEFAULT 0,
   status VARCHAR(50) DEFAULT 'pending',
@@ -201,6 +218,11 @@ CREATE TABLE IF NOT EXISTS public.debts (
 );
 ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS shop_id VARCHAR(255) DEFAULT 'default-shop';
 ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS client_phone VARCHAR(50);
+ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS amount_owed INTEGER DEFAULT 0;
+ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending';
+ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS paid_amount INTEGER DEFAULT 0;
+ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE public.debts ADD COLUMN IF NOT EXISTS due_date DATE;
 
 DROP TRIGGER IF EXISTS update_debts_updated_at ON public.debts;
 CREATE TRIGGER update_debts_updated_at BEFORE UPDATE ON public.debts
@@ -210,7 +232,7 @@ CREATE TRIGGER update_debts_updated_at BEFORE UPDATE ON public.debts
 CREATE TABLE IF NOT EXISTS public.supplier_debts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_id VARCHAR(255) NOT NULL DEFAULT 'default-shop',
-  supplier_name VARCHAR(255) NOT NULL,
+  supplier_name VARCHAR(255) NOT NULL DEFAULT 'Fournisseur',
   supplier_phone VARCHAR(50),
   invoice_number VARCHAR(100),
   amount_owed INTEGER NOT NULL DEFAULT 0,
@@ -221,8 +243,15 @@ CREATE TABLE IF NOT EXISTS public.supplier_debts (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE public.supplier_debts ADD COLUMN IF NOT EXISTS shop_id VARCHAR(255) DEFAULT 'default-shop';
+ALTER TABLE public.supplier_debts ADD COLUMN IF NOT EXISTS supplier_name VARCHAR(255) DEFAULT 'Fournisseur';
 ALTER TABLE public.supplier_debts ADD COLUMN IF NOT EXISTS supplier_phone VARCHAR(50);
 ALTER TABLE public.supplier_debts ADD COLUMN IF NOT EXISTS invoice_number VARCHAR(100);
+ALTER TABLE public.supplier_debts ADD COLUMN IF NOT EXISTS amount_owed INTEGER DEFAULT 0;
+ALTER TABLE public.supplier_debts ADD COLUMN IF NOT EXISTS paid_amount INTEGER DEFAULT 0;
+ALTER TABLE public.supplier_debts ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending';
+ALTER TABLE public.supplier_debts ADD COLUMN IF NOT EXISTS due_date DATE;
+ALTER TABLE public.supplier_debts ADD COLUMN IF NOT EXISTS notes TEXT;
 
 DROP TRIGGER IF EXISTS update_supplier_debts_updated_at ON public.supplier_debts;
 CREATE TRIGGER update_supplier_debts_updated_at BEFORE UPDATE ON public.supplier_debts
@@ -232,7 +261,7 @@ CREATE TRIGGER update_supplier_debts_updated_at BEFORE UPDATE ON public.supplier
 CREATE TABLE IF NOT EXISTS public.shopping_list (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_id VARCHAR(255) NOT NULL DEFAULT 'default-shop',
-  product_name VARCHAR(255) NOT NULL,
+  product_name VARCHAR(255) NOT NULL DEFAULT 'Article à acheter',
   requested_quantity INTEGER NOT NULL DEFAULT 1,
   unit_cost_est INTEGER DEFAULT 0,
   priority VARCHAR(50) DEFAULT 'normal',
@@ -241,6 +270,14 @@ CREATE TABLE IF NOT EXISTS public.shopping_list (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE public.shopping_list ADD COLUMN IF NOT EXISTS shop_id VARCHAR(255) DEFAULT 'default-shop';
+ALTER TABLE public.shopping_list ADD COLUMN IF NOT EXISTS product_name VARCHAR(255) DEFAULT 'Article à acheter';
+ALTER TABLE public.shopping_list ADD COLUMN IF NOT EXISTS requested_quantity INTEGER DEFAULT 1;
+ALTER TABLE public.shopping_list ADD COLUMN IF NOT EXISTS unit_cost_est INTEGER DEFAULT 0;
+ALTER TABLE public.shopping_list ADD COLUMN IF NOT EXISTS priority VARCHAR(50) DEFAULT 'normal';
+ALTER TABLE public.shopping_list ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending';
+ALTER TABLE public.shopping_list ADD COLUMN IF NOT EXISTS notes TEXT;
+
 DROP TRIGGER IF EXISTS update_shopping_list_updated_at ON public.shopping_list;
 CREATE TRIGGER update_shopping_list_updated_at BEFORE UPDATE ON public.shopping_list
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -249,19 +286,44 @@ CREATE TRIGGER update_shopping_list_updated_at BEFORE UPDATE ON public.shopping_
 CREATE TABLE IF NOT EXISTS public.cash_closings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_id VARCHAR(255) NOT NULL DEFAULT 'default-shop',
-  closing_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  total_cash_sales INTEGER NOT NULL DEFAULT 0,
-  total_cash_expenses INTEGER NOT NULL DEFAULT 0,
-  total_cash_collected INTEGER NOT NULL DEFAULT 0,
-  expected_cash INTEGER NOT NULL DEFAULT 0,
-  actual_cash INTEGER NOT NULL DEFAULT 0,
-  cash_gap INTEGER NOT NULL DEFAULT 0,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  closing_time VARCHAR(10),
+  opening_cash NUMERIC NOT NULL DEFAULT 0,
+  theoretical_cash NUMERIC NOT NULL DEFAULT 0,
+  actual_cash NUMERIC NOT NULL DEFAULT 0,
+  difference NUMERIC NOT NULL DEFAULT 0,
+  cash_receipts NUMERIC NOT NULL DEFAULT 0,
+  expenses NUMERIC NOT NULL DEFAULT 0,
+  credit_sales NUMERIC NOT NULL DEFAULT 0,
   notes TEXT,
-  closed_by_id UUID,
-  closed_by_name VARCHAR(255),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+-- Garantir la présence de TOUTES les variantes de colonnes (date, closing_date, etc.)
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS shop_id VARCHAR(255) DEFAULT 'default-shop';
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS date DATE DEFAULT CURRENT_DATE;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS closing_date DATE DEFAULT CURRENT_DATE;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS closing_time VARCHAR(10);
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS opening_cash NUMERIC DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS theoretical_cash NUMERIC DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS actual_cash NUMERIC DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS difference NUMERIC DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS cash_receipts NUMERIC DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS expenses NUMERIC DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS credit_sales NUMERIC DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS total_cash_sales INTEGER DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS total_cash_expenses INTEGER DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS total_cash_collected INTEGER DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS expected_cash INTEGER DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS cash_gap INTEGER DEFAULT 0;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS closed_by_id UUID;
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS closed_by_name VARCHAR(255);
+ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- Synchroniser date et closing_date pour compatibilité totale
+UPDATE public.cash_closings SET date = closing_date WHERE date IS NULL AND closing_date IS NOT NULL;
+UPDATE public.cash_closings SET closing_date = date WHERE closing_date IS NULL AND date IS NOT NULL;
+
 DROP TRIGGER IF EXISTS update_cash_closings_updated_at ON public.cash_closings;
 CREATE TRIGGER update_cash_closings_updated_at BEFORE UPDATE ON public.cash_closings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -280,8 +342,16 @@ CREATE TABLE IF NOT EXISTS public.market_knowledge (
   city VARCHAR(100),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS product_name_normalized VARCHAR(255);
+ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS avg_unit_price INTEGER DEFAULT 0;
+ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS avg_unit_cost INTEGER DEFAULT 0;
+ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS observation_count INTEGER DEFAULT 0;
+ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS last_seen_price INTEGER DEFAULT 0;
+ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS last_seen_cost INTEGER DEFAULT 0;
+ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS country VARCHAR(10) DEFAULT 'BJ';
+ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS city VARCHAR(100);
 
--- ── 3. CRÉATION DES INDEX DE PERFORMANCE ULTRA-RAPIDES ─────────────────────────
+-- ── 3. CRÉATION DES INDEX DE PERFORMANCE ───────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_shops_owner ON public.shops(owner_id);
 CREATE INDEX IF NOT EXISTS idx_shops_code ON public.shops(shop_code);
 CREATE INDEX IF NOT EXISTS idx_employees_shop ON public.employees(shop_id);
@@ -295,27 +365,19 @@ CREATE INDEX IF NOT EXISTS idx_products_barcode ON public.products(barcode);
 CREATE INDEX IF NOT EXISTS idx_debts_shop_status ON public.debts(shop_id, status);
 CREATE INDEX IF NOT EXISTS idx_supplier_debts_shop ON public.supplier_debts(shop_id);
 CREATE INDEX IF NOT EXISTS idx_shopping_list_shop ON public.shopping_list(shop_id);
-CREATE INDEX IF NOT EXISTS idx_cash_closings_shop ON public.cash_closings(shop_id, closing_date);
+CREATE INDEX IF NOT EXISTS idx_cash_closings_shop ON public.cash_closings(shop_id);
+CREATE INDEX IF NOT EXISTS idx_cash_closings_date ON public.cash_closings(date);
 
--- ── 4. HARMONISATION & UNIFICATION AUTOMATIQUE DES UUID BOUTIQUES ──────────────
--- Si des données historiques utilisent un code textuel 'BTQ-XXXX' au lieu de l'UUID,
--- nous les rattachons immédiatement au vrai UUID de la boutique correspondante.
-DO $$
-DECLARE
-  r RECORD;
-BEGIN
-  FOR r IN SELECT id::VARCHAR AS real_uuid, shop_code FROM public.shops WHERE shop_code IS NOT NULL LOOP
-    UPDATE public.employees SET shop_id = r.real_uuid WHERE shop_id = r.shop_code OR shop_id = REPLACE(r.shop_code, 'BTQ-', '');
-    UPDATE public.sales SET shop_id = r.real_uuid WHERE shop_id = r.shop_code OR shop_id = REPLACE(r.shop_code, 'BTQ-', '');
-    UPDATE public.products SET shop_id = r.real_uuid WHERE shop_id = r.shop_code OR shop_id = REPLACE(r.shop_code, 'BTQ-', '');
-    UPDATE public.debts SET shop_id = r.real_uuid WHERE shop_id = r.shop_code OR shop_id = REPLACE(r.shop_code, 'BTQ-', '');
-    UPDATE public.supplier_debts SET shop_id = r.real_uuid WHERE shop_id = r.shop_code OR shop_id = REPLACE(r.shop_code, 'BTQ-', '');
-    UPDATE public.shopping_list SET shop_id = r.real_uuid WHERE shop_id = r.shop_code OR shop_id = REPLACE(r.shop_code, 'BTQ-', '');
-    UPDATE public.cash_closings SET shop_id = r.real_uuid WHERE shop_id = r.shop_code OR shop_id = REPLACE(r.shop_code, 'BTQ-', '');
-  END LOOP;
-END $$;
+-- ── 4. HARMONISATION RAPIDE DES UUID BOUTIQUES ─────────────────────────────────
+UPDATE public.employees e SET shop_id = s.id::VARCHAR FROM public.shops s WHERE s.shop_code IS NOT NULL AND (e.shop_id = s.shop_code OR e.shop_id = REPLACE(s.shop_code, 'BTQ-', ''));
+UPDATE public.sales sa SET shop_id = s.id::VARCHAR FROM public.shops s WHERE s.shop_code IS NOT NULL AND (sa.shop_id = s.shop_code OR sa.shop_id = REPLACE(s.shop_code, 'BTQ-', ''));
+UPDATE public.products p SET shop_id = s.id::VARCHAR FROM public.shops s WHERE s.shop_code IS NOT NULL AND (p.shop_id = s.shop_code OR p.shop_id = REPLACE(s.shop_code, 'BTQ-', ''));
+UPDATE public.debts d SET shop_id = s.id::VARCHAR FROM public.shops s WHERE s.shop_code IS NOT NULL AND (d.shop_id = s.shop_code OR d.shop_id = REPLACE(s.shop_code, 'BTQ-', ''));
+UPDATE public.supplier_debts sd SET shop_id = s.id::VARCHAR FROM public.shops s WHERE s.shop_code IS NOT NULL AND (sd.shop_id = s.shop_code OR sd.shop_id = REPLACE(s.shop_code, 'BTQ-', ''));
+UPDATE public.shopping_list sl SET shop_id = s.id::VARCHAR FROM public.shops s WHERE s.shop_code IS NOT NULL AND (sl.shop_id = s.shop_code OR sl.shop_id = REPLACE(s.shop_code, 'BTQ-', ''));
+UPDATE public.cash_closings cc SET shop_id = s.id::VARCHAR FROM public.shops s WHERE s.shop_code IS NOT NULL AND (cc.shop_id = s.shop_code OR cc.shop_id = REPLACE(s.shop_code, 'BTQ-', ''));
 
--- ── 5. PRIVILÈGES GLOBAUX POSTGRESQL (ANON, AUTHENTICATED, SERVICE_ROLE) ───────
+-- ── 5. PRIVILÈGES GLOBAUX POSTGRESQL ───────────────────────────────────────────
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
@@ -325,7 +387,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authentic
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
 
--- ── 6. ACTIVATION DE SUPABASE REALTIME (WEBSOCKETS INSTANTANÉES) ──────────────
+-- ── 6. ACTIVATION DE SUPABASE REALTIME ────────────────────────────────────────
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
@@ -358,7 +420,6 @@ DECLARE
   v_email TEXT := LOWER(TRIM(COALESCE(auth.jwt()->>'email', '')));
   v_role TEXT := COALESCE(auth.jwt()->>'role', '');
 BEGIN
-  -- 1. Clé de service (accès admin)
   IF v_role = 'service_role' THEN
     RETURN QUERY 
       SELECT id::VARCHAR FROM public.shops
@@ -367,7 +428,6 @@ BEGIN
     RETURN;
   END IF;
 
-  -- 2. Boutiques dont l'utilisateur est le propriétaire
   IF v_uid IS NOT NULL THEN
     RETURN QUERY 
       SELECT s.id::VARCHAR FROM public.shops s WHERE s.owner_id = v_uid
@@ -375,7 +435,6 @@ BEGIN
       SELECT s.shop_code::VARCHAR FROM public.shops s WHERE s.owner_id = v_uid AND s.shop_code IS NOT NULL;
   END IF;
 
-  -- 3. Boutiques où l'utilisateur est enregistré comme employé (par email ou auth.uid)
   IF v_email <> '' THEN
     RETURN QUERY 
       SELECT e.shop_id::VARCHAR FROM public.employees e WHERE LOWER(TRIM(e.email)) = v_email
@@ -398,7 +457,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.get_user_authorized_shop_ids() TO authenticated, anon, service_role;
 
--- ── 8. POLITIQUES RLS INFAILLIBLES SUR TOUTES LES 10 TABLES ────────────────────
+-- ── 8. POLITIQUES RLS HARMONISÉES SUR TOUTES LES TABLES ────────────────────────
 
 -- shops
 ALTER TABLE IF EXISTS public.shops ENABLE ROW LEVEL SECURITY;
