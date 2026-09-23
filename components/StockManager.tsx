@@ -155,9 +155,11 @@ export function StockManager({
   }, [loadStock])
 
   const handleOpenAddModal = () => {
-    setEditingProduct(null)
-    setFormData(defaultFormData)
-    setIsProductModalOpen(true)
+    const input = document.getElementById('smart-product-quick-add-input') as HTMLInputElement | null
+    if (input) {
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      input.focus()
+    }
   }
 
   const handleOpenEditModal = (p: Product) => {
@@ -797,11 +799,6 @@ export function StockManager({
         <SmartProductQuickAdd
           existingProducts={products}
           onAddProduct={handleSmartAddProduct}
-          onOpenAdvancedModalWithData={(data) => {
-            setEditingProduct(null)
-            setFormData(data)
-            setIsProductModalOpen(true)
-          }}
           onOpenBarcodeScanner={() => setShowBarcodeScannerModal(true)}
           disabled={saving}
         />

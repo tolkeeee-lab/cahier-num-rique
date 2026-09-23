@@ -7,7 +7,6 @@ import {
   CornerDownLeft,
   X,
   AlertCircle,
-  ArrowUpRight,
   Package,
   TrendingUp,
   Tag,
@@ -56,7 +55,6 @@ interface SmartProductQuickAddProps {
     existingIdToRestock?: string,
     financialImpact?: FinancialImpactOption
   ) => Promise<void>
-  onOpenAdvancedModalWithData?: (data: StockFormState) => void
   onOpenBarcodeScanner?: () => void
   disabled?: boolean
 }
@@ -64,7 +62,6 @@ interface SmartProductQuickAddProps {
 export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
   existingProducts,
   onAddProduct,
-  onOpenAdvancedModalWithData,
   onOpenBarcodeScanner,
   disabled = false,
 }) => {
@@ -392,32 +389,6 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     }
   }
 
-  const handleOpenDetailed = () => {
-    if (onOpenAdvancedModalWithData) {
-      const formState: StockFormState = {
-        name: activeData.name,
-        initial_stock: activeData.initial_stock,
-        unit_cost: activeData.unit_cost,
-        unit_price: activeData.unit_price,
-        alert_threshold: activeData.alert_threshold,
-        category: activeData.category,
-        unit: activeData.unit,
-        multiplier: activeData.multiplier,
-        packaging_name: activeData.packaging_name,
-        packages_count: activeData.packages_count,
-        package_cost: activeData.package_cost,
-        wholesale_price: activeData.wholesale_price,
-        half_package_price: activeData.half_package_price,
-        quarter_package_price: activeData.quarter_package_price,
-        lot_quantity: activeData.lot_quantity,
-        lot_price: activeData.lot_price,
-        trade_type: activeData.trade_type,
-        barcode: '',
-      }
-      onOpenAdvancedModalWithData(formState)
-    }
-  }
-
   return (
     <div className="bg-[#fdfbf7] border-2 border-amber-300/90 rounded-2xl p-3 sm:p-4 shadow-sm space-y-3 mb-4 transition-all">
       {/* ── EN-TÊTE CHALEUREUX DU CAHIER ── */}
@@ -449,6 +420,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         <div className="relative flex-grow">
           <input
             ref={inputRef}
+            id="smart-product-quick-add-input"
             type="text"
             value={inputText}
             onChange={(e) => {
@@ -574,17 +546,6 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                 </span>
               )}
             </div>
-
-            {onOpenAdvancedModalWithData && (
-              <button
-                type="button"
-                onClick={handleOpenDetailed}
-                className="text-amber-900 hover:text-amber-950 underline font-bold flex items-center gap-1 cursor-pointer"
-              >
-                <span>Fiche détaillée</span>
-                <ArrowUpRight className="w-3 h-3" />
-              </button>
-            )}
           </div>
 
           {/* TABLEAU RESPONSIVE (GRILLE SEYÈS DE HAUTE PRÉCISION) */}
