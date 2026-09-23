@@ -42,6 +42,7 @@ import { useInputPipeline, StockConfirmationData, PriceChangeData, WizardPrefill
 import { saveOfflineProduct, getOfflineProducts } from '@/lib/offlineDb'
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
+import { exportFullBackupJSON } from '@/lib/exportUtils'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
@@ -948,6 +949,11 @@ export default function JournalPage() {
                   employees={employees}
                   onInviteEmployee={handleInviteEmployee}
                   onRemoveEmployee={handleRemoveEmployee}
+                  onExportBackup={() => exportFullBackupJSON(
+                    shopManager.shopId,
+                    shopManager.currentShop?.name || 'Ma Boutique',
+                    journalData.allSales
+                  )}
                 />
 
               </div>

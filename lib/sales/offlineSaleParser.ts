@@ -88,7 +88,9 @@ function resolveArticleWithPackaging(
     matchedProd = catalog.find(p => normalizeProductName(p.name).toLowerCase().trim() === norm)
   }
 
-  const multiplier = matchedProd?.multiplier && matchedProd.multiplier > 1 ? matchedProd.multiplier : 24
+  const multiplier = matchedProd?.multiplier && matchedProd.multiplier > 1 
+    ? matchedProd.multiplier 
+    : (matchedProd?.package_size && matchedProd.package_size > 1 ? matchedProd.package_size : 1)
 
   if (packInfo.packagingType === 'quarter') {
     piecesCount = Math.max(1, Math.round(multiplier * (packInfo.multiplierFraction || 0.25))) * qty
@@ -342,13 +344,23 @@ export function parseTextLocally(text: string, penColor: string, catalog?: any[]
   }
 
   let nomClient = "Client anonyme"
-  const explicitClientMatch = text.match(/(?:client|grossiste|fournisseur)\s*[:=]?\s*([A-Za-zÀ-ÿ]+)/i)
-  const pourClientMatch = text.match(/(?:^|\s)pour\s+([A-Za-zÀ-ÿ]{2,})\b/i)
-  const clientCandidate = explicitClientMatch ? explicitClientMatch[1].trim() : (pourClientMatch ? pourClientMatch[1].trim() : null)
+  const explicitClientMatch = text.match(/(?:client|grossiste|fournisseur)\s*[:=]?\s*([^,\n\r;]+?)(?=\s+(?:reste|dette|credit|crédit|payé|paye|recu|avance|total|\d+[\s\w]*$|$))/i)
+  const pourClientMatch = text.match(/(?:^|\s)pour\s+([A-Za-zÀ-ÿ]+(?:[-'\s][A-Za-zÀ-ÿ]+)?)(?=\s+(?:reste|dette|credit|crédit|payé|paye|recu|avance|total|\d+|$))/i)
+  const rawCandidate = explicitClientMatch ? explicitClientMatch[1].trim() : (pourClientMatch ? pourClientMatch[1].trim() : null)
   const reservedWords = new Set(['stock', 'achat', 'recette', 'vente', 'carton', 'boite', 'boîte', 'sac', 'pack', 'demande', 'reste', 'dette', 'credit', 'crédit', 'total', 'loyer', 'transport', 'lui', 'moi', 'elle', 'eux', 'ce', 'cet', 'cette', 'un', 'une', 'des', 'le', 'la', 'les', 'du'])
 
-  if (clientCandidate && !reservedWords.has(clientCandidate.toLowerCase())) {
-    nomClient = clientCandidate.charAt(0).toUpperCase() + clientCandidate.slice(1).toLowerCase()
+  if (rawCandidate) {
+    const cleaned = rawCandidate.replace(/^[:=\-\s]+|[:=\-\s]+$/g, '')
+    if (cleaned && !reservedWords.has(cleaned.toLowerCase())) {
+      // Formater chaque segment en Title Case propre (ex: "mamadou traoré" -> "Mamadou Traoré", "jean-paul" -> "Jean-Paul")
+      nomClient = cleaned
+        .split(/(\s+|-)/)
+        .map(part => {
+          if (/^[\s-]+$/.test(part)) return part
+          return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+        })
+        .join('')
+    }
   }
 
   let montantPaye = totalFacture

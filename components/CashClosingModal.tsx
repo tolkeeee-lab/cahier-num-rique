@@ -18,7 +18,7 @@ import {
   Calendar,
   Clock
 } from 'lucide-react'
-import { calculateCash } from '@/lib/sales/cashDrawerCalculator'
+import { calculateCash, getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
 import { 
   getOfflineCashClosings, 
   saveOfflineCashClosing, 
@@ -121,41 +121,40 @@ export function CashClosingModal({
   const activeSales = sales.filter(s => s.status !== 'crossed_out')
   const todaySales = activeSales.filter(s => s.date === todayIso)
 
-  // Recettes Espèces du Jour (Ventes Cash + Encaisses Dettes + Acomptes)
-  const cashReceipts = todaySales
-    .filter(s => ['cash_in', 'sale', 'sale_cash', 'payment_client'].includes(s.type) || (s.type === 'sale_credit' && (s.paid || 0) > 0) || s.pen_color === 'blue' || s.pen === 'blue')
-    .reduce((sum, s) => sum + (s.paid || (s.type === 'sale_credit' ? 0 : s.total) || 0), 0)
+  // Recettes Espèces réelles du Jour (Flux entrants nets au tiroir : ventes cash, acomptes, remboursements fournisseurs, apports caisse)
+  const cashReceipts = todaySales.reduce((sum, s) => {
+    const delta = getItemCashDelta(s)
+    return delta > 0 ? sum + delta : sum
+  }, 0)
 
-  // Ventes à Crédit accordées aux clients aujourd'hui
+  // Ventes à Crédit accordées aux clients aujourd'hui (créances nées aujourd'hui)
   const creditSales = todaySales
     .filter(s => s.type === 'sale_credit' || (s.debt > 0 && s.type !== 'purchase_credit') || s.pen_color === 'yellow' || s.pen === 'yellow')
     .reduce((sum, s) => sum + (s.debt || 0), 0)
 
-  // Dépenses & Achats Cash du Jour (Montant décaissé du tiroir)
-  const totalExpenses = todaySales
-    .filter(s => ['cash_out', 'purchase_cash', 'payment_supplier'].includes(s.type) || (s.type === 'purchase_credit' && (s.paid || 0) > 0) || s.pen_color === 'red' || s.pen_color === 'green' || s.pen === 'red' || s.pen === 'green')
-    .reduce((sum, s) => {
-      if (s.type === 'purchase_credit') return sum + (s.paid || 0)
-      return sum + (s.total || s.paid || 0)
-    }, 0)
+  // Dépenses & Sorties Cash du Jour (Flux sortants nets du tiroir : achats comptant, dépenses, remboursements clients, retraits caisse)
+  const totalExpenses = todaySales.reduce((sum, s) => {
+    const delta = getItemCashDelta(s)
+    return delta < 0 ? sum + Math.abs(delta) : sum
+  }, 0)
 
   // Fond de caisse d'ouverture
   const rawOpening = parseFloat(openingCashInput.replace(/\s/g, '').replace(/,/g, '.'))
-  const openingCash = Number.isFinite(rawOpening) ? Math.max(0, rawOpening) : 0
+  const openingCash = Number.isFinite(rawOpening) ? Math.max(0, Math.round(rawOpening)) : 0
 
   // Solde théorique total = ouverture + recettes jour - dépenses jour
   // Si openingCash est renseigné, on l'ajoute au flux net de la journée
   const netDayCash = cashReceipts - totalExpenses
   const cumulatedSalesCash = calculateCash(activeSales)
-  const theoreticalCash = openingCash > 0 ? (openingCash + netDayCash) : cumulatedSalesCash
+  const theoreticalCash = openingCash > 0 ? Math.round(openingCash + netDayCash) : Math.round(cumulatedSalesCash)
 
   // Parsing espèces réelles comptées
   const rawActual = parseFloat(actualCashInput.replace(/\s/g, '').replace(/,/g, '.'))
   const actualCash = actualCashInput !== ''
-    ? (Number.isFinite(rawActual) ? rawActual : 0)
+    ? (Number.isFinite(rawActual) ? Math.round(rawActual) : 0)
     : theoreticalCash
 
-  const difference = Math.round((actualCash - theoreticalCash) * 100) / 100
+  const difference = Math.round(actualCash - theoreticalCash)
 
   const formatPrice = (price: number) => {
     const safe = Number.isFinite(price) ? price : 0

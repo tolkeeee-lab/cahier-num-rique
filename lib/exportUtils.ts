@@ -477,5 +477,68 @@ export function exportSyscohadaJournalCSV(
   document.body.removeChild(link)
 }
 
+/**
+ * Exporte l'ensemble des données du magasin (ventes, dettes, stock, clôtures) en fichier JSON complet de sauvegarde.
+ */
+export function exportFullBackupJSON(
+  shopId: string = 'default-shop',
+  shopName: string = 'Ma Boutique',
+  inMemorySales?: any[]
+) {
+  if (typeof window === 'undefined') return
 
+  try {
+    // Récupération des données locales
+    const sales = (Array.isArray(inMemorySales) && inMemorySales.length > 0)
+      ? inMemorySales
+      : JSON.parse(localStorage.getItem(`cahier_sales_${shopId}`) || '[]')
+    
+    const products = JSON.parse(localStorage.getItem(`cahier_products_${shopId}`) || '[]')
+    const cashClosings = JSON.parse(localStorage.getItem(`cahier_cash_closings_${shopId}`) || '[]')
+    const shoppingList = JSON.parse(localStorage.getItem(`cahier_shopping_${shopId}`) || '[]')
+    const clients = JSON.parse(localStorage.getItem(`cahier_clients_${shopId}`) || '[]')
+    const suppliers = JSON.parse(localStorage.getItem(`cahier_suppliers_${shopId}`) || '[]')
 
+    const backupData = {
+      version: '2.0.0',
+      exported_at: new Date().toISOString(),
+      shop: {
+        id: shopId,
+        name: shopName,
+      },
+      counts: {
+        sales: sales.length,
+        products: products.length,
+        cash_closings: cashClosings.length,
+        shopping_items: shoppingList.length,
+        clients: clients.length,
+        suppliers: suppliers.length,
+      },
+      data: {
+        sales,
+        products,
+        cash_closings: cashClosings,
+        shopping_list: shoppingList,
+        client_debts: clients,
+        supplier_debts: suppliers,
+      }
+    }
+
+    const jsonStr = JSON.stringify(backupData, null, 2)
+    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const cleanShopName = shopName.replace(/[^a-zA-Z0-9_-]/g, '_')
+    const dateStr = getTodayDateString()
+
+    link.setAttribute('href', url)
+    link.setAttribute('download', `Sauvegarde_Cahier_${cleanShopName}_${dateStr}.json`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch (err: any) {
+    console.error('[exportFullBackupJSON] Erreur lors de l\'export:', err)
+    alert("Erreur lors de la génération de la sauvegarde : " + (err?.message || 'Erreur inconnue'))
+  }
+}

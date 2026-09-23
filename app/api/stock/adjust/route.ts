@@ -120,8 +120,40 @@ export async function POST(request: Request) {
     if (articleErr) throw articleErr
 
     // 4. Mettre à jour la quantité globale en stock du produit et réinitialiser tracking_started_at
-    // pour éviter que les calculs automatiques ne déduisent ou n'ajoutent une seconde fois l'opération
-    const currentVal = product.initial_stock || 0
+    // pour éviter que les calculs automatiques ne déduisent ou n'ajoutent une seconde fois l'opération.
+    // Calcul du stock effectif réel avant cet ajustement pour ne pas effacer les ventes passées :
+    let currentVal = product.initial_stock || 0
+    if (typeof rawBody?.currentStock === 'number' && Number.isFinite(rawBody.currentStock)) {
+      currentVal = Math.max(0, rawBody.currentStock)
+    } else {
+      const trackingStart = product.tracking_started_at || product.created_at
+      let articlesQuery = supabase
+        .from('sold_articles')
+        .select('quantity, sales!inner(type, status, created_at)')
+        .eq('product_id', product.id)
+        .neq('sales.status', 'crossed_out')
+
+      if (trackingStart) {
+        articlesQuery = articlesQuery.gt('sales.created_at', trackingStart)
+      }
+
+      const { data: pastArticles } = await articlesQuery
+      if (pastArticles && pastArticles.length > 0) {
+        let totalIn = 0
+        let totalOut = 0
+        for (const item of pastArticles) {
+          const sType = (item.sales as any)?.type
+          const isEntry = ['purchase_cash', 'purchase_credit', 'stock_in', 'purchase_return'].includes(sType)
+          if (isEntry) {
+            totalIn += Number(item.quantity || 0)
+          } else {
+            totalOut += Number(item.quantity || 0)
+          }
+        }
+        currentVal = Math.max(0, currentVal + totalIn - totalOut)
+      }
+    }
+
     const newStockVal = type === 'in' ? currentVal + quantity : Math.max(0, currentVal - quantity)
     const saleCreatedAt = sale.created_at || new Date().toISOString()
     const trackingTime = new Date(new Date(saleCreatedAt).getTime() + 1000).toISOString()
