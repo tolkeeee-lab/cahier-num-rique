@@ -1,14 +1,23 @@
 -- ==============================================================================
--- CAHIER NUMÉRIQUE — LE SCRIPT MAÎTRE TOUT-EN-UN DÉFINITIF (VÉRIFIÉ & INFAILLIBLE)
+-- CAHIER NUMÉRIQUE — LE SCRIPT MAÎTRE TOUT-EN-UN DÉFINITIF
 -- ==============================================================================
 -- À exécuter dans l'éditeur SQL de Supabase (SQL Editor).
 -- Ce script est 100% idempotent : peut être relancé sans aucun risque d'erreur.
 --
--- CONSEIL : Fermez ou mettez en pause les onglets ouverts de votre application
--- avant de cliquer sur "Run" pour libérer les connexions PostgreSQL actives.
+-- ⚠️ IMPORTANT : FERMEZ L'ONGLET DE VOTRE APPLICATION (SUR ORDINATEUR ET TÉLÉPHONE)
+-- AVANT DE CLIQUER SUR "RUN" POUR DÉCONNECTER LES WEBSOCKETS EN DIRECT.
 -- ==============================================================================
 
-SET lock_timeout = '15s';
+-- 1. Nettoyer les transactions résiduelles bloquées en arrière-plan
+SELECT pg_terminate_backend(pid) 
+FROM pg_stat_activity 
+WHERE pid <> pg_backend_pid() 
+  AND datname = current_database() 
+  AND state IN ('idle in transaction', 'idle in transaction (aborted)');
+
+-- 2. Désactiver temporairement le déclenchement des workers concurrents pendant la migration
+SET lock_timeout = '30s';
+SET session_replication_role = 'replica';
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -299,7 +308,6 @@ CREATE TABLE IF NOT EXISTS public.cash_closings (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
--- Garantir la présence de TOUTES les variantes de colonnes (date, closing_date, etc.)
 ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS shop_id VARCHAR(255) DEFAULT 'default-shop';
 ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS date DATE DEFAULT CURRENT_DATE;
 ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS closing_date DATE DEFAULT CURRENT_DATE;
@@ -320,7 +328,6 @@ ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS closed_by_id UUID;
 ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS closed_by_name VARCHAR(255);
 ALTER TABLE public.cash_closings ADD COLUMN IF NOT EXISTS notes TEXT;
 
--- Synchroniser date et closing_date pour compatibilité totale
 UPDATE public.cash_closings SET date = closing_date WHERE date IS NULL AND closing_date IS NOT NULL;
 UPDATE public.cash_closings SET closing_date = date WHERE closing_date IS NULL AND date IS NOT NULL;
 
@@ -658,7 +665,8 @@ CREATE POLICY "market_knowledge_unified_policy" ON public.market_knowledge
   USING (true)
   WITH CHECK (true);
 
--- ── 9. RECHARGEMENT DU CACHE SUPABASE SCHEMA ──────────────────────────────────
+-- ── 9. RÉTABLISSEMENT DES MODES NORMAUX ET RECHARGEMENT DU CACHE ────────────────
+SET session_replication_role = 'origin';
 NOTIFY pgrst, 'reload schema';
 
 -- ── 10. VÉRIFICATION FINALE DES TABLES ACTIVES ─────────────────────────────────
