@@ -47,7 +47,7 @@ import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient
 import { getPens } from '@/lib/penUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
 import { isEmployeeRole } from '@/lib/roleUtils'
-import { findShopIdByCode } from '@/lib/shopCodeUtils'
+import { findShopIdByCode, isRealUuid } from '@/lib/shopCodeUtils'
 import { Send, Loader, Zap, ScanLine } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
