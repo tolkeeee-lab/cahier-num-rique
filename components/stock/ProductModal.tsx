@@ -13,6 +13,9 @@ interface ProductModalProps {
   setFormData: React.Dispatch<React.SetStateAction<StockFormState>>
   saving?: boolean
   onSave: () => void
+  orphanPastSales?: number
+  deductPastSales?: boolean
+  setDeductPastSales?: (val: boolean) => void
 }
 
 const CATEGORIES = [
@@ -47,6 +50,9 @@ export function ProductModal({
   setFormData,
   saving = false,
   onSave,
+  orphanPastSales = 0,
+  deductPastSales = false,
+  setDeductPastSales,
 }: ProductModalProps) {
   useEffect(() => {
     if (!isOpen) return
@@ -295,6 +301,21 @@ export function ProductModal({
               />
             </div>
           </div>
+
+          {/* Déduction ventes passées orphelines */}
+          {orphanPastSales > 0 && setDeductPastSales && (
+            <div className="p-2.5 bg-amber-100/70 border border-amber-300 rounded-xl flex items-center justify-between text-xs font-mono">
+              <label className="flex items-center gap-2 cursor-pointer text-amber-950 font-bold">
+                <input
+                  type="checkbox"
+                  checked={deductPastSales}
+                  onChange={(e) => setDeductPastSales(e.target.checked)}
+                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                />
+                <span>Déduire les {orphanPastSales} ventes passées du stock actuel</span>
+              </label>
+            </div>
+          )}
 
           {/* Boutons d'Action Fixes en Bas */}
           <div className="flex-shrink-0 flex items-center justify-end gap-2.5 pt-3 mt-2 border-t border-amber-200 bg-[#fdfaf2]">
