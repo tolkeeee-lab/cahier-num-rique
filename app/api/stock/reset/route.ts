@@ -16,11 +16,7 @@ export async function POST(request: Request) {
 
   try {
     if (isSupabaseConfigured()) {
-      const altShopId = shopId.startsWith('SHOP-')
-        ? shopId.replace(/^SHOP-/i, '')
-        : `SHOP-${shopId}`
-
-      // Supprimer uniquement le catalogue des produits pour cette boutique (shopId et altShopId)
+// Supprimer uniquement le catalogue des produits pour cette boutique (shopId et altShopId)
       const { error } = await supabase
         .from('products')
         .delete()
