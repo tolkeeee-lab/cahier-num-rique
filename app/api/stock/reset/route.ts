@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { requireShopOwner, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 export async function POST(request: Request) {
-  const shopId = request.headers.get('x-shop-id') || 'default-shop'
+  const requestedShopId = request.headers.get('x-shop-id')
+  if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+  let shopId: string
+  try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
   const authHeader = request.headers.get('authorization') || ''
   const token = authHeader.replace(/^Bearer\s+/i, '').trim()
 
@@ -12,7 +16,8 @@ export async function POST(request: Request) {
     return url.includes('supabase.co') && key.length > 20
   }
 
-  // Vérification de sécurité avec Supabase Auth
+  // Vérification de sécurité centralisée ci-dessus.
+  /* Ancien contrôle conservé temporairement pour compatibilité de réponse.
   if (isSupabaseConfigured() && token) {
     const { data: { user }, error: userErr } = await supabase.auth.getUser(token)
     if (userErr || !user) {
@@ -41,6 +46,7 @@ export async function POST(request: Request) {
     )
   }
 
+  */
   try {
     if (isSupabaseConfigured()) {
       const altShopId = shopId.startsWith('SHOP-')
