@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { normalizeProductName, sanitizeProductData } from '@/lib/productUtils'
+import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -11,7 +12,10 @@ const isSupabaseConfigured = () => {
 // ─── GET /api/stock ───────────────────────────────────────────────────────────
 // Retourne le catalogue produits + stock calculé depuis les écritures
 export async function GET(request: Request) {
-  const shopId = request.headers.get('x-shop-id') || 'default-shop'
+  const requestedShopId = request.headers.get('x-shop-id')
+  if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+  let shopId: string
+  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ products: [], orphans: [], total: 0, offline: true })
@@ -223,7 +227,10 @@ function filterProductDbColumns(obj: Record<string, any>): Record<string, any> {
 // ─── POST /api/stock ──────────────────────────────────────────────────────────
 // Crée un nouveau produit dans le catalogue
 export async function POST(request: Request) {
-  const shopId = request.headers.get('x-shop-id') || 'default-shop'
+  const requestedShopId = request.headers.get('x-shop-id')
+  if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+  let shopId: string
+  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
   }
@@ -338,7 +345,10 @@ export async function POST(request: Request) {
 // ─── PATCH /api/stock ─────────────────────────────────────────────────────────
 // Met à jour un produit existant (ou l'insère s'il a été créé hors-ligne)
 export async function PATCH(request: Request) {
-  const shopId = request.headers.get('x-shop-id') || 'default-shop'
+  const requestedShopId = request.headers.get('x-shop-id')
+  if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+  let shopId: string
+  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
   }
