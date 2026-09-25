@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
+import { requireShopAccess, requireShopOwner, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -13,7 +14,10 @@ const isSupabaseConfigured = () => {
 // Récupère la liste des employés associés à une boutique
 export async function GET(request: NextRequest) {
   try {
-    const shopId = request.headers.get('x-shop-id') || 'default-shop'
+    const requestedShopId = request.headers.get('x-shop-id')
+    if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+    const { shop } = await requireShopAccess(request, requestedShopId)
+    const shopId = shop.id
 
     if (isSupabaseConfigured()) {
       const altShopId = shopId.startsWith('SHOP-')
@@ -35,6 +39,7 @@ export async function GET(request: NextRequest) {
     // Fallback local en mémoire pour le mode démo ou hors-ligne
     return NextResponse.json({ employees: [] })
   } catch (err) {
+    if ((err as any)?.status === 401 || (err as any)?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur GET /api/employees:', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur inconnue' },
@@ -47,7 +52,10 @@ export async function GET(request: NextRequest) {
 // Ajoute un employé à la boutique et lui envoie une invitation par e-mail
 export async function POST(request: NextRequest) {
   try {
-    const shopId = request.headers.get('x-shop-id') || 'default-shop'
+    const requestedShopId = request.headers.get('x-shop-id')
+    if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+    const { shop } = await requireShopOwner(request, requestedShopId)
+    const shopId = shop.id
     const shopName = request.headers.get('x-shop-name') || ''
     const { name, email, role } = await request.json()
 
@@ -184,6 +192,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (err) {
+    if ((err as any)?.status === 401 || (err as any)?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur POST /api/employees:', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur inconnue' },
@@ -199,7 +208,10 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    const shopId = request.headers.get('x-shop-id') || 'default-shop'
+    const requestedShopId = request.headers.get('x-shop-id')
+    if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+    const { shop } = await requireShopOwner(request, requestedShopId)
+    const shopId = shop.id
 
     if (!id) {
       return NextResponse.json(
@@ -265,6 +277,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
+    if ((err as any)?.status === 401 || (err as any)?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur DELETE /api/employees:', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur inconnue' },
