@@ -14,14 +14,6 @@ export async function POST(request: Request) {
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
   try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
-  const userRole = ''
-
-  if (userRole === 'employee' || userRole === 'caissier') {
-    return NextResponse.json(
-      { error: 'Action interdite : Seul le propriétaire peut fusionner des produits du catalogue.' },
-      { status: 403 }
-    )
-  }
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données distante non configurée' }, { status: 503 })
@@ -129,7 +121,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Produit « ${sourceProduct.name} » fusionné avec succès dans « ${targetProduct.name} ».`,
+      message: `Produit « ${sourceProduct.name} » fusionné avec succès dans « ${targetProduct.name } ».`,
       product: updatedTarget,
     })
   } catch (err: any) {
