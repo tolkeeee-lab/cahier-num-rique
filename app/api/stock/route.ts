@@ -301,7 +301,7 @@ export async function POST(request: Request) {
     const { data: existingProd } = await supabase
       .from('products')
       .select('*')
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
       .ilike('name', canonicalName)
       .maybeSingle()
 
@@ -451,7 +451,7 @@ export async function PATCH(request: Request) {
       const { data: existingByName } = await supabase
         .from('products')
         .select('id')
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
         .ilike('name', canonicalName)
         .maybeSingle()
 
@@ -547,7 +547,7 @@ export async function DELETE(request: Request) {
       const { data: shopSales } = await supabase
         .from('sales')
         .select('id')
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
 
       const saleIds = (shopSales || []).map(s => s.id)
       if (saleIds.length > 0) {
@@ -568,7 +568,7 @@ export async function DELETE(request: Request) {
         .from('products')
         .select('*')
         .eq('id', id)
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
         .maybeSingle()
       
       productToDelete = prod
@@ -579,7 +579,7 @@ export async function DELETE(request: Request) {
         .from('products')
         .select('*')
         .ilike('name', productName.trim())
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
         .maybeSingle()
 
       productToDelete = prodByName
@@ -591,7 +591,7 @@ export async function DELETE(request: Request) {
         .from('products')
         .delete()
         .eq('id', productToDelete.id)
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
 
       if (deleteProdErr) throw deleteProdErr
     } else if (id && !id.startsWith('stk_')) {
@@ -600,7 +600,7 @@ export async function DELETE(request: Request) {
         .from('products')
         .delete()
         .eq('id', id)
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
     }
 
     // 3. Purger les sold_articles associés au produit pour cette boutique
@@ -609,7 +609,7 @@ export async function DELETE(request: Request) {
       const { data: shopSales } = await supabase
         .from('sales')
         .select('id')
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
 
       const saleIds = (shopSales || []).map(s => s.id)
       if (saleIds.length > 0) {
