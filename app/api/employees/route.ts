@@ -209,12 +209,6 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (isSupabaseConfigured()) {
-      const altShopId = shopId.startsWith('SHOP-')
-        ? shopId.replace(/^SHOP-/i, 'BTQ-')
-        : shopId.startsWith('BTQ-')
-          ? shopId.replace(/^BTQ-/i, 'SHOP-')
-          : shopId
-
       // 1. Récupérer l'email de l'employé avant la suppression (restreint strictement à la boutique)
       const { data: empData } = await supabase
         .from('employees')
@@ -229,7 +223,7 @@ export async function DELETE(request: NextRequest) {
 
       const empEmail = empData?.email?.toLowerCase().trim()
 
-      // 2. Supprimer la ligne dans `employees` par ID et/ou email pour shopId et altShopId
+      // 2. Supprimer la ligne dans `employees` par ID et/ou email pour la boutique autorisée
       if (empEmail) {
         await supabase
           .from('employees')
