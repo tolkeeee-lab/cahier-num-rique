@@ -20,10 +20,7 @@ export async function POST(request: Request) {
   } catch (err) {
     return shopAuthorizationErrorResponse(err)
   }
-
-  const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
-
-  try {
+try {
     const rawBody = await request.json()
     const validation = validatePayload(stockAdjustSchema, rawBody)
     if (!validation.success) {
@@ -32,7 +29,7 @@ export async function POST(request: Request) {
 
     const { productId, quantity, type, reason, notes } = validation.data
 
-    // 1. Récupérer le produit (support shopId et altShopId)
+    // 1. Récupérer le produit 
     const { data: product, error: prodErr } = await supabase
       .from('products')
       .select('*')
