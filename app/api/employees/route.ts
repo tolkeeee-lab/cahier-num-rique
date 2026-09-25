@@ -20,16 +20,10 @@ export async function GET(request: NextRequest) {
     const shopId = shop.id
 
     if (isSupabaseConfigured()) {
-      const altShopId = shopId.startsWith('SHOP-')
-        ? shopId.replace(/^SHOP-/i, 'BTQ-')
-        : shopId.startsWith('BTQ-')
-          ? shopId.replace(/^BTQ-/i, 'SHOP-')
-          : shopId
-
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -70,17 +64,11 @@ export async function POST(request: NextRequest) {
     const cleanName = name.trim()
 
     if (isSupabaseConfigured()) {
-      const altShopId = shopId.startsWith('SHOP-')
-        ? shopId.replace(/^SHOP-/i, 'BTQ-')
-        : shopId.startsWith('BTQ-')
-          ? shopId.replace(/^BTQ-/i, 'SHOP-')
-          : shopId
-
       // 1. Supprimer toute ancienne ligne résiduelle avec cet email pour cette boutique pour autoriser la ré-invitation
       await supabase
         .from('employees')
         .delete()
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
         .eq('email', cleanEmail)
 
       // 2. Insérer la nouvelle fiche employé dans la table `employees`
@@ -232,7 +220,7 @@ export async function DELETE(request: NextRequest) {
         .from('employees')
         .select('*')
         .eq('id', id)
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
         .maybeSingle()
 
       if (!empData) {
@@ -246,7 +234,7 @@ export async function DELETE(request: NextRequest) {
         await supabase
           .from('employees')
           .delete()
-          .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+          .eq('shop_id', shopId)
           .eq('email', empEmail)
       }
 
@@ -254,7 +242,7 @@ export async function DELETE(request: NextRequest) {
         .from('employees')
         .delete()
         .eq('id', id)
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
 
       // 3. Nettoyer le compte Auth Supabase correspondant pour permettre une ré-invitation ultérieure
       const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
