@@ -42,8 +42,8 @@ export async function POST(request: Request) {
     const payload: Record<string, any> = {
       model,
       messages: formattedMessages,
-      max_tokens,
-      reasoning_budget,
+      max_tokens: safeMaxTokens,
+      reasoning_budget: safeReasoningBudget,
       temperature,
       top_p,
       stream,
