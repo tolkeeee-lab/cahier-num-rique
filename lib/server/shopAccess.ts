@@ -106,3 +106,17 @@ export function shopAuthorizationErrorResponse(error: unknown) {
     { status },
   )
 }
+
+
+export async function requireShopOwner(
+  request: Request,
+  requestedShopId: string,
+): Promise<{ user: User; shop: AuthorizedShop; accessToken: string }> {
+  const result = await requireShopAccess(request, requestedShopId)
+  if (result.shop.role !== 'owner') {
+    const error = new Error('Owner permission required')
+    ;(error as Error & { status?: number }).status = 403
+    throw error
+  }
+  return result
+}
