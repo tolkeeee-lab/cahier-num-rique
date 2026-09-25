@@ -30,14 +30,7 @@ export async function POST(request: Request) {
     if (sourceProductId === targetProductId) {
       return NextResponse.json({ error: 'Impossible de fusionner un produit avec lui-même' }, { status: 400 })
     }
-
-    const altShopId = shopId.startsWith('SHOP-')
-      ? shopId.replace(/^SHOP-/i, '')
-      : shopId.startsWith('BTQ-')
-        ? shopId.replace(/^BTQ-/i, 'SHOP-')
-        : `SHOP-${shopId}`
-
-    // 1. Récupérer les 2 produits (support shopId et altShopId)
+// 1. Récupérer les 2 produits 
     const { data: sourceProduct, error: err1 } = await supabase
       .from('products')
       .select('*')
