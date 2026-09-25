@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
+import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -10,7 +11,10 @@ const isSupabaseConfigured = () => {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const shopId = request.headers.get('x-shop-id') || searchParams.get('shop_id') || 'default-shop'
+  const requestedShopId = request.headers.get('x-shop-id') || searchParams.get('shop_id')
+  if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+  let shopId: string
+  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
   const actionFilter = searchParams.get('action')
   const limit = Math.min(Number(searchParams.get('limit')) || 100, 200)
 
