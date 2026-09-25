@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 import { calculateCash } from '@/lib/sales/cashDrawerCalculator'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
+import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -35,7 +36,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // client ou supplier
-    const shopId = request.headers.get('x-shop-id') || 'default-shop'
+    const requestedShopId = request.headers.get('x-shop-id')
+    if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+    const { shop } = await requireShopAccess(request, requestedShopId)
+    const shopId = shop.id
     const targetShopIds = getDualShopIds(shopId)
 
     if (type === 'supplier') {
@@ -201,6 +205,7 @@ export async function GET(request: NextRequest) {
     }))
     return NextResponse.json({ debts: [...localClients, ...localSuppliers] })
   } catch (error) {
+    if ((error as any)?.status === 401 || (error as any)?.status === 403) return shopAuthorizationErrorResponse(error)
     console.error('Erreur API GET debts:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
@@ -210,7 +215,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { id, date, time, created_at, name, amount, type, action, description } = body
-    const shopId = request.headers.get('x-shop-id') || 'default-shop'
+    const requestedShopId = request.headers.get('x-shop-id')
+    if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+    const { shop } = await requireShopAccess(request, requestedShopId)
+    const shopId = shop.id
 
     if (!name || !amount || amount <= 0 || !type || !action) {
       return NextResponse.json({ error: 'Données incomplètes' }, { status: 400 })
@@ -319,6 +327,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, sale: newSale })
   } catch (error) {
+    if ((error as any)?.status === 401 || (error as any)?.status === 403) return shopAuthorizationErrorResponse(error)
     console.error('Erreur POST debts:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
