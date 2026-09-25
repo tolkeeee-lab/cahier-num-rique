@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select('*')
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
       .order('name')
 
     if (productsError) throw productsError
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
         id, type, date, notes, status, created_at,
         sold_articles ( product_name, quantity, unit_price )
       `)
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
 
     if (salesError) throw salesError
 
