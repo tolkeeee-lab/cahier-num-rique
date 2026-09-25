@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { stockAdjustSchema, validatePayload } from '@/lib/validations'
+import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 export async function POST(request: Request) {
-  const shopId = request.headers.get('x-shop-id') || 'default-shop'
+  const requestedShopId = request.headers.get('x-shop-id')
+  if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+  let shopId: string
+  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
   const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
   const employeeName = request.headers.get('x-employee-name') || 'Gérant'
 
@@ -179,6 +183,7 @@ export async function POST(request: Request) {
       message: `Stock ajusté (${signSymbol}${quantity} ${product.unit || 'unités'}) pour « ${product.name} ».`,
     })
   } catch (err: any) {
+    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[API/stock/adjust POST]', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
