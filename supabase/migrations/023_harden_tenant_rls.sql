@@ -38,8 +38,14 @@ AS $$
 
   SELECT e.shop_id::text
   FROM public.employees AS e
-  WHERE e.id = (SELECT auth.uid())
-    AND e.shop_id IS NOT NULL
+  WHERE e.shop_id IS NOT NULL
+    AND (
+      e.id = (SELECT auth.uid())
+      OR (
+        NULLIF(LOWER(TRIM(e.email)), '') IS NOT NULL
+        AND LOWER(TRIM(e.email)) = LOWER(TRIM(COALESCE((SELECT auth.jwt()->>'email'), '')))
+      )
+    )
 $$;
 
 REVOKE ALL ON FUNCTION private.user_shop_ids() FROM PUBLIC;
@@ -66,8 +72,14 @@ AS $$
     ELSE (
       SELECT LOWER(COALESCE(e.role, 'employee'))
       FROM public.employees AS e
-      WHERE e.id = (SELECT auth.uid())
-        AND e.shop_id = p_shop_id
+      WHERE e.shop_id = p_shop_id
+        AND (
+          e.id = (SELECT auth.uid())
+          OR (
+            NULLIF(LOWER(TRIM(e.email)), '') IS NOT NULL
+            AND LOWER(TRIM(e.email)) = LOWER(TRIM(COALESCE((SELECT auth.jwt()->>'email'), '')))
+          )
+        )
       LIMIT 1
     )
   END
@@ -157,6 +169,10 @@ FOR SELECT
 TO authenticated
 USING (
   id = (SELECT auth.uid())
+  OR (
+    NULLIF(LOWER(TRIM(email)), '') IS NOT NULL
+    AND LOWER(TRIM(email)) = LOWER(TRIM(COALESCE((SELECT auth.jwt()->>'email'), '')))
+  )
   OR shop_id IN (SELECT private.user_shop_ids())
 );
 
