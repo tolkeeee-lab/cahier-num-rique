@@ -6,10 +6,22 @@ import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/
 export async function POST(request: Request) {
   const requestedShopId = request.headers.get('x-shop-id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+
   let shopId: string
-  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  let employeeName = 'Gérant'
+  try {
+    const authorization = await requireShopAccess(request, requestedShopId)
+    shopId = authorization.shop.id
+    employeeName =
+      authorization.user.user_metadata?.full_name ||
+      authorization.user.user_metadata?.name ||
+      authorization.user.email ||
+      'Gérant'
+  } catch (err) {
+    return shopAuthorizationErrorResponse(err)
+  }
+
   const altShopId = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
-  const employeeName = request.headers.get('x-employee-name') || 'Gérant'
 
   try {
     const rawBody = await request.json()
@@ -125,7 +137,6 @@ export async function POST(request: Request) {
 
     // 4. Mettre à jour la quantité globale en stock du produit et réinitialiser tracking_started_at
     // pour éviter que les calculs automatiques ne déduisent ou n'ajoutent une seconde fois l'opération.
-    // Calcul du stock effectif réel avant cet ajustement pour ne pas effacer les ventes passées :
     let currentVal = product.initial_stock || 0
     if (typeof rawBody?.currentStock === 'number' && Number.isFinite(rawBody.currentStock)) {
       currentVal = Math.max(0, rawBody.currentStock)
