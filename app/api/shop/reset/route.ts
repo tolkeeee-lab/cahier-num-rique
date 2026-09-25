@@ -8,8 +8,6 @@ export async function POST(request: Request) {
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
   try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
-  const authHeader = request.headers.get('authorization') || ''
-  const token = authHeader.replace(/^Bearer\s+/i, '').trim()
 
   const isSupabaseConfigured = () => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -17,36 +15,6 @@ export async function POST(request: Request) {
     return url.includes('supabase.co') && key.length > 20
   }
 
-  // Vérification de sécurité centralisée ci-dessus.
-  /* Ancien contrôle conservé temporairement pour compatibilité de réponse.
-  if (isSupabaseConfigured() && token) {
-    const { data: { user }, error: userErr } = await supabase.auth.getUser(token)
-    if (userErr || !user) {
-      return NextResponse.json({ error: 'Session invalide ou expirée.' }, { status: 401 })
-    }
-
-    const email = (user.email || '').toLowerCase().trim()
-    const { data: empRecord } = await supabase
-      .from('employees')
-      .select('role')
-      .eq('shop_id', shopId)
-      .eq('email', email)
-      .single()
-
-    if (empRecord && (empRecord.role === 'employee' || empRecord.role === 'caissier')) {
-      return NextResponse.json(
-        { error: 'Action interdite : Seul le propriétaire peut réinitialiser la boutique.' },
-        { status: 403 }
-      )
-    }
-  } else if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json(
-      { error: 'Authentification requise pour réinitialiser la boutique.' },
-      { status: 401 }
-    )
-  }
-
-  */
   try {
     if (isSupabaseConfigured()) {
       const targetShopIds = getDualShopIds(shopId)
