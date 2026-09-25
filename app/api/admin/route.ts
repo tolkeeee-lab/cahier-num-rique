@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
       if (!authErr && user) {
         authenticatedEmail = (user.email || '').toLowerCase().trim()
-        const role = user.app_metadata?.role || user.user_metadata?.role
+        const role = user.app_metadata?.role
         const allowedEmails = ['admin@cahier.com', 'tolkeeee@gmail.com', 'tolkeeeee@gmail.com']
         if (role === 'super_admin' || role === 'admin' || allowedEmails.includes(authenticatedEmail) || authenticatedEmail.endsWith('@cahier.admin')) {
           isAuthorized = true
