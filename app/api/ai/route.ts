@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
+import { requireAuthenticatedUser, unauthorizedResponse } from '@/lib/server/auth'
 
 export async function POST(request: Request) {
+  try {
+    await requireAuthenticatedUser(request)
+  } catch (err) {
+    return unauthorizedResponse(err instanceof Error ? err.message : 'Authentication required')
+  }
+
   const apiKey = process.env.NVIDIA_API_KEY
 
   if (!apiKey) {
@@ -22,6 +29,11 @@ export async function POST(request: Request) {
       reasoning_budget = 16384,
       stream = false,
     } = body
+
+    if (!Array.isArray(messages) || messages.length > 50) return NextResponse.json({ error: 'Trop de messages dans la requête.' }, { status: 400 })
+    if (typeof prompt === 'string' && prompt.length > 20000) return NextResponse.json({ error: 'Prompt trop volumineux.' }, { status: 400 })
+    const safeMaxTokens = Math.min(Math.max(Number(max_tokens) || 4096, 1), 16384)
+    const safeReasoningBudget = Math.min(Math.max(Number(reasoning_budget) || 0, 0), 8192)
 
     const formattedMessages = messages.length > 0
       ? messages
