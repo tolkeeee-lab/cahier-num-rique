@@ -75,6 +75,28 @@ export function useOfflineSync({
     isSyncing.current = true
     setSyncStatus('syncing')
 
+    // Les API de synchronisation sont protégées par un Bearer token.
+    // La session Supabase persiste côté client même hors ligne ; au retour réseau,
+    // on la rafraîchit si nécessaire avant d'envoyer les opérations en attente.
+    let accessToken: string | null = null
+    if (isSupabaseClientConfigured()) {
+      const { data: sessionData } = await supabaseClient.auth.getSession()
+      accessToken = sessionData.session?.access_token ?? null
+
+      if (!accessToken) {
+        const { data: refreshed } = await supabaseClient.auth.refreshSession()
+        accessToken = refreshed.session?.access_token ?? null
+      }
+    }
+
+    if (!accessToken) {
+      isSyncing.current = false
+      setSyncStatus('error')
+      return
+    }
+
+    const authHeaders = { Authorization: `Bearer ${accessToken}` }
+
     let successCount = 0
     let errorCount = 0
 
@@ -86,6 +108,7 @@ export function useOfflineSync({
           headers: {
             'Content-Type': 'application/json',
             'x-shop-id': shopId,
+            ...authHeaders,
           },
           body: JSON.stringify(prod),
         })
@@ -109,6 +132,7 @@ export function useOfflineSync({
           headers: {
             'Content-Type': 'application/json',
             'x-shop-id': shopId,
+            ...authHeaders,
           },
           body: JSON.stringify(closing),
         })
@@ -165,6 +189,7 @@ export function useOfflineSync({
             'Content-Type': 'application/json',
             'x-shop-id': shopId,
             'x-shop-activity': shopActivity,
+            ...authHeaders,
           },
           body: JSON.stringify({
             id: sale.id,
