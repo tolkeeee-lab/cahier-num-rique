@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { stockMergeSchema, validatePayload } from '@/lib/validations'
+import { requireShopOwner, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -9,8 +10,11 @@ const isSupabaseConfigured = () => {
 }
 
 export async function POST(request: Request) {
-  const shopId = request.headers.get('x-shop-id') || 'default-shop'
-  const userRole = (request.headers.get('x-user-role') || '').toLowerCase().trim()
+  const requestedShopId = request.headers.get('x-shop-id')
+  if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+  let shopId: string
+  try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  const userRole = ''
 
   if (userRole === 'employee' || userRole === 'caissier') {
     return NextResponse.json(
@@ -129,6 +133,7 @@ export async function POST(request: Request) {
       product: updatedTarget,
     })
   } catch (err: any) {
+    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[API/stock/merge POST]', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
