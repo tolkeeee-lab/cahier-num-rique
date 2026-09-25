@@ -42,14 +42,14 @@ export async function POST(request: Request) {
       .from('products')
       .select('*')
       .eq('id', sourceProductId)
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
       .single()
 
     const { data: targetProduct, error: err2 } = await supabase
       .from('products')
       .select('*')
       .eq('id', targetProductId)
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
       .single()
 
     if (err1 || !sourceProduct) {
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     const { data: shopSales } = await supabase
       .from('sales')
       .select('id')
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
 
     const saleIds = (shopSales || []).map(s => s.id)
     if (saleIds.length > 0) {
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
           product_name_canonical: targetProduct.name,
         })
         .in('sale_id', saleIds)
-        .or(`product_id.eq.${sourceProduct.id},product_name.ilike.${sourceProduct.name}`)
+        .eq('product_id', sourceProduct.id)
 
       if (updateArticlesErr) {
         console.warn('[Merge] Remarque lors de la màj des sold_articles:', updateArticlesErr.message)
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', targetProduct.id)
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
       .select()
       .single()
 
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
       .from('products')
       .delete()
       .eq('id', sourceProduct.id)
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
 
     if (deleteSourceErr) throw deleteSourceErr
 
