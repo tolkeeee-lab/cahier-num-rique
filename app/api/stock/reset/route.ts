@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       const { error } = await supabase
         .from('products')
         .delete()
-        .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+        .eq('shop_id', shopId)
 
       if (error) throw error
     }
