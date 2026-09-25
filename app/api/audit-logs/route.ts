@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 const isSupabaseConfigured = () => {
@@ -23,13 +22,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const ids = getDualShopIds(shopId)
-    const orFilter = ids.length > 1 ? ids.map(id => `shop_id.eq.${id}`).join(',') : `shop_id.eq.${shopId}`
-
     let query = supabase
       .from('audit_logs')
       .select('*')
-      .or(orFilter)
+      .eq('shop_id', shopId)
       .order('created_at', { ascending: false })
       .limit(limit)
 
