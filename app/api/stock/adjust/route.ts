@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       .from('products')
       .select('*')
       .eq('id', productId)
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
       .single()
 
     if (prodErr || !product) {
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
       .from('products')
       .update(updatePayload)
       .eq('id', product.id)
-      .or(`shop_id.eq.${shopId},shop_id.eq.${altShopId}`)
+      .eq('shop_id', shopId)
 
     return NextResponse.json({
       success: true,
