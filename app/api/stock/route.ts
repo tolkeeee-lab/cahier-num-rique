@@ -22,13 +22,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const altShopId = shopId.startsWith('SHOP-')
-      ? shopId.replace(/^SHOP-/i, 'BTQ-')
-      : shopId.startsWith('BTQ-')
-        ? shopId.replace(/^BTQ-/i, 'SHOP-')
-        : shopId
-
-    // 1. Catalogue des produits
+// 1. Catalogue des produits
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select('*')
@@ -264,11 +258,7 @@ export async function POST(request: Request) {
     }
 
     const canonicalName = normalizeProductName(name)
-    const altShopId = shopId.startsWith('SHOP-')
-      ? shopId.replace(/^SHOP-/i, '')
-      : `SHOP-${shopId}`
-
-    const cleanData: Record<string, any> = sanitizeProductData({
+const cleanData: Record<string, any> = sanitizeProductData({
       shop_id: shopId,
       name: canonicalName,
       category: category || 'Général',
@@ -297,7 +287,7 @@ export async function POST(request: Request) {
 
     const insertData = filterProductDbColumns(cleanData)
 
-    // Vérifier si le produit existe déjà sous shopId ou altShopId pour éviter les doublons inter-identifiants
+    // Vérifier si le produit existe déjà pour cette boutique
     const { data: existingProd } = await supabase
       .from('products')
       .select('*')
@@ -381,14 +371,7 @@ export async function PATCH(request: Request) {
     if (!id && !name) {
       return NextResponse.json({ error: 'ID ou nom du produit manquant' }, { status: 400 })
     }
-
-    const altShopId = shopId.startsWith('SHOP-')
-      ? shopId.replace(/^SHOP-/i, 'BTQ-')
-      : shopId.startsWith('BTQ-')
-        ? shopId.replace(/^BTQ-/i, 'SHOP-')
-        : shopId
-
-    let updates: Record<string, any> = {}
+let updates: Record<string, any> = {}
     if (name !== undefined) updates.name = name.trim()
     if (category !== undefined) updates.category = category
     if (unit !== undefined) updates.unit = unit
@@ -537,11 +520,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const altShopId = shopId.startsWith('SHOP-')
-      ? shopId.replace(/^SHOP-/i, '')
-      : `SHOP-${shopId}`
-
-    // 1. Cas d'un article orphelin (historique de vente sans fiche produit dans le catalogue)
+// 1. Cas d'un article orphelin (historique de vente sans fiche produit dans le catalogue)
     if (id && id.startsWith('orphan_')) {
       const orphanName = id.replace(/^orphan_/, '')
       const { data: shopSales } = await supabase
