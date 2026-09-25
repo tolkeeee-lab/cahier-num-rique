@@ -44,13 +44,25 @@ export async function requireShopAccess(
 
   const client = adminClient()
 
-  const { data: shop, error: shopError } = await client
+  let { data: shop, error: shopError } = await client
     .from('shops')
     .select('id, shop_code, owner_id')
-    .or(`id.eq.${shopId},shop_code.eq.${shopId}`)
+    .eq('id', shopId)
     .maybeSingle()
 
   if (shopError) throw shopError
+
+  if (!shop) {
+    const result = await client
+      .from('shops')
+      .select('id, shop_code, owner_id')
+      .eq('shop_code', shopId)
+      .maybeSingle()
+
+    shop = result.data
+    shopError = result.error
+    if (shopError) throw shopError
+  }
 
   if (!shop) {
     const error = new Error('Shop not found')
@@ -66,14 +78,28 @@ export async function requireShopAccess(
     }
   }
 
-  const { data: employee, error: employeeError } = await client
+  const employeeById = await client
     .from('employees')
     .select('id, email, role, shop_id')
     .eq('shop_id', shop.id)
-    .or(`id.eq.${user.id},email.eq.${(user.email || '').toLowerCase()}`)
+    .eq('id', user.id)
     .maybeSingle()
 
-  if (employeeError) throw employeeError
+  if (employeeById.error) throw employeeById.error
+
+  let employee = employeeById.data
+
+  if (!employee && user.email) {
+    const employeeByEmail = await client
+      .from('employees')
+      .select('id, email, role, shop_id')
+      .eq('shop_id', shop.id)
+      .eq('email', user.email.toLowerCase())
+      .maybeSingle()
+
+    if (employeeByEmail.error) throw employeeByEmail.error
+    employee = employeeByEmail.data
+  }
 
   if (!employee) {
     const error = new Error('You do not have access to this shop')
