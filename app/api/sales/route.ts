@@ -7,6 +7,7 @@ import { parseTextWithOpenAI, ParsedSale } from '@/lib/sales/openAiSaleParser'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { fetchSalesHistory, feedMarketKnowledge } from '@/lib/sales/salesRepository'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
+import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,10 @@ export async function POST(request: NextRequest) {
     const penColor = body.penColor || body.pen_color || 'blue'
     const overrideData = body.overrideData
 
-    const shopId = request.headers.get('x-shop-id') || body.shop_id || 'default-shop'
+    const requestedShopId = request.headers.get('x-shop-id') || body.shop_id
+    if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+    const { shop } = await requireShopAccess(request, requestedShopId)
+    const shopId = shop.id
 
     if ((!text || typeof text !== 'string' || text.trim().length === 0) && !overrideData) {
       return NextResponse.json({ error: 'Texte de transaction invalide' }, { status: 400 })
@@ -161,6 +165,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, sale: newSale })
   } catch (err: any) {
+    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur dans POST /api/sales :', err)
     return NextResponse.json({ error: err?.message || 'Erreur serveur' }, { status: 500 })
   }
@@ -172,12 +177,16 @@ export async function HEAD() {
 
 export async function GET(request: NextRequest) {
   try {
-    const shopId = request.headers.get('x-shop-id') || 'default-shop'
+    const requestedShopId = request.headers.get('x-shop-id')
+    if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+    const { shop } = await requireShopAccess(request, requestedShopId)
+    const shopId = shop.id
     const dateParam = request.nextUrl.searchParams.get('date')
     const sales = await fetchSalesHistory(dateParam === 'all' ? null : dateParam, shopId)
     const cashDrawer = await getCurrentCash(shopId)
     return NextResponse.json({ sales, cashDrawer })
   } catch (err: any) {
+    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
     return NextResponse.json({ error: err?.message || 'Erreur d\'extraction' }, { status: 500 })
   }
 }
@@ -185,7 +194,10 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const shopId = request.headers.get('x-shop-id') || body.shop_id || 'default-shop'
+    const requestedShopId = request.headers.get('x-shop-id') || body.shop_id
+    if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+    const { shop } = await requireShopAccess(request, requestedShopId)
+    const shopId = shop.id
     const targetShopIds = getDualShopIds(shopId)
     const { id, action, text, penColor, articles, clientName, category } = body
 
@@ -371,6 +383,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ error: 'Action inconnue' }, { status: 400 })
   } catch (err: any) {
+    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur dans PATCH /api/sales :', err)
     return NextResponse.json({ error: err?.message || 'Erreur serveur' }, { status: 500 })
   }
