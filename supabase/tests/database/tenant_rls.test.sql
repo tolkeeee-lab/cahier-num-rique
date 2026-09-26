@@ -83,11 +83,12 @@ select throws_ok(
 );
 
 -- Employee cannot update an existing employee's role.
-select throws_ok(
-  $$update public.employees
+select results_eq(
+  $update public.employees
     set role = 'admin'
-    where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'$$,
-  '42501',
+    where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+    returning id$,
+  $select null::uuid where false$,
   'employee cannot change employee role'
 );
 
