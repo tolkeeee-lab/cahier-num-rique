@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
           {
             id: randomUUID(),
             shop_id: shopId,
+            user_id: null,
             name: cleanName,
             email: cleanEmail,
             role: role || 'employee',
@@ -94,13 +95,14 @@ export async function POST(request: NextRequest) {
       // 3. Envoyer ou ré-émettre l'invitation par e-mail via Supabase Auth Admin
       let inviteSent = false
       let inviteError: string | null = null
+      let authUserId: string | null = null
 
       const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
         !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')
 
       if (hasServiceRoleKey) {
         try {
-          const { error: invErr } = await supabase.auth.admin.inviteUserByEmail(
+          const { data: inviteData, error: invErr } = await supabase.auth.admin.inviteUserByEmail(
             cleanEmail,
             {
               data: {
@@ -121,6 +123,7 @@ export async function POST(request: NextRequest) {
             const existingUser = authUsers?.users?.find(u => u.email?.toLowerCase() === cleanEmail)
 
             if (existingUser) {
+              authUserId = existingUser.id
               await supabase.auth.admin.updateUserById(existingUser.id, {
                 user_metadata: {
                   full_name: cleanName,
@@ -151,10 +154,19 @@ export async function POST(request: NextRequest) {
             }
           } else {
             inviteSent = true
+            authUserId = inviteData.user?.id ?? null
           }
         } catch (inviteEx: any) {
           inviteError = inviteEx?.message || 'Erreur lors de l\'envoi de l\'invitation'
           console.warn('[Invite] Exception non bloquante:', inviteEx)
+        }
+
+        if (authUserId) {
+          await supabase
+            .from('employees')
+            .update({ user_id: authUserId })
+            .eq('shop_id', shopId)
+            .eq('email', cleanEmail)
         }
       } else {
         inviteError = 'SUPABASE_SERVICE_ROLE_KEY manquante — invitation e-mail désactivée.'
