@@ -420,6 +420,7 @@ let updates: Record<string, any> = {}
         .from('products')
         .update(dbUpdates)
         .eq('id', id)
+        .eq('shop_id', shopId)
         .select()
         .maybeSingle()
 
@@ -443,6 +444,7 @@ let updates: Record<string, any> = {}
           .from('products')
           .update(dbUpdates)
           .eq('id', existingByName.id)
+          .eq('shop_id', shopId)
           .select()
           .maybeSingle()
 
@@ -509,7 +511,18 @@ export async function DELETE(request: Request) {
   const url = new URL(request.url)
   const id = url.searchParams.get('id')
   const productName = url.searchParams.get('name')
-  const shopId = request.headers.get('x-shop-id') || url.searchParams.get('shopId') || 'default-shop'
+  const requestedShopId = request.headers.get('x-shop-id') || url.searchParams.get('shopId')
+
+  if (!requestedShopId) {
+    return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
+  }
+
+  let shopId: string
+  try {
+    shopId = (await requireShopAccess(request, requestedShopId)).shop.id
+  } catch (err) {
+    return shopAuthorizationErrorResponse(err)
+  }
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
