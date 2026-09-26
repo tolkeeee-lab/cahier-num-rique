@@ -699,7 +699,8 @@ AS $$
       FROM public.employees AS e
       WHERE e.shop_id = p_shop_id
         AND (
-          e.id = (SELECT auth.uid())
+          e.user_id = (SELECT auth.uid())
+          OR e.id = (SELECT auth.uid())
           OR (
             NULLIF(LOWER(TRIM(e.email)), '') IS NOT NULL
             AND LOWER(TRIM(e.email)) = LOWER(TRIM(COALESCE((SELECT auth.jwt()->>'email'), '')))
