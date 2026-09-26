@@ -393,4 +393,9 @@ WITH CHECK (
   AND (user_id IS NULL OR user_id = (SELECT auth.uid()))
 );
 
+
+-- Keep the analytics view aligned with the authenticated-only market data surface.
+REVOKE ALL ON TABLE public.market_intelligence FROM anon, authenticated;
+GRANT SELECT ON TABLE public.market_intelligence TO authenticated;
+
 NOTIFY pgrst, 'reload schema';
