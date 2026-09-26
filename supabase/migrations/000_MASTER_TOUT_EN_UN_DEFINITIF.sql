@@ -954,4 +954,29 @@ WITH CHECK (
   AND shop_id IN (SELECT private.user_shop_ids())
 );
 
+
+-- ------------------------------------------------------------------------------
+-- 8. Market knowledge : lecture authentifiée, écriture backend uniquement
+-- ------------------------------------------------------------------------------
+
+ALTER TABLE IF EXISTS public.market_knowledge ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.market_knowledge FROM anon, authenticated;
+GRANT SELECT ON TABLE public.market_knowledge TO authenticated;
+
+DROP POLICY IF EXISTS "market_knowledge_select" ON public.market_knowledge;
+DROP POLICY IF EXISTS "market_knowledge_insert" ON public.market_knowledge;
+DROP POLICY IF EXISTS "market_knowledge_update" ON public.market_knowledge;
+DROP POLICY IF EXISTS "market_knowledge_delete" ON public.market_knowledge;
+
+CREATE POLICY "market_knowledge_authenticated_select"
+ON public.market_knowledge
+FOR SELECT
+TO authenticated
+USING (true);
+
+REVOKE ALL ON FUNCTION public.update_market_knowledge(TEXT, NUMERIC, NUMERIC, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.update_market_knowledge(TEXT, NUMERIC, NUMERIC, TEXT, TEXT) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.update_market_knowledge(TEXT, NUMERIC, NUMERIC, TEXT, TEXT) TO service_role;
+
 NOTIFY pgrst, 'reload schema';
