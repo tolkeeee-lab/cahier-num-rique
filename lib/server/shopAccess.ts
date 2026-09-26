@@ -104,7 +104,7 @@ export async function requireShopAccess(
   if (!employee && user.email) {
     const employeeByEmail = await client
       .from('employees')
-      .select('id, email, role, shop_id')
+      .select('id, user_id, email, role, shop_id')
       .eq('shop_id', shop.id)
       .eq('email', user.email.toLowerCase())
       .maybeSingle()
