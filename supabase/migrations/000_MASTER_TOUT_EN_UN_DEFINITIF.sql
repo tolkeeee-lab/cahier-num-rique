@@ -636,6 +636,9 @@ ORDER BY tablename;
 
 CREATE SCHEMA IF NOT EXISTS private;
 
+CREATE INDEX IF NOT EXISTS employees_user_id_idx
+ON public.employees (user_id);
+
 REVOKE ALL ON SCHEMA private FROM PUBLIC;
 REVOKE ALL ON SCHEMA private FROM anon, authenticated;
 GRANT USAGE ON SCHEMA private TO authenticated;
@@ -661,7 +664,8 @@ AS $$
   FROM public.employees AS e
   WHERE e.shop_id IS NOT NULL
     AND (
-      e.id = (SELECT auth.uid())
+      e.user_id = (SELECT auth.uid())
+      OR e.id = (SELECT auth.uid())
       OR (
         NULLIF(LOWER(TRIM(e.email)), '') IS NOT NULL
         AND LOWER(TRIM(e.email)) = LOWER(TRIM(COALESCE((SELECT auth.jwt()->>'email'), '')))
@@ -790,6 +794,7 @@ FOR SELECT
 TO authenticated
 USING (
   id = (SELECT auth.uid())
+  OR user_id = (SELECT auth.uid())
   OR (
     NULLIF(LOWER(TRIM(email)), '') IS NOT NULL
     AND LOWER(TRIM(email)) = LOWER(TRIM(COALESCE((SELECT auth.jwt()->>'email'), '')))
