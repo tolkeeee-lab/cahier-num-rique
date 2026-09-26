@@ -356,4 +356,41 @@ REVOKE ALL ON FUNCTION public.update_market_knowledge(TEXT, NUMERIC, NUMERIC, TE
 REVOKE ALL ON FUNCTION public.update_market_knowledge(TEXT, NUMERIC, NUMERIC, TEXT, TEXT) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_market_knowledge(TEXT, NUMERIC, NUMERIC, TEXT, TEXT) TO service_role;
 
+
+-- ------------------------------------------------------------------------------
+-- 9. Audit logs : lecture/insertion limitées à la boutique autorisée.
+-- Les utilisateurs ne peuvent ni modifier ni supprimer les journaux.
+-- ------------------------------------------------------------------------------
+
+ALTER TABLE IF EXISTS public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.audit_logs FROM anon;
+GRANT SELECT, INSERT ON TABLE public.audit_logs TO authenticated;
+
+DROP POLICY IF EXISTS "tenant_isolation_audit_logs_select" ON public.audit_logs;
+DROP POLICY IF EXISTS "tenant_isolation_audit_logs_insert" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_select" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_insert" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_update" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_delete" ON public.audit_logs;
+
+CREATE POLICY "audit_logs_member_select"
+ON public.audit_logs
+FOR SELECT
+TO authenticated
+USING (
+  shop_id IS NOT NULL
+  AND shop_id IN (SELECT private.user_shop_ids())
+);
+
+CREATE POLICY "audit_logs_member_insert"
+ON public.audit_logs
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  shop_id IS NOT NULL
+  AND shop_id IN (SELECT private.user_shop_ids())
+  AND (user_id IS NULL OR user_id = (SELECT auth.uid()))
+);
+
 NOTIFY pgrst, 'reload schema';
