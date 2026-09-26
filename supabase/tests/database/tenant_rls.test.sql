@@ -84,11 +84,11 @@ select throws_ok(
 
 -- Employee cannot update an existing employee's role.
 select results_eq(
-  $update public.employees
+  $sql$update public.employees
     set role = 'admin'
     where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
-    returning id$,
-  $select null::uuid where false$,
+    returning id$sql$,
+  $expected$select null::uuid where false$expected$,
   'employee cannot change employee role'
 );
 
