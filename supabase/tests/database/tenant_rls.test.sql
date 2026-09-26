@@ -46,6 +46,9 @@ values
   ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
    '33333333-3333-3333-3333-333333333333', 'rls-employee@example.test', 'RLS Employee', 'employee');
 
+-- Switch from the setup owner (postgres) into the API role so RLS is actually evaluated.
+set local role authenticated;
+
 -- Owner sees only the owned shop.
 select results_eq(
   $$select count(*)::int from public.shops$$,
