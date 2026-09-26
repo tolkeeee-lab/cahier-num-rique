@@ -62,6 +62,11 @@ export async function POST(request: NextRequest) {
 
     const cleanEmail = email.trim().toLowerCase()
     const cleanName = name.trim()
+    const cleanRole = typeof role === 'string' ? role.trim().toLowerCase() : 'employee'
+
+    if (!['admin', 'employee'].includes(cleanRole)) {
+      return NextResponse.json({ error: 'Rôle employé invalide.' }, { status: 400 })
+    }
 
     if (isSupabaseConfigured()) {
       // 1. Supprimer toute ancienne ligne résiduelle avec cet email pour cette boutique pour autoriser la ré-invitation
@@ -81,7 +86,7 @@ export async function POST(request: NextRequest) {
             user_id: null,
             name: cleanName,
             email: cleanEmail,
-            role: role || 'employee',
+            role: cleanRole,
             created_at: new Date().toISOString()
           }
         ])
@@ -107,7 +112,7 @@ export async function POST(request: NextRequest) {
             {
               data: {
                 full_name: cleanName,
-                role: role || 'employee',
+                role: cleanRole,
                 shop_id: shopId,
                 shop_name: shopName,
                 shop_activity: 'boutique',
@@ -127,7 +132,7 @@ export async function POST(request: NextRequest) {
               await supabase.auth.admin.updateUserById(existingUser.id, {
                 user_metadata: {
                   full_name: cleanName,
-                  role: role || 'employee',
+                  role: cleanRole,
                   shop_id: shopId,
                   shop_name: shopName,
                   shop_activity: 'boutique',
@@ -184,7 +189,7 @@ export async function POST(request: NextRequest) {
       shop_id: shopId,
       name: cleanName,
       email: cleanEmail,
-      role: role || 'employee',
+      role: cleanRole,
       created_at: new Date().toISOString()
     }
     return NextResponse.json(
