@@ -80,7 +80,7 @@ export async function requireShopAccess(
 
   const employeeById = await client
     .from('employees')
-    .select('id, email, role, shop_id')
+    .select('id, user_id, email, role, shop_id')
     .eq('shop_id', shop.id)
     .eq('id', user.id)
     .maybeSingle()
@@ -88,6 +88,18 @@ export async function requireShopAccess(
   if (employeeById.error) throw employeeById.error
 
   let employee = employeeById.data
+
+  if (!employee) {
+    const employeeByAuthId = await client
+      .from('employees')
+      .select('id, user_id, email, role, shop_id')
+      .eq('shop_id', shop.id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (employeeByAuthId.error) throw employeeByAuthId.error
+    employee = employeeByAuthId.data
+  }
 
   if (!employee && user.email) {
     const employeeByEmail = await client
