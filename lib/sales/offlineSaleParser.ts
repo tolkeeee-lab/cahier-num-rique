@@ -344,8 +344,8 @@ export function parseTextLocally(text: string, penColor: string, catalog?: any[]
   }
 
   let nomClient = "Client anonyme"
-  const explicitClientMatch = text.match(/(?:client|grossiste|fournisseur)\s*[:=]?\s*([^,\n\r;]+?)(?=\s+(?:reste|dette|credit|crédit|payé|paye|recu|avance|total|\d+[\s\w]*$|$))/i)
-  const pourClientMatch = text.match(/(?:^|\s)pour\s+([A-Za-zÀ-ÿ]+(?:[-'\s][A-Za-zÀ-ÿ]+)?)(?=\s+(?:reste|dette|credit|crédit|payé|paye|recu|avance|total|\d+|$))/i)
+  const explicitClientMatch = text.match(/(?:client|grossiste|fournisseur)\s*[:=]?\s*([^,\n\r;]+?)(?=\s+(?:reste|dette|credit|crédit|payé|paye|recu|avance|total|\d+(?:\s+[a-zA-ZÀ-ÿ]|$)|$))/i)
+  const pourClientMatch = text.match(/(?:^|\s)pour\s+([A-Za-zÀ-ÿ0-9]+(?:[-'\s][A-Za-zÀ-ÿ0-9]+)*?)(?=\s+(?:reste|dette|credit|crédit|payé|paye|recu|avance|total|\d+(?:\s+[a-zA-ZÀ-ÿ]|$)|$))/i)
   const rawCandidate = explicitClientMatch ? explicitClientMatch[1].trim() : (pourClientMatch ? pourClientMatch[1].trim() : null)
   const reservedWords = new Set(['stock', 'achat', 'recette', 'vente', 'carton', 'boite', 'boîte', 'sac', 'pack', 'demande', 'reste', 'dette', 'credit', 'crédit', 'total', 'loyer', 'transport', 'lui', 'moi', 'elle', 'eux', 'ce', 'cet', 'cette', 'un', 'une', 'des', 'le', 'la', 'les', 'du'])
 
