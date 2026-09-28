@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect } from 'react'
-import { AlertCircle, RefreshCw, BookOpen, WifiOff } from 'lucide-react'
+import { RefreshCw, BookOpen, WifiOff } from 'lucide-react'
 
 export default function GlobalError({
   error,
