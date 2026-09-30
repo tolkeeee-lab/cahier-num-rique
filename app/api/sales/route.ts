@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const dateStr = body.date || new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
     const timeStr = body.time || new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(now)
-    const saleId = body.id || randomUUID()
+    const saleId = body.id || overrideData?.id || randomUUID()
     const createdAtStr = body.created_at || now.toISOString()
 
     const finalTotal = overrideData?.total ?? overrideData?.total_amount ?? parsedData?.total_facture ?? 0

@@ -196,6 +196,7 @@ export function useSaleCreation({
 
         const { error: insertErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
         if (!insertErr) {
+          console.log('[useSaleCreation] Direct Supabase insert success:', saleRecord.id)
           // ✅ Marquer la vente locale comme synchronisée
           markAsSynced(shopId, localSaleId)
 
@@ -243,6 +244,8 @@ export function useSaleCreation({
           }
           onSaleCreated()
           return
+        } else {
+          console.warn('[useSaleCreation] Direct Supabase insert failed, falling back to API:', insertErr)
         }
       }
 

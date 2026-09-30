@@ -1,0 +1,19 @@
+--- app/api/sales/route.ts
++++ app/api/sales/route.ts
+@@ -85,7 +85,7 @@
+     const now = new Date()
+     const dateStr = body.date || new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+     const timeStr = body.time || new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(now)
+-    const saleId = body.id || randomUUID()
++    const saleId = overrideData?.id || body.id || randomUUID()
+     const createdAtStr = body.created_at || now.toISOString()
+
+     const finalTotal = overrideData?.total ?? overrideData?.total_amount ?? parsedData?.total_facture ?? 0
+@@ -126,8 +126,8 @@
+         console.error('Erreur Supabase, bascule locale :', saleErr)
+         const localSales = getLocalDb()
+         localSales.unshift(newSale)
+         saveLocalDb(localSales)
+       } else {
+         if (parsedData?.articles && parsedData.articles.length > 0) {
+           // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de retry
