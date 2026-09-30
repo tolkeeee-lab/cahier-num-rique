@@ -31,7 +31,7 @@ interface SaleItemCardProps {
   isEmployee?: boolean
 }
 
-export const SaleItemCard: React.FC<SaleItemCardProps> = ({
+export const SaleItemCard: React.FC<SaleItemCardProps> = React.memo(({
   sale,
   onCrossOut,
   onPrintReceipt,
@@ -236,4 +236,4 @@ export const SaleItemCard: React.FC<SaleItemCardProps> = ({
       </div>
     </div>
   )
-}
+})

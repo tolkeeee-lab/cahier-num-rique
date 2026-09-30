@@ -24,6 +24,7 @@ export interface ParsedProductResult {
   wholesale_price?: number
   half_package_price?: number
   quarter_package_price?: number
+  eighth_package_price?: number
   lot_quantity: number
   lot_price: number
   barcode?: string
