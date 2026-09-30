@@ -469,7 +469,7 @@ export default function JournalPage() {
   }
 
   // Synchronisation automatique au retour en ligne
-  useOfflineSync({
+  const { syncNow } = useOfflineSync({
     shopId: shopManager.shopId,
     shopActivity: shopManager.shopActivity,
     isOnline,
@@ -748,7 +748,7 @@ export default function JournalPage() {
               isOnline={isOnline}
               pendingSyncCount={pendingCount}
               isSyncing={syncStatus === 'syncing'}
-              onSyncClick={() => setSyncStatus('syncing')}
+              onSyncClick={syncNow}
               onOpenSettings={() => setActiveTab('settings')}
               onOpenCashAdjustment={() => setShowCashAdjustment(true)}
               onOpenCashClosing={() => setShowCashClosing(true)}
