@@ -64,7 +64,7 @@ export function StockWizardModal({
   const [name, setName] = useState(prefillName)
   const [category, setCategory] = useState('')
   const [packaging, setPackaging] = useState('unité')
-  const [multiplier, setMultiplier] = useState('1')
+  const [multiplier, setMultiplier] = useState('')
   const [unit, setUnit] = useState('pièce')
   const [purchasePrice, setPurchasePrice] = useState('')
   const [salePrice, setSalePrice] = useState(prefillPrice > 0 ? String(prefillPrice) : '')
@@ -79,7 +79,7 @@ export function StockWizardModal({
     setName(prefillName)
     setCategory('')
     setPackaging('unité')
-    setMultiplier('1')
+    setMultiplier('')
     setUnit('pièce')
     setPurchasePrice('')
     setSalePrice(prefillPrice > 0 ? String(prefillPrice) : '')
@@ -265,7 +265,7 @@ export function StockWizardModal({
                     ))}
                   </div>
                 </div>
-                {parseInt(multiplier) > 1 && (
+                {!isNaN(parseInt(multiplier)) && parseInt(multiplier) > 1 && (
                   <p className="text-xs text-emerald-700 font-bold flex items-center gap-1 font-mono tabular-nums">
                     <Check className="w-3.5 h-3.5 inline-block text-emerald-600" strokeWidth={1.75} />
                     1 {packaging} = {multiplier} {unit}s
