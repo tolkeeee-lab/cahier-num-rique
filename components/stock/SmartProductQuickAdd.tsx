@@ -44,6 +44,7 @@ interface ProductCandidate {
   wholesale_price?: number
   half_package_price?: number
   quarter_package_price?: number
+  eighth_package_price?: number
   alert_threshold?: number
   barcode?: string
 }
@@ -196,11 +197,23 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       parsed.quarter_package_price ??
       matchingExistingProduct?.quarter_package_price ??
       0
+    let ePrice =
+      overrides.eighth_package_price ??
+      parsed.eighth_package_price ??
+      matchingExistingProduct?.eighth_package_price ??
+      0
 
-    if (numMult > 1 && uPrice > 0) {
-      if (!wPrice) wPrice = Math.round((uPrice * numMult * 0.88) / 100) * 100
-      if (!hPrice) hPrice = Math.round((uPrice * (numMult / 2) * 0.92) / 50) * 50
-      if (!qPrice && numMult >= 8) qPrice = Math.round((uPrice * (numMult / 4) * 0.95) / 25) * 25
+    if (numMult > 1) {
+      if (!wPrice && uPrice > 0) wPrice = Math.round((uPrice * numMult * 0.88) / 100) * 100
+      if (wPrice > 0) {
+        if (!hPrice) hPrice = Math.round(wPrice / 2)
+        if (!qPrice && numMult >= 4) qPrice = Math.round(wPrice / 4)
+        if (!ePrice && numMult >= 8) ePrice = Math.round(wPrice / 8)
+      } else if (uPrice > 0) {
+        if (!hPrice) hPrice = Math.round((uPrice * (numMult / 2) * 0.92) / 50) * 50
+        if (!qPrice && numMult >= 4) qPrice = Math.round((uPrice * (numMult / 4) * 0.95) / 25) * 25
+        if (!ePrice && numMult >= 8) ePrice = Math.round((uPrice * (numMult / 8) * 0.97) / 25) * 25
+      }
     }
 
     const finalName =
@@ -220,6 +233,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       wholesale_price: wPrice,
       half_package_price: hPrice,
       quarter_package_price: qPrice,
+      eighth_package_price: ePrice,
       lot_quantity: overrides.lot_quantity ?? parsed.lot_quantity ?? 0,
       lot_price: overrides.lot_price ?? parsed.lot_price ?? 0,
       alert_threshold:
@@ -826,6 +840,22 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
 
               {isPackagingCarton && (
                 <>
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                    <span className="text-[10px] text-cyan-700 font-bold">1/8 ctn :</span>
+                    <input
+                      type="number"
+                      value={activeData.eighth_package_price || ''}
+                      onChange={(e) =>
+                        setOverrides((prev) => ({
+                          ...prev,
+                          eighth_package_price: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-14 text-center font-bold text-xs text-cyan-950 outline-none tabular-nums"
+                    />
+                    <span className="text-[10px] text-gray-400">F</span>
+                  </div>
+
                   <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
                     <span className="text-[10px] text-blue-700 font-bold">1/4 ctn :</span>
                     <input
