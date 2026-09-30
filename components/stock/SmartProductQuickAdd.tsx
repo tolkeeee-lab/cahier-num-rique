@@ -827,6 +827,22 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               {isPackagingCarton && (
                 <>
                   <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                    <span className="text-[10px] text-blue-700 font-bold">1/4 ctn :</span>
+                    <input
+                      type="number"
+                      value={activeData.quarter_package_price || ''}
+                      onChange={(e) =>
+                        setOverrides((prev) => ({
+                          ...prev,
+                          quarter_package_price: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-14 text-center font-bold text-xs text-blue-950 outline-none tabular-nums"
+                    />
+                    <span className="text-[10px] text-gray-400">F</span>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
                     <span className="text-[10px] text-indigo-700 font-bold">1/2 ctn :</span>
                     <input
                       type="number"
