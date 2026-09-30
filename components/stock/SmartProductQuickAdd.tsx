@@ -206,9 +206,9 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     if (numMult > 1) {
       if (!wPrice && uPrice > 0) wPrice = Math.round((uPrice * numMult * 0.88) / 100) * 100
       if (wPrice > 0) {
-        if (!hPrice) hPrice = Math.round(wPrice / 2)
-        if (!qPrice && numMult >= 4) qPrice = Math.round(wPrice / 4)
-        if (!ePrice && numMult >= 8) ePrice = Math.round(wPrice / 8)
+        if (overrides.half_package_price === undefined) hPrice = Math.round(wPrice / 2)
+        if (overrides.quarter_package_price === undefined && numMult >= 4) qPrice = Math.round(wPrice / 4)
+        if (overrides.eighth_package_price === undefined && numMult >= 8) ePrice = Math.round(wPrice / 8)
       } else if (uPrice > 0) {
         if (!hPrice) hPrice = Math.round((uPrice * (numMult / 2) * 0.92) / 50) * 50
         if (!qPrice && numMult >= 4) qPrice = Math.round((uPrice * (numMult / 4) * 0.95) / 25) * 25
@@ -841,33 +841,23 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               {isPackagingCarton && (
                 <>
                   <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
-                    <span className="text-[10px] text-cyan-700 font-bold">1/8 ctn :</span>
+                    <span className="text-[10px] text-purple-700 font-bold">Carton :</span>
                     <input
                       type="number"
-                      value={activeData.eighth_package_price || ''}
-                      onChange={(e) =>
+                      value={activeData.wholesale_price || ''}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0
                         setOverrides((prev) => ({
                           ...prev,
-                          eighth_package_price: parseFloat(e.target.value) || 0,
+                          wholesale_price: val,
+                          // Recalcul automatique strict si on change le carton : on réinitialise les overrides liés
+                          // (S'il veut modifier le 1/2 ensuite manuellement il pourra)
+                          half_package_price: Math.round(val / 2),
+                          quarter_package_price: Math.round(val / 4),
+                          eighth_package_price: Math.round(val / 8),
                         }))
-                      }
-                      className="w-14 text-center font-bold text-xs text-cyan-950 outline-none tabular-nums"
-                    />
-                    <span className="text-[10px] text-gray-400">F</span>
-                  </div>
-
-                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
-                    <span className="text-[10px] text-blue-700 font-bold">1/4 ctn :</span>
-                    <input
-                      type="number"
-                      value={activeData.quarter_package_price || ''}
-                      onChange={(e) =>
-                        setOverrides((prev) => ({
-                          ...prev,
-                          quarter_package_price: parseFloat(e.target.value) || 0,
-                        }))
-                      }
-                      className="w-14 text-center font-bold text-xs text-blue-950 outline-none tabular-nums"
+                      }}
+                      className="w-16 text-center font-bold text-xs text-purple-950 outline-none tabular-nums"
                     />
                     <span className="text-[10px] text-gray-400">F</span>
                   </div>
@@ -889,17 +879,33 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
-                    <span className="text-[10px] text-purple-700 font-bold">Carton :</span>
+                    <span className="text-[10px] text-blue-700 font-bold">1/4 ctn :</span>
                     <input
                       type="number"
-                      value={activeData.wholesale_price || ''}
+                      value={activeData.quarter_package_price || ''}
                       onChange={(e) =>
                         setOverrides((prev) => ({
                           ...prev,
-                          wholesale_price: parseFloat(e.target.value) || 0,
+                          quarter_package_price: parseFloat(e.target.value) || 0,
                         }))
                       }
-                      className="w-16 text-center font-bold text-xs text-purple-950 outline-none tabular-nums"
+                      className="w-14 text-center font-bold text-xs text-blue-950 outline-none tabular-nums"
+                    />
+                    <span className="text-[10px] text-gray-400">F</span>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                    <span className="text-[10px] text-cyan-700 font-bold">1/8 ctn :</span>
+                    <input
+                      type="number"
+                      value={activeData.eighth_package_price || ''}
+                      onChange={(e) =>
+                        setOverrides((prev) => ({
+                          ...prev,
+                          eighth_package_price: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-14 text-center font-bold text-xs text-cyan-950 outline-none tabular-nums"
                     />
                     <span className="text-[10px] text-gray-400">F</span>
                   </div>
