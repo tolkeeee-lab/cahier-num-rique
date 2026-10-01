@@ -273,6 +273,9 @@ export function useSaleCreation({
           shop_id: shopId,
           country: shopCountry,
           city: shopCity,
+          overrideData: {
+            id: localSaleId
+          }
         }),
       })
 
