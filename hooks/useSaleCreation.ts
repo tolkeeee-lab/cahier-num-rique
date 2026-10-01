@@ -292,12 +292,21 @@ export function useSaleCreation({
     }
   }
 
+  // ── Fonction utilitaire pour propager l'événement global de mise à jour de vente ──
+  const triggerSaleEvents = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+    }
+    onSaleCreated()
+  }
+
   // ── submitText : pour le pipeline et les modales d'interception ──
   const submitText = async (text: string, penOverride?: string): Promise<void> => {
     if (!text.trim() || isSubmitting) return
     setIsSubmitting(true)
     const localSale = buildLocalSale(text, penOverride)
-    onSaleCreated()
+    triggerSaleEvents()
     if (onAfterSale && localSale.total > 0) onAfterSale(localSale.total)
     syncWithApi(text, localSale.id, penOverride).finally(() => setIsSubmitting(false))
   }
@@ -315,7 +324,7 @@ export function useSaleCreation({
 
     // 2. Vider le champ et rafraîchir l'affichage sans attendre l'API
     setInput('')
-    onSaleCreated()
+    triggerSaleEvents()
 
     // 3. Notifier le calculateur de monnaie si besoin
     if (onAfterSale && localSale.total > 0) {
