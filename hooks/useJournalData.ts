@@ -419,19 +419,22 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             )
         })
 
-        channel.subscribe()
+        channel.subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(`[Realtime] Synchronisation active pour la boutique ${shopId}`)
+          }
+        })
       } catch (err) {
         console.warn('[Realtime] Souscription non active:', err)
       }
     }
 
-    // Polling de secours doux (120s) — uniquement si Realtime Supabase est indisponible
-    // Le Realtime Channel ci-dessus est la méthode principale de sync multi-appareils.
+    // Polling de secours modéré (30s) au lieu de 120s pour compenser si Realtime tombe silencieusement
     const pollInterval = setInterval(() => {
-      if (isOnline && isMounted && !channel) {
+      if (isOnline && isMounted) {
         reloadData()
       }
-    }, 120_000)
+    }, 30_000)
 
     return () => {
       isMounted = false
