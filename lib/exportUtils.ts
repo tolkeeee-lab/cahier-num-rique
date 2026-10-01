@@ -542,3 +542,128 @@ export function exportFullBackupJSON(
     alert("Erreur lors de la génération de la sauvegarde : " + (err?.message || 'Erreur inconnue'))
   }
 }
+export function exportProductsToPDF(
+  products: any[],
+  shopName: string = 'Cahier Numérique'
+) {
+  if (products.length === 0) {
+    alert("Aucun produit disponible à exporter.")
+    return
+  }
+
+  const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(Number.isFinite(p) ? p : 0) + ' FCFA'
+  const todayStr = new Date().toLocaleDateString('fr-FR')
+
+  let totalValue = 0
+  let totalCost = 0
+
+  const rowsHtml = products.map(p => {
+    const stock = Number(p.current_stock ?? p.initial_stock ?? 0)
+    const threshold = Number(p.alert_threshold ?? 0)
+    const buyPrice = Number(p.unit_cost ?? 0)
+    const sellPrice = Number(p.unit_price ?? 0)
+    const valVente = stock * sellPrice
+    const valAchat = stock * buyPrice
+
+    totalValue += valVente
+    totalCost += valAchat
+
+    let statusHtml = '<span style="color: #166534;">En Stock</span>'
+    if (stock <= 0) {
+      statusHtml = '<span style="color: #991b1b; font-weight: bold;">Rupture</span>'
+    } else if (threshold > 0 && stock <= threshold) {
+      statusHtml = '<span style="color: #92400e; font-weight: bold;">Alerte</span>'
+    }
+
+    return `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">${p.name.replace(/</g, '&lt;')}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${(p.category || 'Général').replace(/</g, '&lt;')}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center; font-family: monospace;">${stock}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-family: monospace;">${formatPrice(sellPrice)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-family: monospace;">${formatPrice(valVente)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">${statusHtml}</td>
+      </tr>
+    `
+  }).join('')
+
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) {
+    alert("Veuillez autoriser les fenêtres surgissantes (popups) pour imprimer le PDF.")
+    return
+  }
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Inventaire de Stock - ${shopName}</title>
+        <style>
+          body { font-family: system-ui, -apple-system, sans-serif; color: #111827; margin: 0; padding: 24px; font-size: 12px; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #374151; padding-bottom: 12px; margin-bottom: 16px; }
+          .shop-title { font-size: 20px; font-weight: bold; color: #111827; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th { background: #f3f4f6; padding: 8px; text-align: left; font-size: 10px; text-transform: uppercase; color: #374151; border-bottom: 2px solid #d1d5db; }
+          @media print {
+            body { padding: 0; }
+            @page { margin: 1.5cm; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="shop-title">INVENTAIRE DU STOCK</div>
+            <div style="color: #4b5563; margin-top: 2px;">Commerce : <strong>${shopName}</strong></div>
+          </div>
+          <div style="text-align: right; color: #6b7280; font-size: 11px;">
+            Généré le ${todayStr}<br/>
+            Cahier Numérique PWA
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+          <div style="flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px 14px; border-radius: 8px;">
+            <div style="font-size: 9px; text-transform: uppercase; color: #6b7280; font-weight: bold;">Valeur Total (Vente)</div>
+            <div style="font-size: 15px; font-weight: bold; font-family: monospace; margin-top: 2px;">${formatPrice(totalValue)}</div>
+          </div>
+          <div style="flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px 14px; border-radius: 8px;">
+            <div style="font-size: 9px; text-transform: uppercase; color: #6b7280; font-weight: bold;">Valeur d'Investissement (Achat)</div>
+            <div style="font-size: 15px; font-weight: bold; font-family: monospace; margin-top: 2px; color: #92400e;">${formatPrice(totalCost)}</div>
+          </div>
+          <div style="flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px 14px; border-radius: 8px;">
+            <div style="font-size: 9px; text-transform: uppercase; color: #6b7280; font-weight: bold;">Produits Renseignés</div>
+            <div style="font-size: 15px; font-weight: bold; font-family: monospace; margin-top: 2px; color: #1d4ed8;">${products.length} réf.</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Produit</th>
+              <th>Catégorie</th>
+              <th style="text-align: center;">Stock</th>
+              <th style="text-align: right;">Prix Unitaire</th>
+              <th style="text-align: right;">Valeur Total</th>
+              <th style="text-align: center;">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div style="margin-top: 24px; text-align: center; color: #9ca3af; font-size: 10px; font-family: monospace; border-top: 1px solid #e5e7eb; padding-top: 12px;">
+          Document officiel généré automatiquement par Cahier Numérique.
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+    </html>
+  `)
+  printWindow.document.close()
+}

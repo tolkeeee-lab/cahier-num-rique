@@ -1,5 +1,5 @@
 import React from 'react'
-import { Search, Plus, FileSpreadsheet, Trash2, ShoppingBag, GitMerge, X, Sparkles, ScanBarcode } from 'lucide-react'
+import { Search, Plus, FileSpreadsheet, Trash2, ShoppingBag, GitMerge, X, Sparkles, ScanBarcode, Share2 } from 'lucide-react'
 
 interface StockToolbarProps {
   searchQuery: string
@@ -12,6 +12,7 @@ interface StockToolbarProps {
   onOpenRestockAdvisor?: () => void
   onOpenCalculator?: () => void
   onExportCSV?: () => void
+  onExportPDF?: () => void
   onClearAllStock?: () => void
   hasProducts?: boolean
   isEmployee?: boolean
@@ -30,6 +31,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
   onOpenRestockAdvisor,
   onOpenCalculator,
   onExportCSV,
+  onExportPDF,
   onClearAllStock,
   hasProducts = false,
   isEmployee = false,
@@ -131,6 +133,17 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
               title="Exporter l'inventaire Excel / CSV"
             >
               <FileSpreadsheet className="w-4 h-4" strokeWidth={1.75} />
+            </button>
+          )}
+
+          {onExportPDF && (
+            <button
+              type="button"
+              onClick={onExportPDF}
+              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 border border-amber-300 transition-all duration-100 ease-out shadow-xs cursor-pointer"
+              title="Générer l'inventaire en PDF"
+            >
+              <Share2 className="w-4 h-4" strokeWidth={1.75} />
             </button>
           )}
 
