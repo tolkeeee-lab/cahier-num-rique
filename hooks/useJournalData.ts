@@ -128,8 +128,20 @@ export function useJournalData(shopId: string, isOnline: boolean) {
   const [isLoading, setIsLoading] = useState(true)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
+  // Utilisation d'un ref pour le timer de debounce afin d'éviter les re-rendus massifs
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const reloadData = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1)
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => {
+      setRefreshTrigger(prev => prev + 1)
+    }, 150) // 150ms de debounce
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    }
   }, [])
 
   useEffect(() => {
