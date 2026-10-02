@@ -599,8 +599,10 @@ export default function JournalPage() {
       reloadData()
     }
     window.addEventListener('cahier_sale_created', handleSaleCreated)
+    window.addEventListener('cahier_sales_updated', handleSaleCreated)
     return () => {
       window.removeEventListener('cahier_sale_created', handleSaleCreated)
+      window.removeEventListener('cahier_sales_updated', handleSaleCreated)
     }
   }, [reloadData])
 

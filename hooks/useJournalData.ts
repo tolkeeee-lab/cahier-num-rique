@@ -396,7 +396,13 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               'postgres_changes',
               { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${id}` },
               () => {
-                if (isMounted) reloadData()
+                if (isMounted) {
+                  reloadData()
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+                    window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+                  }
+                }
               }
             )
             .on(
