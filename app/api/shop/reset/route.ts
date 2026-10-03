@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
+
 
 export async function POST(request: Request) {
   const shopId = request.headers.get('x-shop-id') || 'default-shop'
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
   try {
     if (isSupabaseConfigured()) {
-      const targetShopIds = getDualShopIds(shopId)
+      const targetShopIds = [shopId]
 
       // 1. Nettoyer sold_articles pour les ventes de cette boutique (tous alias inclus)
       const { data: sales } = await supabase

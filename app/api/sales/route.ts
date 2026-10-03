@@ -7,7 +7,7 @@ import { getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
 import { parseTextWithOpenAI, ParsedSale } from '@/lib/sales/openAiSaleParser'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { fetchSalesHistory, feedMarketKnowledge } from '@/lib/sales/salesRepository'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -187,7 +187,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
     const shopId = request.headers.get('x-shop-id') || body.shop_id || 'default-shop'
-    const targetShopIds = getDualShopIds(shopId)
+    const targetShopIds = [shopId]
     const { id, action, text, penColor, articles, clientName, category } = body
 
     if (!id) {

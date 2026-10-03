@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
+
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const ids = getDualShopIds(shopId)
+    const ids = [shopId]
     const orFilter = ids.length > 1 ? ids.map(id => `shop_id.eq.${id}`).join(',') : `shop_id.eq.${shopId}`
 
     const { data, error } = await supabase

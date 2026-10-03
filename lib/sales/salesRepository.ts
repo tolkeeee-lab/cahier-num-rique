@@ -1,6 +1,6 @@
 import { supabase, isBackendSupabaseConfigured } from '@/lib/supabase'
 import { getLocalDb } from '@/lib/localDb'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
+
 
 export async function feedMarketKnowledge(
   articles: Array<{ nom: string; prix_unitaire: number; [key: string]: any }>,
@@ -33,7 +33,7 @@ export async function feedMarketKnowledge(
 
 export function getLocalSales(dateParam: string | null, shopId: string): any[] {
   const salesDatabase = getLocalDb()
-  const validShopIds = new Set(getDualShopIds(shopId))
+  const validShopIds = new Set([shopId])
   let filtered = salesDatabase.filter(s => validShopIds.has(s.shop_id))
   if (dateParam === 'today') {
     const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
@@ -48,7 +48,7 @@ export async function fetchSalesHistory(dateParam: string | null, shopId: string
   }
 
   try {
-    const targetShopIds = getDualShopIds(shopId)
+    const targetShopIds = [shopId]
     const orFilter = targetShopIds.length > 1
       ? targetShopIds.map(id => `shop_id.eq.${id}`).join(',')
       : `shop_id.eq.${shopId}`

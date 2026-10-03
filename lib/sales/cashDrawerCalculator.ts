@@ -77,8 +77,7 @@ export function calculateCash(list: any[]): number {
 }
 
 export async function getCurrentCash(shopId: string): Promise<number> {
-  const { getDualShopIds } = await import('@/lib/shopCodeUtils')
-  const targetShopIds = getDualShopIds(shopId)
+  const targetShopIds = [shopId]
   const orFilter = targetShopIds.length > 1
     ? targetShopIds.map(id => `shop_id.eq.${id}`).join(',')
     : `shop_id.eq.${shopId}`

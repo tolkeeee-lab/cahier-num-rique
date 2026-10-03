@@ -3,7 +3,7 @@ import { Plus, Trash2, Share2, Sparkles, Check, Search, Send, PenTool, Lightbulb
 import { formatCurrency } from '@/lib/currencyUtils'
 import { recordRequestedProductInStorage, RequestedProduct } from '@/lib/requestedProductsUtils'
 import { getOfflineSales } from '@/lib/offlineDb'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
+
 import { getTodayDateString } from '@/lib/dateUtils'
 
 interface RequestedProductsManagerProps {
@@ -28,7 +28,7 @@ export function RequestedProductsManager({
   const [notes, setNotes] = useState('')
 
   // Storage key avec support multi-tenant et alias complets
-  const targetShopIds = getDualShopIds(shopId)
+  const targetShopIds = [shopId]
   const storageKey = `cahier_requested_products_${shopId}`
 
   const loadItems = React.useCallback(() => {

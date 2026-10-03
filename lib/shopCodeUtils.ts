@@ -134,34 +134,5 @@ export async function findShopIdByCode(inputCode: string): Promise<string> {
   return ''
 }
 
-/**
- * Retourne la liste des identifiants équivalents (ex: ['58C54', 'SHOP-58C54', 'BTQ-58C54'])
- */
-export function getDualShopIds(shopId: string): string[] {
-  if (!shopId) return []
-  const clean = normalizeShopCode(shopId)
-  const ids = new Set<string>()
-  ids.add(shopId)
-  if (clean) {
-    ids.add(clean)
-    ids.add(`SHOP-${clean}`)
-    ids.add(`BTQ-${clean}`)
-  }
-
-  // Si c'est un UUID complet, inclure aussi les représentations en code court 5 chars
-  if (isRealUuid(shopId)) {
-    const short = formatShortShopCode(shopId)
-    ids.add(short)
-    const shortClean = normalizeShopCode(short)
-    if (shortClean) {
-      ids.add(shortClean)
-      ids.add(`SHOP-${shortClean}`)
-      ids.add(`BTQ-${shortClean}`)
-    }
-  }
-
-  return Array.from(ids)
-}
-
 
 
