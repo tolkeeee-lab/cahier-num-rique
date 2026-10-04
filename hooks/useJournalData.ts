@@ -251,7 +251,24 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               mappedSales.map(s => `${s.date}_${s.time}_${(s.client || '').trim().toLowerCase()}_${s.total}`)
             )
 
-            const offlineNotYetInCloud = getOfflineSales(shopId).filter(s => {
+            const offlineSales = getOfflineSales(shopId)
+            const localPendingUpdates = new Map()
+            for (const s of offlineSales) {
+              if (s.id && s.is_synced === false) {
+                localPendingUpdates.set(s.id, s)
+              }
+            }
+
+            const mergedCloudSales = mappedSales.map(s => {
+              if (localPendingUpdates.has(s.id)) {
+                // Si la vente existe dans le cloud, mais a été modifiée localement et n'est pas encore synchronisée,
+                // la version locale DOIT prévaloir pour éviter de l'écraser silencieusement.
+                return { ...s, ...localPendingUpdates.get(s.id), is_synced: false }
+              }
+              return s
+            })
+
+            const offlineNotYetInCloud = offlineSales.filter(s => {
               if (!s.id) return false
               if (supabaseIds.has(s.id)) return false
               const sig = `${s.date}_${s.time}_${(s.client || '').trim().toLowerCase()}_${s.total}`
@@ -259,7 +276,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               return true
             })
 
-            const rawCombined = [...mappedSales, ...offlineNotYetInCloud]
+            const rawCombined = [...mergedCloudSales, ...offlineNotYetInCloud]
 
             const seenIds = new Set<string>()
             const combinedSales: Sale[] = []
