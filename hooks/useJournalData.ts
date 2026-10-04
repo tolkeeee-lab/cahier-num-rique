@@ -391,7 +391,23 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     loadJournal()
 
-    // ── Supabase Realtime Channel pour synchronisation multi-appareils instantanée ──
+    // Polling de secours modéré (30s) au lieu de 120s pour compenser si Realtime tombe silencieusement
+    const pollInterval = setInterval(() => {
+      if (isOnline && isMounted) {
+        reloadData()
+      }
+    }, 30_000)
+
+    return () => {
+      isMounted = false
+      clearInterval(pollInterval)
+    }
+  }, [shopId, isOnline, refreshTrigger, reloadData])
+
+  // ── Supabase Realtime Channel pour synchronisation multi-appareils instantanée ──
+  // Séparé du hook de chargement pour éviter de déconnecter/reconnecter le WebSocket
+  // à chaque fois que refreshTrigger change.
+  useEffect(() => {
     let channel: any = null
     if (isSupabaseClientConfigured() && isOnline && shopId) {
       try {
@@ -403,12 +419,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             'postgres_changes',
             { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${shopId}` },
             () => {
-              if (isMounted) {
-                reloadData()
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('cahier_sale_created'))
-                  window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
-                }
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('cahier_sale_created'))
+                window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
               }
             }
           )
@@ -441,21 +454,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       }
     }
 
-    // Polling de secours modéré (30s) au lieu de 120s pour compenser si Realtime tombe silencieusement
-    const pollInterval = setInterval(() => {
-      if (isOnline && isMounted) {
-        reloadData()
-      }
-    }, 30_000)
-
     return () => {
-      isMounted = false
       if (channel) {
         try { supabaseClient.removeChannel(channel) } catch {}
       }
-      clearInterval(pollInterval)
     }
-  }, [shopId, isOnline, refreshTrigger, reloadData])
+  }, [shopId, isOnline])
 
   const calculateSummary = useCallback((all: Sale[], todays: Sale[]) => {
     let cash = 0
