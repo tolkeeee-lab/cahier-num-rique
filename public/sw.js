@@ -1,6 +1,6 @@
 /* Service Worker PWA Robust Offline Shell — Cahier Numérique */
 
-const CACHE_NAME = 'cahier-pwa-v28'
+const CACHE_NAME = 'cahier-pwa-v29'
 const STATIC_ASSETS = [
   '/',
   '/journal',
@@ -33,6 +33,13 @@ self.addEventListener('install', (event) => {
     })
   )
   self.skipWaiting()
+})
+
+// Écoute des messages venant du navigateur pour forcer la mise à jour
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
 })
 
 // Activation : Nettoyage immédiat des anciens caches + prise en charge des clients

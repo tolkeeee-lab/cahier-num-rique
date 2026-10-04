@@ -72,11 +72,42 @@ export default function RootLayout({
                 navigator.serviceWorker.register('/sw.js').then(
                   function(reg) {
                     console.log('SW enregistré scope:', reg.scope);
+
+                    // Vérification périodique des mises à jour
+                    setInterval(() => {
+                      reg.update();
+                    }, 1000 * 60 * 5); // toutes les 5 minutes
+
+                    // Si un nouveau SW est déjà en attente
+                    if (reg.waiting) {
+                       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+
+                    // Détection d'un nouveau SW en cours d'installation
+                    reg.addEventListener('updatefound', () => {
+                      const newWorker = reg.installing;
+                      if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Un nouveau service worker est prêt. On force son activation.
+                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                          }
+                        });
+                      }
+                    });
                   },
                   function(err) {
                     console.error('SW échec enregistrement:', err);
                   }
                 );
+
+                // Rafraîchir la page uniquement quand le NOUVEAU service worker prend le contrôle
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', function() {
+                  if (refreshing) return;
+                  refreshing = true;
+                  window.location.reload();
+                });
               };
               if (document.readyState === 'complete') {
                 registerSW();
