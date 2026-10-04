@@ -415,9 +415,23 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       }
     }, 30_000)
 
+    // Écouteur pour forcer le rechargement quand on sort de veille / revient sur l'app (mobile PWA)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isMounted) {
+        reloadData()
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    }
+
     return () => {
       isMounted = false
       clearInterval(pollInterval)
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+      }
     }
   }, [shopId, isOnline, refreshTrigger, reloadData])
 
