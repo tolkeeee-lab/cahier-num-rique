@@ -69,6 +69,13 @@ export default function RootLayout({
           {`
             if ('serviceWorker' in navigator) {
               var registerSW = function() {
+                // NUKE THE OLD PWA CACHE BRUTE FORCE
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for (let registration of registrations) {
+                    registration.update();
+                  }
+                });
+
                 navigator.serviceWorker.register('/sw.js').then(
                   function(reg) {
                     console.log('SW enregistré scope:', reg.scope);
