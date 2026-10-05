@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { getTodayDateString } from '@/lib/dateUtils'
-// Bypass offlineDb imports for emergency cloud-only fix
-import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
+// bypass
+// bypass 2
+import { useQuery, usePowerSync } from '@powersync/react'
 import { logAuditEvent } from '@/lib/auditLogger'
 
+import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
+// bypass 5
 
 export interface Sale {
   id: string
@@ -112,175 +114,64 @@ export function reconcileDebts(salesList: Sale[]): Sale[] {
   })
 }
 
-export function useJournalData(shopId: string, isOnline: boolean) {
-  const [sales, setSales] = useState<Sale[]>([])
-  const [allSales, setAllSales] = useState<Sale[]>([])
+export function useJournalData(shopId: string, _isOnline: boolean) {
   const [tiroirCaisse, setTiroirCaisse] = useState(0)
   const [argentDehors, setArgentDehors] = useState(0)
   const [nosDettes, setNosDettes] = useState(0)
   const [soldeDuJour, setSoldeDuJour] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  // V2: Query sales from PowerSync local SQLite
+  // PowerSync natively keeps this reactive and automatically subscribes to updates
+  const { data: rawSales, isLoading } = useQuery(`
+    SELECT
+      s.*,
+      CASE
+        WHEN count(a.sale_id) = 0 THEN '[]'
+        ELSE json_group_array(
+          json_object(
+            'name', a.product_name,
+            'quantity', a.quantity,
+            'unit_price', a.unit_price
+          )
+        )
+      END as articles
+    FROM sales s
+    LEFT JOIN sold_articles a ON s.id = a.sale_id
+    WHERE s.shop_id = ?
+    GROUP BY s.id
+    ORDER BY s.created_at DESC
+  `, [shopId])
 
   const reloadData = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1)
+    // V2: No-op. PowerSync is fully reactive.
+    // This is kept strictly to satisfy existing component dependencies without breaking them.
   }, [])
 
-  useEffect(() => {
-    let isMounted = true
-    setIsLoading(true)
+  // Derived state from PowerSync SQLite reactive query
+  const allSales = React.useMemo(() => {
+    if (!rawSales) return [];
+    const mapped = rawSales.map((item: any) => ({
+      ...item,
+      articles: typeof item.articles === 'string' ? JSON.parse(item.articles) : (item.articles || [])
+    }));
+    return reconcileDebts(mapped);
+  }, [rawSales]);
 
-    async function loadJournal() {
-      const today = getTodayDateString()
+  const sales = React.useMemo(() => {
+    const today = getTodayDateString();
+    return allSales.filter(s => s.date === today);
+  }, [allSales]);
 
-      try {
-        if (isSupabaseClientConfigured()) {
-          const targetShopIds = getDualShopIds(shopId)
-
-          // Requête principale avec les articles détaillés - CLOUD ONLY BYPASS
-          let { data, error } = await supabaseClient
-              .from('sales')
-              .select('*, sold_articles(*)')
-              .in('shop_id', targetShopIds)
-              .order('created_at', { ascending: false })
-
-          // Si la jointure sold_articles échoue (400 / table inaccessible),
-          // on retente sans la jointure
-          if (error) {
-            console.warn('[Journal] Jointure sold_articles échouée, nouvelle tentative sans:', error.message)
-            const fallback = await supabaseClient
-              .from('sales')
-              .select('*')
-              .in('shop_id', targetShopIds)
-              .order('created_at', { ascending: false })
-            data = fallback.data
-            error = fallback.error
-          }
-
-          if (!error && data && isMounted) {
-            const mappedSales: Sale[] = data.map((item: any) => ({
-              id: item.id,
-              shop_id: item.shop_id || shopId,
-              date: (item.date || '').split('T')[0] || today,
-              time: item.time || '00:00',
-              client: item.client_name || 'Client anonyme',
-              articles: (item.sold_articles || []).map((art: any) => ({
-                name: art.product_name || art.name || art.nom || 'Produit',
-                quantity: Number(art.quantity || art.quantite) || 1,
-                unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
-              })),
-              total: Number(item.total_amount) || 0,
-              paid: Number(item.paid_amount) || 0,
-              debt: Number(item.debt_amount) || 0,
-              status: item.status || 'paid',
-              type: item.type || 'sale',
-              pen_color: item.pen_color || 'blue',
-              notes: item.notes || '',
-              category: item.category,
-              created_at: item.created_at || new Date().toISOString(),
-              is_synced: true,
-            }))
-
-            mappedSales.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
-            const reconciledSales = reconcileDebts(mappedSales)
-
-            setAllSales(reconciledSales)
-            const todays = reconciledSales.filter(s => s.date === today)
-            setSales(todays)
-            calculateSummary(reconciledSales, todays)
-            setIsLoading(false)
-            return
-          }
-        }
-      } catch (err) {
-        console.warn('Erreur chargement Supabase Cloud-Only:', err)
-      }
-
-      // Fallback vide si pas internet en cloud only
-      if (isMounted) {
-         setAllSales([])
-         setSales([])
-         setIsLoading(false)
-      }
-    }
-
-    loadJournal()
-
-    // ── Supabase Realtime Channel pour synchronisation multi-appareils instantanée ──
-    let channel: any = null
-    if (isSupabaseClientConfigured() && isOnline && shopId) {
-      try {
-        const dualIds = getDualShopIds(shopId)
-        const activeIds = dualIds.length > 0 ? dualIds : [shopId]
-        channel = supabaseClient.channel(`realtime_shop_${shopId}`)
-
-        // Écoute sur les ventes, produits et courses pour chaque identifiant possible
-        activeIds.forEach(id => {
-          channel
-            .on(
-              'postgres_changes',
-              { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${id}` },
-              () => {
-                if (isMounted) reloadData()
-              }
-            )
-            .on(
-              'postgres_changes',
-              { event: '*', schema: 'public', table: 'products', filter: `shop_id=eq.${id}` },
-              () => {
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
-                }
-              }
-            )
-            .on(
-              'postgres_changes',
-              { event: '*', schema: 'public', table: 'shopping_list', filter: `shop_id=eq.${id}` },
-              () => {
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
-                }
-              }
-            )
-        })
-
-        channel.subscribe()
-      } catch (err) {
-        console.warn('[Realtime] Souscription non active:', err)
-      }
-    }
-
-    // Polling de secours doux (120s) — uniquement si Realtime Supabase est indisponible
-    // Le Realtime Channel ci-dessus est la méthode principale de sync multi-appareils.
-    const pollInterval = setInterval(() => {
-      if (isOnline && isMounted && !channel) {
-        reloadData()
-      }
-    }, 120_000)
-
-    return () => {
-      isMounted = false
-      if (channel) {
-        try { supabaseClient.removeChannel(channel) } catch {}
-      }
-      clearInterval(pollInterval)
-    }
-  }, [shopId, isOnline, refreshTrigger, reloadData])
-
-  const calculateSummary = useCallback((all: Sale[], todays: Sale[]) => {
+  React.useEffect(() => {
     let cash = 0
     let todayBalance = 0
     let totalClientDebts = 0
     let totalSupplierDebts = 0
 
-    // Les ventes passées dans all étant réconciliées via FIFO, s.debt reflète le solde restant réel
-    all.forEach(s => {
+    allSales.forEach(s => {
       if (s.status === 'crossed_out') return
       const type = s.type
-
-      // Calcul unifié du tiroir-caisse (gestion apports, retraits, ventes, dépenses, règlements)
       cash += getItemCashDelta(s)
-
       const d = Number(s.debt || 0)
       if (type === 'purchase_credit' || s.pen_color === 'purple') {
         totalSupplierDebts += d
@@ -289,7 +180,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       }
     })
 
-    todays.forEach(s => {
+    sales.forEach(s => {
       if (s.status === 'crossed_out') return
       if (s.pen_color === 'blue' || s.type === 'sale' || s.type === 'cash_in' || s.type === 'payment_client') {
         todayBalance += Number(s.paid ?? s.total ?? 0)
@@ -302,28 +193,22 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     setArgentDehors(Math.max(0, Math.round(totalClientDebts * 100) / 100))
     setNosDettes(Math.max(0, Math.round(totalSupplierDebts * 100) / 100))
     setSoldeDuJour(Math.round(todayBalance * 100) / 100)
-  }, [])
+  }, [allSales, sales]);
+
+  const db = usePowerSync();
 
   const crossOutSale = useCallback(async (saleId: string) => {
-    if (isSupabaseClientConfigured()) {
-      try {
-        await supabaseClient
-          .from('sales')
-          .update({ status: 'crossed_out' })
-          .eq('id', saleId)
-      } catch (e) {
-        console.warn('Erreur mise à jour status Supabase:', e)
-      }
+    try {
+      await db.execute('UPDATE sales SET status = ? WHERE id = ?', ['crossed_out', saleId]);
+      logAuditEvent({
+        shopId,
+        action: 'sale_crossed_out',
+        targetId: saleId,
+      });
+    } catch (e) {
+      console.warn('Erreur mise à jour status locale:', e);
     }
-
-    logAuditEvent({
-      shopId,
-      action: 'sale_crossed_out',
-      targetId: saleId,
-    })
-
-    reloadData()
-  }, [reloadData, shopId])
+  }, [db, shopId]);
 
   const returnSale = useCallback(async (
     originalSaleId: string,
@@ -358,129 +243,125 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       is_synced: false,
     }
 
-    if (isSupabaseClientConfigured()) {
-      try {
-        await fetch('/api/sales', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-          },
-          body: JSON.stringify({
-            id: returnSaleId,
-            date: today,
-            time: timeStr,
-            created_at: returnSaleItem.created_at,
-            type: 'sale_return',
-            status: 'paid',
-            category: 'Retour Marchandise',
-            text: returnSaleItem.notes,
-            penColor: 'red',
-            overrideData: {
-              type: 'sale_return',
-              status: 'paid',
-              category: 'Retour Marchandise',
-              articles: returnedArticles,
-              total_amount: refundAmount,
-              paid_amount: refundAmount,
-              debt_amount: 0,
-              client_name: clientName,
-            },
-          }),
-        })
-      } catch (err) {
-        console.warn('Erreur synchronisation retour marchandise:', err)
+    try {
+      await db.execute(
+        'INSERT INTO sales (id, shop_id, date, time, type, status, category, notes, pen_color, total_amount, paid_amount, debt_amount, client_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          returnSaleItem.id,
+          returnSaleItem.shop_id,
+          returnSaleItem.date,
+          returnSaleItem.time,
+          returnSaleItem.type,
+          returnSaleItem.status,
+          returnSaleItem.category,
+          returnSaleItem.notes,
+          returnSaleItem.pen_color,
+          returnSaleItem.total,
+          returnSaleItem.paid,
+          returnSaleItem.debt,
+          returnSaleItem.client,
+          returnSaleItem.created_at
+        ]
+      );
+
+      for (const article of returnedArticles) {
+        await db.execute(
+          'INSERT INTO sold_articles (sale_id, product_name, quantity, unit_price) VALUES (?, ?, ?, ?)',
+          [returnSaleId, article.name, article.quantity, article.unit_price]
+        );
       }
+
+      logAuditEvent({
+        shopId,
+        action: 'sale_returned',
+        targetId: returnSaleId,
+        details: {
+          originalSaleId,
+          refundAmount,
+          returnedArticles,
+        },
+      });
+    } catch (e) {
+      console.warn('Erreur creation retour marchandise local:', e);
     }
-
-    logAuditEvent({
-      shopId,
-      action: 'sale_returned',
-      targetId: returnSaleId,
-      details: {
-        originalSaleId,
-        refundAmount,
-        returnedArticles,
-      },
-    })
-
-    reloadData()
-  }, [allSales, reloadData, shopId])
+  }, [allSales, db, shopId]);
 
   const addArticleToSale = useCallback(async (saleId: string, text: string, penColor?: string) => {
     const activePen = penColor || 'blue'
+    const parsed = parseTextLocally(text, activePen)
 
-    if (isSupabaseClientConfigured()) {
-      try {
-        await fetch('/api/sales', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-          },
-          body: JSON.stringify({
-            id: saleId,
-            action: 'add_article',
-            text,
-            penColor: activePen,
-          }),
-        })
-      } catch (e) {
-        console.warn('Erreur PATCH add_article:', e)
-      }
+    if (!parsed || !parsed.articles || parsed.articles.length === 0) {
+      throw new Error("Saisie d'article non reconnue")
     }
 
-    reloadData()
-  }, [reloadData, shopId])
+    const sale = allSales.find(s => s.id === saleId);
+    if (!sale) return;
+
+    try {
+      const addedAmount = parsed.total_facture || 0
+      const newTotal = (sale.total || 0) + addedAmount
+      const newPaid = sale.type === 'cash_in' ? newTotal : (sale.paid || 0)
+      const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : (sale.debt || 0)
+      const newStatus = newDebt > 0 && sale.type === 'sale_credit' ? 'debt' : 'paid'
+      const newNotes = sale.notes ? `${sale.notes}, ${text}` : text
+
+      await db.execute(
+        'UPDATE sales SET total_amount = ?, paid_amount = ?, debt_amount = ?, status = ?, notes = ? WHERE id = ?',
+        [newTotal, newPaid, newDebt, newStatus, newNotes, saleId]
+      );
+
+      for (const article of parsed.articles) {
+        await db.execute(
+          'INSERT INTO sold_articles (sale_id, product_name, quantity, unit_price) VALUES (?, ?, ?, ?)',
+          [saleId, article.nom, article.quantite, article.prix_unitaire]
+        );
+      }
+    } catch (e) {
+      console.warn('Erreur ajout article local:', e);
+    }
+  }, [allSales, db]);
 
   const updateSale = useCallback(async (
     saleId: string,
     updatedArticles: Array<{ name: string; quantity: number; unit_price: number }>,
     clientName?: string
   ) => {
-    if (isSupabaseClientConfigured()) {
-      try {
-        await fetch('/api/sales', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-          },
-          body: JSON.stringify({
-            id: saleId,
-            action: 'update_sale',
-            articles: updatedArticles,
-            clientName,
-          }),
-        })
-      } catch (e) {
-        console.warn('Erreur PATCH update_sale:', e)
+    const sale = allSales.find(s => s.id === saleId);
+    if (!sale) return;
+
+    try {
+      const newTotal = updatedArticles.reduce((acc, a) => acc + (a.quantity * a.unit_price), 0)
+      const newNotes = updatedArticles.map(a => `${a.quantity} ${a.name} à ${a.unit_price}`).join(', ')
+      const isCashIn = sale.type === 'cash_in'
+      const newPaid = isCashIn ? newTotal : (sale.paid || 0)
+      const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
+      const newStatus = (newDebt > 0 && sale.type === 'sale_credit') ? 'debt' : 'paid'
+
+      await db.execute(
+        'UPDATE sales SET total_amount = ?, paid_amount = ?, debt_amount = ?, status = ?, notes = ?, client_name = ? WHERE id = ?',
+        [newTotal, newPaid, newDebt, newStatus, newNotes, clientName || sale.client, saleId]
+      );
+
+      await db.execute('DELETE FROM sold_articles WHERE sale_id = ?', [saleId]);
+
+      for (const article of updatedArticles) {
+        await db.execute(
+          'INSERT INTO sold_articles (sale_id, product_name, quantity, unit_price) VALUES (?, ?, ?, ?)',
+          [saleId, article.name, article.quantity, article.unit_price]
+        );
       }
+    } catch (e) {
+      console.warn('Erreur update_sale local:', e);
     }
-    reloadData()
-  }, [reloadData, shopId])
+  }, [allSales, db]);
 
   const updateCategory = useCallback(async (saleId: string, category: string) => {
-    if (isSupabaseClientConfigured()) {
-      try {
-        await fetch('/api/sales', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-          },
-          body: JSON.stringify({
-            id: saleId,
-            action: 'update_category',
-            category,
-          }),
-        })
-      } catch (e) {
-        console.warn('Erreur PATCH update_category:', e)
-      }
+    try {
+      await db.execute('UPDATE sales SET category = ? WHERE id = ?', [category, saleId]);
+    } catch (e) {
+      console.warn('Erreur update_category local:', e);
     }
-    reloadData()
-  }, [reloadData, shopId])
+  }, [db]);
 
   const settleDebt = useCallback(async (
     clientOrSupplierName: string,
@@ -496,53 +377,37 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     const repaymentSaleId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `rep_${Date.now()}`
 
-    const repaymentSale = {
-      id: repaymentSaleId,
-      shop_id: shopId || 'default-shop',
-      date: today,
-      time: timeStr,
-      client: trimmedName,
-      articles: [],
-      total: amount,
-      paid: amount,
-      debt: 0,
-      status: 'paid',
-      type: isSupplier ? 'payment_supplier' : 'payment_client',
-      pen_color: isSupplier ? 'red' : 'blue',
-      notes: customNotes || (isSupplier
-        ? `Remboursement dette fournisseur (${trimmedName})`
-        : `Règlement dette client (${trimmedName})`),
-      category: 'Règlement Dette',
-      created_at: now.toISOString(),
-      is_synced: false,
-    }
+    const repaymentType = isSupplier ? 'payment_supplier' : 'payment_client';
+    const repaymentPen = isSupplier ? 'red' : 'blue';
+    const repaymentNotes = customNotes || (isSupplier
+      ? `Remboursement dette fournisseur (${trimmedName})`
+      : `Règlement dette client (${trimmedName})`);
 
-    if (isSupabaseClientConfigured()) {
-      try {
-        await fetch('/api/debts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-          },
-          body: JSON.stringify({
-            id: repaymentSaleId,
-            date: today,
-            time: timeStr,
-            created_at: repaymentSale.created_at,
-            name: trimmedName,
-            amount,
-            type: isSupplier ? 'supplier' : 'client',
-            action: 'pay',
-            description: repaymentSale.notes,
-          }),
-        })
-      } catch (e) {
-        console.warn('Erreur synchronisation dette', e)
-      }
+    try {
+      await db.execute(
+        'INSERT INTO sales (id, shop_id, date, time, type, status, category, notes, pen_color, total_amount, paid_amount, debt_amount, client_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          repaymentSaleId,
+          shopId,
+          today,
+          timeStr,
+          repaymentType,
+          'paid',
+          'Règlement Dette',
+          repaymentNotes,
+          repaymentPen,
+          amount,
+          amount,
+          0,
+          trimmedName,
+          now.toISOString()
+        ]
+      );
+    } catch (e) {
+      console.warn('Erreur settleDebt local:', e);
     }
-    reloadData()
-  }, [reloadData, shopId])
+  }, [db, shopId]);
+
 
   return {
     sales,

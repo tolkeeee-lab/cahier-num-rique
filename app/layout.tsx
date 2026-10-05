@@ -51,6 +51,7 @@ export const metadata: Metadata = {
 }
 
 import { FeatureProvider } from '@/context/FeatureContext'
+import { PowerSyncProvider } from '@/lib/powersync/PowerSyncProvider'
 
 export default function RootLayout({
   children,
@@ -60,9 +61,11 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning className={`${inter.variable} ${itim.variable} ${jetbrains.variable}`}>
       <body suppressHydrationWarning className="font-sans antialiased bg-[#141210] text-gray-900 min-h-screen">
-        <FeatureProvider>
-          {children}
-        </FeatureProvider>
+        <PowerSyncProvider>
+          <FeatureProvider>
+            {children}
+          </FeatureProvider>
+        </PowerSyncProvider>
         
         {/* Enregistrement du Service Worker pour le support PWA */}
         <Script id="register-sw" strategy="afterInteractive">
