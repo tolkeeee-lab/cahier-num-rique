@@ -16,6 +16,9 @@
     "verify": "npx -y tsx scripts/verify_fixes.ts"
   },
   "dependencies": {
+    "@journeyapps/wa-sqlite": "^2.0.6",
+    "@powersync/react": "^2.0.2",
+    "@powersync/web": "^2.4.2",
     "@supabase/supabase-js": "^2.45.0",
     "@zxing/library": "^0.23.0",
     "lucide-react": "^0.408.0",
