@@ -12,7 +12,7 @@ import { RealValueCalculatorModal } from '@/components/stock/RealValueCalculator
 import { ExpressAdjustmentModal } from '@/components/stock/ExpressAdjustmentModal'
 import { BarcodeScannerModal } from '@/components/BarcodeScannerModal'
 import { StockFormState } from '@/components/stock/types'
-import { exportProductsToCSV, exportProductsToPDF } from '@/lib/exportUtils'
+import { exportProductsToCSV } from '@/lib/exportUtils'
 import {
   clearOfflineProducts,
   saveOfflineProduct,
@@ -815,7 +815,6 @@ export function StockManager({
         onOpenRestockAdvisor={() => setIsRestockModalOpen(true)}
         onOpenCalculator={() => handleOpenCalculator()}
         onExportCSV={() => exportProductsToCSV(filteredProducts, `Stock_${shopId}`)}
-        onExportPDF={() => exportProductsToPDF(filteredProducts, `Stock_${shopId}`)}
         onClearAllStock={handleClearAllStock}
         hasProducts={products.length > 0}
         isEmployee={isEmployee}

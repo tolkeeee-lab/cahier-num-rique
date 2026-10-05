@@ -10,6 +10,7 @@ import {
   idbClearSyncQueue,
 } from '@/lib/indexedDb'
 import {
+  getDualShopIds,
   isRealUuid,
   findShopIdByCode,
   formatShortShopCode,
@@ -34,7 +35,7 @@ export async function getAllShopAliases(shopId: string): Promise<string[]> {
   if (!shopId) return []
   ids.add(shopId)
 
-  for (const d of [shopId]) {
+  for (const d of getDualShopIds(shopId)) {
     ids.add(d)
   }
 
@@ -52,7 +53,7 @@ export async function getAllShopAliases(shopId: string): Promise<string[]> {
       const realId = await findShopIdByCode(shopId)
       if (realId && isRealUuid(realId)) {
         ids.add(realId)
-        ids.add(realId)
+        for (const d of getDualShopIds(realId)) ids.add(d)
         const short = formatShortShopCode(realId)
         ids.add(short)
         const clean = normalizeShopCode(short)

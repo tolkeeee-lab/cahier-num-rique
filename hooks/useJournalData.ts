@@ -1,18 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getTodayDateString } from '@/lib/dateUtils'
-import {
-  getOfflineSales,
-  saveOfflineSale,
-  replaceOfflineSales,
-  OfflineSale,
-} from '@/lib/offlineDb'
+// Bypass offlineDb imports for emergency cloud-only fix
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { logAuditEvent } from '@/lib/auditLogger'
 
-import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export interface Sale {
   id: string
@@ -127,20 +122,8 @@ export function useJournalData(shopId: string, isOnline: boolean) {
   const [isLoading, setIsLoading] = useState(true)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  // Utilisation d'un ref pour le timer de debounce afin d'éviter les re-rendus massifs
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   const reloadData = useCallback(() => {
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    debounceTimerRef.current = setTimeout(() => {
-      setRefreshTrigger(prev => prev + 1)
-    }, 150) // 150ms de debounce
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    }
+    setRefreshTrigger(prev => prev + 1)
   }, [])
 
   useEffect(() => {
@@ -150,64 +133,25 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     async function loadJournal() {
       const today = getTodayDateString()
 
-      // 0. CHARGEMENT INSTANTANÉ DU CACHE LOCAL (0 ms)
       try {
-        const localRaw = getOfflineSales(shopId)
-        if (localRaw && localRaw.length > 0 && isMounted) {
-          const localClean: Sale[] = localRaw.map(s => ({
-            id: s.id,
-            shop_id: s.shop_id || shopId,
-            date: (s.date || '').split('T')[0] || today,
-            time: s.time || '00:00',
-            client: s.client || 'Client anonyme',
-            articles: (s.articles || []).map(a => ({
-              name: a.name || 'Produit',
-              quantity: Number(a.quantity) || 1,
-              unit_price: Number(a.unit_price) || 0,
-            })),
-            total: Number(s.total) || 0,
-            paid: Number(s.paid) || 0,
-            debt: Number(s.debt) || 0,
-            status: s.status || 'paid',
-            type: s.type || 'sale',
-            pen_color: s.pen_color || 'blue',
-            notes: s.notes || '',
-            category: s.category,
-            created_at: s.created_at || new Date().toISOString(),
-            is_synced: s.is_synced ?? true,
-          }))
-          const todaysLocal = localClean.filter(s => s.date === today)
-          setAllSales(localClean)
-          setSales(todaysLocal)
-          calculateSummary(localClean, todaysLocal)
-          setIsLoading(false)
-        }
-      } catch {}
+        if (isSupabaseClientConfigured()) {
+          const targetShopIds = getDualShopIds(shopId)
 
-      try {
-        if (isSupabaseClientConfigured() && isOnline) {
-          const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
-            setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 3500)
-          )
-
-          // Requête principale avec les articles détaillés
-          let { data, error } = await Promise.race([
-            supabaseClient
+          // Requête principale avec les articles détaillés - CLOUD ONLY BYPASS
+          let { data, error } = await supabaseClient
               .from('sales')
               .select('*, sold_articles(*)')
-              .eq('shop_id', shopId)
-              .order('created_at', { ascending: false }),
-            timeoutPromise
-          ])
+              .in('shop_id', targetShopIds)
+              .order('created_at', { ascending: false })
 
           // Si la jointure sold_articles échoue (400 / table inaccessible),
           // on retente sans la jointure
-          if (error && error.message !== 'timeout') {
+          if (error) {
             console.warn('[Journal] Jointure sold_articles échouée, nouvelle tentative sans:', error.message)
             const fallback = await supabaseClient
               .from('sales')
               .select('*')
-              .eq('shop_id', shopId)
+              .in('shop_id', targetShopIds)
               .order('created_at', { ascending: false })
             data = fallback.data
             error = fallback.error
@@ -237,114 +181,8 @@ export function useJournalData(shopId: string, isOnline: boolean) {
               is_synced: true,
             }))
 
-            // NOTE: La synchronisation des ventes en attente est EXCLUSIVEMENT gérée par useOfflineSync.
-            // Ne pas pousser les ventes ici pour éviter les doublons et les race conditions.
-
-            // 2. Fusion sécurisée : Supabase est la vérité pour les ventes connues,
-            // mais on inclut TOUJOURS les ventes locales dont l'ID n'est pas encore arrivé dans Supabase
-            // (race condition entre la sauvegarde et la prochaine requête Supabase)
-
-            // On renforce la déduplication : on filtre par ID, mais aussi par signature de vente
-            // pour attraper les doublons physiques ayant des IDs différents suite à un crash du cache local.
-            const supabaseIds = new Set(mappedSales.map(s => s.id))
-            const supabaseSignatures = new Set(
-              mappedSales.map(s => `${s.date}_${s.time}_${(s.client || '').trim().toLowerCase()}_${s.total}`)
-            )
-
-            const offlineSales = getOfflineSales(shopId)
-            const localPendingUpdates = new Map()
-            for (const s of offlineSales) {
-              if (s.id && s.is_synced === false) {
-                localPendingUpdates.set(s.id, s)
-              }
-            }
-
-            const mergedCloudSales = mappedSales.map(s => {
-              if (localPendingUpdates.has(s.id)) {
-                // Si la vente existe dans le cloud, mais a été modifiée localement et n'est pas encore synchronisée,
-                // la version locale DOIT prévaloir pour éviter de l'écraser silencieusement.
-                return { ...s, ...localPendingUpdates.get(s.id), is_synced: false }
-              }
-              return s
-            })
-
-            const offlineNotYetInCloud = offlineSales.filter(s => {
-              if (!s.id) return false
-              if (supabaseIds.has(s.id)) return false
-              const sig = `${s.date}_${s.time}_${(s.client || '').trim().toLowerCase()}_${s.total}`
-              if (supabaseSignatures.has(sig)) return false
-              return true
-            })
-
-            const rawCombined = [...mergedCloudSales, ...offlineNotYetInCloud]
-
-            const seenIds = new Set<string>()
-            const combinedSales: Sale[] = []
-
-            for (const s of rawCombined) {
-              if (s.id && seenIds.has(s.id)) continue
-              if (s.id) seenIds.add(s.id)
-
-              const cleanArticles = (s.articles || []).map((art: any) => ({
-                name: art.name || art.nom || art.product_name || 'Produit',
-                quantity: Number(art.quantity || art.quantite) || 1,
-                unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
-              }))
-
-              const saleDate = (s.date || '').split('T')[0] || today
-
-              const cleanSale: Sale = {
-                id: s.id,
-                shop_id: s.shop_id || shopId,
-                date: saleDate,
-                time: s.time || '00:00',
-                client: s.client || (s as any).client_name || 'Client anonyme',
-                articles: cleanArticles,
-                total: Number(s.total ?? (s as any).total_amount) || 0,
-                paid: Number(s.paid ?? (s as any).paid_amount) || 0,
-                debt: Number(s.debt ?? (s as any).debt_amount) || 0,
-                status: s.status || 'paid',
-                type: s.type || 'sale',
-                pen_color: s.pen_color || 'blue',
-                notes: s.notes || '',
-                category: s.category,
-                created_at: s.created_at || new Date().toISOString(),
-                is_synced: s.is_synced ?? true,
-              }
-
-              combinedSales.push(cleanSale)
-            }
-
-
-            combinedSales.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
-            const reconciledSales = reconcileDebts(combinedSales)
-
-            // Mettre à jour le cache local avec la vérité du Cloud Supabase (incluant les dettes réconciliées)
-            try {
-              const offlineFormatted: OfflineSale[] = reconciledSales.map(cs => ({
-                id: cs.id,
-                shop_id: cs.shop_id || shopId,
-                date: cs.date,
-                time: cs.time,
-                client: cs.client,
-                articles: cs.articles.map(a => ({
-                  name: a.name,
-                  quantity: a.quantity,
-                  unit_price: a.unit_price,
-                })),
-                total: cs.total,
-                paid: cs.paid,
-                debt: cs.debt,
-                status: cs.status as any,
-                type: cs.type,
-                pen_color: cs.pen_color,
-                notes: cs.notes,
-                category: cs.category,
-                created_at: cs.created_at || new Date().toISOString(),
-                is_synced: cs.is_synced ?? true,
-              }))
-              replaceOfflineSales(shopId, offlineFormatted)
-            } catch {}
+            mappedSales.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
+            const reconciledSales = reconcileDebts(mappedSales)
 
             setAllSales(reconciledSales)
             const todays = reconciledSales.filter(s => s.date === today)
@@ -355,142 +193,79 @@ export function useJournalData(shopId: string, isOnline: boolean) {
           }
         }
       } catch (err) {
-        console.warn('Erreur chargement Supabase, repli offline:', err)
+        console.warn('Erreur chargement Supabase Cloud-Only:', err)
       }
 
-
+      // Fallback vide si pas internet en cloud only
       if (isMounted) {
-        const offlineSales = getOfflineSales(shopId)
-        const seenKeys = new Set<string>()
-        const cleanOffline: Sale[] = []
-
-        for (const s of offlineSales) {
-          const cleanArticles = (s.articles || []).map((art: any) => ({
-            name: art.name || art.nom || art.product_name || 'Produit',
-            quantity: Number(art.quantity || art.quantite) || 1,
-            unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
-          }))
-
-          const cleanSale: Sale = {
-            id: s.id,
-            shop_id: s.shop_id || shopId,
-            date: s.date,
-            time: s.time || '00:00',
-            client: s.client || 'Client anonyme',
-            articles: cleanArticles,
-            total: Number(s.total) || 0,
-            paid: Number(s.paid) || 0,
-            debt: Number(s.debt) || 0,
-            status: s.status || 'paid',
-            type: s.type || 'sale',
-            pen_color: s.pen_color || 'blue',
-            notes: s.notes || '',
-            category: s.category,
-            created_at: s.created_at || new Date().toISOString(),
-            is_synced: s.is_synced ?? true,
-          }
-
-          const dedupKey = `${cleanSale.date}_${cleanSale.time}_${cleanSale.total}_${(cleanSale.notes || '').trim().toLowerCase()}`
-          if (seenKeys.has(dedupKey)) continue
-          seenKeys.add(dedupKey)
-          cleanOffline.push(cleanSale)
-        }
-
-        cleanOffline.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
-        const reconciledOffline = reconcileDebts(cleanOffline)
-        setAllSales(reconciledOffline)
-        const todays = reconciledOffline.filter(s => s.date === today)
-        setSales(todays)
-        calculateSummary(reconciledOffline, todays)
-        setIsLoading(false)
+         setAllSales([])
+         setSales([])
+         setIsLoading(false)
       }
     }
 
     loadJournal()
 
-    // Polling de secours modéré (30s) au lieu de 120s pour compenser si Realtime tombe silencieusement
-    const pollInterval = setInterval(() => {
-      if (isOnline && isMounted) {
-        reloadData()
-      }
-    }, 30_000)
-
-    // Écouteur pour forcer le rechargement quand on sort de veille / revient sur l'app (mobile PWA)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isMounted) {
-        reloadData()
-      }
-    }
-
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', handleVisibilityChange)
-    }
-
-    return () => {
-      isMounted = false
-      clearInterval(pollInterval)
-      if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', handleVisibilityChange)
-      }
-    }
-  }, [shopId, isOnline, refreshTrigger, reloadData])
-
-  // ── Supabase Realtime Channel pour synchronisation multi-appareils instantanée ──
-  // Séparé du hook de chargement pour éviter de déconnecter/reconnecter le WebSocket
-  // à chaque fois que refreshTrigger change.
-  useEffect(() => {
+    // ── Supabase Realtime Channel pour synchronisation multi-appareils instantanée ──
     let channel: any = null
     if (isSupabaseClientConfigured() && isOnline && shopId) {
       try {
+        const dualIds = getDualShopIds(shopId)
+        const activeIds = dualIds.length > 0 ? dualIds : [shopId]
         channel = supabaseClient.channel(`realtime_shop_${shopId}`)
 
-        // Écoute sur les ventes, produits et courses pour l'identifiant exact de boutique
-        channel
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${shopId}` },
-            () => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('cahier_sale_created'))
-                window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+        // Écoute sur les ventes, produits et courses pour chaque identifiant possible
+        activeIds.forEach(id => {
+          channel
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${id}` },
+              () => {
+                if (isMounted) reloadData()
               }
-            }
-          )
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'products', filter: `shop_id=eq.${shopId}` },
-            () => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+            )
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'products', filter: `shop_id=eq.${id}` },
+              () => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+                }
               }
-            }
-          )
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'shopping_list', filter: `shop_id=eq.${shopId}` },
-            () => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
+            )
+            .on(
+              'postgres_changes',
+              { event: '*', schema: 'public', table: 'shopping_list', filter: `shop_id=eq.${id}` },
+              () => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
+                }
               }
-            }
-          )
-
-        channel.subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            console.log(`[Realtime] Synchronisation active pour la boutique ${shopId}`)
-          }
+            )
         })
+
+        channel.subscribe()
       } catch (err) {
         console.warn('[Realtime] Souscription non active:', err)
       }
     }
 
+    // Polling de secours doux (120s) — uniquement si Realtime Supabase est indisponible
+    // Le Realtime Channel ci-dessus est la méthode principale de sync multi-appareils.
+    const pollInterval = setInterval(() => {
+      if (isOnline && isMounted && !channel) {
+        reloadData()
+      }
+    }, 120_000)
+
     return () => {
+      isMounted = false
       if (channel) {
         try { supabaseClient.removeChannel(channel) } catch {}
       }
+      clearInterval(pollInterval)
     }
-  }, [shopId, isOnline])
+  }, [shopId, isOnline, refreshTrigger, reloadData])
 
   const calculateSummary = useCallback((all: Sale[], todays: Sale[]) => {
     let cash = 0
@@ -530,52 +305,25 @@ export function useJournalData(shopId: string, isOnline: boolean) {
   }, [])
 
   const crossOutSale = useCallback(async (saleId: string) => {
-    const updated = allSales.map(s => (s.id === saleId ? { ...s, status: 'crossed_out' as const } : s))
-    setAllSales(updated)
-    const today = getTodayDateString()
-    const todays = updated.filter(s => s.date === today)
-    setSales(todays)
-    calculateSummary(updated, todays)
-
-    const target = updated.find(s => s.id === saleId)
-    if (target) {
-      const offlineTarget: OfflineSale = {
-        ...target,
-        shop_id: target.shop_id || shopId,
-        created_at: target.created_at || new Date().toISOString(),
-        is_synced: false,
+    if (isSupabaseClientConfigured()) {
+      try {
+        await supabaseClient
+          .from('sales')
+          .update({ status: 'crossed_out' })
+          .eq('id', saleId)
+      } catch (e) {
+        console.warn('Erreur mise à jour status Supabase:', e)
       }
-      saveOfflineSale(shopId, offlineTarget)
-    }
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
-      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
     }
 
     logAuditEvent({
       shopId,
       action: 'sale_crossed_out',
       targetId: saleId,
-      details: {
-        total: target?.total,
-        client: target?.client,
-        articles: target?.articles,
-      },
     })
 
-    if (isSupabaseClientConfigured() && isOnline) {
-      try {
-        await supabaseClient
-          .from('sales')
-          .update({ status: 'crossed_out' })
-          .eq('id', saleId)
-          .eq('shop_id', shopId)
-      } catch (e) {
-        console.warn('Erreur mise à jour status Supabase:', e)
-      }
-    }
-  }, [allSales, calculateSummary, isOnline, shopId])
+    reloadData()
+  }, [reloadData, shopId])
 
   const returnSale = useCallback(async (
     originalSaleId: string,
@@ -591,7 +339,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     const originalSale = allSales.find(s => s.id === originalSaleId)
     const clientName = originalSale?.client || 'Client anonyme'
 
-    const returnSaleItem: OfflineSale = {
+    const returnSaleItem = {
       id: returnSaleId,
       shop_id: shopId || 'default-shop',
       date: today,
@@ -610,34 +358,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       is_synced: false,
     }
 
-    saveOfflineSale(shopId, returnSaleItem)
-
-    setAllSales(prev => {
-      const updated = [returnSaleItem, ...prev]
-      const todays = updated.filter(s => s.date === today)
-      setSales(todays)
-      calculateSummary(updated, todays)
-      return updated
-    })
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
-      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
-      window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
-    }
-
-    logAuditEvent({
-      shopId,
-      action: 'sale_returned',
-      targetId: returnSaleId,
-      details: {
-        originalSaleId,
-        refundAmount,
-        returnedArticles,
-      },
-    })
-
-    if (isSupabaseClientConfigured() && isOnline) {
+    if (isSupabaseClientConfigured()) {
       try {
         await fetch('/api/sales', {
           method: 'POST',
@@ -671,49 +392,25 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         console.warn('Erreur synchronisation retour marchandise:', err)
       }
     }
-  }, [allSales, calculateSummary, isOnline, shopId])
+
+    logAuditEvent({
+      shopId,
+      action: 'sale_returned',
+      targetId: returnSaleId,
+      details: {
+        originalSaleId,
+        refundAmount,
+        returnedArticles,
+      },
+    })
+
+    reloadData()
+  }, [allSales, reloadData, shopId])
 
   const addArticleToSale = useCallback(async (saleId: string, text: string, penColor?: string) => {
     const activePen = penColor || 'blue'
-    const parsed = parseTextLocally(text, activePen)
 
-    if (!parsed || !parsed.articles || parsed.articles.length === 0) {
-      throw new Error("Saisie d'article non reconnue")
-    }
-
-    const offlineSales = getOfflineSales(shopId)
-    const idx = offlineSales.findIndex(s => s.id === saleId)
-
-    if (idx !== -1) {
-      const sale = offlineSales[idx]
-      const addedAmount = parsed.total_facture || 0
-      const newTotal = (sale.total || 0) + addedAmount
-      const newPaid = sale.type === 'cash_in' ? newTotal : (sale.paid || 0)
-      const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : (sale.debt || 0)
-
-      sale.total = newTotal
-      sale.paid = newPaid
-      sale.debt = newDebt
-      sale.status = newDebt > 0 && sale.type === 'sale_credit' ? 'debt' : 'paid'
-      sale.notes = sale.notes ? `${sale.notes}, ${text}` : text
-      sale.articles = [
-        ...(sale.articles || []),
-        ...parsed.articles.map(a => ({
-          name: a.nom,
-          quantity: a.quantite,
-          unit_price: a.prix_unitaire,
-        }))
-      ]
-      sale.is_synced = false
-      replaceOfflineSales(shopId, offlineSales)
-      reloadData()
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cahier_sale_created'))
-        window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
-      }
-    }
-
-    if (isSupabaseClientConfigured() && isOnline) {
+    if (isSupabaseClientConfigured()) {
       try {
         await fetch('/api/sales', {
           method: 'PATCH',
@@ -732,42 +429,16 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         console.warn('Erreur PATCH add_article:', e)
       }
     }
-  }, [reloadData, isOnline, shopId])
+
+    reloadData()
+  }, [reloadData, shopId])
 
   const updateSale = useCallback(async (
     saleId: string,
     updatedArticles: Array<{ name: string; quantity: number; unit_price: number }>,
     clientName?: string
   ) => {
-    const newTotal = updatedArticles.reduce((acc, a) => acc + (a.quantity * a.unit_price), 0)
-    const newNotes = updatedArticles.map(a => `${a.quantity} ${a.name} à ${a.unit_price}`).join(', ')
-
-    const offlineSales = getOfflineSales(shopId)
-    const idx = offlineSales.findIndex(s => s.id === saleId)
-
-    if (idx !== -1) {
-      const sale = offlineSales[idx]
-      const isCashIn = sale.type === 'cash_in'
-      const newPaid = isCashIn ? newTotal : (sale.paid || 0)
-      const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
-
-      sale.total = newTotal
-      sale.paid = newPaid
-      sale.debt = newDebt
-      sale.status = (newDebt > 0 && sale.type === 'sale_credit') ? 'debt' : 'paid'
-      sale.notes = newNotes
-      if (clientName) sale.client = clientName
-      sale.articles = updatedArticles
-      sale.is_synced = false
-      replaceOfflineSales(shopId, offlineSales)
-      reloadData()
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cahier_sale_created'))
-        window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
-      }
-    }
-
-    if (isSupabaseClientConfigured() && isOnline) {
+    if (isSupabaseClientConfigured()) {
       try {
         await fetch('/api/sales', {
           method: 'PATCH',
@@ -786,22 +457,11 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         console.warn('Erreur PATCH update_sale:', e)
       }
     }
-  }, [reloadData, isOnline, shopId])
+    reloadData()
+  }, [reloadData, shopId])
 
   const updateCategory = useCallback(async (saleId: string, category: string) => {
-    const offlineSales = getOfflineSales(shopId)
-    const idx = offlineSales.findIndex(s => s.id === saleId)
-    if (idx !== -1) {
-      offlineSales[idx].category = category
-      offlineSales[idx].is_synced = false
-      replaceOfflineSales(shopId, offlineSales)
-      reloadData()
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
-      }
-    }
-
-    if (isSupabaseClientConfigured() && isOnline) {
+    if (isSupabaseClientConfigured()) {
       try {
         await fetch('/api/sales', {
           method: 'PATCH',
@@ -819,7 +479,8 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         console.warn('Erreur PATCH update_category:', e)
       }
     }
-  }, [reloadData, isOnline, shopId])
+    reloadData()
+  }, [reloadData, shopId])
 
   const settleDebt = useCallback(async (
     clientOrSupplierName: string,
@@ -835,7 +496,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     const repaymentSaleId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `rep_${Date.now()}`
 
-    const repaymentSale: OfflineSale = {
+    const repaymentSale = {
       id: repaymentSaleId,
       shop_id: shopId || 'default-shop',
       date: today,
@@ -856,75 +517,32 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       is_synced: false,
     }
 
-    // Sauvegarder dans offlineDb
-    saveOfflineSale(shopId, repaymentSale)
-
-    // Mettre à jour l'état local allSales & sales en mémoire immédiatement avec réconciliation FIFO
-    setAllSales(prev => {
-      const combined = [repaymentSale, ...prev.filter(s => s.id !== repaymentSaleId)]
-      const reconciled = reconcileDebts(combined)
-      const todays = reconciled.filter(s => s.date === today)
-      setSales(todays)
-      calculateSummary(reconciled, todays)
-
-      // Persister l'apurement de dette dans le cache offlineDb
+    if (isSupabaseClientConfigured()) {
       try {
-        const offlineSales = getOfflineSales(shopId)
-        const recMap = new Map(reconciled.map(r => [r.id, r]))
-        let changed = false
-        for (const os of offlineSales) {
-          const rec = recMap.get(os.id)
-          if (rec && (os.debt !== rec.debt || os.status !== rec.status)) {
-            os.debt = rec.debt
-            os.status = rec.status as any
-            changed = true
-          }
-        }
-        if (changed) {
-          replaceOfflineSales(shopId, offlineSales)
-        }
-      } catch {}
-
-      return reconciled
-    })
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
-      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
-    }
-
-    // Synchronisation en ligne
-    try {
-      const res = await fetch('/api/debts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-shop-id': shopId,
-        },
-        body: JSON.stringify({
-          id: repaymentSaleId,
-          date: today,
-          time: timeStr,
-          created_at: repaymentSale.created_at,
-          name: trimmedName,
-          amount,
-          type: isSupplier ? 'supplier' : 'client',
-          action: 'pay',
-          description: repaymentSale.notes,
-        }),
-      })
-      if (res.ok) {
-        const currentOffline = getOfflineSales(shopId)
-        const match = currentOffline.find(s => s.id === repaymentSaleId)
-        if (match) {
-          match.is_synced = true
-          replaceOfflineSales(shopId, currentOffline)
-        }
+        await fetch('/api/debts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId,
+          },
+          body: JSON.stringify({
+            id: repaymentSaleId,
+            date: today,
+            time: timeStr,
+            created_at: repaymentSale.created_at,
+            name: trimmedName,
+            amount,
+            type: isSupplier ? 'supplier' : 'client',
+            action: 'pay',
+            description: repaymentSale.notes,
+          }),
+        })
+      } catch (e) {
+        console.warn('Erreur synchronisation dette', e)
       }
-    } catch (e) {
-      console.warn('Règlement enregistré en local (mode hors-ligne):', e)
     }
-  }, [calculateSummary, shopId])
+    reloadData()
+  }, [reloadData, shopId])
 
   return {
     sales,

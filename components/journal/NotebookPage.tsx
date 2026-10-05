@@ -115,7 +115,6 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   const [activeChangeSaleId, setActiveChangeSaleId] = React.useState<string | null>(null)
   const [changeReceivedMap, setChangeReceivedMap] = React.useState<Record<string, string>>({})
   const [activeActionMenuSaleId, setActiveActionMenuSaleId] = React.useState<string | null>(null)
-  const [visibleDaysCount, setVisibleDaysCount] = React.useState(7)
 
   useEffect(() => {
     if (listRef.current && sales.length > 0) {
@@ -170,7 +169,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
           ref={listRef}
           className="flex-1 min-h-0 overflow-y-auto space-y-2 sm:space-y-3 lined-text-container pr-1 scrollbar-none pb-2"
         >
-          {salesByDate.slice(0, visibleDaysCount).map(([dateKey, dateSales]) => {
+          {salesByDate.map(([dateKey, dateSales]) => {
             const allDaySales = sales.filter(s => s.date === dateKey && s.status !== 'crossed_out')
             const allDayOperations = allDaySales.filter(s => s.type !== 'client_request')
 
@@ -696,18 +695,6 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
           </div>
         )
       })}
-
-          {salesByDate.length > visibleDaysCount && (
-            <div className="flex justify-center pt-6 pb-12">
-              <button
-                type="button"
-                onClick={() => setVisibleDaysCount(prev => prev + 7)}
-                className="px-6 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold rounded-xl shadow-xs border border-amber-300 transition-colors font-mono cursor-pointer active:scale-[0.97]"
-              >
-                Tourner la page ({Math.min(7, salesByDate.length - visibleDaysCount)} jours restants...)
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

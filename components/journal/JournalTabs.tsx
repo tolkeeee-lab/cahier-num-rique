@@ -53,13 +53,6 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
       show: true,
     },
     {
-      id: 'demandes' as JournalTab,
-      label: labels.tabDemandes,
-      icon: ClipboardList,
-      badge: pendingRequestsCount > 0 ? pendingRequestsCount : undefined,
-      show: activity !== 'particulier',
-    },
-    {
       id: 'stock' as JournalTab,
       label: labels.tabStock,
       icon: Package,
@@ -77,6 +70,13 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
       label: labels.tabShopping,
       icon: ShoppingCart,
       show: true,
+    },
+    {
+      id: 'demandes' as JournalTab,
+      label: labels.tabDemandes,
+      icon: ClipboardList,
+      badge: pendingRequestsCount > 0 ? pendingRequestsCount : undefined,
+      show: activity !== 'particulier',
     },
     {
       id: 'analytics' as JournalTab,

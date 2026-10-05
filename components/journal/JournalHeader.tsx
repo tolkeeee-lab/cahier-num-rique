@@ -204,22 +204,12 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             )}
           </div>
 
-          {/* Bouton de rafraîchissement manuel PWA */}
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="p-1 sm:p-1.5 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-800 border border-sky-300 transition-colors shadow-2xs cursor-pointer active:scale-95 hidden sm:block"
-            title="Forcer le rafraîchissement de l'application (PWA)"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-
           {/* Paramètres & Menu Mobile */}
           {canAccessAdminSettings(userRole) && (
             <button
               type="button"
               onClick={onOpenSettings}
-              className="p-1 sm:p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 transition-colors shadow-2xs cursor-pointer active:scale-95"
+              className="p-1 sm:p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 transition-colors shadow-2xs"
               title="Paramètres"
             >
               <Settings className="w-3.5 h-3.5" />
@@ -251,45 +241,6 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                   <div className="px-2.5 py-1 text-[10px] text-amber-900 font-black uppercase border-b border-amber-200 mb-1 tracking-wider">
                     Menu & Outils
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => { setShowMobileMenu(false); window.location.reload(); }}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-sky-100 active:scale-[0.97] text-sky-900 font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    <div className="w-6 h-6 rounded-lg bg-sky-200/80 flex items-center justify-center flex-shrink-0 text-sky-800">
-                      <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
-                    </div>
-                    <span>Forcer Mise à Jour</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setShowMobileMenu(false);
-                      if (confirm("ATTENTION : Cela va vider toute la mémoire hors-ligne de votre appareil. Vos ventes non synchronisées pourraient être perdues. Voulez-vous vraiment réparer l'application ?")) {
-                        localStorage.clear();
-                        if ('indexedDB' in window) {
-                          try { await window.indexedDB.deleteDatabase('CahierNumeriqueDB'); } catch (e) {}
-                        }
-                        if ('serviceWorker' in navigator) {
-                          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                            for(let registration of registrations) {
-                              registration.unregister();
-                            }
-                          });
-                        }
-                        alert("Mémoire vidée. L'application va redémarrer.");
-                        window.location.reload();
-                      }
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-red-100 active:scale-[0.97] text-red-700 font-black flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap mt-2 border border-red-200"
-                  >
-                    <div className="w-6 h-6 rounded-lg bg-red-200 flex items-center justify-center flex-shrink-0 text-red-800">
-                      <RefreshCw className="w-3.5 h-3.5" strokeWidth={2} />
-                    </div>
-                    <span>RÉPARER (Vider Cache)</span>
-                  </button>
 
                   {features.enableCashClosing && onOpenCashClosing && (
                     <button

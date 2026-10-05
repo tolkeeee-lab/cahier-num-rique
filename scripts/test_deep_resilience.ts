@@ -173,8 +173,9 @@ assert(safeMarche === 0, `Le total marché doit ignorer les undefined et lignes 
 // ─── 7. TEST RECHERCHE VENTES RÉSISTANTE AUX VALEURS NULLES & ALIAS BOUTIQUE ─
 console.log('\n--- 7. TEST RECHERCHE VENTES & ALIAS BOUTIQUE ---')
 
+import { getDualShopIds } from '../lib/shopCodeUtils'
 
-const dualIds = ["BTQ-58C54", "58C54", "SHOP-58C54"]
+const dualIds = getDualShopIds('BTQ-58C54')
 assert(dualIds.includes('BTQ-58C54'), `Doit inclure l'ID original BTQ-58C54`)
 assert(dualIds.includes('58C54'), `Doit inclure le code normalisé 58C54`)
 assert(dualIds.includes('SHOP-58C54'), `Doit inclure l'alias SHOP-58C54`)
@@ -243,15 +244,15 @@ let overpaidDebt = 1000 - 1500
 const sanitizedDebt = Math.max(0, Math.round(overpaidDebt * 100) / 100)
 assert(sanitizedDebt === 0, `Une dette sur-remboursée doit être bornée à 0, obtenu: ${sanitizedDebt}`)
 
-// ── Test 28 : Résolution complète multi-tenant getDualShopIds_REMOVED ──
-console.log('\n28. Résolution multi-tenant getDualShopIds_REMOVED...')
-const btqIds = ["BTQ-58C54", "58C54", "SHOP-58C54"]
-const shopPrefixIds = ["BTQ-58C54", "58C54", "SHOP-58C54"]
-const cleanBareIds = ["BTQ-58C54", "58C54", "SHOP-58C54"]
+// ── Test 28 : Résolution complète multi-tenant getDualShopIds ──
+console.log('\n28. Résolution multi-tenant getDualShopIds...')
+const btqIds = getDualShopIds('BTQ-58C54')
+const shopPrefixIds = getDualShopIds('SHOP-58C54')
+const cleanBareIds = getDualShopIds('58C54')
 
-assert(btqIds.includes('58C54') && btqIds.includes('SHOP-58C54') && btqIds.includes('BTQ-58C54'), `getDualShopIds_REMOVED(BTQ-58C54) doit inclure tous les alias`)
-assert(shopPrefixIds.includes('58C54') && shopPrefixIds.includes('SHOP-58C54') && shopPrefixIds.includes('BTQ-58C54'), `getDualShopIds_REMOVED(SHOP-58C54) doit inclure tous les alias`)
-assert(cleanBareIds.includes('58C54') && cleanBareIds.includes('SHOP-58C54') && cleanBareIds.includes('BTQ-58C54'), `getDualShopIds_REMOVED(58C54) doit inclure tous les alias`)
+assert(btqIds.includes('58C54') && btqIds.includes('SHOP-58C54') && btqIds.includes('BTQ-58C54'), `getDualShopIds(BTQ-58C54) doit inclure tous les alias`)
+assert(shopPrefixIds.includes('58C54') && shopPrefixIds.includes('SHOP-58C54') && shopPrefixIds.includes('BTQ-58C54'), `getDualShopIds(SHOP-58C54) doit inclure tous les alias`)
+assert(cleanBareIds.includes('58C54') && cleanBareIds.includes('SHOP-58C54') && cleanBareIds.includes('BTQ-58C54'), `getDualShopIds(58C54) doit inclure tous les alias`)
 
 // ── Test 29 : Aggrégation RetailAnalytics avec articles nulls / malformés ──
 console.log('\n29. Aggrégation RetailAnalytics avec articles malformés...')

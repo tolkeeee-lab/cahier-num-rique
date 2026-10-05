@@ -179,7 +179,6 @@ export function useOfflineSync({
             penColor: sale.pen_color || 'blue',
             pen_color: sale.pen_color || 'blue',
             overrideData: {
-              id: sale.id,
               type: sale.type,
               status: sale.status,
               category: sale.category,

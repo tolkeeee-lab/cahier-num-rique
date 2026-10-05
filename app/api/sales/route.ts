@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
-import { isBackendSupabaseConfigured } from '@/lib/supabase'
-import { getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
+import { isSupabaseConfigured, getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
 import { parseTextWithOpenAI, ParsedSale } from '@/lib/sales/openAiSaleParser'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { fetchSalesHistory, feedMarketKnowledge } from '@/lib/sales/salesRepository'
-
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,7 +85,7 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const dateStr = body.date || new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
     const timeStr = body.time || new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(now)
-    const saleId = body.id || overrideData?.id || randomUUID()
+    const saleId = body.id || randomUUID()
     const createdAtStr = body.created_at || now.toISOString()
 
     const finalTotal = overrideData?.total ?? overrideData?.total_amount ?? parsedData?.total_facture ?? 0
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Sauvegarde Supabase ou DB Locale
-    if (isBackendSupabaseConfigured() && supabase) {
+    if (isSupabaseConfigured() && supabase) {
       const { error: saleErr } = await supabase.from('sales').upsert([saleRecord], { onConflict: 'id' })
       if (saleErr) {
         console.error('Erreur Supabase, bascule locale :', saleErr)
@@ -187,7 +186,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
     const shopId = request.headers.get('x-shop-id') || body.shop_id || 'default-shop'
-    const targetShopIds = [shopId]
+    const targetShopIds = getDualShopIds(shopId)
     const { id, action, text, penColor, articles, clientName, category } = body
 
     if (!id) {
@@ -204,7 +203,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Saisie d\'article non reconnue' }, { status: 400 })
       }
 
-      if (isBackendSupabaseConfigured() && supabase) {
+      if (isSupabaseConfigured() && supabase) {
         const { data: currentSale, error: fetchErr } = await supabase
           .from('sales')
           .select('*, sold_articles(*)')
@@ -273,7 +272,7 @@ export async function PATCH(request: NextRequest) {
       const newTotal = updatedArticles.reduce((acc: number, a: any) => acc + ((a.quantity || a.quantite || 0) * (a.unit_price || a.prix_unitaire || 0)), 0)
       const newNotes = updatedArticles.map((a: any) => `${a.quantity} ${a.name} à ${a.unit_price}`).join(', ')
 
-      if (isBackendSupabaseConfigured() && supabase) {
+      if (isSupabaseConfigured() && supabase) {
         const { data: currentSale } = await supabase
           .from('sales')
           .select('*')
@@ -334,7 +333,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'update_category') {
-      if (isBackendSupabaseConfigured() && supabase) {
+      if (isSupabaseConfigured() && supabase) {
         await supabase.from('sales').update({ category }).eq('id', id).in('shop_id', targetShopIds)
         return NextResponse.json({ success: true })
       }
@@ -350,7 +349,7 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'settle_debt') {
       const { debt_amount, paid_amount, status: newStatus } = body
-      if (isBackendSupabaseConfigured() && supabase) {
+      if (isSupabaseConfigured() && supabase) {
         await supabase.from('sales').update({
           debt_amount: Number(debt_amount || 0),
           paid_amount: Number(paid_amount || 0),

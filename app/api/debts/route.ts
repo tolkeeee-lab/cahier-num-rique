@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto'
 export const dynamic = 'force-dynamic'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 import { calculateCash } from '@/lib/sales/cashDrawerCalculator'
-
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -19,7 +19,7 @@ async function getCurrentCash(shopId: string): Promise<number> {
 }
 
 async function getAllSales(shopId: string): Promise<any[]> {
-  const targetShopIds = [shopId]
+  const targetShopIds = getDualShopIds(shopId)
   if (isSupabaseConfigured()) {
     try {
       const { data } = await supabase.from('sales').select('*').in('shop_id', targetShopIds)
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // client ou supplier
     const shopId = request.headers.get('x-shop-id') || 'default-shop'
-    const targetShopIds = [shopId]
+    const targetShopIds = getDualShopIds(shopId)
 
     if (type === 'supplier') {
       // Logic for explicit supplier request (maybe used elsewhere, keep it)
@@ -326,7 +326,7 @@ export async function POST(request: NextRequest) {
 
 // Helpers locaux en mémoire pour l'extraction dynamique
 function getLocalClients(shopId: string) {
-  const targetShopIds = [shopId]
+  const targetShopIds = getDualShopIds(shopId)
   const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && targetShopIds.includes(s.shop_id))
   const clientNameMap = new Map<string, string>()
   sales
@@ -369,7 +369,7 @@ function getLocalClients(shopId: string) {
 }
 
 function getLocalSuppliers(shopId: string) {
-  const targetShopIds = [shopId]
+  const targetShopIds = getDualShopIds(shopId)
   const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && targetShopIds.includes(s.shop_id))
   const suppNameMap = new Map<string, string>()
   sales

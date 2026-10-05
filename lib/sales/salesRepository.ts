@@ -1,6 +1,7 @@
-import { supabase, isBackendSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { isSupabaseConfigured } from './cashDrawerCalculator'
 import { getLocalDb } from '@/lib/localDb'
-
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export async function feedMarketKnowledge(
   articles: Array<{ nom: string; prix_unitaire: number; [key: string]: any }>,
@@ -9,7 +10,7 @@ export async function feedMarketKnowledge(
   country: string = 'BJ',
   city: string | null = null
 ) {
-  if (!isBackendSupabaseConfigured()) return
+  if (!isSupabaseConfigured()) return
 
   const isPurchase = ['purchase_cash', 'purchase_credit'].includes(transactionType)
   const isSale = ['cash_in', 'sale_credit'].includes(transactionType)
@@ -33,7 +34,7 @@ export async function feedMarketKnowledge(
 
 export function getLocalSales(dateParam: string | null, shopId: string): any[] {
   const salesDatabase = getLocalDb()
-  const validShopIds = new Set([shopId])
+  const validShopIds = new Set(getDualShopIds(shopId))
   let filtered = salesDatabase.filter(s => validShopIds.has(s.shop_id))
   if (dateParam === 'today') {
     const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
@@ -43,12 +44,12 @@ export function getLocalSales(dateParam: string | null, shopId: string): any[] {
 }
 
 export async function fetchSalesHistory(dateParam: string | null, shopId: string) {
-  if (!isBackendSupabaseConfigured()) {
+  if (!isSupabaseConfigured()) {
     return getLocalSales(dateParam, shopId)
   }
 
   try {
-    const targetShopIds = [shopId]
+    const targetShopIds = getDualShopIds(shopId)
     const orFilter = targetShopIds.length > 1
       ? targetShopIds.map(id => `shop_id.eq.${id}`).join(',')
       : `shop_id.eq.${shopId}`

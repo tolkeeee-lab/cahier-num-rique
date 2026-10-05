@@ -1,6 +1,6 @@
 /* Service Worker PWA Robust Offline Shell — Cahier Numérique */
 
-const CACHE_NAME = 'cahier-pwa-v30-nuke'
+const CACHE_NAME = 'cahier-pwa-v27'
 const STATIC_ASSETS = [
   '/',
   '/journal',
@@ -35,13 +35,6 @@ self.addEventListener('install', (event) => {
   self.skipWaiting()
 })
 
-// Écoute des messages venant du navigateur pour forcer la mise à jour
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting()
-  }
-})
-
 // Activation : Nettoyage immédiat des anciens caches + prise en charge des clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
@@ -73,20 +66,16 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // 2. Navigation HTML (pages web, reload PWA) -> Réseau prioritaire (Network-First) sans cache bloquant
+  // 2. Navigation HTML (pages web, reload PWA) -> Fast Network (1200ms) avec Fallback Cache Instantané
   if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
       (async () => {
+        // Tenter le réseau avec un timeout de 1200ms max pour éviter tout blocage d'écran blanc
         try {
-          // On tente le réseau en priorité, avec un timeout plus généreux (3s) pour éviter
-          // de retomber trop vite sur l'ancienne version
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 3000)
+          const timeoutId = setTimeout(() => controller.abort(), 1200)
 
-          const response = await fetch(event.request, {
-            signal: controller.signal,
-            cache: 'no-store' // IMPORTANT : on force à ignorer le cache HTTP du navigateur
-          })
+          const response = await fetch(event.request, { signal: controller.signal })
           clearTimeout(timeoutId)
 
           if (response && response.ok) {
@@ -95,10 +84,10 @@ self.addEventListener('fetch', (event) => {
             return response
           }
         } catch (err) {
-          // Seulement si vraiment pas de réseau, on bascule sur le cache
+          // Timeout réseau ou absence de connexion : bascule instantanée sur le cache
         }
 
-        // Fallback hors-ligne
+        // Cache local immédiat (0 ms)
         const cachedExact = await caches.match(event.request)
         if (cachedExact) return cachedExact
 

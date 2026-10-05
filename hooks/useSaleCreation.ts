@@ -15,8 +15,6 @@ import { useState, FormEvent, Dispatch, SetStateAction } from 'react'
 import { getTodayDateString } from '@/lib/dateUtils'
 import {
   generateOfflineId,
-  saveOfflineSale,
-  markAsSynced,
   getOfflineProducts,
   OfflineSale,
 } from '@/lib/offlineDb'
@@ -122,35 +120,6 @@ export function useSaleCreation({
       is_synced: false,
     }
 
-    saveOfflineSale(shopId, sale)
-
-    // Vérification du stock après vente (Stylo Bleu ou Jaune)
-    if (activePen === 'blue' || activePen === 'yellow') {
-      const offlineStock = getOfflineProducts(shopId) || []
-      const warnings: string[] = []
-      
-      for (const art of sale.articles || []) {
-        const lookup = (art.canonical_name || art.name || '').toLowerCase().trim()
-        const stockItem = offlineStock.find((p: any) => {
-          const pName = (p.name || '').toLowerCase().trim()
-          return pName === lookup || lookup.includes(pName)
-        })
-        if (stockItem) {
-          const currentStock = stockItem.current_stock ?? stockItem.initial_stock ?? 0
-          const neededPieces = art.pieces_count || art.quantity || 1
-          if (currentStock <= 0) {
-            warnings.push(`⚠️ Le produit "${stockItem.name}" est déjà en rupture de stock (0).`)
-          } else if (currentStock - neededPieces <= 0) {
-            warnings.push(`⚠️ Attention : Le stock de "${stockItem.name}" est maintenant épuisé.`)
-          }
-        }
-      }
-      
-      if (warnings.length > 0) {
-        setPostItWarning(warnings.join('\n'))
-      }
-    }
-
     return sale
   }
 
@@ -196,10 +165,6 @@ export function useSaleCreation({
 
         const { error: insertErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
         if (!insertErr) {
-          console.log('[useSaleCreation] Direct Supabase insert success:', saleRecord.id)
-          // ✅ Marquer la vente locale comme synchronisée
-          markAsSynced(shopId, localSaleId)
-
           const articlesToSync = isClientRequest
             ? [{ nom: reqMatch?.cleanName || 'Produit demandé', quantite: 1, prix_unitaire: reqMatch?.price || 0 }]
             : (parsed?.articles || [])
@@ -244,8 +209,6 @@ export function useSaleCreation({
           }
           onSaleCreated()
           return
-        } else {
-          console.warn('[useSaleCreation] Direct Supabase insert failed, falling back to API:', insertErr)
         }
       }
 
@@ -273,32 +236,17 @@ export function useSaleCreation({
           shop_id: shopId,
           country: shopCountry,
           city: shopCity,
-          overrideData: {
-            id: localSaleId
-          }
         }),
       })
 
-
       if (response.ok) {
-        // ✅ Marquer la vente locale comme synchronisée via l'API route
-        markAsSynced(shopId, localSaleId)
         onSaleCreated()
       } else {
-        if (onError) onError('⚠️ Sauvegardé hors-ligne, en attente de réseau.')
+        if (onError) onError('⚠️ Erreur réseau lors de la création Cloud-Only.')
       }
     } catch {
-      if (onError) onError('⚠️ Pas de réseau. Vente sauvegardée localement.')
+      if (onError) onError('⚠️ Pas de réseau.')
     }
-  }
-
-  // ── Fonction utilitaire pour propager l'événement global de mise à jour de vente ──
-  const triggerSaleEvents = () => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
-      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
-    }
-    onSaleCreated()
   }
 
   // ── submitText : pour le pipeline et les modales d'interception ──
@@ -306,7 +254,7 @@ export function useSaleCreation({
     if (!text.trim() || isSubmitting) return
     setIsSubmitting(true)
     const localSale = buildLocalSale(text, penOverride)
-    triggerSaleEvents()
+    onSaleCreated()
     if (onAfterSale && localSale.total > 0) onAfterSale(localSale.total)
     syncWithApi(text, localSale.id, penOverride).finally(() => setIsSubmitting(false))
   }
@@ -324,7 +272,7 @@ export function useSaleCreation({
 
     // 2. Vider le champ et rafraîchir l'affichage sans attendre l'API
     setInput('')
-    triggerSaleEvents()
+    onSaleCreated()
 
     // 3. Notifier le calculateur de monnaie si besoin
     if (onAfterSale && localSale.total > 0) {
