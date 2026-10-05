@@ -1,4 +1,5 @@
-import { supabase, isBackendSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+import { isSupabaseConfigured } from './cashDrawerCalculator'
 import { getLocalDb } from '@/lib/localDb'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
 
@@ -9,7 +10,7 @@ export async function feedMarketKnowledge(
   country: string = 'BJ',
   city: string | null = null
 ) {
-  if (!isBackendSupabaseConfigured()) return
+  if (!isSupabaseConfigured()) return
 
   const isPurchase = ['purchase_cash', 'purchase_credit'].includes(transactionType)
   const isSale = ['cash_in', 'sale_credit'].includes(transactionType)
@@ -43,7 +44,7 @@ export function getLocalSales(dateParam: string | null, shopId: string): any[] {
 }
 
 export async function fetchSalesHistory(dateParam: string | null, shopId: string) {
-  if (!isBackendSupabaseConfigured()) {
+  if (!isSupabaseConfigured()) {
     return getLocalSales(dateParam, shopId)
   }
 

@@ -196,7 +196,6 @@ export function useSaleCreation({
 
         const { error: insertErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
         if (!insertErr) {
-          console.log('[useSaleCreation] Direct Supabase insert success:', saleRecord.id)
           // ✅ Marquer la vente locale comme synchronisée
           markAsSynced(shopId, localSaleId)
 
@@ -244,8 +243,6 @@ export function useSaleCreation({
           }
           onSaleCreated()
           return
-        } else {
-          console.warn('[useSaleCreation] Direct Supabase insert failed, falling back to API:', insertErr)
         }
       }
 
@@ -273,9 +270,6 @@ export function useSaleCreation({
           shop_id: shopId,
           country: shopCountry,
           city: shopCity,
-          overrideData: {
-            id: localSaleId
-          }
         }),
       })
 
@@ -292,21 +286,12 @@ export function useSaleCreation({
     }
   }
 
-  // ── Fonction utilitaire pour propager l'événement global de mise à jour de vente ──
-  const triggerSaleEvents = () => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('cahier_sale_created'))
-      window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
-    }
-    onSaleCreated()
-  }
-
   // ── submitText : pour le pipeline et les modales d'interception ──
   const submitText = async (text: string, penOverride?: string): Promise<void> => {
     if (!text.trim() || isSubmitting) return
     setIsSubmitting(true)
     const localSale = buildLocalSale(text, penOverride)
-    triggerSaleEvents()
+    onSaleCreated()
     if (onAfterSale && localSale.total > 0) onAfterSale(localSale.total)
     syncWithApi(text, localSale.id, penOverride).finally(() => setIsSubmitting(false))
   }
@@ -324,7 +309,7 @@ export function useSaleCreation({
 
     // 2. Vider le champ et rafraîchir l'affichage sans attendre l'API
     setInput('')
-    triggerSaleEvents()
+    onSaleCreated()
 
     // 3. Notifier le calculateur de monnaie si besoin
     if (onAfterSale && localSale.total > 0) {

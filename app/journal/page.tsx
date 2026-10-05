@@ -469,7 +469,7 @@ export default function JournalPage() {
   }
 
   // Synchronisation automatique au retour en ligne
-  const { syncNow } = useOfflineSync({
+  useOfflineSync({
     shopId: shopManager.shopId,
     shopActivity: shopManager.shopActivity,
     isOnline,
@@ -599,10 +599,8 @@ export default function JournalPage() {
       reloadData()
     }
     window.addEventListener('cahier_sale_created', handleSaleCreated)
-    window.addEventListener('cahier_sales_updated', handleSaleCreated)
     return () => {
       window.removeEventListener('cahier_sale_created', handleSaleCreated)
-      window.removeEventListener('cahier_sales_updated', handleSaleCreated)
     }
   }, [reloadData])
 
@@ -750,7 +748,7 @@ export default function JournalPage() {
               isOnline={isOnline}
               pendingSyncCount={pendingCount}
               isSyncing={syncStatus === 'syncing'}
-              onSyncClick={syncNow}
+              onSyncClick={() => setSyncStatus('syncing')}
               onOpenSettings={() => setActiveTab('settings')}
               onOpenCashAdjustment={() => setShowCashAdjustment(true)}
               onOpenCashClosing={() => setShowCashClosing(true)}
