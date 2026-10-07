@@ -1,0 +1,23 @@
+config:
+  edition: 3
+
+streams:
+  sales:
+    auto_subscribe: true
+    query: SELECT * FROM sales WHERE shop_id = auth.user_id()
+
+  sold_articles:
+    auto_subscribe: true
+    query: SELECT * FROM sold_articles WHERE shop_id = auth.user_id()
+
+  products:
+    auto_subscribe: true
+    query: SELECT * FROM products WHERE shop_id = auth.user_id()
+
+  cash_closings:
+    auto_subscribe: true
+    query: SELECT * FROM cash_closings WHERE shop_id = auth.user_id()
+
+  shopping_list:
+    auto_subscribe: true
+    query: SELECT * FROM shopping_list WHERE shop_id = auth.user_id()
