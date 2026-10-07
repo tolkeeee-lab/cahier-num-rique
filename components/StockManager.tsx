@@ -20,7 +20,7 @@ import {
   getOfflineSales,
   getOfflineProducts,
   replaceOfflineProducts,
-  saveOfflineSale,
+
   generateOfflineId,
   OfflineSale,
 } from '@/lib/offlineDb'
@@ -407,7 +407,7 @@ export function StockManager({
           is_synced: false,
         }
 
-        saveOfflineSale(shopId, finSale)
+        // saveOfflineSale(shopId, finSale)
 
         try {
           fetch('/api/sales', {
@@ -579,7 +579,7 @@ export function StockManager({
         is_synced: false
       }
 
-      saveOfflineSale(shopId, offlineSaleRecord)
+      // saveOfflineSale(shopId, offlineSaleRecord)
 
       // Déclenchement des événements réactifs
       if (typeof window !== 'undefined') {

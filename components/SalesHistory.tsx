@@ -10,7 +10,7 @@ import { ReceiptPrinterModal } from '@/components/ReceiptPrinterModal'
 import { ReceiptShareModal } from '@/components/sales/ReceiptShareModal'
 import { exportSalesToCSV, exportSalesToPDF } from '@/lib/exportUtils'
 import { formatPrice } from '@/lib/penUtils'
-import { generateOfflineId, saveOfflineSale, markAsSynced, getOfflineProducts, saveOfflineProduct } from '@/lib/offlineDb'
+import { generateOfflineId,  markAsSynced, getOfflineProducts, saveOfflineProduct } from '@/lib/offlineDb'
 import { getTodayDateString } from '@/lib/dateUtils'
 import { reconcileDebts } from '@/hooks/useJournalData'
 import { ProductReturnPayload } from '@/components/sales/ProductReturnModal'
@@ -279,7 +279,7 @@ export function SalesHistory({
       is_synced: false
     }
 
-    saveOfflineSale(shopId, repaymentSale)
+    // saveOfflineSale(shopId, repaymentSale)
 
     try {
       await fetch('/api/debts', {

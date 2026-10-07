@@ -15,7 +15,7 @@ import { useState, FormEvent, Dispatch, SetStateAction } from 'react'
 import { getTodayDateString } from '@/lib/dateUtils'
 import {
   generateOfflineId,
-  saveOfflineSale,
+
   getOfflineProducts,
   OfflineSale,
 } from '@/lib/offlineDb'
@@ -121,7 +121,7 @@ export function useSaleCreation({
       is_synced: false,
     }
 
-    saveOfflineSale(shopId, sale)
+    // saveOfflineSale(shopId, sale) // V2: Removed legacy local storage
 
     // Vérification du stock après vente (Stylo Bleu ou Jaune)
     if (activePen === 'blue' || activePen === 'yellow') {
