@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Layers, ShieldAlert, Landmark, ChevronDown, ChevronUp, CheckCircle2, TrendingUp, AlertTriangle, Calculator, ArrowDownLeft, ArrowUpRight, Pencil, CupSoda, Package, X, Scissors, UtensilsCrossed } from 'lucide-react'
 import { calculateCategoryCashboxBreakdown, CategoryCashboxGroup } from '@/lib/boutiqueAnalyticsEngine'
-import { generateOfflineId,  markAsSynced } from '@/lib/offlineDb'
+import { generateOfflineId, saveOfflineSale, markAsSynced } from '@/lib/offlineDb'
 
 interface CategoryCashboxWidgetProps {
   sales: any[]
@@ -117,7 +117,7 @@ export function CategoryCashboxWidget({
       created_at: new Date().toISOString(),
       is_synced: false
     }
-    // saveOfflineSale(sId, localSale)
+    saveOfflineSale(sId, localSale)
 
     try {
       const res = await fetch('/api/sales', {

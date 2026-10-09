@@ -148,14 +148,40 @@ export function useJournalData(shopId: string, _isOnline: boolean) {
   }, [])
 
   // Derived state from PowerSync SQLite reactive query
+  const [legacySales, setLegacySales] = useState<any[]>([])
+
+  React.useEffect(() => {
+    // Listen to legacy update events
+    const loadLegacy = () => {
+      import('@/lib/offlineDb').then(m => {
+        setLegacySales(m.getOfflineSales(shopId))
+      })
+    }
+    loadLegacy()
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('cahier_sale_created', loadLegacy)
+      window.addEventListener('cahier_sales_updated', loadLegacy)
+      return () => {
+        window.removeEventListener('cahier_sale_created', loadLegacy)
+        window.removeEventListener('cahier_sales_updated', loadLegacy)
+      }
+    }
+  }, [shopId])
+
   const allSales = React.useMemo(() => {
-    if (!rawSales) return [];
-    const mapped = rawSales.map((item: any) => ({
+    // Hybrid mode: Use PowerSync if available, fallback and merge with local changes for instant UI feedback
+    const psMapped = (rawSales || []).map((item: any) => ({
       ...item,
       articles: typeof item.articles === 'string' ? JSON.parse(item.articles) : (item.articles || [])
     }));
-    return reconcileDebts(mapped);
-  }, [rawSales]);
+
+    // Merge Strategy: Prefer PowerSync data (source of truth), append missing legacy data (recent drafts)
+    const psIds = new Set(psMapped.map(s => s.id));
+    const pendingLegacy = legacySales.filter(s => !psIds.has(s.id));
+
+    return reconcileDebts([...psMapped, ...pendingLegacy].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+  }, [rawSales, legacySales]);
 
   const sales = React.useMemo(() => {
     const today = getTodayDateString();

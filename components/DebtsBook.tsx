@@ -5,7 +5,7 @@ import { DebtSummaryCards } from '@/components/debts/DebtSummaryCards'
 import { DebtFilterBar } from '@/components/debts/DebtFilterBar'
 import { DebtItemCard } from '@/components/debts/DebtItemCard'
 import { DebtRepaymentModal } from '@/components/sales/DebtRepaymentModal'
-import {  generateOfflineId, getOfflineSales, markAsSynced, OfflineSale } from '@/lib/offlineDb'
+import { saveOfflineSale, generateOfflineId, getOfflineSales, markAsSynced, OfflineSale } from '@/lib/offlineDb'
 import { getTodayDateString } from '@/lib/dateUtils'
 interface Debt {
   id: string
@@ -157,7 +157,7 @@ export function DebtsBook({
       if (onSettleDebt) {
         await onSettleDebt(debt.id, repayAmount, customNotes, debt.client_name, isSupplier)
       } else {
-        // saveOfflineSale(shopId, newSale)
+        saveOfflineSale(shopId, newSale)
         const response = await fetch('/api/sales', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
