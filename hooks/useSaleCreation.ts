@@ -21,6 +21,8 @@ import {
   OfflineSale,
 } from '@/lib/offlineDb'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
+import { db } from '@/lib/powersync/PowerSyncProvider'
+
 
 import {
   parseRequestedProductFromNotebookText,
@@ -123,6 +125,40 @@ export function useSaleCreation({
     }
 
     saveOfflineSale(shopId, sale)
+
+    // Parallel insert to PowerSync for hybrid reactive UI and automatic cloud sync
+    try {
+      db.execute(
+        'INSERT INTO sales (id, shop_id, date, time, type, status, category, notes, pen_color, total_amount, paid_amount, debt_amount, client_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          sale.id,
+          sale.shop_id,
+          sale.date,
+          sale.time,
+          sale.type,
+          sale.status,
+          sale.category,
+          sale.notes,
+          sale.pen_color,
+          sale.total,
+          sale.paid,
+          sale.debt,
+          sale.client,
+          sale.created_at
+        ]
+      ).then(() => {
+        if (sale.articles && sale.articles.length > 0) {
+          sale.articles.forEach(a => {
+            db.execute(
+              'INSERT INTO sold_articles (sale_id, product_name, quantity, unit_price) VALUES (?, ?, ?, ?)',
+              [sale.id, a.name, a.quantity, a.unit_price]
+            )
+          })
+        }
+      }).catch(console.error)
+    } catch (err) {
+      console.error("V2 SQLite Write Error: ", err)
+    }
 
     // Vérification du stock après vente (Stylo Bleu ou Jaune)
     if (activePen === 'blue' || activePen === 'yellow') {
