@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
-import { isBackendSupabaseConfigured } from '@/lib/supabase'
 import { getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
 import { parseTextWithOpenAI, ParsedSale } from '@/lib/sales/openAiSaleParser'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Sauvegarde Supabase ou DB Locale
-    if (isBackendSupabaseConfigured() && supabase) {
+    if (false) {
       const { error: saleErr } = await supabase.from('sales').upsert([saleRecord], { onConflict: 'id' })
       if (saleErr) {
         console.error('Erreur Supabase, bascule locale :', saleErr)
@@ -129,11 +128,11 @@ export async function POST(request: NextRequest) {
         localSales.unshift(newSale)
         saveLocalDb(localSales)
       } else {
-        if (parsedData?.articles && parsedData.articles.length > 0) {
+        if (parsedData?.articles && (parsedData?.articles as any[])?.length > 0) {
           // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de retry
           await supabase.from('sold_articles').delete().eq('sale_id', saleId)
 
-          const soldArticlesRecords = parsedData.articles.map((a: any) => {
+          const soldArticlesRecords = (parsedData?.articles || []).map((a: any) => {
             const qty = a.quantite || a.quantity || 1;
             const price = a.prix_unitaire || a.unit_price || 0;
             return {
@@ -150,7 +149,7 @@ export async function POST(request: NextRequest) {
 
           const reqCountry = request.headers.get('x-shop-country') || body.country || 'BJ'
           const reqCity = request.headers.get('x-shop-city') || body.city || null
-          await feedMarketKnowledge(parsedData.articles, type, shopId, reqCountry, reqCity)
+          await feedMarketKnowledge(parsedData?.articles || [], type, shopId, reqCountry, reqCity)
         }
 
       }
@@ -204,7 +203,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Saisie d\'article non reconnue' }, { status: 400 })
       }
 
-      if (isBackendSupabaseConfigured() && supabase) {
+      if (false) {
         const { data: currentSale, error: fetchErr } = await supabase
           .from('sales')
           .select('*, sold_articles(*)')
@@ -273,7 +272,7 @@ export async function PATCH(request: NextRequest) {
       const newTotal = updatedArticles.reduce((acc: number, a: any) => acc + ((a.quantity || a.quantite || 0) * (a.unit_price || a.prix_unitaire || 0)), 0)
       const newNotes = updatedArticles.map((a: any) => `${a.quantity} ${a.name} à ${a.unit_price}`).join(', ')
 
-      if (isBackendSupabaseConfigured() && supabase) {
+      if (false) {
         const { data: currentSale } = await supabase
           .from('sales')
           .select('*')
@@ -334,7 +333,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'update_category') {
-      if (isBackendSupabaseConfigured() && supabase) {
+      if (false) {
         await supabase.from('sales').update({ category }).eq('id', id).in('shop_id', targetShopIds)
         return NextResponse.json({ success: true })
       }
@@ -350,7 +349,7 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'settle_debt') {
       const { debt_amount, paid_amount, status: newStatus } = body
-      if (isBackendSupabaseConfigured() && supabase) {
+      if (false) {
         await supabase.from('sales').update({
           debt_amount: Number(debt_amount || 0),
           paid_amount: Number(paid_amount || 0),
