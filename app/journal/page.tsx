@@ -37,7 +37,6 @@ import { useJournalData } from '@/hooks/useJournalData'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useSaleCreation } from '@/hooks/useSaleCreation'
 import { useTactileMenu } from '@/hooks/useTactileMenu'
-import { useOfflineSync } from '@/hooks/useOfflineSync'
 import { useInputPipeline, StockConfirmationData, PriceChangeData, WizardPrefill } from '@/hooks/useInputPipeline'
 import { saveOfflineProduct, getOfflineProducts } from '@/lib/offlineDb'
 
@@ -382,7 +381,7 @@ export default function JournalPage() {
 
   const shopManager = useShopManager(mappedUser)
   const effectiveRole = shopManager.employeeRole || mappedUser?.role || 'owner'
-  const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopManager.shopId)
+  const { isOnline, pendingCount, syncStatus } = useNetworkStatus(shopManager.shopId)
   const journalData = useJournalData(shopManager.shopId, isOnline)
 
   // ── Protection d'accès aux onglets pour les employés ────────────────────────
@@ -469,14 +468,7 @@ export default function JournalPage() {
   }
 
   // Synchronisation automatique au retour en ligne
-  const { syncNow } = useOfflineSync({
-    shopId: shopManager.shopId,
-    shopActivity: shopManager.shopActivity,
-    isOnline,
-    setSyncStatus,
-    refreshPendingCount,
-    onSyncComplete: journalData.reloadData,
-  })
+  const syncNow = () => {}
 
   const saleCreation = useSaleCreation({
     shopId: shopManager.shopId,

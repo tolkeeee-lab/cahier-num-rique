@@ -2,14 +2,14 @@
 
 import React, { useState, useCallback } from 'react'
 import { getTodayDateString } from '@/lib/dateUtils'
-
- 2
+// bypass
+// bypass 2
 import { useQuery, usePowerSync } from '@powersync/react'
 import { logAuditEvent } from '@/lib/auditLogger'
 
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
- 5
+// bypass 5
 
 export interface Sale {
   id: string
