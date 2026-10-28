@@ -3,14 +3,9 @@
 /**
  * useOfflineSync.ts
  *
- * Responsabilité unique : synchroniser automatiquement les ventes
- * hors-ligne dès que la connexion revient.
- *
- * - Écoute le retour en ligne via `isOnline`
- * - Envoie les ventes en attente (`getPendingSync`) à l'API
- * - Marque chaque vente comme `synced` ou `error`
- * - Retry automatique toutes les 30s pour les ventes en erreur
- * - Met à jour le badge de sync dans l'UI via callbacks
+ * Responsabilité unique : synchroniser automatiquement les données
+ * hors-ligne (ventes, produits, clôtures de caisse, liste de courses) dès que la connexion revient
+ * ou que la PWA sort de veille.
  */
 
 import { useEffect, useRef, useCallback } from 'react'
@@ -35,7 +30,7 @@ interface UseOfflineSyncOptions {
   isOnline: boolean
   setSyncStatus: (s: SyncStatus) => void
   refreshPendingCount: (shopId: string) => void
-  onSyncComplete?: () => void // Appelé après sync réussie — pour recharger les données
+  onSyncComplete?: () => void
 }
 
 export function useOfflineSync({
@@ -46,7 +41,6 @@ export function useOfflineSync({
   refreshPendingCount,
   onSyncComplete,
 }: UseOfflineSyncOptions) {
-  // Évite les double-syncs simultanés
   const isSyncing = useRef(false)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -59,11 +53,9 @@ export function useOfflineSync({
   const syncOfflineData = useCallback(async (includeErrors = false) => {
     if (!shopId || !isOnline || isSyncing.current) return
 
-    // On récupère les ventes non synchronisées + les ventes en erreur si retry
     const pending = getPendingSync(shopId)
     const errored = includeErrors ? getSyncErrors(shopId) : []
 
-    // Déduplique : évite de réenvoyer ce qui est déjà dans pending
     const pendingIds = new Set(pending.map(s => s.id))
     const toSync = [...pending, ...errored.filter(s => !pendingIds.has(s.id))]
     const pendingProducts = getPendingOfflineProducts(shopId)
@@ -78,175 +70,211 @@ export function useOfflineSync({
     let successCount = 0
     let errorCount = 0
 
-    // 1. Synchronisation des Produits créés ou modifiés hors-ligne
-    for (const prod of pendingProducts) {
-      try {
-        const response = await fetch('/api/stock', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-          },
-          body: JSON.stringify(prod),
-        })
-        if (response.ok) {
-          const resData = await response.json()
-          if (resData?.product) {
-            markProductAsSynced(shopId, prod.id, resData.product)
-            successCount++
-          }
-        }
-      } catch (err) {
-        console.warn('[OfflineSync] Erreur sync produit hors-ligne:', prod.name, err)
-      }
-    }
-
-    // 2. Synchronisation des Clôtures de Caisse hors-ligne (Z)
-    for (const closing of pendingClosings) {
-      try {
-        const response = await fetch('/api/cash-closings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-          },
-          body: JSON.stringify(closing),
-        })
-        if (response.ok) {
-          saveOfflineCashClosing(shopId, { ...closing, is_synced: true })
-          successCount++
-        }
-      } catch (err) {
-        console.warn('[OfflineSync] Erreur sync clôture caisse:', closing.date, err)
-      }
-    }
-
-    // 3. Synchronisation de la Liste de Courses hors-ligne
-    if (pendingShopping.length > 0 && isSupabaseClientConfigured()) {
-      try {
-        const { error } = await supabaseClient
-          .from('shopping_list')
-          .upsert(
-            pendingShopping.map(item => ({
-              id: item.id,
-              shop_id: shopId,
-              name: item.name,
-              quantity: item.quantity,
-              unit_cost: item.unit_cost,
-              is_wholesale: item.is_wholesale || false,
-              wholesale_qty: item.wholesale_qty || 0,
-              wholesale_price: item.wholesale_price || 0,
-              items_per_wholesale: item.items_per_wholesale || 1,
-              is_checked: item.is_checked,
-              updated_at: new Date().toISOString(),
-            })),
-            { onConflict: 'id' }
-          )
-        if (!error) {
-          const currentShopping = getOfflineShoppingList(shopId)
-          const updatedShopping = currentShopping.map(item => {
-            const wasPending = pendingShopping.some(p => p.id === item.id)
-            return wasPending ? { ...item, is_synced: true } : item
+    try {
+      // 1. Synchronisation des Produits créés ou modifiés hors-ligne
+      for (const prod of pendingProducts) {
+        try {
+          const response = await fetch('/api/stock', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-shop-id': shopId,
+            },
+            body: JSON.stringify(prod),
           })
-          replaceOfflineShoppingList(shopId, updatedShopping)
-          successCount++
+          if (response.ok) {
+            const resData = await response.json()
+            if (resData?.product) {
+              markProductAsSynced(shopId, prod.id, resData.product)
+              successCount++
+            }
+          } else {
+            console.warn('[OfflineSync] Échec sync produit:', prod.name, response.status)
+            errorCount++
+          }
+        } catch (err) {
+          console.warn('[OfflineSync] Erreur réseau sync produit:', prod.name, err)
+          errorCount++
         }
-      } catch (err) {
-        console.warn('[OfflineSync] Erreur sync shopping list:', err)
       }
-    }
 
-    // 4. Synchronisation des Ventes hors-ligne
-    for (const sale of toSync) {
-      try {
-        const response = await fetch('/api/sales', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-            'x-shop-activity': shopActivity,
-          },
-          body: JSON.stringify({
-            id: sale.id,
-            created_at: sale.created_at,
-            date: sale.date,
-            time: sale.time,
-            type: sale.type,
-            status: sale.status,
-            category: sale.category,
-            text: sale.notes || '',
-            raw_text: sale.notes || '',
-            penColor: sale.pen_color || 'blue',
-            pen_color: sale.pen_color || 'blue',
-            overrideData: {
+      // 2. Synchronisation des Clôtures de Caisse hors-ligne (Z)
+      for (const closing of pendingClosings) {
+        try {
+          const response = await fetch('/api/cash-closings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-shop-id': shopId,
+            },
+            body: JSON.stringify(closing),
+          })
+          if (response.ok) {
+            saveOfflineCashClosing(shopId, { ...closing, is_synced: true })
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch (err) {
+          console.warn('[OfflineSync] Erreur sync clôture caisse:', closing.date, err)
+          errorCount++
+        }
+      }
+
+      // 3. Synchronisation de la Liste de Courses hors-ligne
+      if (pendingShopping.length > 0 && isSupabaseClientConfigured()) {
+        try {
+          const { error } = await supabaseClient
+            .from('shopping_list')
+            .upsert(
+              pendingShopping.map(item => ({
+                id: item.id,
+                shop_id: shopId,
+                name: item.name,
+                quantity: item.quantity,
+                unit_cost: item.unit_cost,
+                is_wholesale: item.is_wholesale || false,
+                wholesale_qty: item.wholesale_qty || 0,
+                wholesale_price: item.wholesale_price || 0,
+                items_per_wholesale: item.items_per_wholesale || 1,
+                is_checked: item.is_checked,
+                updated_at: new Date().toISOString(),
+              })),
+              { onConflict: 'id' }
+            )
+          if (!error) {
+            const currentShopping = getOfflineShoppingList(shopId)
+            const updatedShopping = currentShopping.map(item => {
+              const wasPending = pendingShopping.some(p => p.id === item.id)
+              return wasPending ? { ...item, is_synced: true } : item
+            })
+            replaceOfflineShoppingList(shopId, updatedShopping)
+            successCount++
+          } else {
+            console.warn('[OfflineSync] Erreur Supabase shopping_list:', error.message)
+            errorCount++
+          }
+        } catch (err) {
+          console.warn('[OfflineSync] Erreur catch shopping list:', err)
+          errorCount++
+        }
+      }
+
+      // 4. Synchronisation des Ventes hors-ligne
+      for (const sale of toSync) {
+        try {
+          const response = await fetch('/api/sales', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-shop-id': shopId,
+              'x-shop-activity': shopActivity,
+            },
+            body: JSON.stringify({
+              id: sale.id,
+              created_at: sale.created_at,
+              date: sale.date,
+              time: sale.time,
               type: sale.type,
               status: sale.status,
               category: sale.category,
-              articles: (sale.articles || []).map((a: any) => ({
-                name: a.name || a.nom,
-                quantity: a.quantity || a.quantite,
-                unit_price: a.unit_price || a.prix_unitaire,
-              })),
-              total_amount: sale.total,
-              paid_amount: sale.paid,
-              debt_amount: sale.debt,
-              client_name: sale.client || 'Client anonyme',
-            },
-          }),
-        })
+              text: sale.notes || '',
+              raw_text: sale.notes || '',
+              penColor: sale.pen_color || 'blue',
+              pen_color: sale.pen_color || 'blue',
+              overrideData: {
+                type: sale.type,
+                status: sale.status,
+                category: sale.category,
+                articles: (sale.articles || []).map((a: any) => ({
+                  name: a.name || a.nom,
+                  quantity: a.quantity || a.quantite,
+                  unit_price: a.unit_price || a.prix_unitaire,
+                })),
+                total_amount: sale.total,
+                paid_amount: sale.paid,
+                debt_amount: sale.debt,
+                client_name: sale.client || 'Client anonyme',
+              },
+            }),
+          })
 
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}))
-          throw new Error(err?.error || `HTTP ${response.status}`)
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}))
+            throw new Error(err?.error || `HTTP ${response.status}`)
+          }
+
+          markAsSynced(shopId, sale.id)
+          successCount++
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Erreur inconnue'
+          markSyncError(shopId, sale.id, msg)
+          errorCount++
         }
-
-        markAsSynced(shopId, sale.id)
-        successCount++
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Erreur inconnue'
-        markSyncError(shopId, sale.id, msg)
-        errorCount++
       }
-    }
+    } finally {
+      refreshPendingCount(shopId)
+      isSyncing.current = false
 
-    refreshPendingCount(shopId)
-    isSyncing.current = false
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
 
-    if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
-
-    if (errorCount === 0) {
-      setSyncStatus('success')
-      onSyncComplete?.()
-      // Réinitialiser le badge après 3s
-      statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 3000)
-    } else if (successCount > 0) {
-      // Sync partielle : certaines ont réussi, d'autres non
-      setSyncStatus('success')
-      onSyncComplete?.()
-      statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 3000)
-    } else {
-      setSyncStatus('error')
-      statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 5000)
+      if (errorCount === 0) {
+        setSyncStatus('success')
+        onSyncComplete?.()
+        statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 3000)
+      } else if (successCount > 0) {
+        setSyncStatus('success')
+        onSyncComplete?.()
+        statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 3000)
+      } else {
+        setSyncStatus('error')
+        statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 5000)
+      }
     }
   }, [shopId, shopActivity, isOnline, setSyncStatus, refreshPendingCount, onSyncComplete])
 
-  // Déclencher automatiquement quand on revient en ligne
+  // Déclencher automatiquement quand la connexion revient
   useEffect(() => {
     if (isOnline && shopId) {
-      // Petit délai pour s'assurer que la connexion est vraiment stable
-      const timer = setTimeout(() => syncOfflineData(false), 1500)
+      const timer = setTimeout(() => syncOfflineData(true), 1200)
       return () => clearTimeout(timer)
     }
   }, [isOnline, shopId, syncOfflineData])
 
-  // Retry automatique toutes les 30s pour les ventes bloquées en erreur
+  // Écouteur PWA Mobile / Veille : réactivation au changement de visibilité (visibilitychange)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isOnline && shopId) {
+        syncOfflineData(true)
+      }
+    }
+
+    const handleOnline = () => {
+      if (shopId) {
+        syncOfflineData(true)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('online', handleOnline)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('online', handleOnline)
+    }
+  }, [isOnline, shopId, syncOfflineData])
+
+  // Retry automatique toutes les 30s pour les éléments en attente ou en erreur
   useEffect(() => {
     if (!isOnline || !shopId) return
 
     const retryInterval = setInterval(() => {
       const errored = getSyncErrors(shopId)
-      if (errored.length > 0) {
-        syncOfflineData(true) // includeErrors = true
+      const pending = getPendingSync(shopId)
+      if (errored.length > 0 || pending.length > 0) {
+        syncOfflineData(true)
       }
     }, 30_000)
 
