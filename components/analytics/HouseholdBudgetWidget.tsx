@@ -33,7 +33,7 @@ interface HouseholdBudgetWidgetProps {
 
 export function HouseholdBudgetWidget({
   sales,
-  shopId = 'default-shop',
+  shopId = '',
 }: HouseholdBudgetWidgetProps) {
   const [monthlyCap] = useState<number>(() => {
     if (typeof window !== 'undefined') {

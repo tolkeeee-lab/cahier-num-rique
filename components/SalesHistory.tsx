@@ -86,7 +86,7 @@ export function SalesHistory({
   onUpdateSale,
   onSettleDebt,
   onError,
-  shopId = 'default-shop',
+  shopId = '',
   isEmployee = false,
   onReturnItems,
 }: SalesHistoryProps) {

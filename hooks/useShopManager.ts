@@ -330,7 +330,7 @@ export function useShopManager(mappedUser: MappedUser | null | undefined) {
     }
   }, [mappedUser?.id, mappedUser?.email, mappedUser?.shop_id])
 
-  const shopId = selectedShopId || mappedUser?.shop_id || 'default-shop'
+  const shopId = selectedShopId || mappedUser?.shop_id || (userShops[0]?.id || '')
   
   // Recherche tolérante de la boutique active (exact, UUID insensible à la casse, ou code court normalisé)
   const currentShop = userShops.find((s) => 

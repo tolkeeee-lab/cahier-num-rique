@@ -16,7 +16,7 @@ interface ShopProfileSettingsProps {
 }
 
 export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
-  shopId = 'default-shop',
+  shopId = '',
   shopName: initialName,
   activity: initialActivity,
   phone: initialPhone,

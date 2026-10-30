@@ -341,7 +341,7 @@ export default function JournalPage() {
       email: user.email,
       name: meta.full_name || user.full_name || 'Utilisateur',
       role: rawRole,
-      shop_id: meta.shop_id || user.shop_id || user.id || 'default-shop',
+      shop_id: meta.shop_id || user.shop_id || user.id || '',
       shop_name: meta.shop_name || user.shop_name,
     }
   }, [user])

@@ -45,13 +45,14 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
       if (onInviteEmployee) {
         data = await onInviteEmployee(name, email, roleInput)
       } else {
+        const reqHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'x-shop-id': shopId || '',
+          'x-shop-name': shopName || 'Ma Boutique'
+        }
         const res = await fetch('/api/employees', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId || 'default-shop',
-            'x-shop-name': shopName || 'Ma Boutique'
-          },
+          headers: reqHeaders,
           body: JSON.stringify({ name, email, role: roleInput })
         })
         data = await res.json()

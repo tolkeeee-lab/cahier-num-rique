@@ -54,7 +54,7 @@ export function AnalyticsDashboard({
 
   const currentShopObj = userShops.find(s => s.id === shopId) || userShops.find(s => s.activity === activeActivity)
   const shopName = currentShopObj?.name || userShops[0]?.name || 'Cahier'
-  const activeShopId = shopId || currentShopObj?.id || 'default-shop'
+  const activeShopId = shopId || currentShopObj?.id || ''
 
   // Widgets actifs personnalisables par boutique + rôle
   const widgetsStorageKey = `cahier_dashboard_widgets_${activeShopId}_${userRole}`

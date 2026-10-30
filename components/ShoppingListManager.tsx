@@ -35,7 +35,7 @@ import {
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
 export function ShoppingListManager({ 
-  shopId = 'default-shop', 
+  shopId = '', 
   onConvertToStockPurchase,
 }: ShoppingListManagerProps) {
   const [items, setItems] = useState<ShoppingItem[]>([])

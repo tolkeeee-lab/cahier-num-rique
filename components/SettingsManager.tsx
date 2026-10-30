@@ -34,7 +34,7 @@ export interface SettingsManagerProps {
 }
 
 export function SettingsManager({
-  shopId = 'default-shop',
+  shopId = '',
   shopName = 'Ma Boutique',
   activity = 'Commerce général',
   phone = '',

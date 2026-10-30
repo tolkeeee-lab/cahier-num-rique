@@ -65,7 +65,7 @@ export function CategoryCashboxWidget({
     if (!adjustingGroup) return
     setSavingAdjust(true)
 
-    const sId = shopId || 'default-shop'
+    const sId = shopId || ''
     const currentCash = adjustingGroup.paidCash
     let delta = 0
     let noteText = ''

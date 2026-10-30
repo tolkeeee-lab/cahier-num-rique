@@ -28,7 +28,7 @@ export interface ParticulierDashboardProps {
 }
 
 export function ParticulierDashboard({
-  shopId = 'default-shop',
+  shopId = '',
   sales = [],
 }: ParticulierDashboardProps) {
   const [activeTab, setActiveTab] = useState<'budget' | 'tontine' | 'carnet' | 'historique'>('budget')

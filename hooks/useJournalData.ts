@@ -562,7 +562,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     const returnSaleItem: OfflineSale = {
       id: returnSaleId,
-      shop_id: shopId || 'default-shop',
+      shop_id: shopId,
       date: today,
       time: timeStr,
       client: clientName,
@@ -806,7 +806,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     const repaymentSale: OfflineSale = {
       id: repaymentSaleId,
-      shop_id: shopId || 'default-shop',
+      shop_id: shopId,
       date: today,
       time: timeStr,
       client: trimmedName,

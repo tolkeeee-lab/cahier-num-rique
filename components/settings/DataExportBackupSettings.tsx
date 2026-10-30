@@ -11,7 +11,7 @@ interface DataExportBackupSettingsProps {
 }
 
 export const DataExportBackupSettings: React.FC<DataExportBackupSettingsProps> = ({
-  shopId = 'default-shop',
+  shopId = '',
   onExportBackup,
   onResetData,
 }) => {
