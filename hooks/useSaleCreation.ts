@@ -124,6 +124,11 @@ export function useSaleCreation({
 
     saveOfflineSale(shopId, sale)
 
+    // Notifier le sous-système de synchronisation (useOfflineSync) qu'une nouvelle vente locale est prête
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cahier_local_sale_created', { detail: { saleId: sale.id } }))
+    }
+
     // Vérification du stock après vente (Stylo Bleu ou Jaune)
     if (activePen === 'blue' || activePen === 'yellow') {
       const offlineStock = getOfflineProducts(shopId) || []
@@ -303,10 +308,13 @@ export function useSaleCreation({
   const submitText = async (text: string, penOverride?: string): Promise<void> => {
     if (!text.trim() || isSubmitting) return
     setIsSubmitting(true)
-    const localSale = buildLocalSale(text, penOverride)
-    onSaleCreated()
-    if (onAfterSale && localSale.total > 0) onAfterSale(localSale.total)
-    syncWithApi(text, localSale.id, penOverride).finally(() => setIsSubmitting(false))
+    try {
+      const localSale = buildLocalSale(text, penOverride)
+      onSaleCreated()
+      if (onAfterSale && localSale.total > 0) onAfterSale(localSale.total)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // ── Handler principal de création de vente ──
@@ -316,23 +324,21 @@ export function useSaleCreation({
     if (!text || isSubmitting) return
 
     setIsSubmitting(true)
+    try {
+      // 1. Sauvegarder localement IMMÉDIATEMENT — affichage instantané (0 ms)
+      const localSale = buildLocalSale(text)
 
-    // 1. Sauvegarder localement IMMÉDIATEMENT — affichage garanti
-    const localSale = buildLocalSale(text)
+      // 2. Vider le champ et rafraîchir l'affichage sans attendre le réseau
+      setInput('')
+      onSaleCreated()
 
-    // 2. Vider le champ et rafraîchir l'affichage sans attendre l'API
-    setInput('')
-    onSaleCreated()
-
-    // 3. Notifier le calculateur de monnaie si besoin
-    if (onAfterSale && localSale.total > 0) {
-      onAfterSale(localSale.total)
-    }
-
-    // 4. Sync API en arrière-plan (ne bloque pas l'UI)
-    syncWithApi(text, localSale.id).finally(() => {
+      // 3. Notifier le calculateur de monnaie si besoin
+      if (onAfterSale && localSale.total > 0) {
+        onAfterSale(localSale.total)
+      }
+    } finally {
       setIsSubmitting(false)
-    })
+    }
   }
 
   return {

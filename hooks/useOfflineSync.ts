@@ -279,6 +279,29 @@ export function useOfflineSync({
     }
   }, [shopId, shopActivity, isOnline, setSyncStatus, refreshPendingCount, onSyncComplete])
 
+  // Écouter les créations de vente locales pour déclencher la synchronisation immédiate en arrière-plan
+  useEffect(() => {
+    if (!shopId) return
+
+    const handleLocalSaleCreated = () => {
+      if (isOnline) {
+        // Déclencher la synchronisation en tâche de fond 300ms après la saisie
+        setTimeout(() => {
+          syncOfflineData(false)
+        }, 300)
+      } else {
+        refreshPendingCount(shopId)
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('cahier_local_sale_created', handleLocalSaleCreated)
+      return () => {
+        window.removeEventListener('cahier_local_sale_created', handleLocalSaleCreated)
+      }
+    }
+  }, [shopId, isOnline, syncOfflineData, refreshPendingCount])
+
   // Déclencher automatiquement quand on revient en ligne
   useEffect(() => {
     if (isOnline && shopId) {
