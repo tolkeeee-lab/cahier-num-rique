@@ -541,9 +541,21 @@ export function replaceOfflineSaleId(shopId: string, oldId: string, newSale: Off
   idbReplaceSales(shopId, sales).catch(() => {})
 }
 
+// Seuil maximum d'historique conservé dans localStorage pour garantir un chargement instantané
+// sans jamais risquer de QuotaExceededError (IndexedDB conserve l'intégralité sans limite de taille)
+const MAX_LOCAL_STORAGE_SALES = 250
+
 export function replaceOfflineSales(shopId: string, sales: OfflineSale[]): void {
-  writeJson(salesKey(shopId), sales)
+  // IndexedDB conserve 100% de l'historique sans limitation
   idbReplaceSales(shopId, sales).catch(() => {})
+
+  // localStorage ne conserve que les ventes non-synchronisées + les N ventes les plus récentes
+  // pour que le carnet s'affiche en 0ms au lancement sans saturer les 5Mo du navigateur
+  const pendingSales = sales.filter(s => s.is_synced === false)
+  const syncedSales = sales.filter(s => s.is_synced !== false)
+  const trimmedSales = [...pendingSales, ...syncedSales.slice(0, MAX_LOCAL_STORAGE_SALES)]
+
+  writeJson(salesKey(shopId), trimmedSales)
 }
 
 export function getPendingSync(shopId: string): OfflineSale[] {
