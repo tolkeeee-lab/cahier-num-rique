@@ -62,7 +62,7 @@ export function isRealUuid(str?: string | null): boolean {
  */
 export async function findShopIdByCode(inputCode: string): Promise<string> {
   const raw = inputCode.trim()
-  if (!raw) return 'default-shop'
+  if (!raw) return ''
 
   // Si c'est déjà un vrai UUID, le retourner directement
   if (isRealUuid(raw)) return raw
