@@ -15,7 +15,6 @@ import {
   idbGetSuppliers, idbReplaceSuppliers,
   idbGetShoppingItems, idbSaveShoppingItem, idbReplaceShoppingItems, idbDeleteShoppingItem,
   idbGetCashClosings, idbSaveCashClosing,
-  migrateLocalStorageToIndexedDB,
   OfflineShoppingItem, OfflineCashClosing
 } from './indexedDb'
 import { normalizeProductName, sanitizeProductData } from './productUtils'
@@ -248,115 +247,9 @@ const suppliersKey = (shopId: string) => `cahier_offline_suppliers_${shopId}`
 const productsKey = (shopId: string) => `cahier_offline_products_${shopId}`
 
 /**
- * Migre les ventes et produits d'une ancienne clé d'identifiant boutique (ex: BTQ-58C54) vers l'UUID réel
+ * @deprecated Identifiants de boutiques désormais uniques et canoniques.
  */
-export function migrateOfflineShopSales(oldShopId: string, newShopId: string): void {
-  if (!oldShopId || !newShopId || oldShopId === newShopId) return
-
-  try {
-    // 1. Migration des Ventes
-    const oldSalesKey = salesKey(oldShopId)
-    const oldSales = readJson<OfflineSale[]>(oldSalesKey, [])
-    if (oldSales.length > 0) {
-      const newSalesKey = salesKey(newShopId)
-      const currentNewSales = readJson<OfflineSale[]>(newSalesKey, [])
-      const combined = [...currentNewSales]
-
-      for (const s of oldSales) {
-        const updatedSale = { ...s, shop_id: newShopId, is_synced: false }
-        if (!combined.some(c => c.id === s.id)) {
-          combined.push(updatedSale)
-        }
-      }
-
-      writeJson(newSalesKey, combined)
-      localStorage.removeItem(oldSalesKey)
-    }
-
-    // 2. Migration des Produits
-    const oldProdKey = productsKey(oldShopId)
-    const oldProds = readJson<OfflineProduct[]>(oldProdKey, [])
-    if (oldProds.length > 0) {
-      const newProdKey = productsKey(newShopId)
-      const currentNewProds = readJson<OfflineProduct[]>(newProdKey, [])
-      const combinedProds = [...currentNewProds]
-
-      for (const p of oldProds) {
-        const updatedProd = { ...p, shop_id: newShopId }
-        if (!combinedProds.some(c => c.id === p.id || c.name.toLowerCase().trim() === p.name.toLowerCase().trim())) {
-          combinedProds.push(updatedProd)
-        }
-      }
-
-      writeJson(newProdKey, combinedProds)
-      localStorage.removeItem(oldProdKey)
-    }
-
-    // 3. Migration des Dettes Clients
-    const oldClientKey = clientsKey(oldShopId)
-    const oldClients = readJson<OfflineDebt[]>(oldClientKey, [])
-    if (oldClients.length > 0) {
-      const newClientKey = clientsKey(newShopId)
-      const currentNewClients = readJson<OfflineDebt[]>(newClientKey, [])
-      const combinedClients = [...currentNewClients]
-
-      for (const c of oldClients) {
-        if (!combinedClients.some(cur => cur.client_name?.toLowerCase().trim() === c.client_name?.toLowerCase().trim())) {
-          combinedClients.push(c)
-        }
-      }
-
-      writeJson(newClientKey, combinedClients)
-      localStorage.removeItem(oldClientKey)
-    }
-
-    // 4. Migration des Dettes Fournisseurs
-    const oldSupplierKey = suppliersKey(oldShopId)
-    const oldSuppliers = readJson<OfflineDebt[]>(oldSupplierKey, [])
-    if (oldSuppliers.length > 0) {
-      const newSupplierKey = suppliersKey(newShopId)
-      const currentNewSuppliers = readJson<OfflineDebt[]>(newSupplierKey, [])
-      const combinedSuppliers = [...currentNewSuppliers]
-
-      for (const sup of oldSuppliers) {
-        if (!combinedSuppliers.some(cur => cur.client_name?.toLowerCase().trim() === sup.client_name?.toLowerCase().trim())) {
-          combinedSuppliers.push(sup)
-        }
-      }
-
-      writeJson(newSupplierKey, combinedSuppliers)
-      localStorage.removeItem(oldSupplierKey)
-    }
-
-    // 5. Migration des Clés Unitaires & Listes de la Boutique
-    const singleKeysToMigrate = [
-      'cahier_currency',
-      'cahier_shopping_list',
-      'cahier_requested_products',
-      'cahier_tactile_menu',
-      'cahier_tactile_excluded',
-      'cahier_analytics_widgets',
-      'cahier_shop_name',
-      'cahier_shop_phone',
-      'cahier_shop_address',
-      'cahier_shop_country',
-      'cahier_shop_city',
-    ]
-
-    for (const prefix of singleKeysToMigrate) {
-      const oldKey = `${prefix}_${oldShopId}`
-      const newKey = `${prefix}_${newShopId}`
-      const val = localStorage.getItem(oldKey)
-      if (val !== null && !localStorage.getItem(newKey)) {
-        localStorage.setItem(newKey, val)
-      }
-      localStorage.removeItem(oldKey)
-    }
-  } catch (e) {
-    console.warn('[offlineDb] Erreur migration collections boutique:', e)
-  }
-}
-
+export function migrateOfflineShopSales(_oldShopId: string, _newShopId: string): void {}
 
 // ─── Utilitaires ─────────────────────────────────────────────────────────────
 
@@ -370,31 +263,6 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
-function writeJson<T>(key: string, value: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (e: any) {
-    console.warn(`[offlineDb] LocalStorage saturé ou inaccessible pour "${key}":`, e?.message)
-    if (typeof window !== 'undefined' && e?.name === 'QuotaExceededError') {
-      window.dispatchEvent(new CustomEvent('cahier_storage_full', {
-        detail: { key, count: Array.isArray(value) ? value.length : 0 }
-      }))
-    }
-    // Si dépassement du quota LocalStorage (5 Mo), élaguer les plus anciennes entrées locales
-    // (IndexedDB v3 conserve l'intégralité sans limite)
-    if (e?.name === 'QuotaExceededError' && Array.isArray(value) && value.length > 400) {
-      try {
-        localStorage.setItem(key, JSON.stringify(value.slice(0, 250)))
-      } catch {
-        // Ne jamais bloquer le fil d'exécution utilisateur
-      }
-    }
-  }
-}
-
-/**
- * Génère un UUID v4 compatible navigateur.
- */
 export function generateOfflineId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -424,7 +292,6 @@ const _hydratedShops = new Set<string>()
 export async function hydrateOfflineStorage(shopId: string): Promise<void> {
   if (typeof window === 'undefined' || !shopId) return
   try {
-    await migrateLocalStorageToIndexedDB(shopId)
     const [sales, prods, clients, supps, shopping, closings] = await Promise.all([
       idbGetSales(shopId),
       idbGetProducts(shopId),
@@ -511,9 +378,6 @@ export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
   // 2. Persistance d'autorité dans IndexedDB (illimité)
   idbSaveSale(sale).catch(() => {})
 
-  // 3. Rétro-compatibilité : écriture de secours légère
-  writeJson(salesKey(shopId), sales.slice(-250))
-
   // Répercussion immédiate sur le stock local pour tout mouvement de marchandise
   if (sale.status !== 'crossed_out' && sale.articles && sale.articles.length > 0) {
     const isOut = ['cash_in', 'sale', 'sale_cash', 'sale_credit', 'stock_damage', 'personal_use'].includes(sale.type)
@@ -587,7 +451,6 @@ export function updateOfflineSale(
     sales[idx] = { ...sales[idx], ...patch, updated_at: new Date().toISOString() }
     _salesCache.set(shopId, sales)
     idbSaveSale(sales[idx]).catch(() => {})
-    writeJson(salesKey(shopId), sales.slice(-250))
   }
 }
 
@@ -606,11 +469,7 @@ export function replaceOfflineSaleId(shopId: string, oldId: string, newSale: Off
   }
   _salesCache.set(shopId, sales)
   idbReplaceSales(shopId, sales).catch(() => {})
-  writeJson(salesKey(shopId), sales.slice(-250))
 }
-
-// Seuil de sécurité de synchronisation immédiate
-const MAX_LOCAL_STORAGE_SALES = 250
 
 export function replaceOfflineSales(shopId: string, sales: OfflineSale[]): void {
   // 1. Mise à jour instantanée du cache mémoire avec 100% des ventes
@@ -618,13 +477,6 @@ export function replaceOfflineSales(shopId: string, sales: OfflineSale[]): void 
 
   // 2. Persistance d'autorité exhaustive dans IndexedDB (illimité)
   idbReplaceSales(shopId, sales).catch(() => {})
-
-  // 3. Rétro-compatibilité : écriture de secours légère
-  const pendingSales = sales.filter(s => s.is_synced === false)
-  const syncedSales = sales.filter(s => s.is_synced !== false)
-  const trimmedSales = [...pendingSales, ...syncedSales.slice(-MAX_LOCAL_STORAGE_SALES)]
-
-  writeJson(salesKey(shopId), trimmedSales)
 }
 
 export function getPendingSync(shopId: string): OfflineSale[] {
@@ -704,7 +556,6 @@ export function replaceOfflineClients(shopId: string, clients: OfflineDebt[]): v
     updated_at: new Date().toISOString()
   }))
   idbReplaceClients(shopId, idbFormatted).catch(() => {})
-  writeJson(clientsKey(shopId), clients)
 }
 
 export function addOrUpdateOfflineClientDebt(
@@ -781,7 +632,6 @@ export function replaceOfflineSuppliers(shopId: string, suppliers: OfflineDebt[]
     updated_at: new Date().toISOString()
   }))
   idbReplaceSuppliers(shopId, idbFormatted).catch(() => {})
-  writeJson(suppliersKey(shopId), suppliers)
 }
 
 export function addOrUpdateOfflineSupplierDebt(
@@ -860,13 +710,11 @@ export function replaceOfflineProducts(shopId: string, products: OfflineProduct[
   const clean = products.map(p => sanitizeProductData(p as any))
   _productsCache.set(shopId, clean)
   idbReplaceProducts(shopId, clean).catch(() => {})
-  writeJson(productsKey(shopId), clean)
 }
 
 export function clearOfflineProducts(shopId: string): void {
   _productsCache.set(shopId, [])
   idbReplaceProducts(shopId, []).catch(() => {})
-  writeJson(productsKey(shopId), [])
 }
 
 export function saveOfflineProduct(shopId: string, product: OfflineProduct): void {
@@ -883,7 +731,6 @@ export function saveOfflineProduct(shopId: string, product: OfflineProduct): voi
   }
   _productsCache.set(shopId, products)
   idbSaveProduct(cleanProduct).catch(() => {})
-  writeJson(productsKey(shopId), products)
 }
 
 export function getPendingOfflineProducts(shopId: string): OfflineProduct[] {
@@ -904,7 +751,6 @@ export function markProductAsSynced(shopId: string, oldId: string, serverProduct
   if (oldId !== updatedProduct.id) {
     idbDeleteProduct(oldId).catch(() => {})
   }
-  writeJson(productsKey(shopId), products)
 }
 
 export function deleteOfflineProduct(shopId: string, productId: string, productName?: string): void {
@@ -914,7 +760,6 @@ export function deleteOfflineProduct(shopId: string, productId: string, productN
   )
   _productsCache.set(shopId, products)
   idbDeleteProduct(productId).catch(() => {})
-  writeJson(productsKey(shopId), products)
 }
 
 // ─── Calcul du stock offline ──────────────────────────────────────────────────
@@ -1028,20 +873,17 @@ export function saveOfflineShoppingItem(shopId: string, item: OfflineShoppingIte
   }
   _shoppingCache.set(shopId, items)
   idbSaveShoppingItem(item).catch(() => {})
-  writeJson(shoppingListKey(shopId), items)
 }
 
 export function deleteOfflineShoppingItem(shopId: string, itemId: string): void {
   const items = getOfflineShoppingList(shopId).filter(i => i.id !== itemId)
   _shoppingCache.set(shopId, items)
   idbDeleteShoppingItem(itemId).catch(() => {})
-  writeJson(shoppingListKey(shopId), items)
 }
 
 export function replaceOfflineShoppingList(shopId: string, items: OfflineShoppingItem[]): void {
   _shoppingCache.set(shopId, items)
   idbReplaceShoppingItems(shopId, items).catch(() => {})
-  writeJson(shoppingListKey(shopId), items)
 }
 
 // ─── Gestion Hors-Ligne des Clôtures de Caisse (Z) ───────────────────────────
@@ -1085,12 +927,10 @@ export function saveOfflineCashClosing(shopId: string, closing: OfflineCashClosi
   }
   _closingsCache.set(shopId, closings)
   idbSaveCashClosing(closing).catch(() => {})
-  writeJson(cashClosingsKey(shopId), closings)
 }
 
 export function replaceOfflineCashClosings(shopId: string, closings: OfflineCashClosing[]): void {
   _closingsCache.set(shopId, closings)
   Promise.all(closings.map(c => idbSaveCashClosing(c))).catch(() => {})
-  writeJson(cashClosingsKey(shopId), closings)
 }
 

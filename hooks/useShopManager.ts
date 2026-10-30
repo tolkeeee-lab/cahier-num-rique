@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
 import { isRealUuid, findShopIdByCode, formatShortShopCode, normalizeShopCode } from '@/lib/shopCodeUtils'
-import { migrateOfflineShopSales } from '@/lib/offlineDb'
 
 export interface Shop {
   id: string
@@ -211,19 +210,13 @@ export function useShopManager(mappedUser: MappedUser | null | undefined) {
           }
 
           if (assignedShopId && !isRealUuid(assignedShopId) && isOnline) {
-            const oldId = assignedShopId
             const resolved = await findShopIdByCode(assignedShopId)
             if (isRealUuid(resolved)) {
-              migrateOfflineShopSales(oldId, resolved)
               assignedShopId = resolved
             }
           }
 
           if ((assignedRole === 'employee' || isEmployeeFromMeta) && assignedShopId && isMounted) {
-            const previousId = mappedUser?.shop_id
-            if (previousId && previousId !== assignedShopId) {
-              migrateOfflineShopSales(previousId, assignedShopId)
-            }
             setEmployeeRole('employee')
             const empShop: Shop = {
               id: assignedShopId,
