@@ -324,6 +324,77 @@ export async function idbDeleteProduct(productId: string): Promise<void> {
   return deleteFromStore('products', productId)
 }
 
+// ─── API Dettes Clients & Fournisseurs (IDB) ──────────────────────────────────
+
+export interface StoredOfflineDebt {
+  id: string
+  shop_id: string
+  client_name: string
+  amount: number
+  amount_owed?: number
+  updated_at?: string
+}
+
+export async function idbGetClients(shopId: string): Promise<StoredOfflineDebt[]> {
+  if (!shopId) return getAllFromStore<StoredOfflineDebt>('clients')
+  const alt = getAltShopId(shopId)
+  const [primaryList, altList] = await Promise.all([
+    getAllFromStore<StoredOfflineDebt>('clients', shopId),
+    alt ? getAllFromStore<StoredOfflineDebt>('clients', alt) : Promise.resolve([])
+  ])
+  if (altList.length === 0) return primaryList
+  if (primaryList.length === 0) return altList
+
+  const map = new Map<string, StoredOfflineDebt>()
+  for (const c of altList) {
+    const key = (c.client_name || '').toLowerCase().trim()
+    if (key) map.set(key, c)
+  }
+  for (const c of primaryList) {
+    const key = (c.client_name || '').toLowerCase().trim()
+    if (key) map.set(key, c)
+  }
+  return Array.from(map.values())
+}
+
+export async function idbReplaceClients(shopId: string, clients: StoredOfflineDebt[]): Promise<void> {
+  return replaceStoreItemsByShopId<StoredOfflineDebt>('clients', shopId, clients)
+}
+
+export async function idbSaveClient(client: StoredOfflineDebt): Promise<void> {
+  return putInStore<StoredOfflineDebt>('clients', client)
+}
+
+export async function idbGetSuppliers(shopId: string): Promise<StoredOfflineDebt[]> {
+  if (!shopId) return getAllFromStore<StoredOfflineDebt>('suppliers')
+  const alt = getAltShopId(shopId)
+  const [primaryList, altList] = await Promise.all([
+    getAllFromStore<StoredOfflineDebt>('suppliers', shopId),
+    alt ? getAllFromStore<StoredOfflineDebt>('suppliers', alt) : Promise.resolve([])
+  ])
+  if (altList.length === 0) return primaryList
+  if (primaryList.length === 0) return altList
+
+  const map = new Map<string, StoredOfflineDebt>()
+  for (const s of altList) {
+    const key = (s.client_name || '').toLowerCase().trim()
+    if (key) map.set(key, s)
+  }
+  for (const s of primaryList) {
+    const key = (s.client_name || '').toLowerCase().trim()
+    if (key) map.set(key, s)
+  }
+  return Array.from(map.values())
+}
+
+export async function idbReplaceSuppliers(shopId: string, suppliers: StoredOfflineDebt[]): Promise<void> {
+  return replaceStoreItemsByShopId<StoredOfflineDebt>('suppliers', shopId, suppliers)
+}
+
+export async function idbSaveSupplier(supplier: StoredOfflineDebt): Promise<void> {
+  return putInStore<StoredOfflineDebt>('suppliers', supplier)
+}
+
 // ─── API Shopping List (IDB) ──────────────────────────────────────────────────
 
 export async function idbGetShoppingItems(shopId?: string): Promise<OfflineShoppingItem[]> {
@@ -509,6 +580,92 @@ export async function migrateLocalStorageToIndexedDB(shopId: string): Promise<vo
     }
     if (productsToMigrate.length > 0) {
       await putBulkInStore<OfflineProduct>('products', productsToMigrate)
+    }
+
+    // 3. Migration des dettes clients
+    const rawClients = localStorage.getItem(`cahier_offline_clients_${shopId}`)
+    const rawAltClients = alt ? localStorage.getItem(`cahier_offline_clients_${alt}`) : null
+    const clientsToMigrate: StoredOfflineDebt[] = []
+
+    if (rawClients) {
+      try {
+        const parsed = JSON.parse(rawClients)
+        if (Array.isArray(parsed)) {
+          parsed.forEach((c, idx) => {
+            clientsToMigrate.push({
+              id: c.id || `cli_${shopId}_${idx}_${c.client_name}`,
+              shop_id: shopId,
+              client_name: c.client_name,
+              amount: c.amount,
+              amount_owed: c.amount_owed,
+            })
+          })
+        }
+      } catch {}
+    }
+    if (rawAltClients) {
+      try {
+        const parsed = JSON.parse(rawAltClients)
+        if (Array.isArray(parsed)) {
+          parsed.forEach((c, idx) => {
+            if (!clientsToMigrate.some(existing => existing.client_name.toLowerCase().trim() === c.client_name?.toLowerCase().trim())) {
+              clientsToMigrate.push({
+                id: c.id || `cli_${alt}_${idx}_${c.client_name}`,
+                shop_id: shopId,
+                client_name: c.client_name,
+                amount: c.amount,
+                amount_owed: c.amount_owed,
+              })
+            }
+          })
+        }
+      } catch {}
+    }
+    if (clientsToMigrate.length > 0) {
+      await putBulkInStore<StoredOfflineDebt>('clients', clientsToMigrate)
+    }
+
+    // 4. Migration des dettes fournisseurs
+    const rawSuppliers = localStorage.getItem(`cahier_offline_suppliers_${shopId}`)
+    const rawAltSuppliers = alt ? localStorage.getItem(`cahier_offline_suppliers_${alt}`) : null
+    const suppliersToMigrate: StoredOfflineDebt[] = []
+
+    if (rawSuppliers) {
+      try {
+        const parsed = JSON.parse(rawSuppliers)
+        if (Array.isArray(parsed)) {
+          parsed.forEach((s, idx) => {
+            suppliersToMigrate.push({
+              id: s.id || `sup_${shopId}_${idx}_${s.client_name}`,
+              shop_id: shopId,
+              client_name: s.client_name,
+              amount: s.amount,
+              amount_owed: s.amount_owed,
+            })
+          })
+        }
+      } catch {}
+    }
+    if (rawAltSuppliers) {
+      try {
+        const parsed = JSON.parse(rawAltSuppliers)
+        if (Array.isArray(parsed)) {
+          parsed.forEach((s, idx) => {
+            if (!suppliersToMigrate.some(existing => existing.client_name.toLowerCase().trim() === s.client_name?.toLowerCase().trim())) {
+              suppliersToMigrate.push({
+                id: s.id || `sup_${alt}_${idx}_${s.client_name}`,
+                shop_id: shopId,
+                client_name: s.client_name,
+                amount: s.amount,
+                amount_owed: s.amount_owed,
+              })
+            }
+          })
+        }
+      } catch {}
+    }
+    if (suppliersToMigrate.length > 0) {
+      await putBulkInStore<StoredOfflineDebt>('suppliers', suppliersToMigrate)
     }
 
     localStorage.setItem(migrationKey, 'true')

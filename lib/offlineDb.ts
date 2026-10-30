@@ -11,6 +11,8 @@
 import {
   idbGetSales, idbSaveSale, idbReplaceSales,
   idbGetProducts, idbSaveProduct, idbReplaceProducts, idbDeleteProduct,
+  idbGetClients, idbReplaceClients,
+  idbGetSuppliers, idbReplaceSuppliers,
   idbGetShoppingItems, idbSaveShoppingItem, idbReplaceShoppingItems, idbDeleteShoppingItem,
   idbGetCashClosings, idbSaveCashClosing,
   migrateLocalStorageToIndexedDB,
@@ -404,34 +406,91 @@ export function generateOfflineId(): string {
   })
 }
 
-// Cache en mémoire pour éviter d'invoquer la vérification de migration IndexedDB à répétition
-const _migratedShopsInMemory = new Set<string>()
+// ─── Caches mémoire ultra-rapides (0 ms) synchronisés avec IndexedDB ─────────
+
+const _salesCache = new Map<string, OfflineSale[]>()
+const _productsCache = new Map<string, OfflineProduct[]>()
+const _clientsCache = new Map<string, OfflineDebt[]>()
+const _suppliersCache = new Map<string, OfflineDebt[]>()
+const _shoppingCache = new Map<string, OfflineShoppingItem[]>()
+const _closingsCache = new Map<string, OfflineCashClosing[]>()
+
+// Cache pour suivre les boutiques dont IndexedDB a été hydraté en mémoire
+const _hydratedShops = new Set<string>()
+
+/**
+ * Hydrate de manière asynchrone les caches mémoire depuis IndexedDB
+ */
+export async function hydrateOfflineStorage(shopId: string): Promise<void> {
+  if (typeof window === 'undefined' || !shopId) return
+  try {
+    await migrateLocalStorageToIndexedDB(shopId)
+    const [sales, prods, clients, supps, shopping, closings] = await Promise.all([
+      idbGetSales(shopId),
+      idbGetProducts(shopId),
+      idbGetClients(shopId),
+      idbGetSuppliers(shopId),
+      idbGetShoppingItems(shopId),
+      idbGetCashClosings(shopId),
+    ])
+
+    if (sales) _salesCache.set(shopId, sales)
+    if (prods) _productsCache.set(shopId, prods.map(p => sanitizeProductData(p as any)))
+    if (clients) _clientsCache.set(shopId, clients.map(c => ({ client_name: c.client_name, amount: c.amount, amount_owed: c.amount_owed })))
+    if (supps) _suppliersCache.set(shopId, supps.map(s => ({ client_name: s.client_name, amount: s.amount, amount_owed: s.amount_owed })))
+    if (shopping) _shoppingCache.set(shopId, shopping)
+    if (closings) _closingsCache.set(shopId, closings)
+
+    _hydratedShops.add(shopId)
+  } catch (err) {
+    console.warn(`[offlineDb] Erreur lors de l'hydratation IndexedDB (${shopId}):`, err)
+  }
+}
 
 export function getOfflineSales(shopId: string): OfflineSale[] {
-  if (typeof window !== 'undefined' && shopId && !_migratedShopsInMemory.has(shopId)) {
-    _migratedShopsInMemory.add(shopId)
-    migrateLocalStorageToIndexedDB(shopId).catch(() => {})
-  }
   if (!shopId) return []
+
+  // Si présent dans le cache mémoire unifié, retour immédiat (0 ms)
+  const cached = _salesCache.get(shopId)
+  if (cached && cached.length > 0) return cached
+
+  // Hydratation de fond non-bloquante depuis IndexedDB
+  if (typeof window !== 'undefined' && !_hydratedShops.has(shopId)) {
+    hydrateOfflineStorage(shopId).catch(() => {})
+  }
+
+  // Repli initial : si le cache n'a pas encore fini d'être hydraté depuis IndexedDB,
+  // vérifier si localStorage contient les données de transition
   const alt = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
   const primary = readJson<OfflineSale[]>(salesKey(shopId), [])
   const altList = readJson<OfflineSale[]>(salesKey(alt), [])
-  if (altList.length === 0) return primary
-  if (primary.length === 0) return altList
-  const map = new Map<string, OfflineSale>()
-  for (const s of altList) if (s.id) map.set(s.id, s)
-  for (const s of primary) if (s.id) map.set(s.id, s)
-  return Array.from(map.values())
+  let list: OfflineSale[] = []
+  if (altList.length === 0) list = primary
+  else if (primary.length === 0) list = altList
+  else {
+    const map = new Map<string, OfflineSale>()
+    for (const s of altList) if (s.id) map.set(s.id, s)
+    for (const s of primary) if (s.id) map.set(s.id, s)
+    list = Array.from(map.values())
+  }
+
+  if (list.length > 0) {
+    _salesCache.set(shopId, list)
+  }
+  return list
 }
 
 export async function getOfflineSalesAsync(shopId: string): Promise<OfflineSale[]> {
   const sales = await idbGetSales(shopId)
-  if (sales && sales.length > 0) return sales
+  if (sales && sales.length > 0) {
+    _salesCache.set(shopId, sales)
+    return sales
+  }
   return getOfflineSales(shopId)
 }
 
 export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
-  const sales = getOfflineSales(shopId)
+  const sales = [...getOfflineSales(shopId)]
   if (sale.type === 'cash_out' && !sale.category) {
     sale.category = classifyOfflineExpense(sale.notes)
   }
@@ -445,8 +504,15 @@ export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
   // Horodatage de création et modification
   sale.updated_at = new Date().toISOString()
   sales.push(sale)
-  writeJson(salesKey(shopId), sales)
+
+  // 1. Mise à jour instantanée du cache mémoire
+  _salesCache.set(shopId, sales)
+
+  // 2. Persistance d'autorité dans IndexedDB (illimité)
   idbSaveSale(sale).catch(() => {})
+
+  // 3. Rétro-compatibilité : écriture de secours légère
+  writeJson(salesKey(shopId), sales.slice(-250))
 
   // Répercussion immédiate sur le stock local pour tout mouvement de marchandise
   if (sale.status !== 'crossed_out' && sale.articles && sale.articles.length > 0) {
@@ -514,18 +580,19 @@ export function updateOfflineSale(
   saleId: string,
   patch: Partial<OfflineSale>
 ): void {
-  const sales = getOfflineSales(shopId)
+  const sales = [...getOfflineSales(shopId)]
   const idx = sales.findIndex((s) => s.id === saleId)
   if (idx !== -1) {
     // Mettre à jour l'horodatage de modification pour résolution de conflits
     sales[idx] = { ...sales[idx], ...patch, updated_at: new Date().toISOString() }
-    writeJson(salesKey(shopId), sales)
+    _salesCache.set(shopId, sales)
     idbSaveSale(sales[idx]).catch(() => {})
+    writeJson(salesKey(shopId), sales.slice(-250))
   }
 }
 
 export function replaceOfflineSaleId(shopId: string, oldId: string, newSale: OfflineSale): void {
-  const sales = getOfflineSales(shopId)
+  const sales = [...getOfflineSales(shopId)]
   const idx = sales.findIndex((s) => s.id === oldId)
   if (idx !== -1) {
     sales[idx] = newSale
@@ -537,23 +604,25 @@ export function replaceOfflineSaleId(shopId: string, oldId: string, newSale: Off
       sales.push(newSale)
     }
   }
-  writeJson(salesKey(shopId), sales)
+  _salesCache.set(shopId, sales)
   idbReplaceSales(shopId, sales).catch(() => {})
+  writeJson(salesKey(shopId), sales.slice(-250))
 }
 
-// Seuil maximum d'historique conservé dans localStorage pour garantir un chargement instantané
-// sans jamais risquer de QuotaExceededError (IndexedDB conserve l'intégralité sans limite de taille)
+// Seuil de sécurité de synchronisation immédiate
 const MAX_LOCAL_STORAGE_SALES = 250
 
 export function replaceOfflineSales(shopId: string, sales: OfflineSale[]): void {
-  // IndexedDB conserve 100% de l'historique sans limitation
+  // 1. Mise à jour instantanée du cache mémoire avec 100% des ventes
+  _salesCache.set(shopId, sales)
+
+  // 2. Persistance d'autorité exhaustive dans IndexedDB (illimité)
   idbReplaceSales(shopId, sales).catch(() => {})
 
-  // localStorage ne conserve que les ventes non-synchronisées + les N ventes les plus récentes
-  // pour que le carnet s'affiche en 0ms au lancement sans saturer les 5Mo du navigateur
+  // 3. Rétro-compatibilité : écriture de secours légère
   const pendingSales = sales.filter(s => s.is_synced === false)
   const syncedSales = sales.filter(s => s.is_synced !== false)
-  const trimmedSales = [...pendingSales, ...syncedSales.slice(0, MAX_LOCAL_STORAGE_SALES)]
+  const trimmedSales = [...pendingSales, ...syncedSales.slice(-MAX_LOCAL_STORAGE_SALES)]
 
   writeJson(salesKey(shopId), trimmedSales)
 }
@@ -582,24 +651,59 @@ export function markSyncError(shopId: string, saleId: string, error: string): vo
 
 export function getOfflineClients(shopId: string): OfflineDebt[] {
   if (!shopId) return []
+  const cached = _clientsCache.get(shopId)
+  if (cached && cached.length > 0) return cached
+
+  if (typeof window !== 'undefined' && !_hydratedShops.has(shopId)) {
+    hydrateOfflineStorage(shopId).catch(() => {})
+  }
+
   const alt = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
   const primary = readJson<OfflineDebt[]>(clientsKey(shopId), [])
   const altList = readJson<OfflineDebt[]>(clientsKey(alt), [])
-  if (altList.length === 0) return primary
-  if (primary.length === 0) return altList
-  const map = new Map<string, OfflineDebt>()
-  for (const c of altList) {
-    const key = (c.client_name || '').toLowerCase().trim()
-    if (key) map.set(key, c)
+  let list: OfflineDebt[] = []
+  if (altList.length === 0) list = primary
+  else if (primary.length === 0) list = altList
+  else {
+    const map = new Map<string, OfflineDebt>()
+    for (const c of altList) {
+      const key = (c.client_name || '').toLowerCase().trim()
+      if (key) map.set(key, c)
+    }
+    for (const c of primary) {
+      const key = (c.client_name || '').toLowerCase().trim()
+      if (key) map.set(key, c)
+    }
+    list = Array.from(map.values())
   }
-  for (const c of primary) {
-    const key = (c.client_name || '').toLowerCase().trim()
-    if (key) map.set(key, c)
+
+  if (list.length > 0) {
+    _clientsCache.set(shopId, list)
   }
-  return Array.from(map.values())
+  return list
+}
+
+export async function getOfflineClientsAsync(shopId: string): Promise<OfflineDebt[]> {
+  const clients = await idbGetClients(shopId)
+  if (clients && clients.length > 0) {
+    const mapped = clients.map(c => ({ client_name: c.client_name, amount: c.amount, amount_owed: c.amount_owed }))
+    _clientsCache.set(shopId, mapped)
+    return mapped
+  }
+  return getOfflineClients(shopId)
 }
 
 export function replaceOfflineClients(shopId: string, clients: OfflineDebt[]): void {
+  _clientsCache.set(shopId, clients)
+  const idbFormatted = clients.map((c, idx) => ({
+    id: `cli_${shopId}_${idx}_${c.client_name}`,
+    shop_id: shopId,
+    client_name: c.client_name,
+    amount: c.amount,
+    amount_owed: c.amount_owed,
+    updated_at: new Date().toISOString()
+  }))
+  idbReplaceClients(shopId, idbFormatted).catch(() => {})
   writeJson(clientsKey(shopId), clients)
 }
 
@@ -608,7 +712,7 @@ export function addOrUpdateOfflineClientDebt(
   clientName: string,
   amount: number
 ): void {
-  const clients = getOfflineClients(shopId)
+  const clients = [...getOfflineClients(shopId)]
   const existing = clients.find(
     (c) => c.client_name?.toLowerCase() === clientName.toLowerCase()
   )
@@ -617,31 +721,66 @@ export function addOrUpdateOfflineClientDebt(
   } else {
     clients.push({ client_name: clientName, amount })
   }
-  writeJson(clientsKey(shopId), clients)
+  replaceOfflineClients(shopId, clients)
 }
 
 // ─── Opérations sur les Dettes Fournisseurs ──────────────────────────────────
 
 export function getOfflineSuppliers(shopId: string): OfflineDebt[] {
   if (!shopId) return []
+  const cached = _suppliersCache.get(shopId)
+  if (cached && cached.length > 0) return cached
+
+  if (typeof window !== 'undefined' && !_hydratedShops.has(shopId)) {
+    hydrateOfflineStorage(shopId).catch(() => {})
+  }
+
   const alt = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
   const primary = readJson<OfflineDebt[]>(suppliersKey(shopId), [])
   const altList = readJson<OfflineDebt[]>(suppliersKey(alt), [])
-  if (altList.length === 0) return primary
-  if (primary.length === 0) return altList
-  const map = new Map<string, OfflineDebt>()
-  for (const s of altList) {
-    const key = (s.client_name || '').toLowerCase().trim()
-    if (key) map.set(key, s)
+  let list: OfflineDebt[] = []
+  if (altList.length === 0) list = primary
+  else if (primary.length === 0) list = altList
+  else {
+    const map = new Map<string, OfflineDebt>()
+    for (const s of altList) {
+      const key = (s.client_name || '').toLowerCase().trim()
+      if (key) map.set(key, s)
+    }
+    for (const s of primary) {
+      const key = (s.client_name || '').toLowerCase().trim()
+      if (key) map.set(key, s)
+    }
+    list = Array.from(map.values())
   }
-  for (const s of primary) {
-    const key = (s.client_name || '').toLowerCase().trim()
-    if (key) map.set(key, s)
+
+  if (list.length > 0) {
+    _suppliersCache.set(shopId, list)
   }
-  return Array.from(map.values())
+  return list
+}
+
+export async function getOfflineSuppliersAsync(shopId: string): Promise<OfflineDebt[]> {
+  const suppliers = await idbGetSuppliers(shopId)
+  if (suppliers && suppliers.length > 0) {
+    const mapped = suppliers.map(s => ({ client_name: s.client_name, amount: s.amount, amount_owed: s.amount_owed }))
+    _suppliersCache.set(shopId, mapped)
+    return mapped
+  }
+  return getOfflineSuppliers(shopId)
 }
 
 export function replaceOfflineSuppliers(shopId: string, suppliers: OfflineDebt[]): void {
+  _suppliersCache.set(shopId, suppliers)
+  const idbFormatted = suppliers.map((s, idx) => ({
+    id: `sup_${shopId}_${idx}_${s.client_name}`,
+    shop_id: shopId,
+    client_name: s.client_name,
+    amount: s.amount,
+    amount_owed: s.amount_owed,
+    updated_at: new Date().toISOString()
+  }))
+  idbReplaceSuppliers(shopId, idbFormatted).catch(() => {})
   writeJson(suppliersKey(shopId), suppliers)
 }
 
@@ -650,7 +789,7 @@ export function addOrUpdateOfflineSupplierDebt(
   supplierName: string,
   amount: number
 ): void {
-  const suppliers = getOfflineSuppliers(shopId)
+  const suppliers = [...getOfflineSuppliers(shopId)]
   const existing = suppliers.find(
     (s) => s.client_name?.toLowerCase() === supplierName.toLowerCase()
   )
@@ -659,7 +798,7 @@ export function addOrUpdateOfflineSupplierDebt(
   } else {
     suppliers.push({ client_name: supplierName, amount })
   }
-  writeJson(suppliersKey(shopId), suppliers)
+  replaceOfflineSuppliers(shopId, suppliers)
 }
 
 // ─── Statistiques ─────────────────────────────────────────────────────────────
@@ -680,10 +819,14 @@ export function getOfflineStats(shopId: string): {
 // ─── Opérations sur les Produits (Catalogue Stock) ───────────────────────────
 
 export function getOfflineProducts(shopId: string): OfflineProduct[] {
-  if (typeof window !== 'undefined') {
-    migrateLocalStorageToIndexedDB(shopId).catch(() => {})
-  }
   if (!shopId) return []
+  const cached = _productsCache.get(shopId)
+  if (cached && cached.length > 0) return cached
+
+  if (typeof window !== 'undefined' && !_hydratedShops.has(shopId)) {
+    hydrateOfflineStorage(shopId).catch(() => {})
+  }
+
   const alt = shopId.startsWith('SHOP-') ? shopId.replace(/^SHOP-/i, '') : `SHOP-${shopId}`
   const primaryRaw = readJson<OfflineProduct[]>(productsKey(shopId), [])
   const altRaw = readJson<OfflineProduct[]>(productsKey(alt), [])
@@ -696,24 +839,34 @@ export function getOfflineProducts(shopId: string): OfflineProduct[] {
     for (const p of primaryRaw) if (p.id) map.set(p.id, p)
     raw = Array.from(map.values())
   }
-  return raw.map(p => sanitizeProductData(p as any))
+  const clean = raw.map(p => sanitizeProductData(p as any))
+  if (clean.length > 0) {
+    _productsCache.set(shopId, clean)
+  }
+  return clean
 }
 
 export async function getOfflineProductsAsync(shopId: string): Promise<OfflineProduct[]> {
   const products = await idbGetProducts(shopId)
-  if (products && products.length > 0) return products.map(p => sanitizeProductData(p as any))
+  if (products && products.length > 0) {
+    const clean = products.map(p => sanitizeProductData(p as any))
+    _productsCache.set(shopId, clean)
+    return clean
+  }
   return getOfflineProducts(shopId)
 }
 
 export function replaceOfflineProducts(shopId: string, products: OfflineProduct[]): void {
   const clean = products.map(p => sanitizeProductData(p as any))
-  writeJson(productsKey(shopId), clean)
+  _productsCache.set(shopId, clean)
   idbReplaceProducts(shopId, clean).catch(() => {})
+  writeJson(productsKey(shopId), clean)
 }
 
 export function clearOfflineProducts(shopId: string): void {
-  writeJson(productsKey(shopId), [])
+  _productsCache.set(shopId, [])
   idbReplaceProducts(shopId, []).catch(() => {})
+  writeJson(productsKey(shopId), [])
 }
 
 export function saveOfflineProduct(shopId: string, product: OfflineProduct): void {
@@ -721,15 +874,16 @@ export function saveOfflineProduct(shopId: string, product: OfflineProduct): voi
   if (cleanProduct.is_synced === undefined) {
     cleanProduct.is_synced = !cleanProduct.id.startsWith('stk_')
   }
-  const products = getOfflineProducts(shopId)
+  const products = [...getOfflineProducts(shopId)]
   const idx = products.findIndex((p) => p.id === cleanProduct.id)
   if (idx !== -1) {
     products[idx] = cleanProduct
   } else {
     products.push(cleanProduct)
   }
-  writeJson(productsKey(shopId), products)
+  _productsCache.set(shopId, products)
   idbSaveProduct(cleanProduct).catch(() => {})
+  writeJson(productsKey(shopId), products)
 }
 
 export function getPendingOfflineProducts(shopId: string): OfflineProduct[] {
@@ -737,7 +891,7 @@ export function getPendingOfflineProducts(shopId: string): OfflineProduct[] {
 }
 
 export function markProductAsSynced(shopId: string, oldId: string, serverProduct: any): void {
-  const products = getOfflineProducts(shopId)
+  const products = [...getOfflineProducts(shopId)]
   const updatedProduct = sanitizeProductData({ ...serverProduct, is_synced: true, sync_error: undefined })
   const idx = products.findIndex((p) => p.id === oldId || p.name.toLowerCase().trim() === updatedProduct.name.toLowerCase().trim())
   if (idx !== -1) {
@@ -745,11 +899,12 @@ export function markProductAsSynced(shopId: string, oldId: string, serverProduct
   } else {
     products.push(updatedProduct)
   }
-  writeJson(productsKey(shopId), products)
+  _productsCache.set(shopId, products)
   idbSaveProduct(updatedProduct).catch(() => {})
   if (oldId !== updatedProduct.id) {
     idbDeleteProduct(oldId).catch(() => {})
   }
+  writeJson(productsKey(shopId), products)
 }
 
 export function deleteOfflineProduct(shopId: string, productId: string, productName?: string): void {
@@ -757,10 +912,9 @@ export function deleteOfflineProduct(shopId: string, productId: string, productN
   const products = getOfflineProducts(shopId).filter(
     (p) => p.id !== productId && (!normName || p.name.toLowerCase().trim() !== normName)
   )
-  writeJson(productsKey(shopId), products)
+  _productsCache.set(shopId, products)
   idbDeleteProduct(productId).catch(() => {})
-  // NOTE: On ne purge JAMAIS rétroactivement les articles dans les ventes passées,
-  // car cela falsifierait les totaux historiques et les chiffres d'affaires des clôtures antérieures.
+  writeJson(productsKey(shopId), products)
 }
 
 // ─── Calcul du stock offline ──────────────────────────────────────────────────
@@ -840,40 +994,54 @@ function shoppingListKey(shopId: string): string {
 }
 
 export function getOfflineShoppingList(shopId: string): OfflineShoppingItem[] {
-  if (typeof window === 'undefined') return []
-  const items = readJson<OfflineShoppingItem[]>(shoppingListKey(shopId), [])
-  
-  // Hydratation asynchrone non-bloquante depuis IndexedDB
-  idbGetShoppingItems(shopId).then(idbItems => {
-    if (idbItems && idbItems.length > 0 && items.length === 0) {
-      writeJson(shoppingListKey(shopId), idbItems)
-    }
-  }).catch(() => {})
+  if (!shopId) return []
+  const cached = _shoppingCache.get(shopId)
+  if (cached && cached.length > 0) return cached
 
+  if (typeof window !== 'undefined' && !_hydratedShops.has(shopId)) {
+    hydrateOfflineStorage(shopId).catch(() => {})
+  }
+
+  const items = readJson<OfflineShoppingItem[]>(shoppingListKey(shopId), [])
+  if (items.length > 0) {
+    _shoppingCache.set(shopId, items)
+  }
   return items
 }
 
+export async function getOfflineShoppingListAsync(shopId: string): Promise<OfflineShoppingItem[]> {
+  const items = await idbGetShoppingItems(shopId)
+  if (items && items.length > 0) {
+    _shoppingCache.set(shopId, items)
+    return items
+  }
+  return getOfflineShoppingList(shopId)
+}
+
 export function saveOfflineShoppingItem(shopId: string, item: OfflineShoppingItem): void {
-  const items = getOfflineShoppingList(shopId)
+  const items = [...getOfflineShoppingList(shopId)]
   const idx = items.findIndex(i => i.id === item.id)
   if (idx !== -1) {
     items[idx] = item
   } else {
     items.unshift(item)
   }
-  writeJson(shoppingListKey(shopId), items)
+  _shoppingCache.set(shopId, items)
   idbSaveShoppingItem(item).catch(() => {})
+  writeJson(shoppingListKey(shopId), items)
 }
 
 export function deleteOfflineShoppingItem(shopId: string, itemId: string): void {
   const items = getOfflineShoppingList(shopId).filter(i => i.id !== itemId)
-  writeJson(shoppingListKey(shopId), items)
+  _shoppingCache.set(shopId, items)
   idbDeleteShoppingItem(itemId).catch(() => {})
+  writeJson(shoppingListKey(shopId), items)
 }
 
 export function replaceOfflineShoppingList(shopId: string, items: OfflineShoppingItem[]): void {
-  writeJson(shoppingListKey(shopId), items)
+  _shoppingCache.set(shopId, items)
   idbReplaceShoppingItems(shopId, items).catch(() => {})
+  writeJson(shoppingListKey(shopId), items)
 }
 
 // ─── Gestion Hors-Ligne des Clôtures de Caisse (Z) ───────────────────────────
@@ -883,33 +1051,46 @@ function cashClosingsKey(shopId: string): string {
 }
 
 export function getOfflineCashClosings(shopId: string): OfflineCashClosing[] {
-  if (typeof window === 'undefined') return []
+  if (!shopId) return []
+  const cached = _closingsCache.get(shopId)
+  if (cached && cached.length > 0) return cached
+
+  if (typeof window !== 'undefined' && !_hydratedShops.has(shopId)) {
+    hydrateOfflineStorage(shopId).catch(() => {})
+  }
+
   const closings = readJson<OfflineCashClosing[]>(cashClosingsKey(shopId), [])
-
-  // Hydratation asynchrone non-bloquante depuis IndexedDB
-  idbGetCashClosings(shopId).then(idbClosings => {
-    if (idbClosings && idbClosings.length > 0 && closings.length === 0) {
-      writeJson(cashClosingsKey(shopId), idbClosings)
-    }
-  }).catch(() => {})
-
+  if (closings.length > 0) {
+    _closingsCache.set(shopId, closings)
+  }
   return closings
 }
 
+export async function getOfflineCashClosingsAsync(shopId: string): Promise<OfflineCashClosing[]> {
+  const closings = await idbGetCashClosings(shopId)
+  if (closings && closings.length > 0) {
+    _closingsCache.set(shopId, closings)
+    return closings
+  }
+  return getOfflineCashClosings(shopId)
+}
+
 export function saveOfflineCashClosing(shopId: string, closing: OfflineCashClosing): void {
-  const closings = getOfflineCashClosings(shopId)
+  const closings = [...getOfflineCashClosings(shopId)]
   const idx = closings.findIndex(c => c.id === closing.id || (c.date === closing.date && c.shop_id === closing.shop_id))
   if (idx !== -1) {
     closings[idx] = closing
   } else {
     closings.unshift(closing)
   }
-  writeJson(cashClosingsKey(shopId), closings)
+  _closingsCache.set(shopId, closings)
   idbSaveCashClosing(closing).catch(() => {})
+  writeJson(cashClosingsKey(shopId), closings)
 }
 
 export function replaceOfflineCashClosings(shopId: string, closings: OfflineCashClosing[]): void {
-  writeJson(cashClosingsKey(shopId), closings)
+  _closingsCache.set(shopId, closings)
   Promise.all(closings.map(c => idbSaveCashClosing(c))).catch(() => {})
+  writeJson(cashClosingsKey(shopId), closings)
 }
 

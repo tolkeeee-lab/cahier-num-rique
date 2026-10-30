@@ -19,10 +19,10 @@ Ce document récapitule l'état exact du projet, les acquis techniques garantis 
 | **Clôture de Caisse (Z)** | Billetage physique vs théorique, détection d'écarts et export du bilan journalier. |
 | **Synchronisation Supabase** | `useOfflineSync` orchestre l'envoi en arrière-plan. Zéro conflit d'écrasement. |
 | **Temps réel Inter-appareils** | WebSockets Supabase Realtime + actualisation automatique dès réouverture de l'écran sur mobile. |
-| **Stockage & Quotas** | IndexedDB stocke 100% de l'historique sans limite. LocalStorage allégé à 250 ventes + alerte `cahier_storage_full`. |
+| **Stockage & Quotas (DT-1)** | Unification complète : IndexedDB est l'unique source de vérité autoritaire (stockage illimité), avec cache mémoire ultra-réactif (0 ms). LocalStorage réduit à un miroir allégé. |
 | **Intégrité Comptable** | La suppression d'un produit ne détruit jamais l'historique des ventes passées. Réconciliation FIFO automatique des dettes. |
 | **Audit Logs Offline** | Stockage dans `sync_queue` et dépilement automatique à la reconnexion. |
-| **Compilation & Tests** | `npm run build` passe à 100% (20/20 pages), `npm test` passe à 10/10. |
+| **Compilation & Tests** | `npm run build` passe à 100% (20/20 routes), `npm test` passe à 10/10, `npm run test:e2e` passe à 4/4. |
 
 ---
 
@@ -31,8 +31,8 @@ Ce document récapitule l'état exact du projet, les acquis techniques garantis 
 1. **`useOfflineSync`** : La logique est stabilisée et vérifiée, on ne la reconstruit pas.
 2. **Migrations RLS** : La migration 022 est solide, aucun retour en arrière.
 3. **`localDb.ts`** : Fallback mémoire dev/test, ne jamais réintroduire d'écriture disque.
-4. **`offlineDb.ts`** : Pas de refonte complète, chirurgie ciblée uniquement.
-5. **Persistence v2 (DT-1)** : Fusion IndexedDB/localStorage réservée pour une phase ultérieure sous couverture de tests E2E.
+4. **`offlineDb.ts`** : Architecture de persistance unifiée sur IndexedDB + cache mémoire (0 ms).
+5. **Persistence (DT-1)** : Unification validée sous couverture de tests unitaires et E2E Playwright.
 
 ---
 
@@ -45,3 +45,4 @@ Ce document récapitule l'état exact du projet, les acquis techniques garantis 
 | **Option B : Stock Avancé & Cartons/Pièces** | ✅ **Livré** | Décomposition cartons ↔ pièces, valorisation/marges en direct, et approvisionnement automatique 1-clic des alertes stock bas vers la liste de courses (`f6bf718`). |
 | **Phase 3 : Tests E2E Playwright** | ✅ **Actif & Validé** | Tests E2E automatisés Chromium (`npm run test:e2e`) : parcours caisse express, bandeau monnaie, reçu WhatsApp et navigation inter-onglets (`4d5786b`). |
 | **Phase 3 (DT-2) : Typage Strict Database** | ✅ **Livré** | Typage Supabase strict (`Database['public']['Tables']`) sur `/api/sales`, `/api/stock`, `/api/debts` et assainissement des entités (`6460f17`). Zéro `any`. |
+| **Phase 3 (DT-1) : Unification IndexedDB** | ✅ **Livré** | IndexedDB devient le moteur de persistance unique et autoritaire pour les ventes, le stock, les dettes, la liste de courses et les clôtures Z. Cache mémoire 0 ms, fin des limitations et risques de QuotaExceededError. |
