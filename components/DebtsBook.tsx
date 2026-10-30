@@ -5,8 +5,10 @@ import { DebtSummaryCards } from '@/components/debts/DebtSummaryCards'
 import { DebtFilterBar } from '@/components/debts/DebtFilterBar'
 import { DebtItemCard } from '@/components/debts/DebtItemCard'
 import { DebtRepaymentModal } from '@/components/sales/DebtRepaymentModal'
-import { saveOfflineSale, generateOfflineId, getOfflineSales, markAsSynced, OfflineSale } from '@/lib/offlineDb'
+import { saveOfflineSale, generateOfflineId, getOfflineSales, OfflineSale } from '@/lib/offlineDb'
+import { authenticatedFetch } from '@/lib/client/authenticatedFetch'
 import { getTodayDateString } from '@/lib/dateUtils'
+
 interface Debt {
   id: string
   client_name: string
@@ -47,8 +49,8 @@ export function DebtsBook({
     let apiDebts: Debt[] = []
     if (!shopId) return
     try {
-      const res = await fetch('/api/debts', {
-        headers: { 'x-shop-id': shopId },
+      const res = await authenticatedFetch('/api/debts', {
+        shopId,
         cache: 'no-store'
       })
       if (res.ok) {
@@ -66,7 +68,6 @@ export function DebtsBook({
     if (salesToMerge && salesToMerge.length > 0) {
       const mergedDebts = [...apiDebts]
       
-      // On ne prend que les ventes qui n'ont pas encore été synchronisées avec l'API
       const unsyncedSales = salesToMerge.filter(s => s.status !== 'crossed_out' && s.is_synced === false)
 
       const processSales = (filteredSales: any[], type: 'client' | 'supplier') => {
@@ -104,7 +105,6 @@ export function DebtsBook({
       const suppSales = unsyncedSales.filter(s => s.type === 'purchase_credit' || s.type === 'payment_supplier')
       processSales(suppSales, 'supplier')
 
-      // Mettre à jour l'état final
       setDebts(mergedDebts)
     } else {
       setDebts(apiDebts)
@@ -161,18 +161,6 @@ export function DebtsBook({
         await onSettleDebt(debt.id, repayAmount, customNotes, debt.client_name, isSupplier)
       } else {
         saveOfflineSale(shopId, newSale)
-        const response = await fetch('/api/sales', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-shop-id': shopId },
-          body: JSON.stringify({
-            overrideData: newSale,
-            type: newSale.type,
-            penColor: newSale.pen_color,
-          }),
-        })
-        if (response.ok) {
-          markAsSynced(shopId, saleId)
-        }
       }
     } catch (e) {
       console.warn('Mode hors-ligne : remboursement enregistré localement')
@@ -190,6 +178,7 @@ export function DebtsBook({
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('cahier_sale_created'))
       window.dispatchEvent(new CustomEvent('cahier_sales_updated'))
+      window.dispatchEvent(new CustomEvent('cahier_local_sale_created'))
     }
   }
 

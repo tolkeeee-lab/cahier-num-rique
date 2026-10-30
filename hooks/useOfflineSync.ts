@@ -3,13 +3,14 @@
 /**
  * useOfflineSync.ts
  *
- * Responsabilité unique : synchroniser automatiquement les ventes
- * hors-ligne dès que la connexion revient.
+ * Responsabilité unique : synchroniser automatiquement toutes les données
+ * hors-ligne (ventes, produits, clôtures de caisse, liste de courses, audit)
+ * dès que la connexion revient.
  *
- * - Écoute le retour en ligne via `isOnline`
- * - Envoie les ventes en attente (`getPendingSync`) à l'API
- * - Marque chaque vente comme `synced` ou `error`
- * - Retry automatique toutes les 30s pour les ventes en erreur
+ * - Écoute le retour en ligne via `isOnline` ou les événements de saisie
+ * - Envoie les données en attente munies des tokens Bearer d'authentification
+ * - Marque chaque élément comme `synced` ou `error`
+ * - Retry automatique toutes les 30s pour les éléments en erreur
  * - Met à jour le badge de sync dans l'UI via callbacks
  */
 
@@ -28,6 +29,7 @@ import {
 } from '@/lib/offlineDb'
 import { idbGetSyncQueue, idbRemoveSyncItem } from '@/lib/indexedDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
+import { authenticatedFetch, getValidAccessToken } from '@/lib/client/authenticatedFetch'
 import type { SyncStatus } from '@/hooks/useNetworkStatus'
 
 interface UseOfflineSyncOptions {
@@ -72,32 +74,25 @@ export function useOfflineSync({
     const pendingShopping = getOfflineShoppingList(shopId).filter(i => i.is_synced === false)
     const pendingSyncQueue = await idbGetSyncQueue(shopId)
 
-    if (toSync.length === 0 && pendingProducts.length === 0 && pendingClosings.length === 0 && pendingShopping.length === 0 && pendingSyncQueue.length === 0) return
+    if (
+      toSync.length === 0 &&
+      pendingProducts.length === 0 &&
+      pendingClosings.length === 0 &&
+      pendingShopping.length === 0 &&
+      pendingSyncQueue.length === 0
+    ) {
+      return
+    }
 
     isSyncing.current = true
     setSyncStatus('syncing')
 
-    // Les API de synchronisation sont protégées par un Bearer token.
-    // La session Supabase persiste côté client même hors ligne ; au retour réseau,
-    // on la rafraîchit si nécessaire avant d'envoyer les opérations en attente.
-    let accessToken: string | null = null
-    if (isSupabaseClientConfigured()) {
-      const { data: sessionData } = await supabaseClient.auth.getSession()
-      accessToken = sessionData.session?.access_token ?? null
-
-      if (!accessToken) {
-        const { data: refreshed } = await supabaseClient.auth.refreshSession()
-        accessToken = refreshed.session?.access_token ?? null
-      }
-    }
-
-    if (!accessToken) {
+    const accessToken = await getValidAccessToken()
+    if (!accessToken && isSupabaseClientConfigured()) {
       isSyncing.current = false
       setSyncStatus('error')
       return
     }
-
-    const authHeaders = { Authorization: `Bearer ${accessToken}` }
 
     let successCount = 0
     let errorCount = 0
@@ -106,13 +101,9 @@ export function useOfflineSync({
     const pendingAuditLogs = pendingSyncQueue.filter(item => item.action === 'audit_log')
     for (const auditItem of pendingAuditLogs) {
       try {
-        const response = await fetch('/api/audit-logs', {
+        const response = await authenticatedFetch('/api/audit-logs', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-            ...authHeaders,
-          },
+          shopId,
           body: JSON.stringify(auditItem.payload),
         })
         if (response.ok) {
@@ -127,13 +118,9 @@ export function useOfflineSync({
     // 1. Synchronisation des Produits créés ou modifiés hors-ligne
     for (const prod of pendingProducts) {
       try {
-        const response = await fetch('/api/stock', {
+        const response = await authenticatedFetch('/api/stock', {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-            ...authHeaders,
-          },
+          shopId,
           body: JSON.stringify(prod),
         })
         if (response.ok) {
@@ -151,13 +138,9 @@ export function useOfflineSync({
     // 2. Synchronisation des Clôtures de Caisse hors-ligne (Z)
     for (const closing of pendingClosings) {
       try {
-        const response = await fetch('/api/cash-closings', {
+        const response = await authenticatedFetch('/api/cash-closings', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
-            ...authHeaders,
-          },
+          shopId,
           body: JSON.stringify(closing),
         })
         if (response.ok) {
@@ -207,13 +190,11 @@ export function useOfflineSync({
     // 4. Synchronisation des Ventes hors-ligne
     for (const sale of toSync) {
       try {
-        const response = await fetch('/api/sales', {
+        const response = await authenticatedFetch('/api/sales', {
           method: 'POST',
+          shopId,
           headers: {
-            'Content-Type': 'application/json',
-            'x-shop-id': shopId,
             'x-shop-activity': shopActivity,
-            ...authHeaders,
           },
           body: JSON.stringify({
             id: sale.id,
