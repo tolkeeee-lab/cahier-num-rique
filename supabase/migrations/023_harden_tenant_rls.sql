@@ -345,6 +345,7 @@ DROP POLICY IF EXISTS "market_knowledge_select" ON public.market_knowledge;
 DROP POLICY IF EXISTS "market_knowledge_insert" ON public.market_knowledge;
 DROP POLICY IF EXISTS "market_knowledge_update" ON public.market_knowledge;
 DROP POLICY IF EXISTS "market_knowledge_delete" ON public.market_knowledge;
+DROP POLICY IF EXISTS "market_knowledge_authenticated_select" ON public.market_knowledge;
 
 CREATE POLICY "market_knowledge_authenticated_select"
 ON public.market_knowledge
