@@ -20,6 +20,7 @@ interface Debt {
 
 export interface DebtsBookProps {
   shopId?: string
+  shopName?: string
   sales?: any[]
   currentCash?: number
   onSettleDebt?: (debtId: string, amount: number, notes?: string, clientName?: string, isSupplier?: boolean) => Promise<void>
@@ -28,7 +29,8 @@ export interface DebtsBookProps {
 }
 
 export function DebtsBook({
-  shopId = 'default-shop',
+  shopId = '',
+  shopName = 'Ma Boutique',
   sales,
   currentCash,
   onSettleDebt,
@@ -43,6 +45,7 @@ export function DebtsBook({
 
   const loadDebts = useCallback(async (currentSales?: any[]) => {
     let apiDebts: Debt[] = []
+    if (!shopId) return
     try {
       const res = await fetch('/api/debts', {
         headers: { 'x-shop-id': shopId },
@@ -241,6 +244,7 @@ export function DebtsBook({
             <DebtItemCard
               key={debt.id}
               debt={debt}
+              shopName={shopName}
               onOpenRepaymentModal={(d) => setActiveRepayDebt(d)}
             />
           ))}

@@ -947,6 +947,7 @@ export default function JournalPage() {
                   onSettleDebt={async (_debtId, amount, notes, clientName, isSupplier) => {
                     await journalData.settleDebt(clientName || '', amount, isSupplier, notes)
                   }}
+                  shopName={shopManager.userShops?.find(s => s.id === shopManager.shopId)?.name || 'Ma Boutique'}
                   onRefreshTotals={journalData.reloadData} 
                   onError={setPostItMessage} 
                 />

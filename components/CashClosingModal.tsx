@@ -53,7 +53,7 @@ export function CashClosingModal({
   onClose,
   sales,
   shopName = 'Cahier Numérique',
-  shopId = 'default-shop',
+  shopId = '',
 }: CashClosingModalProps) {
   const [activeTab, setActiveTab] = useState<'closing' | 'history'>('closing')
   const [openingCashInput, setOpeningCashInput] = useState<string>('')
@@ -81,7 +81,7 @@ export function CashClosingModal({
     setHistoryClosings(closings)
 
     // Synchronisation en tâche de fond avec le serveur
-    if (typeof window !== 'undefined' && navigator.onLine) {
+    if (typeof window !== 'undefined' && navigator.onLine && shopId) {
       fetch(`/api/cash-closings?shop_id=${encodeURIComponent(shopId)}`, {
         headers: { 'x-shop-id': shopId }
       })
@@ -213,7 +213,7 @@ export function CashClosingModal({
     })
 
     // 2. Synchronisation serveur en tâche de fond si connecté
-    if (typeof window !== 'undefined' && navigator.onLine) {
+    if (typeof window !== 'undefined' && navigator.onLine && shopId) {
       try {
         const res = await fetch('/api/cash-closings', {
           method: 'POST',

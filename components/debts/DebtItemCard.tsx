@@ -19,11 +19,26 @@ interface Debt {
 
 interface DebtItemCardProps {
   debt: Debt
+  shopName?: string
   onOpenRepaymentModal?: (debt: Debt) => void
+}
+
+function extractPhoneNumber(str?: string): string {
+  if (!str) return ''
+  const match = str.match(/(?:\+?\d{1,4}[\s-]?)?(?:0\d{9}|\d{8,12})/)
+  if (match) {
+    const raw = match[0].replace(/[^\d+]/g, '')
+    if (raw.length === 10 && raw.startsWith('0')) {
+      return `225${raw.slice(1)}`
+    }
+    return raw.replace(/^\+/, '')
+  }
+  return ''
 }
 
 export const DebtItemCard: React.FC<DebtItemCardProps> = ({
   debt,
+  shopName,
   onOpenRepaymentModal,
 }) => {
   const isSettled = debt.status === 'settled' || debt.amount_owed <= 0
@@ -35,10 +50,14 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
 
   const handleSendWhatsAppReminder = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const text = encodeURIComponent(
-      `Bonjour ${debt.client_name}, nous vous rappelons amicalement qu'il reste un solde impayé de ${formatPrice(debt.amount_owed)} sur votre compte chez notre boutique. Merci de passer pour régulariser.`
-    )
-    window.open(`https://wa.me/?text=${text}`, '_blank')
+    const targetPhone = extractPhoneNumber(debt.notes) || extractPhoneNumber(debt.client_name)
+    const storeLabel = shopName ? `*${shopName}*` : 'notre boutique'
+    const message = `Bonjour ${debt.client_name},\n\nNous vous rappelons amicalement qu'il reste un solde impayé de *${formatPrice(debt.amount_owed)}* sur votre compte chez ${storeLabel}.\n\nMerci de bien vouloir passer à la boutique pour régulariser votre situation.\nExcellente journée !`
+
+    const url = targetPhone
+      ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(url, '_blank')
   }
 
   return (
@@ -106,9 +125,9 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                   type="button"
                   onClick={handleSendWhatsAppReminder}
                   className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 active:scale-[0.97] text-emerald-800 border border-emerald-300 transition-all duration-100 ease-out cursor-pointer"
-                  title="Relancer par WhatsApp"
+                  title="Relancer par WhatsApp (1-Clic)"
                 >
-                  <Share2 className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  <Share2 className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
                 </button>
               )}
 
