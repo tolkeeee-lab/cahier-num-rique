@@ -392,7 +392,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             .on(
               'postgres_changes',
               { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${id}` },
-              (payload: any) => {
+              () => {
                 if (isMounted) {
                   // Rechargement immédiat de la caisse dès qu'une vente est faite sur un autre appareil
                   reloadData()
