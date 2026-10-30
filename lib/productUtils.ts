@@ -205,20 +205,20 @@ export function findDuplicateCandidates(
 export interface CleanableProduct {
   id?: string
   name: string
-  category?: string
-  unit?: string
-  initial_stock?: number
-  unit_cost?: number
-  unit_price?: number
-  multiplier?: number
-  packaging_name?: string
-  lot_quantity?: number
-  lot_price?: number
-  packages_count?: number
-  package_cost?: number
-  wholesale_price?: number
-  half_package_price?: number
-  quarter_package_price?: number
+  category?: string | null
+  unit?: string | null
+  initial_stock?: number | null
+  unit_cost?: number | null
+  unit_price?: number | null
+  multiplier?: number | null
+  packaging_name?: string | null
+  lot_quantity?: number | null
+  lot_price?: number | null
+  packages_count?: number | null
+  package_cost?: number | null
+  wholesale_price?: number | null
+  half_package_price?: number | null
+  quarter_package_price?: number | null
   [key: string]: any
 }
 

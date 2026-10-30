@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, Database } from '@/lib/supabase'
+import type { OfflineSale } from '@/lib/offlineDb'
 import { randomUUID } from 'crypto'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 import { isSupabaseConfigured, getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
@@ -8,6 +9,20 @@ import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { fetchSalesHistory, feedMarketKnowledge } from '@/lib/sales/salesRepository'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+
+type SaleInsert = Database['public']['Tables']['sales']['Insert']
+type SaleUpdate = Database['public']['Tables']['sales']['Update']
+type SoldArticleInsert = Database['public']['Tables']['sold_articles']['Insert']
+
+interface RawSaleArticleInput {
+  nom?: string
+  name?: string
+  quantite?: number
+  quantity?: number
+  prix_unitaire?: number
+  unit_price?: number
+}
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,11 +45,11 @@ export async function POST(request: NextRequest) {
 
     if (overrideData) {
       parsedData = {
-        articles: (overrideData.articles || []).map((a: any) => ({
-          nom: a.name || a.nom,
-          quantite: a.quantity || a.quantite,
-          prix_unitaire: a.unit_price || a.prix_unitaire
-        })),
+        articles: (((overrideData.articles as RawSaleArticleInput[] | undefined) || []).map(a => ({
+          nom: a.name || a.nom || 'Article',
+          quantite: Number(a.quantity ?? a.quantite ?? 1),
+          prix_unitaire: Number(a.unit_price ?? a.prix_unitaire ?? 0)
+        }))),
         total_facture: overrideData.total_amount,
         montant_paye: overrideData.paid_amount,
         montant_dette: overrideData.debt_amount,
@@ -99,7 +114,7 @@ export async function POST(request: NextRequest) {
     const finalNotes = overrideData?.notes ?? text ?? ''
     const resolvedStatus = body.status || overrideData?.status || ((calculatedDebt > 0 && (type === 'sale_credit' || type === 'purchase_credit')) ? 'debt' : 'paid')
 
-    const saleRecord = {
+    const saleRecord: SaleInsert = {
       id: saleId,
       shop_id: shopId,
       created_at: createdAtStr,
@@ -136,13 +151,13 @@ export async function POST(request: NextRequest) {
           // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de retry
           await supabase.from('sold_articles').delete().eq('sale_id', saleId)
 
-          const soldArticlesRecords = parsedData.articles.map((a: any) => {
-            const qty = a.quantite || a.quantity || 1;
-            const price = a.prix_unitaire || a.unit_price || 0;
+          const soldArticlesRecords: SoldArticleInsert[] = parsedData.articles.map(a => {
+            const qty = a.quantite || 1;
+            const price = a.prix_unitaire || 0;
             return {
               sale_id: saleId,
               shop_id: shopId,
-              product_name: a.nom || a.name,
+              product_name: a.nom,
               quantity: qty,
               unit_price: price,
               subtotal: qty * price
@@ -164,10 +179,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, sale: newSale })
-  } catch (err: any) {
-    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
+  } catch (err: unknown) {
+    if ((err as { status?: number })?.status === 401 || (err as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur dans POST /api/sales :', err)
-    return NextResponse.json({ error: err?.message || 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json({ error: (err as Error)?.message || 'Erreur serveur' }, { status: 500 })
   }
 }
 
@@ -185,9 +200,9 @@ export async function GET(request: NextRequest) {
     const sales = await fetchSalesHistory(dateParam === 'all' ? null : dateParam, shopId)
     const cashDrawer = await getCurrentCash(shopId)
     return NextResponse.json({ sales, cashDrawer })
-  } catch (err: any) {
-    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
-    return NextResponse.json({ error: err?.message || 'Erreur d\'extraction' }, { status: 500 })
+  } catch (err: unknown) {
+    if ((err as { status?: number })?.status === 401 || (err as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(err)
+    return NextResponse.json({ error: (err as Error)?.message || 'Erreur d\'extraction' }, { status: 500 })
   }
 }
 
@@ -253,7 +268,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: any) => s.id === id && (targetShopIds.includes(s.shop_id) || !s.shop_id))
+      const idx = localSales.findIndex((s: Partial<OfflineSale>) => s.id === id && (targetShopIds.includes(s.shop_id || '') || !s.shop_id))
       if (idx !== -1) {
         const sale = localSales[idx]
         const addedAmount = parsed.total_facture || 0
@@ -280,9 +295,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'update_sale') {
-      const updatedArticles = articles || []
-      const newTotal = updatedArticles.reduce((acc: number, a: any) => acc + ((a.quantity || a.quantite || 0) * (a.unit_price || a.prix_unitaire || 0)), 0)
-      const newNotes = updatedArticles.map((a: any) => `${a.quantity} ${a.name} à ${a.unit_price}`).join(', ')
+      const updatedArticles: RawSaleArticleInput[] = articles || []
+      const newTotal = updatedArticles.reduce((acc: number, a) => acc + ((a.quantity || a.quantite || 0) * (a.unit_price || a.prix_unitaire || 0)), 0)
+      const newNotes = updatedArticles.map(a => `${a.quantity || a.quantite || 1} ${a.name || a.nom || ''} à ${a.unit_price || a.prix_unitaire || 0}`).join(', ')
 
       if (isSupabaseConfigured() && supabase) {
         const { data: currentSale } = await supabase
@@ -295,7 +310,7 @@ export async function PATCH(request: NextRequest) {
           const isCashIn = currentSale.type === 'cash_in'
           const newPaid = isCashIn ? newTotal : (currentSale.paid_amount || 0)
           const newDebt = currentSale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
-          const patchObj: any = {
+          const patchObj: SaleUpdate = {
             total_amount: newTotal,
             paid_amount: newPaid,
             debt_amount: newDebt,
@@ -308,7 +323,7 @@ export async function PATCH(request: NextRequest) {
           await supabase.from('sold_articles').delete().eq('sale_id', id)
           if (updatedArticles.length > 0) {
             await supabase.from('sold_articles').insert(
-              updatedArticles.map((a: any) => ({
+              updatedArticles.map(a => ({
                 sale_id: id,
                 shop_id: currentSale.shop_id || shopId,
                 product_name: a.name || a.nom,
@@ -322,7 +337,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: any) => s.id === id && (targetShopIds.includes(s.shop_id) || !s.shop_id))
+      const idx = localSales.findIndex((s: Partial<OfflineSale>) => s.id === id && (targetShopIds.includes(s.shop_id || '') || !s.shop_id))
       if (idx !== -1) {
         const sale = localSales[idx]
         const isCashIn = sale.type === 'cash_in'
@@ -333,7 +348,7 @@ export async function PATCH(request: NextRequest) {
         sale.debt_amount = newDebt
         sale.notes = newNotes
         if (clientName) sale.client_name = clientName
-        sale.articles = updatedArticles.map((a: any) => ({
+        sale.articles = updatedArticles.map(a => ({
           name: a.name || a.nom,
           quantity: a.quantity || a.quantite,
           unit_price: a.unit_price || a.prix_unitaire,
@@ -350,7 +365,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: true })
       }
       const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: any) => s.id === id && (targetShopIds.includes(s.shop_id) || !s.shop_id))
+      const idx = localSales.findIndex((s: Partial<OfflineSale>) => s.id === id && (targetShopIds.includes(s.shop_id || '') || !s.shop_id))
       if (idx !== -1) {
         localSales[idx].category = category
         saveLocalDb(localSales)
@@ -370,7 +385,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: true })
       }
       const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: any) => s.id === id && (targetShopIds.includes(s.shop_id) || !s.shop_id))
+      const idx = localSales.findIndex((s: Partial<OfflineSale>) => s.id === id && (targetShopIds.includes(s.shop_id || '') || !s.shop_id))
       if (idx !== -1) {
         localSales[idx].debt_amount = Number(debt_amount || 0)
         localSales[idx].paid_amount = Number(paid_amount || 0)
@@ -382,9 +397,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Action inconnue' }, { status: 400 })
-  } catch (err: any) {
-    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
+  } catch (err: unknown) {
+    if ((err as { status?: number })?.status === 401 || (err as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur dans PATCH /api/sales :', err)
-    return NextResponse.json({ error: err?.message || 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json({ error: (err as Error)?.message || 'Erreur serveur' }, { status: 500 })
   }
 }

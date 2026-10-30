@@ -1,11 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, Database } from '@/lib/supabase'
+import type { OfflineSale } from '@/lib/offlineDb'
 import { randomUUID } from 'crypto'
 export const dynamic = 'force-dynamic'
 import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 import { calculateCash } from '@/lib/sales/cashDrawerCalculator'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+type SaleRow = Database['public']['Tables']['sales']['Row']
+type DebtRow = Database['public']['Tables']['debts']['Row']
+type SupplierDebtRow = Database['public']['Tables']['supplier_debts']['Row']
+type LocalSaleItem = Partial<OfflineSale> & {
+  client_name?: string
+  total_amount?: number
+  paid_amount?: number
+  debt_amount?: number
+}
+
+interface DebtHistoryEntry {
+  id: string
+  date: string
+  time: string
+  description: string
+  amount: number
+}
+
+interface NormalizedDebtItem {
+  id: string
+  client_name: string
+  amount_owed: number
+  paid_amount: number
+  status: 'settled' | 'pending'
+  history: DebtHistoryEntry[]
+  debt_type: 'client' | 'supplier'
+}
+
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -19,7 +48,7 @@ async function getCurrentCash(shopId: string): Promise<number> {
   return calculateCash(salesList)
 }
 
-async function getAllSales(shopId: string): Promise<any[]> {
+async function getAllSales(shopId: string): Promise<SaleRow[] | LocalSaleItem[]> {
   const targetShopIds = getDualShopIds(shopId)
   if (isSupabaseConfigured()) {
     try {
@@ -29,7 +58,7 @@ async function getAllSales(shopId: string): Promise<any[]> {
       console.error('Erreur Supabase dans debts API:', e)
     }
   }
-  return getLocalDb().filter((s: any) => targetShopIds.includes(s.shop_id))
+  return (getLocalDb() as LocalSaleItem[]).filter(s => targetShopIds.includes(s.shop_id || ''))
 }
 
 export async function GET(request: NextRequest) {
@@ -46,7 +75,7 @@ export async function GET(request: NextRequest) {
       // Logic for explicit supplier request (maybe used elsewhere, keep it)
       if (isSupabaseConfigured()) {
         try {
-          const { data: debts } = await supabase.from('supplier_debts').select('*').in('shop_id', targetShopIds).order('supplier_name', { ascending: true })
+          const { data: debts } = await supabase.from('supplier_debts').select('*').in('shop_id', targetShopIds).order('supplier_name', { ascending: true }) as { data: SupplierDebtRow[] | null }
           const { data: sales } = await supabase.from('sales').select('*').in('shop_id', targetShopIds).in('type', ['purchase_credit', 'payment_supplier'])
 
           const suppMap = new Map<string, string>()
@@ -69,9 +98,9 @@ export async function GET(request: NextRequest) {
             const history = (sales || [])
               .filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out')
               .map(s => ({
-                id: s.id,
-                date: s.date,
-                time: s.time,
+                id: s.id || randomUUID(),
+                date: s.date || '',
+                time: s.time || '',
                 description: s.type === 'purchase_credit' ? `Achat à crédit: ${s.notes || 'Articles divers'}` : 'Remboursement fournisseur',
                 amount: s.type === 'purchase_credit' ? s.debt_amount : -s.paid_amount
               }))
@@ -99,12 +128,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Default: return BOTH clients and suppliers for DebtsBook.tsx
-    let allDebts: any[] = []
+    let allDebts: NormalizedDebtItem[] = []
     
     if (isSupabaseConfigured()) {
       try {
         // --- CLIENTS ---
-        const { data: cDebts } = await supabase.from('debts').select('*').in('shop_id', targetShopIds)
+        const { data: cDebts } = await supabase.from('debts').select('*').in('shop_id', targetShopIds) as { data: DebtRow[] | null }
         const { data: cSales } = await supabase.from('sales').select('*').in('shop_id', targetShopIds).in('type', ['sale_credit', 'payment_client'])
         
         // Regroupement insensible à la casse et sans espaces résiduels
@@ -119,14 +148,14 @@ export async function GET(request: NextRequest) {
             }
           })
 
-        const clientList = Array.from(clientNameMap.values()).map(name => {
+        const clientList: NormalizedDebtItem[] = Array.from(clientNameMap.values()).map(name => {
           const lowerName = name.toLowerCase().trim()
           const clientDebts = (cDebts || []).filter(d => (d.client_name || '').toLowerCase().trim() === lowerName)
           const legacyOwed = clientDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
           const legacyPaid = clientDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
           
           const history = (cSales || []).filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out').map(s => ({
-            id: s.id, date: s.date, time: s.time,
+            id: s.id || randomUUID(), date: s.date || '', time: s.time || '',
             description: s.type === 'sale_credit' ? `Achat à crédit: ${s.notes || 'Articles divers'}` : 'Remboursement crédit',
             amount: s.type === 'sale_credit' ? s.debt_amount : -s.paid_amount
           }))
@@ -162,7 +191,7 @@ export async function GET(request: NextRequest) {
             }
           })
 
-        const supplierList = Array.from(suppNameMap.values()).map(name => {
+        const supplierList: NormalizedDebtItem[] = Array.from(suppNameMap.values()).map(name => {
           const lowerName = name.toLowerCase().trim()
           const supplierDebts = (sDebts || []).filter(d => (d.supplier_name || '').toLowerCase().trim() === lowerName)
           const legacyOwed = supplierDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
@@ -197,15 +226,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Local fallback
-    const localClients = getLocalClients(shopId).map((c: any) => ({
+    const localClients: NormalizedDebtItem[] = getLocalClients(shopId).map(c => ({
       id: c.id, client_name: c.name, amount_owed: c.amount, paid_amount: c.paid, status: c.status, history: c.history, debt_type: 'client'
     }))
-    const localSuppliers = getLocalSuppliers(shopId).map((c: any) => ({
+    const localSuppliers: NormalizedDebtItem[] = getLocalSuppliers(shopId).map(c => ({
       id: c.id, client_name: c.name, amount_owed: c.amount, paid_amount: c.paid, status: c.status, history: c.history, debt_type: 'supplier'
     }))
     return NextResponse.json({ debts: [...localClients, ...localSuppliers] })
   } catch (error) {
-    if ((error as any)?.status === 401 || (error as any)?.status === 403) return shopAuthorizationErrorResponse(error)
+    if ((error as { status?: number })?.status === 401 || (error as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(error)
     console.error('Erreur API GET debts:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
@@ -327,7 +356,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, sale: newSale })
   } catch (error) {
-    if ((error as any)?.status === 401 || (error as any)?.status === 403) return shopAuthorizationErrorResponse(error)
+    if ((error as { status?: number })?.status === 401 || (error as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(error)
     console.error('Erreur POST debts:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
@@ -336,11 +365,11 @@ export async function POST(request: NextRequest) {
 // Helpers locaux en mémoire pour l'extraction dynamique
 function getLocalClients(shopId: string) {
   const targetShopIds = getDualShopIds(shopId)
-  const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && targetShopIds.includes(s.shop_id))
+  const sales = (getLocalDb() as LocalSaleItem[]).filter(s => s.status !== 'crossed_out' && targetShopIds.includes(s.shop_id || ''))
   const clientNameMap = new Map<string, string>()
   sales
-    .filter((s: any) => (s.type === 'sale_credit' || s.type === 'payment_client') && s.client_name)
-    .forEach((s: any) => {
+    .filter(s => (s.type === 'sale_credit' || s.type === 'payment_client') && (s.client || s.client_name))
+    .forEach(s => {
       const trimmed = String(s.client_name).trim()
       const lower = trimmed.toLowerCase()
       if (!clientNameMap.has(lower)) {
@@ -350,20 +379,20 @@ function getLocalClients(shopId: string) {
   
   return Array.from(clientNameMap.values()).map(name => {
     const lower = name.toLowerCase().trim()
-    const clientSales = sales.filter((s: any) => (s.client_name || '').toLowerCase().trim() === lower)
-    const credits = clientSales.filter((s: any) => s.type === 'sale_credit').reduce((sum: number, s: any) => sum + (s.debt_amount ?? s.total_amount ?? 0), 0)
-    const downPayments = clientSales.filter((s: any) => s.type === 'sale_credit').reduce((sum: number, s: any) => sum + (s.paid_amount || 0), 0)
-    const payments = clientSales.filter((s: any) => s.type === 'payment_client').reduce((sum: number, s: any) => sum + (s.paid_amount ?? s.total_amount ?? 0), 0)
+    const clientSales = sales.filter(s => ((s.client || s.client_name) || '').toLowerCase().trim() === lower)
+    const credits = clientSales.filter(s => s.type === 'sale_credit').reduce((sum: number, s) => sum + (s.debt ?? s.debt_amount ?? s.total ?? s.total_amount ?? 0), 0)
+    const downPayments = clientSales.filter(s => s.type === 'sale_credit').reduce((sum: number, s) => sum + (s.paid ?? s.paid_amount ?? 0), 0)
+    const payments = clientSales.filter(s => s.type === 'payment_client').reduce((sum: number, s) => sum + (s.paid ?? s.paid_amount ?? s.total ?? s.total_amount ?? 0), 0)
     const balance = Math.max(0, credits - payments)
 
-    const history = clientSales
-      .filter((s: any) => s.type === 'sale_credit' || s.type === 'payment_client')
-      .map((s: any) => ({
-        id: s.id,
-        date: s.date,
-        time: s.time,
+    const history: DebtHistoryEntry[] = clientSales
+      .filter(s => s.type === 'sale_credit' || s.type === 'payment_client')
+      .map(s => ({
+        id: s.id || randomUUID(),
+        date: s.date || '',
+        time: s.time || '',
         description: s.notes || (s.type === 'sale_credit' ? 'Achat à crédit' : 'Remboursement crédit'),
-        amount: s.type === 'sale_credit' ? (s.debt_amount ?? s.total_amount) : -(s.paid_amount ?? s.total_amount)
+        amount: Number(s.type === 'sale_credit' ? (s.debt ?? s.debt_amount ?? s.total ?? s.total_amount ?? 0) : -Number(s.paid ?? s.paid_amount ?? s.total ?? s.total_amount ?? 0))
       }))
 
     return {
@@ -371,7 +400,7 @@ function getLocalClients(shopId: string) {
       name,
       amount: balance,
       paid: payments + downPayments,
-      status: balance === 0 ? 'settled' : 'pending',
+      status: (balance === 0 ? 'settled' : 'pending') as 'settled' | 'pending',
       history
     }
   })
@@ -379,11 +408,11 @@ function getLocalClients(shopId: string) {
 
 function getLocalSuppliers(shopId: string) {
   const targetShopIds = getDualShopIds(shopId)
-  const sales = getLocalDb().filter((s: any) => s.status !== 'crossed_out' && targetShopIds.includes(s.shop_id))
+  const sales = (getLocalDb() as LocalSaleItem[]).filter(s => s.status !== 'crossed_out' && targetShopIds.includes(s.shop_id || ''))
   const suppNameMap = new Map<string, string>()
   sales
-    .filter((s: any) => (s.type === 'purchase_credit' || s.type === 'payment_supplier') && s.client_name)
-    .forEach((s: any) => {
+    .filter(s => (s.type === 'purchase_credit' || s.type === 'payment_supplier') && (s.client || s.client_name))
+    .forEach(s => {
       const trimmed = String(s.client_name).trim()
       const lower = trimmed.toLowerCase()
       if (!suppNameMap.has(lower)) {
@@ -393,20 +422,20 @@ function getLocalSuppliers(shopId: string) {
 
   return Array.from(suppNameMap.values()).map(name => {
     const lower = name.toLowerCase().trim()
-    const supplierSales = sales.filter((s: any) => (s.client_name || '').toLowerCase().trim() === lower)
-    const credits = supplierSales.filter((s: any) => s.type === 'purchase_credit').reduce((sum: number, s: any) => sum + (s.debt_amount ?? s.total_amount ?? 0), 0)
-    const downPayments = supplierSales.filter((s: any) => s.type === 'purchase_credit').reduce((sum: number, s: any) => sum + (s.paid_amount || 0), 0)
-    const payments = supplierSales.filter((s: any) => s.type === 'payment_supplier').reduce((sum: number, s: any) => sum + (s.paid_amount ?? s.total_amount ?? 0), 0)
+    const supplierSales = sales.filter(s => ((s.client || s.client_name) || '').toLowerCase().trim() === lower)
+    const credits = supplierSales.filter(s => s.type === 'purchase_credit').reduce((sum: number, s) => sum + (s.debt ?? s.debt_amount ?? s.total ?? s.total_amount ?? 0), 0)
+    const downPayments = supplierSales.filter(s => s.type === 'purchase_credit').reduce((sum: number, s) => sum + (s.paid ?? s.paid_amount ?? 0), 0)
+    const payments = supplierSales.filter(s => s.type === 'payment_supplier').reduce((sum: number, s) => sum + (s.paid ?? s.paid_amount ?? s.total ?? s.total_amount ?? 0), 0)
     const balance = Math.max(0, credits - payments)
 
-    const history = supplierSales
-      .filter((s: any) => s.type === 'purchase_credit' || s.type === 'payment_supplier')
-      .map((s: any) => ({
-        id: s.id,
-        date: s.date,
-        time: s.time,
+    const history: DebtHistoryEntry[] = supplierSales
+      .filter(s => s.type === 'purchase_credit' || s.type === 'payment_supplier')
+      .map(s => ({
+        id: s.id || randomUUID(),
+        date: s.date || '',
+        time: s.time || '',
         description: s.notes || (s.type === 'purchase_credit' ? 'Achat à crédit fournisseur' : 'Remboursement fournisseur'),
-        amount: s.type === 'purchase_credit' ? (s.debt_amount ?? s.total_amount) : -(s.paid_amount ?? s.total_amount)
+        amount: Number(s.type === 'purchase_credit' ? (s.debt ?? s.debt_amount ?? s.total ?? s.total_amount ?? 0) : -Number(s.paid ?? s.paid_amount ?? s.total ?? s.total_amount ?? 0))
       }))
 
     return {
@@ -414,7 +443,7 @@ function getLocalSuppliers(shopId: string) {
       name,
       amount: balance,
       paid: payments + downPayments,
-      status: balance === 0 ? 'settled' : 'pending',
+      status: (balance === 0 ? 'settled' : 'pending') as 'settled' | 'pending',
       history
     }
   })

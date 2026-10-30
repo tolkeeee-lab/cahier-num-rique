@@ -1,7 +1,27 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { normalizeProductName, sanitizeProductData } from '@/lib/productUtils'
+import { supabase, Database } from '@/lib/supabase'
+import { normalizeProductName, sanitizeProductData, CleanableProduct } from '@/lib/productUtils'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+type ProductRow = Database['public']['Tables']['products']['Row'] & { tracking_started_at?: string | null }
+type ProductInsert = Database['public']['Tables']['products']['Insert']
+type ProductUpdate = Database['public']['Tables']['products']['Update']
+
+interface SoldArticleQueryResult {
+  product_name: string | null
+  quantity: number
+  unit_price: number
+}
+
+interface StockMovementItem {
+  date: string
+  created_at: string
+  type: 'in' | 'out'
+  quantity: number
+  unit_price: number
+  notes: string
+  sale_type: string
+}
+
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -46,7 +66,7 @@ export async function GET(request: Request) {
     const stockMap: Record<string, {
       total_in: number
       total_out: number
-      movements: Array<{ date: string; created_at: string; type: 'in' | 'out'; quantity: number; unit_price: number; notes: string; sale_type: string }>
+      movements: StockMovementItem[]
     }> = {}
 
     for (const sale of salesData || []) {
@@ -55,7 +75,7 @@ export async function GET(request: Request) {
       const isOut = ['cash_in', 'sale_credit', 'sale', 'sale_cash', 'stock_damage', 'personal_use', 'purchase_return'].includes(sale.type)
       if (!isIn && !isOut) continue
 
-      for (const article of (sale.sold_articles as any[] | null) || []) {
+      for (const article of (sale.sold_articles as SoldArticleQueryResult[] | null) || []) {
         const rawName = (article.product_name as string) || ''
         if (!rawName.trim()) continue
         const cleanName = normalizeProductName(rawName)
@@ -89,13 +109,13 @@ export async function GET(request: Request) {
     }
 
     // 4. Fusionner catalogue + niveaux de stock (avec normalisation canonique)
-    const stockItems = (products || []).map((product: any) => {
+    const stockItems = ((products || []) as ProductRow[]).map(product => {
       const cleanName = normalizeProductName(product.name)
       const key = cleanName.toLowerCase().trim()
       const data = stockMap[key] || { total_in: 0, total_out: 0, movements: [] }
       
       const hasInitialStock = (product.initial_stock || 0) > 0
-      const hasPurchases = data.movements.some((m: any) => m.type === 'in')
+      const hasPurchases = data.movements.some(m => m.type === 'in')
       const stockTracked = product.stock_tracked || hasInitialStock || hasPurchases
 
       // Déterminer le timestamp à partir duquel le suivi est actif
@@ -107,7 +127,7 @@ export async function GET(request: Request) {
       }
 
       // Si le stock N'EST PAS suivi, les anciennes ventes ne réduisent pas le stock
-      const filteredMovements = data.movements.filter((m: any) => {
+      const filteredMovements = data.movements.filter(m => {
         if (!stockTracked) return false
         if (trackingStart === 0) return true
         const mTime = m.created_at ? new Date(m.created_at).getTime() : new Date(m.date).getTime()
@@ -155,7 +175,7 @@ export async function GET(request: Request) {
     })
 
     // 5. Articles hors-catalogue (présents dans les écritures mais pas dans le catalogue)
-    const catalogKeys = new Set((products || []).map((p: any) => normalizeProductName(p.name).toLowerCase().trim()))
+    const catalogKeys = new Set(((products || []) as ProductRow[]).map(p => normalizeProductName(p.name).toLowerCase().trim()))
     const orphans = Object.entries(stockMap)
       .filter(([key]) => !catalogKeys.has(key))
       .map(([key, data]) => {
@@ -176,8 +196,8 @@ export async function GET(request: Request) {
       orphans,
       total: stockItems.length,
     })
-  } catch (err: any) {
-    const msg = err instanceof Error ? err.message : (err && typeof err === 'object' && ('message' in err || 'details' in err) ? (err.message || err.details) : String(err))
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : (err && typeof err === 'object' && ('message' in err || 'details' in err) ? String((err as { message?: string; details?: string }).message || (err as { message?: string; details?: string }).details) : String(err))
     console.error('[API/stock GET]', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
   }
@@ -296,7 +316,7 @@ const cleanData: Record<string, any> = sanitizeProductData({
       .maybeSingle()
 
     if (existingProd?.id) {
-      const updatePayload = { ...insertData }
+      const updatePayload: ProductUpdate = { ...insertData }
       delete updatePayload.id
       delete updatePayload.created_at
       const { data: updated, error: upErr } = await supabase
@@ -316,7 +336,7 @@ const cleanData: Record<string, any> = sanitizeProductData({
       .select()
       .single()
 
-    if (error && (error.message?.includes('barcode') || (error as any).details?.includes('barcode'))) {
+    if (error && (error.message?.includes('barcode') || (error as { details?: string }).details?.includes('barcode'))) {
       delete insertData.barcode
       const retry = await supabase.from('products').insert(insertData).select().single()
       data = retry.data
@@ -410,11 +430,11 @@ let updates: Record<string, any> = {}
     if (trade_type !== undefined) updates.trade_type = trade_type
     if (barcode !== undefined) updates.barcode = barcode?.trim() || null
 
-    updates = sanitizeProductData(updates as any)
+    updates = sanitizeProductData(updates as CleanableProduct)
     const dbUpdates = filterProductDbColumns(updates)
 
     // 1. Tenter une mise à jour directe par ID
-    let updatedProduct: any = null
+    let updatedProduct: ProductRow | null = null
     if (id && !id.startsWith('stk_') && !id.startsWith('orphan_')) {
       const { data, error } = await supabase
         .from('products')
@@ -477,8 +497,8 @@ let updates: Record<string, any> = {}
         created_at: new Date().toISOString(),
       }
 
-      const cleanInsert = sanitizeProductData(insertData as any)
-      const dbInsert = filterProductDbColumns(cleanInsert)
+      const cleanInsert = sanitizeProductData(insertData as CleanableProduct)
+      const dbInsert = filterProductDbColumns(cleanInsert) as ProductInsert
 
       const { data, error } = await supabase
         .from('products')
@@ -553,7 +573,7 @@ export async function DELETE(request: Request) {
     }
 
     // 2. Traitement d'un produit du catalogue (par son ID ou son Nom)
-    let productToDelete: any = null
+    let productToDelete: ProductRow | null = null
 
     if (id) {
       const { data: prod } = await supabase
