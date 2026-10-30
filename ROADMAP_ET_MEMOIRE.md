@@ -13,9 +13,13 @@ Ce document récapitule l'état exact du projet, les acquis techniques garantis 
 | :--- | :--- |
 | **Sécurité & Authentification** | 40 commits de durcissement intégrés (`lib/server/auth.ts`, RLS Supabase 022, tokens Bearer). |
 | **Vente Offline-First (0 ms)** | Écriture locale instantanée. Aucune attente réseau. Aucune perte de vente. |
+| **Expérience Caisse Express** | Bandeau post-vente avec coupures FCFA (`500 F` à `10 000 F`, compte juste) et calcul automatique de monnaie. |
+| **Reçu WhatsApp 1-Clic** | Partage direct du ticket de caisse en 1 clic + envoi ciblé au numéro WhatsApp sans enregistrer le contact. |
+| **Relance Dettes WhatsApp** | Détection automatique du numéro et génération du message personnalisé poli avec solde FIFO. |
+| **Clôture de Caisse (Z)** | Billetage physique vs théorique, détection d'écarts et export du bilan journalier. |
 | **Synchronisation Supabase** | `useOfflineSync` orchestre l'envoi en arrière-plan. Zéro conflit d'écrasement. |
 | **Temps réel Inter-appareils** | WebSockets Supabase Realtime + actualisation automatique dès réouverture de l'écran sur mobile. |
-| **Stockage & Quotas** | IndexedDB stocke 100% de l'historique sans limite. LocalStorage allégé à 250 ventes pour éviter tout plantage mémoire + alerte `cahier_storage_full`. |
+| **Stockage & Quotas** | IndexedDB stocke 100% de l'historique sans limite. LocalStorage allégé à 250 ventes + alerte `cahier_storage_full`. |
 | **Intégrité Comptable** | La suppression d'un produit ne détruit jamais l'historique des ventes passées. Réconciliation FIFO automatique des dettes. |
 | **Audit Logs Offline** | Stockage dans `sync_queue` et dépilement automatique à la reconnexion. |
 | **Compilation & Tests** | `npm run build` passe à 100% (20/20 pages), `npm test` passe à 10/10. |
@@ -32,33 +36,11 @@ Ce document récapitule l'état exact du projet, les acquis techniques garantis 
 
 ---
 
-## 🧭 3. Par quoi commence-t-on maintenant ? (Options Prioritaires)
+## 🧭 3. Feuille de Route Métier
 
-Le socle technique étant désormais parfaitement stable et testé, voici les **3 grands chantiers métier** au choix pour faire évoluer le produit :
-
-### 🚀 Option A : L'Expérience Caisse & Vente Terrain (UX Vendeur) — *Recommandé*
-- **Objectif** : Rendre la saisie de vente encore plus rapide qu'un cahier papier sur smartphone.
-- **Fonctionnalités** :
-  - Clavier tactile optimisé avec raccourcis espèces rapides (ex: 500 F, 1 000 F, 2 000 F, 5 000 F, 10 000 F CFA).
-  - Génération et partage instantané de tickets de reçu via **WhatsApp** en 1 clic.
-  - Recherche et scan de code-barres ultra-réactif avec la caméra du téléphone.
-
-### 📦 Option B : Gestion Avancée du Stock & Alertes Réapprovisionnement
-- **Objectif** : Ne jamais tomber en rupture de stock et maîtriser les marges réelles.
-- **Fonctionnalités** :
-  - Décomposition visuelle cartons / pièces (vente au détail ou en gros avec conversion automatique de stock).
-  - Alertes automatiques de stock bas et liste de courses intelligente (`shopping_list`).
-  - Suivi des marges bénéficiaires réelles par produit.
-
-### 💰 Option C : Clôture de Caisse & Recouvrement des Dettes
-- **Objectif** : Sécuriser la trésorerie journalière du commerçant.
-- **Fonctionnalités** :
-  - Écran de fin de journée : comptage de caisse physique vs théorique avec calcul automatique des écarts.
-  - Relances clients par WhatsApp avec décompte exact du solde restant dû (FIFO).
-  - Export PDF / Excel des bilans de la journée ou du mois.
-
----
-
-## 🔒 4. Recommandation du Chef d'Orchestre
-
-La priorité logique pour un commerçant est d'abord de **vendre sans friction et de partager le reçu WhatsApp (Option A)**, puis de **sécuriser sa clôture de caisse quotidienne (Option C)**.
+| Chantier | Statut | Détails |
+| :--- | :---: | :--- |
+| **Option A : Caisse & Reçu WhatsApp** | ✅ **Livré** | Bandeau caisse post-vente, coupures rapides FCFA, reçu WhatsApp 1-clic et bouton direct sur chaque ligne du journal (`ab4ceeb`). |
+| **Option C : Clôture Z & Dettes WhatsApp** | ✅ **Livré** | Billetage physique, sécurisation multi-boutique et relances clients WhatsApp directes (`deb795c`). |
+| **Option B : Stock Avancé & Cartons/Pièces** | ⏳ **À venir** | Décomposition cartons ↔ pièces (vente au détail ou en gros avec conversion automatique de stock), alertes de stock bas et liste de courses intelligente (`shopping_list`). |
+| **Phase 3 : Tests E2E Playwright** | 📋 **Planifié** | Scénarios offline 30 min → reconnexion réseau → intégrité Supabase. |
