@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { stockAdjustSchema, validatePayload } from '@/lib/validations'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+import type { Database } from '@/lib/types/database.types'
+
+type ProductRow = Database['public']['Tables']['products']['Row'] & { tracking_started_at?: string | null }
+type ProductUpdate = Database['public']['Tables']['products']['Update'] & { tracking_started_at?: string | null }
+type SaleInsert = Database['public']['Tables']['sales']['Insert']
+type SaleRow = Database['public']['Tables']['sales']['Row']
+type SoldArticleInsert = Database['public']['Tables']['sold_articles']['Insert']
 
 export async function POST(request: Request) {
   const requestedShopId = request.headers.get('x-shop-id')
@@ -20,8 +27,9 @@ export async function POST(request: Request) {
   } catch (err) {
     return shopAuthorizationErrorResponse(err)
   }
-try {
-    const rawBody = await request.json()
+
+  try {
+    const rawBody = (await request.json()) as Record<string, unknown>
     const validation = validatePayload(stockAdjustSchema, rawBody)
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
@@ -30,16 +38,18 @@ try {
     const { productId, quantity, type, reason, notes } = validation.data
 
     // 1. Récupérer le produit 
-    const { data: product, error: prodErr } = await supabase
+    const { data: productData, error: prodErr } = await supabase
       .from('products')
       .select('*')
       .eq('id', productId)
       .eq('shop_id', shopId)
       .single()
 
-    if (prodErr || !product) {
+    if (prodErr || !productData) {
       return NextResponse.json({ error: 'Produit introuvable' }, { status: 404 })
     }
+
+    const product: ProductRow = productData
 
     const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
     const timeStr = new Date().toTimeString().split(' ')[0]
@@ -96,39 +106,44 @@ try {
     }
 
     // 2. Créer l'écriture dans sales
-    const { data: sale, error: saleErr } = await supabase
+    const saleInsertPayload: SaleInsert = {
+      shop_id: shopId,
+      client_name: fullNotes,
+      date: todayStr,
+      time: timeStr,
+      total_amount: calculatedTotal,
+      paid_amount: calculatedPaid,
+      debt_amount: 0,
+      status: 'paid',
+      type: saleType,
+      pen_color: penColor,
+      notes: fullNotes,
+    }
+
+    const { data: saleData, error: saleErr } = await supabase
       .from('sales')
-      .insert({
-        shop_id: shopId,
-        client_name: fullNotes,
-        date: todayStr,
-        time: timeStr,
-        total_amount: calculatedTotal,
-        paid_amount: calculatedPaid,
-        debt_amount: 0,
-        status: 'paid',
-        type: saleType,
-        pen_color: penColor,
-        notes: fullNotes,
-      })
+      .insert(saleInsertPayload)
       .select()
       .single()
 
-    if (saleErr) throw saleErr
+    if (saleErr || !saleData) throw saleErr || new Error('Erreur création vente pour ajustement stock')
+    const sale: SaleRow = saleData
 
     // 3. Créer l'article dans sold_articles
+    const soldArticlePayload: SoldArticleInsert = {
+      shop_id: shopId,
+      sale_id: sale.id,
+      product_id: product.id,
+      product_name: product.name,
+      product_name_canonical: product.name,
+      quantity: quantity,
+      unit_price: type === 'in' ? effectiveUnitCost : (product.unit_price || 0),
+      subtotal: calculatedTotal,
+    }
+
     const { error: articleErr } = await supabase
       .from('sold_articles')
-      .insert({
-        shop_id: shopId,
-        sale_id: sale.id,
-        product_id: product.id,
-        product_name: product.name,
-        product_name_canonical: product.name,
-        quantity: quantity,
-        unit_price: type === 'in' ? effectiveUnitCost : (product.unit_price || 0),
-        subtotal: calculatedTotal,
-      })
+      .insert(soldArticlePayload)
 
     if (articleErr) throw articleErr
 
@@ -154,7 +169,9 @@ try {
         let totalIn = 0
         let totalOut = 0
         for (const item of pastArticles) {
-          const sType = (item.sales as any)?.type
+          const sType = typeof item.sales === 'object' && item.sales !== null && 'type' in item.sales
+            ? String((item.sales as { type?: unknown }).type || '')
+            : ''
           const isEntry = ['purchase_cash', 'purchase_credit', 'stock_in', 'purchase_return'].includes(sType)
           if (isEntry) {
             totalIn += Number(item.quantity || 0)
@@ -170,7 +187,7 @@ try {
     const saleCreatedAt = sale.created_at || new Date().toISOString()
     const trackingTime = new Date(new Date(saleCreatedAt).getTime() + 1000).toISOString()
 
-    const updatePayload: any = {
+    const updatePayload: ProductUpdate = {
       initial_stock: Math.max(0, newStockVal),
       tracking_started_at: trackingTime,
       updated_at: new Date().toISOString(),
@@ -190,8 +207,9 @@ try {
       success: true,
       message: `Stock ajusté (${signSymbol}${quantity} ${product.unit || 'unités'}) pour « ${product.name} ».`,
     })
-  } catch (err: any) {
-    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status
+    if (status === 401 || status === 403) return shopAuthorizationErrorResponse(err)
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[API/stock/adjust POST]', msg)
     return NextResponse.json({ error: msg }, { status: 500 })

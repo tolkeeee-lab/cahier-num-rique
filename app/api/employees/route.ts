@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Fallback local en mémoire pour le mode démo ou hors-ligne
     return NextResponse.json({ employees: [] })
   } catch (err) {
-    if ((err as any)?.status === 401 || (err as any)?.status === 403) return shopAuthorizationErrorResponse(err)
+    if ((err as { status?: number })?.status === 401 || (err as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur GET /api/employees:', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur inconnue' },
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (err) {
-    if ((err as any)?.status === 401 || (err as any)?.status === 403) return shopAuthorizationErrorResponse(err)
+    if ((err as { status?: number })?.status === 401 || (err as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur POST /api/employees:', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur inconnue' },
@@ -259,7 +259,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    if ((err as any)?.status === 401 || (err as any)?.status === 403) return shopAuthorizationErrorResponse(err)
+    if ((err as { status?: number })?.status === 401 || (err as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(err)
     console.error('Erreur DELETE /api/employees:', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur inconnue' },

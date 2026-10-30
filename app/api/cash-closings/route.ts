@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+import type { Database } from '@/lib/types/database.types'
+
+type CashClosingRow = Database['public']['Tables']['cash_closings']['Row']
+type CashClosingInsert = Database['public']['Tables']['cash_closings']['Insert']
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -32,31 +36,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ closings: [], error: error.message }, { status: 200 })
     }
 
-    return NextResponse.json({ closings: data || [] })
-  } catch (err: any) {
-    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
-    console.error('[API cash-closings] Exception GET:', err)
-    return NextResponse.json({ closings: [], error: err.message }, { status: 500 })
+    const typedClosings: CashClosingRow[] = data || []
+    return NextResponse.json({ closings: typedClosings })
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status
+    if (status === 401 || status === 403) return shopAuthorizationErrorResponse(err)
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[API cash-closings] Exception GET:', message)
+    return NextResponse.json({ closings: [], error: message }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const requestedShopId = request.headers.get('x-shop-id') || body.shop_id
+    const body = (await request.json()) as Record<string, unknown>
+    const requestedShopId = request.headers.get('x-shop-id') || (typeof body.shop_id === 'string' ? body.shop_id : null)
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
     const { shop } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
 
-    if (!body.date) {
+    if (!body.date || typeof body.date !== 'string') {
       return NextResponse.json({ error: 'La date est requise pour la clôture de caisse' }, { status: 400 })
     }
 
-    const payload = {
-      id: body.id || undefined,
+    const payload: CashClosingInsert = {
+      id: typeof body.id === 'string' ? body.id : undefined,
       shop_id: shopId,
       date: body.date,
-      closing_time: body.closing_time || new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(new Date()),
+      closing_time: typeof body.closing_time === 'string' ? body.closing_time : new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(new Date()),
       opening_cash: Number(body.opening_cash) || 0,
       theoretical_cash: Number(body.theoretical_cash) || 0,
       actual_cash: Number(body.actual_cash) || 0,
@@ -64,7 +71,7 @@ export async function POST(request: NextRequest) {
       cash_receipts: Number(body.cash_receipts) || 0,
       expenses: Number(body.expenses) || 0,
       credit_sales: Number(body.credit_sales) || 0,
-      notes: body.notes || '',
+      notes: typeof body.notes === 'string' ? body.notes : '',
       updated_at: new Date().toISOString()
     }
 
@@ -84,10 +91,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message, closing: payload }, { status: 200 })
     }
 
-    return NextResponse.json({ closing: data, success: true })
-  } catch (err: any) {
-    if (err?.status === 401 || err?.status === 403) return shopAuthorizationErrorResponse(err)
-    console.error('[API cash-closings] Exception POST:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    const typedClosing: CashClosingRow = data
+    return NextResponse.json({ closing: typedClosing, success: true })
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status
+    if (status === 401 || status === 403) return shopAuthorizationErrorResponse(err)
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[API cash-closings] Exception POST:', message)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+import type { Database, Json } from '@/lib/types/database.types'
+
+type AuditLogRow = Database['public']['Tables']['audit_logs']['Row']
+type AuditLogInsert = Database['public']['Tables']['audit_logs']['Insert']
 
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -40,25 +44,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ logs: [], error: error.message }, { status: 200 })
     }
 
-    return NextResponse.json({ logs: data || [] })
-  } catch (err: any) {
-    console.error('[API audit-logs] Exception GET:', err)
-    return NextResponse.json({ logs: [], error: err.message }, { status: 500 })
+    const typedLogs: AuditLogRow[] = data || []
+    return NextResponse.json({ logs: typedLogs })
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status
+    if (status === 401 || status === 403) return shopAuthorizationErrorResponse(err)
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[API audit-logs] Exception GET:', message)
+    return NextResponse.json({ logs: [], error: message }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const requestedShopId = request.headers.get('x-shop-id') || body.shop_id
+    const body = (await request.json()) as Record<string, unknown>
+    const requestedShopId = request.headers.get('x-shop-id') || (typeof body.shop_id === 'string' ? body.shop_id : null)
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
 
     let shopId: string
-    let authUser: any
+    let authUserId: string | null = null
+    let authUserEmail: string | null = null
     try {
       const authResult = await requireShopAccess(request, requestedShopId)
       shopId = authResult.shop.id
-      authUser = authResult.user
+      authUserId = authResult.user.id
+      authUserEmail = authResult.user.email || null
     } catch (err) {
       return shopAuthorizationErrorResponse(err)
     }
@@ -67,17 +77,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, offline: true })
     }
 
-    const { action, target_id, details, created_at, user_email } = body
+    const action = typeof body.action === 'string' ? body.action : 'unknown'
+    const targetId = typeof body.target_id === 'string' ? body.target_id : null
+    const details = (body.details && typeof body.details === 'object' ? body.details : {}) as Json
+    const createdAt = typeof body.created_at === 'string' ? body.created_at : new Date().toISOString()
+    const userEmail = typeof body.user_email === 'string' ? body.user_email : authUserEmail
 
-    const { error } = await supabase.from('audit_logs').insert({
+    const payload: AuditLogInsert = {
       shop_id: shopId,
-      user_id: authUser?.id || null,
-      user_email: user_email || authUser?.email || null,
+      user_id: authUserId,
+      user_email: userEmail,
       action,
-      target_id: target_id || null,
-      details: details || {},
-      created_at: created_at || new Date().toISOString(),
-    })
+      target_id: targetId,
+      details,
+      created_at: createdAt,
+    }
+
+    const { error } = await supabase.from('audit_logs').insert(payload)
 
     if (error) {
       console.warn('[API audit-logs] Erreur INSERT:', error.message)
@@ -85,8 +101,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true })
-  } catch (err: any) {
-    console.error('[API audit-logs] Exception POST:', err)
-    return NextResponse.json({ error: err?.message || 'Erreur serveur' }, { status: 500 })
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status
+    if (status === 401 || status === 403) return shopAuthorizationErrorResponse(err)
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[API audit-logs] Exception POST:', message)
+    return NextResponse.json({ error: message || 'Erreur serveur' }, { status: 500 })
   }
 }

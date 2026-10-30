@@ -152,6 +152,7 @@ export interface Database {
           id: string
           sale_id: string
           shop_id: string | null
+          product_id: string | null
           product_name: string
           product_name_raw: string | null
           product_name_canonical: string | null
@@ -168,6 +169,7 @@ export interface Database {
           id?: string
           sale_id: string
           shop_id?: string | null
+          product_id?: string | null
           product_name?: string
           product_name_raw?: string | null
           product_name_canonical?: string | null
@@ -184,6 +186,7 @@ export interface Database {
           id?: string
           sale_id?: string
           shop_id?: string | null
+          product_id?: string | null
           product_name?: string
           product_name_raw?: string | null
           product_name_canonical?: string | null
