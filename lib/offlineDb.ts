@@ -373,6 +373,11 @@ function writeJson<T>(key: string, value: T): void {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e: any) {
     console.warn(`[offlineDb] LocalStorage saturé ou inaccessible pour "${key}":`, e?.message)
+    if (typeof window !== 'undefined' && e?.name === 'QuotaExceededError') {
+      window.dispatchEvent(new CustomEvent('cahier_storage_full', {
+        detail: { key, count: Array.isArray(value) ? value.length : 0 }
+      }))
+    }
     // Si dépassement du quota LocalStorage (5 Mo), élaguer les plus anciennes entrées locales
     // (IndexedDB v3 conserve l'intégralité sans limite)
     if (e?.name === 'QuotaExceededError' && Array.isArray(value) && value.length > 400) {
@@ -399,10 +404,12 @@ export function generateOfflineId(): string {
   })
 }
 
-// ─── Opérations sur les Ventes ────────────────────────────────────────────────
+// Cache en mémoire pour éviter d'invoquer la vérification de migration IndexedDB à répétition
+const _migratedShopsInMemory = new Set<string>()
 
 export function getOfflineSales(shopId: string): OfflineSale[] {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && shopId && !_migratedShopsInMemory.has(shopId)) {
+    _migratedShopsInMemory.add(shopId)
     migrateLocalStorageToIndexedDB(shopId).catch(() => {})
   }
   if (!shopId) return []
@@ -740,24 +747,8 @@ export function deleteOfflineProduct(shopId: string, productId: string, productN
   )
   writeJson(productsKey(shopId), products)
   idbDeleteProduct(productId).catch(() => {})
-
-  const targetName = productName || (productId.startsWith('orphan_') ? productId.replace(/^orphan_/, '') : null)
-  if (targetName) {
-    const targetKey = targetName.toLowerCase().trim()
-    const sales = getOfflineSales(shopId)
-    let modified = false
-    sales.forEach(s => {
-      if (s.articles && s.articles.length > 0) {
-        const origLen = s.articles.length
-        s.articles = s.articles.filter(a => normalizeProductName(a.name).toLowerCase().trim() !== targetKey)
-        if (s.articles.length !== origLen) modified = true
-      }
-    })
-    if (modified) {
-      writeJson(salesKey(shopId), sales)
-      idbReplaceSales(shopId, sales).catch(() => {})
-    }
-  }
+  // NOTE: On ne purge JAMAIS rétroactivement les articles dans les ventes passées,
+  // car cela falsifierait les totaux historiques et les chiffres d'affaires des clôtures antérieures.
 }
 
 // ─── Calcul du stock offline ──────────────────────────────────────────────────

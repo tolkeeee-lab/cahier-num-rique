@@ -233,39 +233,61 @@ export async function idbSaveSale(sale: OfflineSale): Promise<void> {
   return putInStore<OfflineSale>('sales', sale)
 }
 
-export async function idbReplaceSales(shopId: string, sales: OfflineSale[]): Promise<void> {
+async function replaceStoreItemsByShopId<T>(
+  storeName: string,
+  shopId: string,
+  items: T[]
+): Promise<void> {
   const db = await getIDB()
-  const tx = db.transaction('sales', 'readwrite')
-  const store = tx.objectStore('sales')
-  
-  const index = store.index('shop_id')
-  const alt = getAltShopId(shopId)
-
   return new Promise((resolve, reject) => {
-    const primaryKeysReq = index.getAllKeys(shopId)
-    primaryKeysReq.onsuccess = () => {
-      const keys = [...primaryKeysReq.result]
-      if (alt) {
-        const altKeysReq = index.getAllKeys(alt)
-        altKeysReq.onsuccess = () => {
-          const allKeys = Array.from(new Set([...keys, ...altKeysReq.result]))
-          allKeys.forEach(key => store.delete(key))
-          sales.forEach(s => store.put(s))
-        }
-        altKeysReq.onerror = () => {
-          keys.forEach(key => store.delete(key))
-          sales.forEach(s => store.put(s))
-        }
-      } else {
-        keys.forEach(key => store.delete(key))
-        sales.forEach(s => store.put(s))
+    const tx = db.transaction(storeName, 'readwrite')
+    const store = tx.objectStore(storeName)
+    const index = store.index('shop_id')
+    const alt = getAltShopId(shopId)
+
+    let primaryKeys: IDBValidKey[] = []
+    let altKeys: IDBValidKey[] = []
+    let pendingReads = alt ? 2 : 1
+
+    const executeReplacement = () => {
+      const allKeys = Array.from(new Set([...primaryKeys, ...altKeys]))
+      for (const key of allKeys) {
+        store.delete(key)
+      }
+      for (const item of items) {
+        store.put(item)
       }
     }
-    primaryKeysReq.onerror = () => reject(primaryKeysReq.error)
+
+    const primaryReq = index.getAllKeys(shopId)
+    primaryReq.onsuccess = () => {
+      primaryKeys = [...primaryReq.result]
+      pendingReads--
+      if (pendingReads === 0) executeReplacement()
+    }
+    primaryReq.onerror = () => reject(primaryReq.error)
+
+    if (alt) {
+      const altReq = index.getAllKeys(alt)
+      altReq.onsuccess = () => {
+        altKeys = [...altReq.result]
+        pendingReads--
+        if (pendingReads === 0) executeReplacement()
+      }
+      altReq.onerror = () => {
+        pendingReads--
+        if (pendingReads === 0) executeReplacement()
+      }
+    }
 
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
+    tx.onabort = () => reject(tx.error)
   })
+}
+
+export async function idbReplaceSales(shopId: string, sales: OfflineSale[]): Promise<void> {
+  return replaceStoreItemsByShopId<OfflineSale>('sales', shopId, sales)
 }
 
 // ─── API Produits (Stock IDB) ──────────────────────────────────────────────────
@@ -295,38 +317,7 @@ export async function idbSaveProduct(product: OfflineProduct): Promise<void> {
 }
 
 export async function idbReplaceProducts(shopId: string, products: OfflineProduct[]): Promise<void> {
-  const db = await getIDB()
-  const tx = db.transaction('products', 'readwrite')
-  const store = tx.objectStore('products')
-  
-  const index = store.index('shop_id')
-  const alt = getAltShopId(shopId)
-
-  return new Promise((resolve, reject) => {
-    const primaryKeysReq = index.getAllKeys(shopId)
-    primaryKeysReq.onsuccess = () => {
-      const keys = [...primaryKeysReq.result]
-      if (alt) {
-        const altKeysReq = index.getAllKeys(alt)
-        altKeysReq.onsuccess = () => {
-          const allKeys = Array.from(new Set([...keys, ...altKeysReq.result]))
-          allKeys.forEach(key => store.delete(key))
-          products.forEach(p => store.put(p))
-        }
-        altKeysReq.onerror = () => {
-          keys.forEach(key => store.delete(key))
-          products.forEach(p => store.put(p))
-        }
-      } else {
-        keys.forEach(key => store.delete(key))
-        products.forEach(p => store.put(p))
-      }
-    }
-    primaryKeysReq.onerror = () => reject(primaryKeysReq.error)
-
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+  return replaceStoreItemsByShopId<OfflineProduct>('products', shopId, products)
 }
 
 export async function idbDeleteProduct(productId: string): Promise<void> {
@@ -344,37 +335,7 @@ export async function idbSaveShoppingItem(item: OfflineShoppingItem): Promise<vo
 }
 
 export async function idbReplaceShoppingItems(shopId: string, items: OfflineShoppingItem[]): Promise<void> {
-  const db = await getIDB()
-  const tx = db.transaction('shopping_list', 'readwrite')
-  const store = tx.objectStore('shopping_list')
-  const index = store.index('shop_id')
-  const alt = getAltShopId(shopId)
-
-  return new Promise((resolve, reject) => {
-    const primaryKeysReq = index.getAllKeys(shopId)
-    primaryKeysReq.onsuccess = () => {
-      const keys = [...primaryKeysReq.result]
-      if (alt) {
-        const altKeysReq = index.getAllKeys(alt)
-        altKeysReq.onsuccess = () => {
-          const allKeys = Array.from(new Set([...keys, ...altKeysReq.result]))
-          allKeys.forEach(key => store.delete(key))
-          items.forEach(it => store.put(it))
-        }
-        altKeysReq.onerror = () => {
-          keys.forEach(key => store.delete(key))
-          items.forEach(it => store.put(it))
-        }
-      } else {
-        keys.forEach(key => store.delete(key))
-        items.forEach(it => store.put(it))
-      }
-    }
-    primaryKeysReq.onerror = () => reject(primaryKeysReq.error)
-
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+  return replaceStoreItemsByShopId<OfflineShoppingItem>('shopping_list', shopId, items)
 }
 
 export async function idbDeleteShoppingItem(itemId: string): Promise<void> {
