@@ -378,13 +378,13 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     loadJournal()
 
-    // ── Supabase Realtime Channel pour synchronisation multi-appareils instantanée ──
+    // ── Supabase Realtime Channel pour synchronisation multi-appareils instantanée (PC <-> Téléphone PWA) ──
     let channel: any = null
     if (isSupabaseClientConfigured() && isOnline && shopId) {
       try {
         const dualIds = getDualShopIds(shopId)
         const activeIds = dualIds.length > 0 ? dualIds : [shopId]
-        channel = supabaseClient.channel(`realtime_shop_${shopId}`)
+        channel = supabaseClient.channel(`realtime_shop_${shopId}_${Date.now()}`)
 
         // Écoute sur les ventes, produits et courses pour chaque identifiant possible
         activeIds.forEach(id => {
@@ -392,8 +392,11 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             .on(
               'postgres_changes',
               { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${id}` },
-              () => {
-                if (isMounted) reloadData()
+              (payload: any) => {
+                if (isMounted) {
+                  // Rechargement immédiat de la caisse dès qu'une vente est faite sur un autre appareil
+                  reloadData()
+                }
               }
             )
             .on(
@@ -416,19 +419,34 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             )
         })
 
-        channel.subscribe()
+        channel.subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(`[Realtime] Synchronisation PC <-> Téléphone active pour boutique ${shopId}`)
+          }
+        })
       } catch (err) {
         console.warn('[Realtime] Souscription non active:', err)
       }
     }
 
-    // Polling de secours doux (120s) — uniquement si Realtime Supabase est indisponible
-    // Le Realtime Channel ci-dessus est la méthode principale de sync multi-appareils.
+    // Polling de secours actif (15s au lieu de 120s) pour garantir la synchronisation PC/Téléphone
+    // même si les WebSockets Realtime sont coupés par le mode veille ou l'économie d'énergie mobile.
     const pollInterval = setInterval(() => {
-      if (isOnline && isMounted && !channel) {
+      if (isOnline && isMounted) {
         reloadData()
       }
-    }, 120_000)
+    }, 15_000)
+
+    // Écouter le retour au premier plan (quand l'utilisateur déverrouille son téléphone ou revient sur l'onglet PC)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isOnline && isMounted) {
+        reloadData()
+      }
+    }
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    }
 
     return () => {
       isMounted = false
@@ -436,6 +454,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
         try { supabaseClient.removeChannel(channel) } catch {}
       }
       clearInterval(pollInterval)
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+      }
     }
   }, [shopId, isOnline, refreshTrigger, reloadData])
 
