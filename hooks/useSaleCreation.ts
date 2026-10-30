@@ -16,7 +16,6 @@ import { getTodayDateString } from '@/lib/dateUtils'
 import {
   generateOfflineId,
   saveOfflineSale,
-  markAsSynced,
   getOfflineProducts,
   OfflineSale,
 } from '@/lib/offlineDb'
@@ -26,7 +25,6 @@ import {
   parseRequestedProductFromNotebookText,
   recordRequestedProductInStorage,
 } from '@/lib/requestedProductsUtils'
-import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -157,151 +155,6 @@ export function useSaleCreation({
     }
 
     return sale
-  }
-
-  // ── Tente une sync API en arrière-plan (non bloquant) ──
-  const syncWithApi = async (text: string, localSaleId: string, penOverride?: string) => {
-    const activePen = penOverride || selectedPen
-    try {
-      const reqMatch = parseRequestedProductFromNotebookText(text.trim())
-      const isClientRequest = !['blue', 'yellow'].includes(activePen) && !!(reqMatch && reqMatch.isRequestedProduct)
-
-      let syncType: OfflineSale['type'] = 'cash_in'
-      if (isClientRequest) {
-        syncType = 'client_request'
-      } else if (activePen === 'red') {
-        syncType = 'cash_out'
-      } else if (activePen === 'green') {
-        syncType = 'purchase_cash'
-      } else if (activePen === 'purple') {
-        syncType = 'purchase_credit'
-      } else if (activePen === 'yellow') {
-        syncType = 'sale_credit'
-      }
-
-      if (isSupabaseClientConfigured()) {
-        const parsed = parseTextLocally(text, activePen)
-        const now = new Date()
-        const saleRecord = {
-          id: localSaleId,
-          shop_id: shopId,
-          created_at: now.toISOString(),
-          date: getTodayDateString(),
-          time: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-          type: syncType,
-          notes: text,
-          total_amount: isClientRequest ? 0 : (parsed?.total_facture || 0),
-          paid_amount: isClientRequest ? 0 : (parsed?.montant_paye || 0),
-          debt_amount: isClientRequest ? 0 : (parsed?.montant_dette || 0),
-          client_name: isClientRequest ? 'Demande Client' : (parsed?.nom_client || 'Client'),
-          status: (!isClientRequest && parsed?.montant_dette && parsed.montant_dette > 0) ? 'debt' : 'paid',
-          category: isClientRequest ? 'Demande Client' : (parsed?.categorie || 'Général'),
-          pen_color: activePen,
-        }
-
-        const { error: insertErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
-        if (!insertErr) {
-          // ✅ Marquer la vente locale comme synchronisée
-          markAsSynced(shopId, localSaleId)
-
-          const articlesToSync = isClientRequest
-            ? [{ nom: reqMatch?.cleanName || 'Produit demandé', quantite: 1, prix_unitaire: reqMatch?.price || 0 }]
-            : (parsed?.articles || [])
-
-          if (articlesToSync.length > 0) {
-            // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de réémission
-            await supabaseClient.from('sold_articles').delete().eq('sale_id', localSaleId)
-
-            const articlesRecords = articlesToSync.map((a: any) => {
-              const qty = Number(a.quantite || a.quantity || 1)
-              const price = Number(a.prix_unitaire || a.unit_price || 0)
-              return {
-                sale_id: localSaleId,
-                shop_id: shopId,
-                product_name: a.nom || a.name || 'Article',
-                quantity: qty,
-                unit_price: price,
-                subtotal: qty * price,
-              }
-            })
-            await supabaseClient.from('sold_articles').insert(articlesRecords)
-
-            // Intelligence de marché avec le vrai pays & la vraie ville de la boutique
-            const shopCountry = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_country_${shopId}`) || 'BJ') : 'BJ'
-            const shopCity = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_city_${shopId}`) || '') : ''
-
-            for (const art of articlesToSync) {
-              const artName = art.nom || (art as any).name
-              const artPrice = art.prix_unitaire || (art as any).unit_price || 0
-              if (artName && artPrice > 0 && !isClientRequest) {
-                try {
-                  await supabaseClient.rpc('update_market_knowledge', {
-                    p_product_name: artName.toLowerCase(),
-                    p_unit_price: saleRecord.type === 'cash_in' || saleRecord.type === 'sale_credit' ? artPrice : 0,
-                    p_unit_cost: saleRecord.type === 'purchase_cash' || saleRecord.type === 'purchase_credit' ? artPrice : 0,
-                    p_country: shopCountry,
-                    p_city: shopCity || null,
-                  })
-                } catch {}
-              }
-            }
-          }
-          onSaleCreated()
-          return
-        }
-      }
-
-      const shopCountry = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_country_${shopId}`) || 'BJ') : 'BJ'
-      const shopCity = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_city_${shopId}`) || '') : ''
-
-      // Récupération du Bearer token pour authentifier l'API route
-      let authHeaders: Record<string, string> = {}
-      if (isSupabaseClientConfigured()) {
-        try {
-          const { data: sessionData } = await supabaseClient.auth.getSession()
-          const token = sessionData.session?.access_token
-          if (token) {
-            authHeaders['Authorization'] = `Bearer ${token}`
-          }
-        } catch {}
-      }
-
-      // Fallback via API route serveur avec token d'authentification
-      const response = await fetch('/api/sales', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-shop-id': shopId,
-          'x-shop-country': shopCountry,
-          'x-shop-city': shopCity,
-          ...authHeaders,
-        },
-        body: JSON.stringify({
-          id: localSaleId,
-          created_at: new Date().toISOString(),
-          date: new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()),
-          time: new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Porto-Novo', hour: '2-digit', minute: '2-digit' }).format(new Date()),
-          text,
-          raw_text: text,
-          penColor: activePen,
-          pen_color: activePen,
-          shop_id: shopId,
-          country: shopCountry,
-          city: shopCity,
-        }),
-      })
-
-
-      if (response.ok) {
-        // ✅ Marquer la vente locale comme synchronisée via l'API route
-        markAsSynced(shopId, localSaleId)
-        onSaleCreated()
-      } else {
-        if (onError) onError('⚠️ Sauvegardé hors-ligne, en attente de réseau.')
-      }
-    } catch {
-      if (onError) onError('⚠️ Pas de réseau. Vente sauvegardée localement.')
-    }
   }
 
   // ── submitText : pour le pipeline et les modales d'interception ──
