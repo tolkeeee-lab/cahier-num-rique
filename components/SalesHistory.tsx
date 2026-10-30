@@ -93,6 +93,7 @@ export function SalesHistory({
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [visibleDaysCount, setVisibleDaysCount] = useState(7)
 
   const [activeDetailSale, setActiveDetailSale] = useState<Sale | null>(null)
   const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null)
@@ -328,7 +329,7 @@ export function SalesHistory({
         </div>
       ) : (
         <div className="space-y-6">
-          {salesByDate.map(([dateKey, dateSales]) => {
+          {salesByDate.slice(0, visibleDaysCount).map(([dateKey, dateSales]) => {
             const validDateSales = dateSales.filter(s => s.status !== 'crossed_out')
 
             // 1. Chiffre d'Affaires brut (Ventes effectives de la journée)
@@ -567,6 +568,17 @@ export function SalesHistory({
               </div>
             )
           })}
+
+          {salesByDate.length > visibleDaysCount && (
+            <div className="flex justify-center pt-4 pb-8">
+              <button
+                onClick={() => setVisibleDaysCount(prev => prev + 7)}
+                className="px-6 py-2.5 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl font-mono text-sm shadow-sm hover:bg-amber-100 transition-colors"
+              >
+                Voir {Math.min(7, salesByDate.length - visibleDaysCount)} jours plus anciens...
+              </button>
+            </div>
+          )}
         </div>
       )}
 

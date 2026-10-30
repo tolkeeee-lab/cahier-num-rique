@@ -39,11 +39,12 @@ interface ProductCandidate {
   unit_price: number
   unit_cost?: number
   category?: string
-  multiplier?: number
+  multiplier?: number | ''
   packaging_name?: string
   wholesale_price?: number
   half_package_price?: number
   quarter_package_price?: number
+  eighth_package_price?: number
   alert_threshold?: number
   barcode?: string
 }
@@ -68,7 +69,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
   const [inputText, setInputText] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [justAddedName, setJustAddedName] = useState<string | null>(null)
-  const [overrides, setOverrides] = useState<Partial<ParsedProductResult>>({})
+  const [overrides, setOverrides] = useState<Partial<Omit<ParsedProductResult, "multiplier">> & { multiplier?: number | '' }>({})
   const [isPackagingCarton, setIsPackagingCarton] = useState(false)
 
   // Options de trésorerie / décaissement lié à l'approvisionnement
@@ -109,7 +110,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
 
   // Synchronisation automatique de l'état carton si détecté par le parser
   useEffect(() => {
-    if (parsed.multiplier > 1 || parsed.packaging_name) {
+    if ((typeof parsed.multiplier === 'number' && parsed.multiplier > 1) || parsed.packaging_name) {
       setIsPackagingCarton(true)
     }
   }, [parsed.multiplier, parsed.packaging_name])
@@ -117,34 +118,36 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
   // Données actives combinant le texte, le produit existant connu et les saisies du commerçant
   const activeData = useMemo(() => {
     // Multiplicateur / Contenance
-    let mult = overrides.multiplier ?? parsed.multiplier ?? 1
-    if (mult <= 1 && isPackagingCarton) {
-      mult = matchingExistingProduct?.multiplier && matchingExistingProduct.multiplier > 1
+    let mult: number | string = overrides.multiplier !== undefined ? overrides.multiplier : (parsed.multiplier ?? 1)
+    if (typeof mult === 'number' && mult <= 1 && isPackagingCarton) {
+      mult = typeof matchingExistingProduct?.multiplier === 'number' && matchingExistingProduct.multiplier > 1
         ? matchingExistingProduct.multiplier
         : 24
-    } else if (!isPackagingCarton && overrides.multiplier === undefined && parsed.multiplier <= 1) {
+    } else if (!isPackagingCarton && overrides.multiplier === undefined && (typeof parsed.multiplier === 'number' && parsed.multiplier <= 1)) {
       mult = 1
     }
+
+    const numMult = typeof mult === 'number' ? mult : 1;
 
     const pkgName =
       overrides.packaging_name ??
       parsed.packaging_name ??
-      (mult > 1 ? matchingExistingProduct?.packaging_name || 'carton' : '')
+      (numMult > 1 ? matchingExistingProduct?.packaging_name || 'carton' : '')
 
     // Quantité & Colisage
     let pkgCount = overrides.packages_count ?? parsed.packages_count ?? 0
     let totalPieces = overrides.initial_stock ?? parsed.initial_stock ?? 0
 
-    if (mult > 1) {
+    if (numMult > 1) {
       if (overrides.packages_count !== undefined) {
-        totalPieces = (overrides.packages_count || 0) * mult
+        totalPieces = (overrides.packages_count || 0) * numMult
       } else if (pkgCount > 0 && totalPieces === 0) {
-        totalPieces = pkgCount * mult
+        totalPieces = pkgCount * numMult
       } else if (pkgCount === 0 && totalPieces > 0) {
-        pkgCount = Math.floor(totalPieces / mult)
+        pkgCount = Math.floor(totalPieces / numMult)
       } else if (pkgCount === 0 && totalPieces === 0) {
         pkgCount = 1
-        totalPieces = mult
+        totalPieces = typeof mult === 'number' ? mult : 1
       }
     } else {
       if (totalPieces === 0) {
@@ -158,18 +161,18 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
 
     if (uCost === 0 && pkgCost === 0 && matchingExistingProduct?.unit_cost) {
       uCost = matchingExistingProduct.unit_cost
-      pkgCost = mult > 1 ? uCost * mult : 0
+      pkgCost = numMult > 1 ? uCost * numMult : 0
     }
 
-    if (mult > 1) {
+    if (numMult > 1) {
       if (overrides.package_cost !== undefined) {
-        uCost = mult > 0 ? Math.round(pkgCost / mult) : pkgCost
+        uCost = numMult > 0 ? Math.round(pkgCost / numMult) : pkgCost
       } else if (overrides.unit_cost !== undefined) {
-        pkgCost = uCost * mult
+        pkgCost = uCost * numMult
       } else if (pkgCost > 0 && uCost === 0) {
-        uCost = Math.round(pkgCost / mult)
+        uCost = Math.round(pkgCost / numMult)
       } else if (uCost > 0 && pkgCost === 0) {
-        pkgCost = uCost * mult
+        pkgCost = uCost * numMult
       }
     }
 
@@ -194,11 +197,23 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       parsed.quarter_package_price ??
       matchingExistingProduct?.quarter_package_price ??
       0
+    let ePrice =
+      overrides.eighth_package_price ??
+      parsed.eighth_package_price ??
+      matchingExistingProduct?.eighth_package_price ??
+      0
 
-    if (mult > 1 && uPrice > 0) {
-      if (!wPrice) wPrice = Math.round((uPrice * mult * 0.88) / 100) * 100
-      if (!hPrice) hPrice = Math.round((uPrice * (mult / 2) * 0.92) / 50) * 50
-      if (!qPrice && mult >= 8) qPrice = Math.round((uPrice * (mult / 4) * 0.95) / 25) * 25
+    if (numMult > 1) {
+      if (!wPrice && uPrice > 0) wPrice = Math.round((uPrice * numMult * 0.88) / 100) * 100
+      if (wPrice > 0) {
+        if (overrides.half_package_price === undefined) hPrice = Math.round(wPrice / 2)
+        if (overrides.quarter_package_price === undefined && numMult >= 4) qPrice = Math.round(wPrice / 4)
+        if (overrides.eighth_package_price === undefined && numMult >= 8) ePrice = Math.round(wPrice / 8)
+      } else if (uPrice > 0) {
+        if (!hPrice) hPrice = Math.round((uPrice * (numMult / 2) * 0.92) / 50) * 50
+        if (!qPrice && numMult >= 4) qPrice = Math.round((uPrice * (numMult / 4) * 0.95) / 25) * 25
+        if (!ePrice && numMult >= 8) ePrice = Math.round((uPrice * (numMult / 8) * 0.97) / 25) * 25
+      }
     }
 
     const finalName =
@@ -211,13 +226,14 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       multiplier: mult,
       initial_stock: totalPieces,
       packaging_name: pkgName,
-      unit: overrides.unit ?? parsed.unit ?? (mult > 1 ? 'carton' : 'unité'),
+      unit: overrides.unit ?? parsed.unit ?? (numMult > 1 ? 'carton' : 'unité'),
       package_cost: pkgCost,
       unit_cost: uCost,
       unit_price: uPrice,
       wholesale_price: wPrice,
       half_package_price: hPrice,
       quarter_package_price: qPrice,
+      eighth_package_price: ePrice,
       lot_quantity: overrides.lot_quantity ?? parsed.lot_quantity ?? 0,
       lot_price: overrides.lot_price ?? parsed.lot_price ?? 0,
       alert_threshold:
@@ -233,7 +249,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       trade_type:
         overrides.trade_type ??
         parsed.trade_type ??
-        (mult > 1 ? 'wholesale' : 'retail'),
+        (numMult > 1 ? 'wholesale' : 'retail'),
     }
   }, [parsed, overrides, isPackagingCarton, matchingExistingProduct, inputText])
 
@@ -320,7 +336,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         alert_threshold: activeData.alert_threshold,
         category: activeData.category,
         unit: activeData.unit,
-        multiplier: activeData.multiplier,
+        multiplier: typeof activeData.multiplier === 'number' ? activeData.multiplier : 1,
         packaging_name: activeData.packaging_name,
         packages_count: activeData.packages_count,
         package_cost: activeData.package_cost,
@@ -515,7 +531,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               onClick={() => {
                 audioFeedback.playTick()
                 setInputText(prod.name)
-                if (prod.multiplier && prod.multiplier > 1) {
+                if (prod.multiplier && typeof prod.multiplier === 'number' && prod.multiplier > 1) {
                   setIsPackagingCarton(true)
                 }
               }}
@@ -608,7 +624,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                       setOverrides((prev) => ({
                         ...prev,
                         packages_count: next,
-                        initial_stock: next * activeData.multiplier,
+                        initial_stock: next * (typeof activeData.multiplier === 'number' ? activeData.multiplier : 1),
                       }))
                     } else {
                       const next = Math.max(1, (activeData.initial_stock || 1) - 1)
@@ -635,7 +651,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                       setOverrides((prev) => ({
                         ...prev,
                         packages_count: val,
-                        initial_stock: val * activeData.multiplier,
+                        initial_stock: val * (typeof activeData.multiplier === 'number' ? activeData.multiplier : 1),
                       }))
                     } else {
                       setOverrides((prev) => ({ ...prev, initial_stock: val }))
@@ -655,7 +671,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                       setOverrides((prev) => ({
                         ...prev,
                         packages_count: next,
-                        initial_stock: next * activeData.multiplier,
+                        initial_stock: next * (typeof activeData.multiplier === 'number' ? activeData.multiplier : 1),
                       }))
                     } else {
                       const next = (activeData.initial_stock || 0) + 1
@@ -686,13 +702,14 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                   <span>1 carton =</span>
                   <input
                     type="number"
-                    value={activeData.multiplier || ''}
+                    value={activeData.multiplier === '' ? '' : activeData.multiplier || ''}
                     onChange={(e) => {
-                      const m = parseInt(e.target.value) || 1
+                      const val = e.target.value
+                      const m = val === '' ? '' : (parseInt(val) || 1)
                       setOverrides((prev) => ({
                         ...prev,
                         multiplier: m,
-                        initial_stock: (activeData.packages_count || 1) * m,
+                        initial_stock: m === '' ? activeData.initial_stock : (activeData.packages_count || 1) * m,
                       }))
                     }}
                     className="w-9 text-center font-bold bg-white border border-blue-300 rounded px-1 py-0.5 outline-none text-blue-950 tabular-nums"
@@ -737,7 +754,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                       setOverrides((prev) => ({
                         ...prev,
                         package_cost: val,
-                        unit_cost: Math.round(val / activeData.multiplier),
+                        unit_cost: Math.round(val / (typeof activeData.multiplier === 'number' ? activeData.multiplier : 1)),
                       }))
                     } else {
                       setOverrides((prev) => ({ ...prev, unit_cost: val }))
@@ -824,6 +841,28 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               {isPackagingCarton && (
                 <>
                   <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                    <span className="text-[10px] text-purple-700 font-bold">Carton :</span>
+                    <input
+                      type="number"
+                      value={activeData.wholesale_price || ''}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0
+                        setOverrides((prev) => ({
+                          ...prev,
+                          wholesale_price: val,
+                          // Recalcul automatique strict si on change le carton : on réinitialise les overrides liés
+                          // (S'il veut modifier le 1/2 ensuite manuellement il pourra)
+                          half_package_price: Math.round(val / 2),
+                          quarter_package_price: Math.round(val / 4),
+                          eighth_package_price: Math.round(val / 8),
+                        }))
+                      }}
+                      className="w-16 text-center font-bold text-xs text-purple-950 outline-none tabular-nums"
+                    />
+                    <span className="text-[10px] text-gray-400">F</span>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
                     <span className="text-[10px] text-indigo-700 font-bold">1/2 ctn :</span>
                     <input
                       type="number"
@@ -840,17 +879,33 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
-                    <span className="text-[10px] text-purple-700 font-bold">Carton :</span>
+                    <span className="text-[10px] text-blue-700 font-bold">1/4 ctn :</span>
                     <input
                       type="number"
-                      value={activeData.wholesale_price || ''}
+                      value={activeData.quarter_package_price || ''}
                       onChange={(e) =>
                         setOverrides((prev) => ({
                           ...prev,
-                          wholesale_price: parseFloat(e.target.value) || 0,
+                          quarter_package_price: parseFloat(e.target.value) || 0,
                         }))
                       }
-                      className="w-16 text-center font-bold text-xs text-purple-950 outline-none tabular-nums"
+                      className="w-14 text-center font-bold text-xs text-blue-950 outline-none tabular-nums"
+                    />
+                    <span className="text-[10px] text-gray-400">F</span>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-amber-300">
+                    <span className="text-[10px] text-cyan-700 font-bold">1/8 ctn :</span>
+                    <input
+                      type="number"
+                      value={activeData.eighth_package_price || ''}
+                      onChange={(e) =>
+                        setOverrides((prev) => ({
+                          ...prev,
+                          eighth_package_price: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-14 text-center font-bold text-xs text-cyan-950 outline-none tabular-nums"
                     />
                     <span className="text-[10px] text-gray-400">F</span>
                   </div>

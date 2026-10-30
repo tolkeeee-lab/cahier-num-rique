@@ -15,6 +15,9 @@
 
 CREATE SCHEMA IF NOT EXISTS private;
 
+CREATE INDEX IF NOT EXISTS employees_user_id_idx
+ON public.employees (user_id);
+
 REVOKE ALL ON SCHEMA private FROM PUBLIC;
 REVOKE ALL ON SCHEMA private FROM anon, authenticated;
 GRANT USAGE ON SCHEMA private TO authenticated;
@@ -40,7 +43,8 @@ AS $$
   FROM public.employees AS e
   WHERE e.shop_id IS NOT NULL
     AND (
-      e.id = (SELECT auth.uid())
+      e.user_id = (SELECT auth.uid())
+      OR e.id = (SELECT auth.uid())
       OR (
         NULLIF(LOWER(TRIM(e.email)), '') IS NOT NULL
         AND LOWER(TRIM(e.email)) = LOWER(TRIM(COALESCE((SELECT auth.jwt()->>'email'), '')))
@@ -169,6 +173,7 @@ FOR SELECT
 TO authenticated
 USING (
   id = (SELECT auth.uid())
+  OR user_id = (SELECT auth.uid())
   OR (
     NULLIF(LOWER(TRIM(email)), '') IS NOT NULL
     AND LOWER(TRIM(email)) = LOWER(TRIM(COALESCE((SELECT auth.jwt()->>'email'), '')))
@@ -326,5 +331,71 @@ WITH CHECK (
   shop_id IS NOT NULL
   AND shop_id IN (SELECT private.user_shop_ids())
 );
+
+-- ------------------------------------------------------------------------------
+-- 8. Market knowledge : lecture authentifiée, écriture backend uniquement
+-- ------------------------------------------------------------------------------
+
+ALTER TABLE IF EXISTS public.market_knowledge ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.market_knowledge FROM anon, authenticated;
+GRANT SELECT ON TABLE public.market_knowledge TO authenticated;
+
+DROP POLICY IF EXISTS "market_knowledge_select" ON public.market_knowledge;
+DROP POLICY IF EXISTS "market_knowledge_insert" ON public.market_knowledge;
+DROP POLICY IF EXISTS "market_knowledge_update" ON public.market_knowledge;
+DROP POLICY IF EXISTS "market_knowledge_delete" ON public.market_knowledge;
+
+CREATE POLICY "market_knowledge_authenticated_select"
+ON public.market_knowledge
+FOR SELECT
+TO authenticated
+USING (true);
+
+REVOKE ALL ON FUNCTION public.update_market_knowledge(TEXT, NUMERIC, NUMERIC, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.update_market_knowledge(TEXT, NUMERIC, NUMERIC, TEXT, TEXT) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.update_market_knowledge(TEXT, NUMERIC, NUMERIC, TEXT, TEXT) TO service_role;
+
+
+-- ------------------------------------------------------------------------------
+-- 9. Audit logs : lecture/insertion limitées à la boutique autorisée.
+-- Les utilisateurs ne peuvent ni modifier ni supprimer les journaux.
+-- ------------------------------------------------------------------------------
+
+ALTER TABLE IF EXISTS public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.audit_logs FROM anon;
+GRANT SELECT, INSERT ON TABLE public.audit_logs TO authenticated;
+
+DROP POLICY IF EXISTS "tenant_isolation_audit_logs_select" ON public.audit_logs;
+DROP POLICY IF EXISTS "tenant_isolation_audit_logs_insert" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_select" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_insert" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_update" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_delete" ON public.audit_logs;
+
+CREATE POLICY "audit_logs_member_select"
+ON public.audit_logs
+FOR SELECT
+TO authenticated
+USING (
+  shop_id IS NOT NULL
+  AND shop_id IN (SELECT private.user_shop_ids())
+);
+
+CREATE POLICY "audit_logs_member_insert"
+ON public.audit_logs
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  shop_id IS NOT NULL
+  AND shop_id IN (SELECT private.user_shop_ids())
+  AND (user_id IS NULL OR user_id = (SELECT auth.uid()))
+);
+
+
+-- Keep the analytics view aligned with the authenticated-only market data surface.
+REVOKE ALL ON TABLE public.market_intelligence FROM anon, authenticated;
+GRANT SELECT ON TABLE public.market_intelligence TO authenticated;
 
 NOTIFY pgrst, 'reload schema';

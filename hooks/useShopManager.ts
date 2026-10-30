@@ -15,7 +15,9 @@ export interface Shop {
 }
 
 
-export function useShopManager(mappedUser: any) {
+export interface MappedUser { id?: string; email?: string; role?: string; shop_id?: string; shop_name?: string; activity?: string; user_metadata?: { shop_activity?: string } }
+
+export function useShopManager(mappedUser: MappedUser | null | undefined) {
   const [userShops, setUserShops] = useState<Shop[]>(() => {
     if (typeof window === 'undefined' || !mappedUser?.id) return []
     try {
@@ -59,8 +61,8 @@ export function useShopManager(mappedUser: any) {
     let isMounted = true
 
     async function initializeShops() {
-      const uEmail = (mappedUser.email || '').toLowerCase().trim()
-      const uShopId = mappedUser.shop_id || `${uId}-main`
+      const uEmail = (mappedUser?.email || '').toLowerCase().trim()
+      const uShopId = mappedUser?.shop_id || `${uId}-main`
       const isOnline = isSupabaseClientConfigured()
 
       // ── 0. CHARGEMENT LOCAL INSTANTANÉ (0 ms) ──
@@ -85,13 +87,13 @@ export function useShopManager(mappedUser: any) {
       }
 
       // ── 1. Vérification si l'utilisateur est un Employé assigné à une Boutique Patron ──
-      const isEmployeeFromMeta = (mappedUser as any)?.role === 'employee'
+      const isEmployeeFromMeta = mappedUser?.role === 'employee'
 
       if (isEmployeeFromMeta || uEmail) {
         try {
-          let assignedShopId = (mappedUser as any)?.shop_id
-          let assignedRole = (mappedUser as any)?.role || 'employee'
-          let assignedShopName = (mappedUser as any)?.shop_name || 'Boutique Assignée'
+          let assignedShopId = mappedUser?.shop_id
+          let assignedRole = mappedUser?.role || 'employee'
+          let assignedShopName = mappedUser?.shop_name || 'Boutique Assignée'
 
           if (uEmail) {
             const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
@@ -168,8 +170,8 @@ export function useShopManager(mappedUser: any) {
                       .limit(1)
                       .maybeSingle()
 
-                    if ((ownerData as any)?.shop_name) {
-                      assignedShopName = (ownerData as any).shop_name
+                    if (ownerData && 'shop_name' in ownerData && typeof (ownerData as Record<string, unknown>).shop_name === 'string') {
+                      assignedShopName = (ownerData as Record<string, unknown>).shop_name as string
                     } else if (ownerData?.name) {
                       assignedShopName = `Boutique de ${ownerData.name}`
                     }
@@ -188,19 +190,19 @@ export function useShopManager(mappedUser: any) {
                 if (isMounted) {
                   setEmployeeRole(assignedRole)
                   const empShopObj: Shop = {
-                    id: assignedShopId,
+                    id: assignedShopId || '',
                     name: assignedShopName,
-                    activity: (mappedUser as any)?.activity || 'boutique',
+                    activity: mappedUser?.activity || 'boutique',
                     country: 'BJ',
                   }
                   setUserShops([empShopObj])
-                  setSelectedShopId(assignedShopId)
+                  setSelectedShopId(assignedShopId || '')
                 }
 
                 localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify([{
-                  id: assignedShopId,
+                  id: assignedShopId || '',
                   name: assignedShopName,
-                  activity: (mappedUser as any)?.activity || 'boutique',
+                  activity: mappedUser?.activity || 'boutique',
                 }]))
                 localStorage.setItem(`cahier_shop_name_${assignedShopId}`, assignedShopName)
                 return
@@ -218,7 +220,7 @@ export function useShopManager(mappedUser: any) {
           }
 
           if ((assignedRole === 'employee' || isEmployeeFromMeta) && assignedShopId && isMounted) {
-            const previousId = (mappedUser as any)?.shop_id
+            const previousId = mappedUser?.shop_id
             if (previousId && previousId !== assignedShopId) {
               migrateOfflineShopSales(previousId, assignedShopId)
             }
@@ -226,10 +228,10 @@ export function useShopManager(mappedUser: any) {
             const empShop: Shop = {
               id: assignedShopId,
               name: assignedShopName,
-              activity: (mappedUser as any)?.activity || 'boutique',
+              activity: mappedUser?.activity || 'boutique',
             }
             setUserShops([empShop])
-            setSelectedShopId(assignedShopId)
+            setSelectedShopId(assignedShopId || '')
             localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify([empShop]))
             return
           }
@@ -263,8 +265,8 @@ export function useShopManager(mappedUser: any) {
           if (!dbErr && dbShops && dbShops.length > 0) {
             ownerShops = dbShops.map(s => ({
               id: s.id,
-              name: s.name || (mappedUser as any)?.shop_name || 'Mon Point de Vente',
-              activity: s.activity || (mappedUser as any)?.activity || 'boutique',
+              name: s.name || mappedUser?.shop_name || 'Mon Point de Vente',
+              activity: s.activity || mappedUser?.activity || 'boutique',
               country: s.country || 'BJ',
               city: s.city || '',
             }))
@@ -295,8 +297,8 @@ export function useShopManager(mappedUser: any) {
         : null
 
       if (ownerShops.length === 0) {
-        const userActivity = (mappedUser as any)?.activity || (mappedUser as any)?.user_metadata?.shop_activity || 'boutique'
-        const initialName = savedName || (mappedUser as any)?.shop_name || 'Mon Point de Vente'
+        const userActivity = mappedUser?.activity || mappedUser?.user_metadata?.shop_activity || 'boutique'
+        const initialName = savedName || mappedUser?.shop_name || 'Mon Point de Vente'
         ownerShops = [{ id: uShopId, name: initialName, activity: userActivity }]
       } else if (savedName && (ownerShops[0].name === 'Mon Point de Vente' || !ownerShops[0].name)) {
         ownerShops[0].name = savedName
@@ -337,11 +339,11 @@ export function useShopManager(mappedUser: any) {
     normalizeShopCode(s.id) === normalizeShopCode(shopId)
   ) || userShops[0]
 
-  const shopActivity = currentShop?.activity || (mappedUser as any)?.activity || 'boutique'
+  const shopActivity = currentShop?.activity || mappedUser?.activity || 'boutique'
   
   const shopName = currentShop?.name || 
     (typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_name_${shopId}`) || localStorage.getItem(`cahier_shop_name_${userShops[0]?.id}`)) : null) ||
-    (mappedUser as any)?.shop_name ||
+    mappedUser?.shop_name ||
     'Mon Point de Vente'
 
   const handleCreateShop = () => {
@@ -428,7 +430,7 @@ export function useShopManager(mappedUser: any) {
           ? targetShopId 
           : (isRealUuid(mappedUser.id) ? mappedUser.id : undefined)
 
-        const shopPayload: any = {
+        const shopPayload: Record<string, string | undefined> = {
           owner_id: isRealUuid(mappedUser.id) ? mappedUser.id : undefined,
           name: data.shopName,
           activity: data.activity,
