@@ -23,10 +23,13 @@ import {
   saveOfflineSale,
   generateOfflineId,
   OfflineSale,
+  getOfflineShoppingList,
+  saveOfflineShoppingItem,
 } from '@/lib/offlineDb'
 import { getTodayDateString } from '@/lib/dateUtils'
 import { audioFeedback } from '@/lib/audioFeedback'
 import { findDuplicateCandidates } from '@/lib/productUtils'
+import type { OfflineShoppingItem } from '@/lib/indexedDb'
 
 interface Product {
   id: string
@@ -75,7 +78,7 @@ const defaultFormData: StockFormState = {
 }
 
 export function StockManager({
-  shopId = 'default-shop',
+  shopId = '',
   isEmployee = false,
   onError,
 }: StockManagerProps) {
@@ -83,6 +86,7 @@ export function StockManager({
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('TOUT')
   const [isLowStockOnly, setIsLowStockOnly] = useState(false)
+  const [addedToShoppingCount, setAddedToShoppingCount] = useState<number | null>(null)
 
   // State pour ProductModal
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
@@ -123,6 +127,7 @@ export function StockManager({
   }, [products])
 
   const loadStock = useCallback(async () => {
+    if (!shopId) return
     try {
       const res = await fetch('/api/stock', {
         headers: { 'x-shop-id': shopId },
@@ -735,6 +740,62 @@ export function StockManager({
     }).length
   }, [products])
 
+  const handleAddLowStockToShoppingList = () => {
+    if (!shopId) return
+    const lowStockProds = products.filter(p => {
+      const curr = p.current_stock ?? p.initial_stock ?? 0
+      return curr <= (p.alert_threshold ?? 5)
+    })
+    if (lowStockProds.length === 0) return
+
+    const existingShopping = getOfflineShoppingList(shopId)
+    let added = 0
+
+    for (const p of lowStockProds) {
+      const curr = p.current_stock ?? p.initial_stock ?? 0
+      const threshold = p.alert_threshold ?? 5
+      const mult = p.multiplier && p.multiplier > 1 ? p.multiplier : 1
+
+      const qtyToOrder = mult > 1
+        ? (curr <= 0 ? 2 : 1)
+        : Math.max(5, (threshold * 2) - Math.max(0, curr))
+
+      const isWholesale = mult > 1
+      const unitCost = isWholesale
+        ? (p.package_cost || p.unit_cost * mult || 0)
+        : (p.unit_cost || 0)
+
+      const alreadyInList = existingShopping.some(
+        item => item.name.toLowerCase().trim() === p.name.toLowerCase().trim() && !item.is_checked
+      )
+
+      if (!alreadyInList) {
+        const item: OfflineShoppingItem = {
+          id: generateOfflineId(),
+          shop_id: shopId,
+          name: isWholesale ? `${p.name} (${p.packaging_name || 'carton'})` : p.name,
+          quantity: qtyToOrder,
+          unit_cost: unitCost,
+          is_wholesale: isWholesale,
+          wholesale_qty: isWholesale ? qtyToOrder : undefined,
+          wholesale_price: isWholesale ? unitCost : undefined,
+          items_per_wholesale: mult,
+          is_checked: false,
+          category: p.category || 'Stock',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_synced: false,
+        }
+        saveOfflineShoppingItem(shopId, item)
+        added++
+      }
+    }
+
+    audioFeedback.playInkStamp()
+    setAddedToShoppingCount(added > 0 ? added : lowStockProds.length)
+    setTimeout(() => setAddedToShoppingCount(null), 3500)
+  }
+
   const duplicatePairs = useMemo(() => {
     return findDuplicateCandidates(products.map(p => ({ id: p.id, name: p.name, category: p.category })))
   }, [products])
@@ -791,7 +852,10 @@ export function StockManager({
       <StockAlertBanner
         lowStockCount={lowStockCount}
         outOfStockCount={outOfStockCount}
+        isFiltered={isLowStockOnly}
         onFilterLowStock={() => setIsLowStockOnly((prev) => !prev)}
+        onAddOutOfStockToShoppingList={handleAddLowStockToShoppingList}
+        addedCount={addedToShoppingCount}
       />
 
       {/* Saisie Magique de Produit en 1 seule ligne */}
