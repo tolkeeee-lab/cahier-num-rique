@@ -42,5 +42,5 @@ Ce document récapitule l'état exact du projet, les acquis techniques garantis 
 | :--- | :---: | :--- |
 | **Option A : Caisse & Reçu WhatsApp** | ✅ **Livré** | Bandeau caisse post-vente, coupures rapides FCFA, reçu WhatsApp 1-clic et bouton direct sur chaque ligne du journal (`ab4ceeb`). |
 | **Option C : Clôture Z & Dettes WhatsApp** | ✅ **Livré** | Billetage physique, sécurisation multi-boutique et relances clients WhatsApp directes (`deb795c`). |
-| **Option B : Stock Avancé & Cartons/Pièces** | ⏳ **À venir** | Décomposition cartons ↔ pièces (vente au détail ou en gros avec conversion automatique de stock), alertes de stock bas et liste de courses intelligente (`shopping_list`). |
+| **Option B : Stock Avancé & Cartons/Pièces** | ✅ **Livré** | Décomposition cartons ↔ pièces, valorisation/marges en direct, et approvisionnement automatique 1-clic des alertes stock bas vers la liste de courses (`f6bf718`). |
 | **Phase 3 : Tests E2E Playwright** | 📋 **Planifié** | Scénarios offline 30 min → reconnexion réseau → intégrité Supabase. |
