@@ -53,7 +53,7 @@ export function useSaleCreation({
   selectedPen,
   onSaleCreated,
   onAfterSale,
-  onError,
+  onError: _onError,
 }: UseSaleCreationOptions): UseSaleCreationReturn {
   const [input, setInput] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
