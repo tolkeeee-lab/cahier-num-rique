@@ -6,6 +6,8 @@
  */
 
 import { supabaseClient, isSupabaseClientConfigured } from './supabaseClient'
+import { idbAddSyncItem } from './indexedDb'
+import { generateOfflineId } from './offlineDb'
 
 export type AuditAction = 
   | 'sale_created'
@@ -37,7 +39,7 @@ export async function logAuditEvent({
     let email = userEmail
     let userId: string | null = null
 
-    if (isSupabaseClientConfigured()) {
+    if (isSupabaseClientConfigured() && typeof navigator !== 'undefined' && navigator.onLine) {
       try {
         const { data } = await supabaseClient.auth.getUser()
         if (data?.user) {
@@ -48,7 +50,7 @@ export async function logAuditEvent({
         // Mode hors-ligne ou session expirée
       }
 
-      await supabaseClient.from('audit_logs').insert({
+      const { error } = await supabaseClient.from('audit_logs').insert({
         shop_id: shopId,
         user_id: userId,
         user_email: email || null,
@@ -57,7 +59,27 @@ export async function logAuditEvent({
         details,
         created_at: new Date().toISOString(),
       })
+
+      if (!error) return
     }
+
+    // Fallback mode hors-ligne : persistance dans la sync_queue IndexedDB
+    await idbAddSyncItem({
+      id: generateOfflineId(),
+      shopId,
+      action: 'audit_log',
+      payload: {
+        shop_id: shopId,
+        user_id: userId,
+        user_email: email || null,
+        action,
+        target_id: targetId || null,
+        details,
+        created_at: new Date().toISOString(),
+      },
+      timestamp: new Date().toISOString(),
+      retries: 0,
+    })
   } catch (err) {
     console.warn('[AuditLogger] Impossible d’enregistrer le log d’audit:', err)
   }

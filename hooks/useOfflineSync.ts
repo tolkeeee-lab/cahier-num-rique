@@ -26,6 +26,7 @@ import {
   getOfflineShoppingList,
   replaceOfflineShoppingList,
 } from '@/lib/offlineDb'
+import { idbGetSyncQueue, idbRemoveSyncItem } from '@/lib/indexedDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import type { SyncStatus } from '@/hooks/useNetworkStatus'
 
@@ -69,8 +70,9 @@ export function useOfflineSync({
     const pendingProducts = getPendingOfflineProducts(shopId)
     const pendingClosings = getOfflineCashClosings(shopId).filter(c => c.is_synced === false)
     const pendingShopping = getOfflineShoppingList(shopId).filter(i => i.is_synced === false)
+    const pendingSyncQueue = await idbGetSyncQueue(shopId)
 
-    if (toSync.length === 0 && pendingProducts.length === 0 && pendingClosings.length === 0 && pendingShopping.length === 0) return
+    if (toSync.length === 0 && pendingProducts.length === 0 && pendingClosings.length === 0 && pendingShopping.length === 0 && pendingSyncQueue.length === 0) return
 
     isSyncing.current = true
     setSyncStatus('syncing')
@@ -99,6 +101,28 @@ export function useOfflineSync({
 
     let successCount = 0
     let errorCount = 0
+
+    // 0. Synchronisation des événements d'audit hors-ligne (anti-fraude)
+    const pendingAuditLogs = pendingSyncQueue.filter(item => item.action === 'audit_log')
+    for (const auditItem of pendingAuditLogs) {
+      try {
+        const response = await fetch('/api/audit-logs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-shop-id': shopId,
+            ...authHeaders,
+          },
+          body: JSON.stringify(auditItem.payload),
+        })
+        if (response.ok) {
+          await idbRemoveSyncItem(auditItem.id)
+          successCount++
+        }
+      } catch (err) {
+        console.warn('[OfflineSync] Erreur sync audit log:', err)
+      }
+    }
 
     // 1. Synchronisation des Produits créés ou modifiés hors-ligne
     for (const prod of pendingProducts) {

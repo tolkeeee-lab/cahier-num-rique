@@ -13,7 +13,7 @@ const DB_VERSION = 3
 export interface SyncQueueItem {
   id: string
   shopId: string
-  action: 'create_sale' | 'update_sale' | 'adjust_stock' | 'merge_product'
+  action: 'create_sale' | 'update_sale' | 'adjust_stock' | 'merge_product' | 'audit_log'
   payload: any
   timestamp: string
   retries: number
