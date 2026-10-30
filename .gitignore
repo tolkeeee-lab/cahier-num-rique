@@ -44,3 +44,6 @@ scratch/
 Thumbs.db
 
 cahier_mock_db.json
+
+test-results/
+playwright-report/

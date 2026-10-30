@@ -9,6 +9,7 @@
     "lint": "next lint",
     "ask-ai": "node scripts/ask_ai.mjs",
     "test": "npx -y tsx scripts/test_critical_suite.ts",
+    "test:e2e": "playwright test",
     "test-stock": "npx -y tsx scripts/test_stock_flow.ts",
     "test-debts": "npx -y tsx scripts/test_debts_multitable_sync.ts",
     "test-product-parser": "npx -y tsx scripts/test_smart_product_parser.ts",
@@ -26,6 +27,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^20.10.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
