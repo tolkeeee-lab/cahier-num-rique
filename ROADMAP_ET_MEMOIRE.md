@@ -44,3 +44,4 @@ Ce document récapitule l'état exact du projet, les acquis techniques garantis 
 | **Option C : Clôture Z & Dettes WhatsApp** | ✅ **Livré** | Billetage physique, sécurisation multi-boutique et relances clients WhatsApp directes (`deb795c`). |
 | **Option B : Stock Avancé & Cartons/Pièces** | ✅ **Livré** | Décomposition cartons ↔ pièces, valorisation/marges en direct, et approvisionnement automatique 1-clic des alertes stock bas vers la liste de courses (`f6bf718`). |
 | **Phase 3 : Tests E2E Playwright** | ✅ **Actif & Validé** | Tests E2E automatisés Chromium (`npm run test:e2e`) : parcours caisse express, bandeau monnaie, reçu WhatsApp et navigation inter-onglets (`4d5786b`). |
+| **Phase 3 (DT-2) : Typage Strict Database** | ✅ **Livré** | Typage Supabase strict (`Database['public']['Tables']`) sur `/api/sales`, `/api/stock`, `/api/debts` et assainissement des entités (`6460f17`). Zéro `any`. |
