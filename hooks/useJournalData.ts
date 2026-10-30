@@ -230,23 +230,20 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             // NOTE: La synchronisation des ventes en attente est EXCLUSIVEMENT gérée par useOfflineSync.
             // Ne pas pousser les ventes ici pour éviter les doublons et les race conditions.
 
-            // 2. Fusion sécurisée : Supabase est la vérité pour les ventes connues,
-            // mais on inclut TOUJOURS les ventes locales dont l'ID n'est pas encore arrivé dans Supabase
-            // (race condition entre la sauvegarde et la prochaine requête Supabase)
-
-            // On renforce la déduplication : on filtre par ID, mais aussi par signature de vente
-            // pour attraper les doublons physiques ayant des IDs différents suite à un crash du cache local.
+            // 2. Fusion ultra-sécurisée :
+            // - Supabase est la référence pour les ventes connues.
+            // - TOUTES les ventes locales non synchronisées (is_synced === false ou id non présent)
+            //   sont STRICTEMENT PRÉSERVÉES pour éviter toute disparition au rechargement.
             const supabaseIds = new Set(mappedSales.map(s => s.id))
-            const supabaseSignatures = new Set(
-              mappedSales.map(s => `${s.date}_${s.time}_${(s.client || '').trim().toLowerCase()}_${s.total}`)
-            )
+            const currentLocalSales = getOfflineSales(shopId)
 
-            const offlineNotYetInCloud = getOfflineSales(shopId).filter(s => {
+            const offlineNotYetInCloud = currentLocalSales.filter(s => {
               if (!s.id) return false
-              if (supabaseIds.has(s.id)) return false
-              const sig = `${s.date}_${s.time}_${(s.client || '').trim().toLowerCase()}_${s.total}`
-              if (supabaseSignatures.has(sig)) return false
-              return true
+              // Si la vente n'est pas encore sur Supabase, on la conserve ABSOLUMENT
+              if (!supabaseIds.has(s.id)) return true
+              // Si la vente porte le flag non-synchronisé, on la garde également
+              if (s.is_synced === false) return true
+              return false
             })
 
             const rawCombined = [...mappedSales, ...offlineNotYetInCloud]

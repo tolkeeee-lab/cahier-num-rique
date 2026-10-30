@@ -249,7 +249,19 @@ export function useSaleCreation({
       const shopCountry = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_country_${shopId}`) || 'BJ') : 'BJ'
       const shopCity = typeof window !== 'undefined' ? (localStorage.getItem(`cahier_shop_city_${shopId}`) || '') : ''
 
-      // Fallback via API route serveur
+      // Récupération du Bearer token pour authentifier l'API route
+      let authHeaders: Record<string, string> = {}
+      if (isSupabaseClientConfigured()) {
+        try {
+          const { data: sessionData } = await supabaseClient.auth.getSession()
+          const token = sessionData.session?.access_token
+          if (token) {
+            authHeaders['Authorization'] = `Bearer ${token}`
+          }
+        } catch {}
+      }
+
+      // Fallback via API route serveur avec token d'authentification
       const response = await fetch('/api/sales', {
         method: 'POST',
         headers: {
@@ -257,6 +269,7 @@ export function useSaleCreation({
           'x-shop-id': shopId,
           'x-shop-country': shopCountry,
           'x-shop-city': shopCity,
+          ...authHeaders,
         },
         body: JSON.stringify({
           id: localSaleId,
