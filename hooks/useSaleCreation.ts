@@ -32,7 +32,7 @@ export interface UseSaleCreationOptions {
   shopId: string
   selectedPen: string
   onSaleCreated: () => void          // Appelé après chaque vente pour rafraîchir l'affichage
-  onAfterSale?: (total: number) => void  // Optionnel : pour le calculateur de monnaie
+  onAfterSale?: (sale: OfflineSale) => void  // Optionnel : pour le bandeau caisse, monnaie & reçu WhatsApp
   onError?: (msg: string) => void
 }
 
@@ -164,7 +164,7 @@ export function useSaleCreation({
     try {
       const localSale = buildLocalSale(text, penOverride)
       onSaleCreated()
-      if (onAfterSale && localSale.total > 0) onAfterSale(localSale.total)
+      if (onAfterSale && localSale.total > 0) onAfterSale(localSale)
     } finally {
       setIsSubmitting(false)
     }
@@ -185,9 +185,9 @@ export function useSaleCreation({
       setInput('')
       onSaleCreated()
 
-      // 3. Notifier le calculateur de monnaie si besoin
+      // 3. Notifier l'expérience caisse & rendu de monnaie si besoin
       if (onAfterSale && localSale.total > 0) {
-        onAfterSale(localSale.total)
+        onAfterSale(localSale)
       }
     } finally {
       setIsSubmitting(false)

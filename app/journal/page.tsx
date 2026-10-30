@@ -30,6 +30,7 @@ import { StockConfirmationModal } from '@/components/journal/StockConfirmationMo
 import { PriceChangeDialog } from '@/components/journal/PriceChangeDialog'
 import { EditSaleModal } from '@/components/journal/EditSaleModal'
 import { ReceiptShareModal } from '@/components/sales/ReceiptShareModal'
+import { QuickCashierReceiptBanner } from '@/components/journal/QuickCashierReceiptBanner'
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 import { useShopManager } from '@/hooks/useShopManager'
@@ -39,7 +40,7 @@ import { useSaleCreation } from '@/hooks/useSaleCreation'
 import { useTactileMenu } from '@/hooks/useTactileMenu'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
 import { useInputPipeline, StockConfirmationData, PriceChangeData, WizardPrefill } from '@/hooks/useInputPipeline'
-import { saveOfflineProduct, getOfflineProducts } from '@/lib/offlineDb'
+import { saveOfflineProduct, getOfflineProducts, OfflineSale } from '@/lib/offlineDb'
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 import { exportFullBackupJSON } from '@/lib/exportUtils'
@@ -368,6 +369,7 @@ export default function JournalPage() {
   const [showReceiptModal, setShowReceiptModal] = useState(false)
   const [shareReceiptSale, setShareReceiptSale] = useState<any>(null)
   const [showShareReceiptModal, setShowShareReceiptModal] = useState(false)
+  const [activeCashierSale, setActiveCashierSale] = useState<OfflineSale | null>(null)
 
   // Pipeline interceptions
   const [stockConfirmationData, setStockConfirmationData] = useState<StockConfirmationData | null>(null)
@@ -482,6 +484,7 @@ export default function JournalPage() {
     shopId: shopManager.shopId,
     selectedPen,
     onSaleCreated: journalData.reloadData,
+    onAfterSale: (sale) => setActiveCashierSale(sale),
     onError: setPostItMessage,
   })
 
@@ -821,6 +824,23 @@ export default function JournalPage() {
                     onCancel={() => { setAddingToSaleId(null); setAddArticleInput('') }}
                     isSubmitting={isAddingArticle}
                   />
+                )}
+
+                {/* Expérience Caisse : Bandeau Rendu de Monnaie & Reçu WhatsApp 1-Clic */}
+                {activeCashierSale && (
+                  <div className="flex-shrink-0 pb-1.5 relative z-30">
+                    <QuickCashierReceiptBanner
+                      sale={activeCashierSale}
+                      shopName={shopManager.userShops?.find(s => s.id === shopManager.shopId)?.name || 'Ma Boutique'}
+                      shopPhone={(mappedUser as any)?.user_metadata?.phone || (mappedUser as any)?.phone || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_phone_${shopManager.shopId}`) || '' : '')}
+                      shopAddress={(mappedUser as any)?.user_metadata?.address || (mappedUser as any)?.address || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_address_${shopManager.shopId}`) || '' : '')}
+                      onDismiss={() => setActiveCashierSale(null)}
+                      onOpenFullReceiptModal={(saleWithChange) => {
+                        setShareReceiptSale(saleWithChange)
+                        setShowShareReceiptModal(true)
+                      }}
+                    />
+                  </div>
                 )}
 
                 {/* Barre de saisie WhatsApp (FIXE EN BAS) */}
@@ -1196,6 +1216,8 @@ export default function JournalPage() {
       />
       <ReceiptShareModal
         isOpen={showShareReceiptModal}
+        shopPhone={(mappedUser as any)?.user_metadata?.phone || (mappedUser as any)?.phone || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_phone_${shopManager.shopId}`) || '' : '')}
+        shopAddress={(mappedUser as any)?.user_metadata?.address || (mappedUser as any)?.address || (typeof window !== 'undefined' ? localStorage.getItem(`cahier_shop_address_${shopManager.shopId}`) || '' : '')}
         onClose={() => { setShowShareReceiptModal(false); setShareReceiptSale(null) }}
         sale={shareReceiptSale}
         shopName={shopManager.userShops?.find(s => s.id === shopManager.shopId)?.name || 'Ma Boutique'}

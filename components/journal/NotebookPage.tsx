@@ -457,6 +457,18 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
 
                             {!isCrossedOut && (
                               <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity relative">
+                                {/* Bouton Reçu WhatsApp Direct 1-Clic */}
+                                {onShareWhatsAppReceipt && sale.total > 0 && (sale.pen_color === 'blue' || sale.pen_color === 'yellow' || sale.type === 'cash_in' || sale.type === 'sale' || sale.type === 'sale_cash' || sale.type === 'sale_credit') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onShareWhatsAppReceipt(sale)}
+                                    className="p-1 rounded-lg text-emerald-800 hover:bg-emerald-200/90 bg-emerald-100/90 border border-emerald-300 shadow-2xs transition-all active:scale-[0.97] cursor-pointer"
+                                    title="Reçu WhatsApp direct (1-Clic)"
+                                  >
+                                    <Share2 className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
+                                  </button>
+                                )}
+
                                 {/* Bouton Trois Points Unique (Actions Rapides) */}
                                 <div className="relative">
                                   <button
