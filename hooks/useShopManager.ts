@@ -346,13 +346,23 @@ export function useShopManager(mappedUser: MappedUser | null | undefined) {
     mappedUser?.shop_name ||
     'Mon Point de Vente'
 
-  const handleCreateShop = () => {
+  const handleCreateShop = async () => {
     if (!newShopName.trim() || !mappedUser?.id) return
-    const newId = `shop-${Date.now()}`
+    
+    // Génération d'un véritable UUID v4 standard pour la nouvelle boutique
+    const newId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0
+          const v = c === 'x' ? r : (r & 0x3) | 0x8
+          return v.toString(16)
+        })
+
     const newShopObj: Shop = {
       id: newId,
       name: newShopName.trim(),
       activity: newShopActivity,
+      country: 'BJ',
     }
     const updated = [...userShops, newShopObj]
     setUserShops(updated)
@@ -360,6 +370,23 @@ export function useShopManager(mappedUser: MappedUser | null | undefined) {
     setSelectedShopId(newId)
     setNewShopName('')
     setShowNewShopModal(false)
+
+    // Si connecté à Supabase, insérer directement dans public.shops avec son vrai UUID et son shop_code dérivé
+    if (isSupabaseClientConfigured()) {
+      try {
+        const shortCode = formatShortShopCode(newId)
+        await supabaseClient.from('shops').insert({
+          id: newId,
+          owner_id: mappedUser.id,
+          name: newShopName.trim(),
+          activity: newShopActivity,
+          shop_code: shortCode,
+          country: 'BJ',
+        })
+      } catch (err) {
+        console.warn('[ShopManager] Impossible de persister le nouveau shop immédiatement:', err)
+      }
+    }
   }
 
   const handleSwitchShop = (id: string) => {
