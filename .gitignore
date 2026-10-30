@@ -42,3 +42,5 @@ yarn-error.log*
 .DS_Store
 scratch/
 Thumbs.db
+
+cahier_mock_db.json

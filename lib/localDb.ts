@@ -1,35 +1,19 @@
 /**
- * localDb.ts — Fallback JSON fichier côté SERVEUR uniquement
+ * localDb.ts — Fallback en mémoire côté SERVEUR (Dev / Tests uniquement)
  *
- * Ce module fournit un stockage de secours (fichier JSON local) utilisé par
- * les API Routes (server-side) quand Supabase n'est pas configuré.
+ * Ce module fournit un stockage de secours temporaire en mémoire utilisé par
+ * les API Routes quand Supabase n'est pas configuré en environnement local.
  *
- * ⚠️ NE PAS importer ce fichier côté client (composants React, hooks).
- *    Pour la persistance côté client (mode hors-ligne navigateur), utiliser lib/offlineDb.ts.
+ * ⚠️ En production (Vercel), Supabase est obligatoire et les écritures disques sont proscrites.
+ * ⚠️ NE PAS importer ce fichier côté client. Utiliser lib/offlineDb.ts.
  */
-import fs from 'fs'
-import path from 'path'
 
-const DB_PATH = path.join(process.cwd(), 'cahier_mock_db.json')
+let inMemoryDb: any[] = []
 
 export function getLocalDb(): any[] {
-  try {
-    if (!fs.existsSync(DB_PATH)) {
-      fs.writeFileSync(DB_PATH, JSON.stringify([]))
-      return []
-    }
-    const data = fs.readFileSync(DB_PATH, 'utf-8')
-    return JSON.parse(data || '[]')
-  } catch (e) {
-    console.error('[localDb] Failed to read local DB:', e)
-    return []
-  }
+  return inMemoryDb
 }
 
 export function saveLocalDb(data: any[]) {
-  try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
-  } catch (e) {
-    console.error('[localDb] Failed to write local DB:', e)
-  }
+  inMemoryDb = Array.isArray(data) ? [...data] : []
 }
