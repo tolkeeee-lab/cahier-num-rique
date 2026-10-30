@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/types/database.types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co'
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
-// Client-side singleton Supabase client
-export const supabaseClient = createClient(supabaseUrl, supabaseKey, {
+// Client-side singleton Supabase client fortement typé
+export const supabaseClient = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
