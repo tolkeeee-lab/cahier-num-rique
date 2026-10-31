@@ -20,7 +20,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ── 2. STRUCTURE DES 10 TABLES ET TOUTES LEURS COLONNES ────────────────────────
+-- ── 2. STRUCTURE DES 11 TABLES ET TOUTES LEURS COLONNES ────────────────────────
 
 -- Table 1 : shops
 CREATE TABLE IF NOT EXISTS public.shops (
@@ -344,6 +344,18 @@ ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS last_seen_cost INTE
 ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS country VARCHAR(10) DEFAULT 'BJ';
 ALTER TABLE public.market_knowledge ADD COLUMN IF NOT EXISTS city VARCHAR(100);
 
+-- Table 11 : audit_logs (traçabilité anti-fraude)
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  shop_id VARCHAR(255) NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  user_email VARCHAR(255),
+  action VARCHAR(100) NOT NULL,
+  target_id VARCHAR(255),
+  details JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- ── 3. CRÉATION DES INDEX DE PERFORMANCE ───────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_shops_owner ON public.shops(owner_id);
 CREATE INDEX IF NOT EXISTS idx_shops_code ON public.shops(shop_code);
@@ -358,6 +370,8 @@ CREATE INDEX IF NOT EXISTS idx_products_barcode ON public.products(barcode);
 CREATE INDEX IF NOT EXISTS idx_debts_shop_status ON public.debts(shop_id, status);
 CREATE INDEX IF NOT EXISTS idx_supplier_debts_shop ON public.supplier_debts(shop_id);
 CREATE INDEX IF NOT EXISTS idx_shopping_list_shop ON public.shopping_list(shop_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_shop_created ON public.audit_logs(shop_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON public.audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_cash_closings_shop ON public.cash_closings(shop_id);
 CREATE INDEX IF NOT EXISTS idx_cash_closings_date ON public.cash_closings(date);
 
@@ -947,5 +961,43 @@ WITH CHECK (
   shop_id IS NOT NULL
   AND shop_id IN (SELECT private.user_shop_ids())
 );
+
+-- ------------------------------------------------------------------------------
+-- Audit logs : lecture/insertion limitées à la boutique autorisée
+-- Les entrées sont immuables (pas d'UPDATE ni de DELETE par les utilisateurs)
+-- ------------------------------------------------------------------------------
+ALTER TABLE IF EXISTS public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.audit_logs FROM anon;
+GRANT SELECT, INSERT ON TABLE public.audit_logs TO authenticated;
+
+DROP POLICY IF EXISTS "tenant_isolation_audit_logs_select" ON public.audit_logs;
+DROP POLICY IF EXISTS "tenant_isolation_audit_logs_insert" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_select" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_insert" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_update" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_member_delete" ON public.audit_logs;
+
+CREATE POLICY "audit_logs_member_select"
+ON public.audit_logs
+FOR SELECT
+TO authenticated
+USING (
+  shop_id IS NOT NULL
+  AND shop_id IN (SELECT private.user_shop_ids())
+);
+
+CREATE POLICY "audit_logs_member_insert"
+ON public.audit_logs
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  shop_id IS NOT NULL
+  AND shop_id IN (SELECT private.user_shop_ids())
+  AND (user_id IS NULL OR user_id = (SELECT auth.uid()))
+);
+
+REVOKE ALL ON TABLE public.market_intelligence FROM anon, authenticated;
+GRANT SELECT ON TABLE public.market_intelligence TO authenticated;
 
 NOTIFY pgrst, 'reload schema';
