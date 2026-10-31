@@ -3,6 +3,8 @@
  */
 
 import { getCanonicalProductName } from '@/lib/smartProductNormalizer'
+import { calculateLevenshteinDistance } from '@/lib/productUtils'
+export { calculateLevenshteinDistance }
 
 export interface StockProductCard {
   id: string
@@ -48,30 +50,7 @@ export interface AssistantAnalysisResult {
   alternativeVariants: StockProductCard[] // Variantes similaires en cas d'ambiguïté
 }
 
-/**
- * Calcul de la distance d'édition de Levenshtein entre deux mots
- */
-export function calculateLevenshteinDistance(a: string, b: string): number {
-  const matrix: number[][] = []
-  const lenA = a.length
-  const lenB = b.length
-
-  for (let i = 0; i <= lenA; i++) matrix[i] = [i]
-  for (let j = 0; j <= lenB; j++) matrix[0][j] = j
-
-  for (let i = 1; i <= lenA; i++) {
-    for (let j = 1; j <= lenB; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,       // Deletion
-        matrix[i][j - 1] + 1,       // Insertion
-        matrix[i - 1][j - 1] + cost // Substitution
-      )
-    }
-  }
-
-  return matrix[lenA][lenB]
-}
+// Distance d'édition de Levenshtein unifiée depuis lib/productUtils.ts
 
 /**
  * Analyse une ligne de saisie manuscrite avec détection d'erreurs de frappe (orthographe & prix)

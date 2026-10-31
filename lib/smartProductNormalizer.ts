@@ -2,6 +2,9 @@
  * smartProductNormalizer.ts — Moteur de Normalisation Canonique, Association par Genre + Prix et Sécurité Anti-Déduction Hasard
  */
 
+import { normalizeProductName, calculateSimilarity, levenshteinDistance } from '@/lib/productUtils'
+export { calculateSimilarity, levenshteinDistance }
+
 export interface CatalogItem {
   id: string
   name: string
@@ -32,98 +35,16 @@ const GENERIC_CATEGORY_KEYWORDS: Record<string, string[]> = {
   'huile': ['huile 1l', 'huile 2l', 'huile 5l', 'dinor', 'aya', 'mayor', 'huile']
 }
 
-// Dictionnaire de mapping canonique direct
-const CANONICAL_DICTIONARY: Record<string, string> = {
-  // Bières & Alcools
-  'flag': 'Flag',
-  'flag 600': 'Flag',
-  'flag 600ml': 'Flag',
-  'flaag': 'Flag',
-  'lb': 'LB',
-  'lb 600': 'LB',
-  'beaufort': 'Beaufort',
-  'beufort': 'Beaufort',
-  'castel': 'Castel',
-  'doppel': 'Doppel',
-  'chill': 'Chill',
-  'guinness': 'Guinness',
-  'heineken': 'Heineken',
+// Dictionnaire canonique unifié dans lib/productUtils.ts (CANONICAL_ALIASES)
 
-  // Sucreries & Softs
-  'coca': 'Coca-Cola',
-  'coca cola': 'Coca-Cola',
-  'coca-cola': 'Coca-Cola',
-  'fanta': 'Fanta',
-  'sprite': 'Sprite',
-  'youki': 'Youki',
-  'schweppes': 'Schweppes',
-
-  // Eaux
-  'possotome': 'Eau Possotomè',
-  'possotomè': 'Eau Possotomè',
-  'eau possotome': 'Eau Possotomè',
-  'eau possotomè': 'Eau Possotomè',
-
-  // Hygiène & Alimentation
-  'colgate': 'Colgate',
-  'close-up': 'Close-Up',
-  'oral-b': 'Oral-B',
-  'omo': 'Savon Omo',
-  'lux': 'Savon Lux'
-}
-
-function levenshteinDistance(a: string, b: string): number {
-  const matrix: number[][] = []
-  for (let i = 0; i <= b.length; i++) matrix[i] = [i]
-  for (let j = 0; j <= a.length; j++) matrix[0][j] = j
-
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1]
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        )
-      }
-    }
-  }
-  return matrix[b.length][a.length]
-}
-
-export function calculateSimilarity(s1: string, s2: string): number {
-  const str1 = s1.toLowerCase().trim()
-  const str2 = s2.toLowerCase().trim()
-  if (str1 === str2) return 1.0
-  if (str1.length === 0 || str2.length === 0) return 0.0
-  const dist = levenshteinDistance(str1, str2)
-  const maxLen = Math.max(str1.length, str2.length)
-  return 1.0 - dist / maxLen
-}
+// Levenshtein & similarité unifiés depuis lib/productUtils.ts
 
 /**
  * Normalise un nom brut vers son équivalent canonique.
  */
 export function getCanonicalProductName(rawName: string): string {
-  const clean = rawName.toLowerCase().trim()
-  if (CANONICAL_DICTIONARY[clean]) return CANONICAL_DICTIONARY[clean]
-
-  for (const key of Object.keys(CANONICAL_DICTIONARY)) {
-    if (clean === key) {
-      return CANONICAL_DICTIONARY[key]
-    }
-    // Nettoyage des préfixes génériques ("bouteille de flag") ou suffixes de contenance ("flag 600ml")
-    const noiseRegex = new RegExp(`^(?:bouteille|canette|pack|carton|sac|boite|verre)?\\s*(?:de\\s+)?${key}(?:\\s*(?:600|600ml|33cl|50cl|1l|1\\.5l|2l|pm|gm))?$`, 'i')
-    if (noiseRegex.test(clean)) {
-      return CANONICAL_DICTIONARY[key]
-    }
-  }
-
-  return rawName.trim().split(/\s+/)
-    .map(w => w.length <= 2 && w.toUpperCase() === w ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ')
+  if (!rawName) return ''
+  return normalizeProductName(rawName)
 }
 
 /**

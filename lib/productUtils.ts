@@ -34,6 +34,16 @@ const CANONICAL_ALIASES: Record<string, string> = {
   'dinor': 'Huile Dinor',
   'mayor': 'Huile Mayor',
   'boni': 'Riz Boni',
+  'doppel': 'Doppel',
+  'chill': 'Chill',
+  'fanta': 'Fanta',
+  'sprite': 'Sprite',
+  'youki': 'Youki',
+  'schweppes': 'Schweppes',
+  'close-up': 'Close-Up',
+  'oral-b': 'Oral-B',
+  'omo': 'Savon Omo',
+  'lux': 'Savon Lux',
 }
 
 /**
@@ -305,3 +315,6 @@ export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
 
   return copy
 }
+
+// Alias de compatibilité unifié
+export const calculateLevenshteinDistance = levenshteinDistance;

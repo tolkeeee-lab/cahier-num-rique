@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Share2, Sparkles, Check, Search, Send, PenTool, Lightbulb, ClipboardList, Flame, ShoppingCart, X } from 'lucide-react'
-import { formatCurrency } from '@/lib/currencyUtils'
+import { formatPrice } from '@/lib/penUtils'
 import { recordRequestedProductInStorage, RequestedProduct } from '@/lib/requestedProductsUtils'
 import { getOfflineSales } from '@/lib/offlineDb'
 import { getTodayDateString } from '@/lib/dateUtils'
@@ -207,7 +207,7 @@ export function RequestedProductsManager({
     msg += `═════════════════════════\n`
     pendingItems.forEach((item, idx) => {
       msg += `${idx + 1}. *${item.name}* (${item.requestCount} demandes clients)\n`
-      if (item.estimatedPrice) msg += `   Prix estimé : ${formatCurrency(item.estimatedPrice)}\n`
+      if (item.estimatedPrice) msg += `   Prix estimé : ${formatPrice(item.estimatedPrice)}\n`
     })
     msg += `═════════════════════════\n`
     msg += `✨ _À ajouter d'urgence au stock de la boutique !_`
@@ -394,7 +394,7 @@ export function RequestedProductsManager({
                 <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500">
                   <span className="bg-gray-100 px-2 py-0.5 rounded-md font-semibold text-gray-700">{item.category}</span>
                   {item.estimatedPrice && (
-                    <span className="text-emerald-800 font-bold tabular-nums">Prix : {formatCurrency(item.estimatedPrice)}</span>
+                    <span className="text-emerald-800 font-bold tabular-nums">Prix : {formatPrice(item.estimatedPrice)}</span>
                   )}
                 </div>
 
