@@ -1,11 +1,21 @@
 /* Service Worker PWA Robust Offline Shell — Cahier Numérique */
 
-const CACHE_NAME = 'cahier-pwa-v27'
+const CACHE_NAME = 'cahier-pwa-v28'
 const STATIC_ASSETS = [
   '/',
   '/journal',
   '/manifest.json',
   '/manifest.webmanifest',
+  '/icons/favicon-32.png',
+  '/icons/favicon-48.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-192.png',
+  '/icons/icon-maskable-512.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/icon-any.svg',
+  '/logo/logo-horizontal.svg',
+  '/logo/logo-symbole.svg',
   '/icon.svg',
   '/icon-192.png',
   '/icon-512.png',

@@ -25,26 +25,31 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#fdfaf2',
+  themeColor: '#0E8F6E',
   interactiveWidget: 'resizes-content',
 }
 
 export const metadata: Metadata = {
   title: 'Cahier Numérique - Gestion de Boutique',
   description: 'Gérez votre boutique simplement, comme un cahier physique.',
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
-    title: 'Cahier Caisse',
+    statusBarStyle: 'black-translucent',
+    title: 'Cahier Numérique',
   },
   icons: {
     icon: [
+      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/favicon-48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icons/icon-any.svg', type: 'image/svg+xml' },
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-      { url: '/icon.svg', type: 'image/svg+xml' },
     ],
-    shortcut: '/icon-192.png',
+    shortcut: '/icons/favicon-32.png',
     apple: [
+      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },

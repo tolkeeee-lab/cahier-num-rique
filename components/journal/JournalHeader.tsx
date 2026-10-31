@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { 
+import {
+  Download,
   Wifi, 
   WifiOff, 
   RefreshCw, 
@@ -72,6 +73,34 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
   const { features } = useFeatures()
   const labels = getActivityLabels(activity)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [isStandalone, setIsStandalone] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setIsStandalone(true)
+    }
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', () => {
+      setIsStandalone(true)
+      setDeferredPrompt(null)
+    })
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null)
+    }
+  }
 
   useEffect(() => {
     if (!showMobileMenu) return
@@ -99,8 +128,8 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
       <div className="flex items-center justify-between gap-1.5 h-8 sm:h-9">
         {/* Titre & Sélecteur Boutique */}
         <div className="flex items-center gap-1.5 min-w-0">
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-br from-[#f59e0b] to-[#d97706] flex items-center justify-center shadow-xs flex-shrink-0 text-amber-950">
-            <BookText className="w-3.5 h-3.5" strokeWidth={2} />
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white border border-amber-300/80 flex items-center justify-center shadow-xs flex-shrink-0 p-0.5">
+            <img src="/logo/logo-symbole.svg" alt="Cahier Numérique" className="w-full h-full object-contain" />
           </div>
           <div className="relative inline-flex items-center bg-amber-100/90 border border-amber-300 rounded-xl px-2 py-0.5 text-xs font-bold text-amber-950 max-w-[170px] sm:max-w-[260px] shadow-2xs">
             <select
@@ -159,6 +188,17 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
 
           {/* Desktop Only Actions */}
           <div className="hidden sm:flex items-center gap-1">
+          {deferredPrompt && !isStandalone && (
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#0E8F6E]/15 hover:bg-[#0E8F6E]/25 text-[#0E8F6E] text-xs font-bold border border-[#0E8F6E]/30 transition-all shadow-2xs cursor-pointer active:scale-[0.97]"
+              title="Installer l'application sur cet appareil"
+            >
+              <Download className="w-3 h-3" />
+              <span>Installer</span>
+            </button>
+          )}
             {features.enableCashClosing && onOpenCashClosing && (
               <button
                 type="button"
@@ -241,6 +281,18 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                   <div className="px-2.5 py-1 text-[10px] text-amber-900 font-black uppercase border-b border-amber-200 mb-1 tracking-wider">
                     Menu & Outils
                   </div>
+                  {deferredPrompt && !isStandalone && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowMobileMenu(false); handleInstallClick(); }}
+                      className="w-full text-left px-3 py-2 rounded-xl bg-[#0E8F6E]/10 hover:bg-[#0E8F6E]/20 active:scale-[0.97] text-[#0E8F6E] font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap border border-[#0E8F6E]/30"
+                    >
+                      <div className="w-6 h-6 rounded-lg bg-[#0E8F6E]/20 flex items-center justify-center flex-shrink-0 text-[#0E8F6E]">
+                        <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
+                      </div>
+                      <span>Installer l'application</span>
+                    </button>
+                  )}
 
                   {features.enableCashClosing && onOpenCashClosing && (
                     <button
