@@ -110,14 +110,7 @@ export async function getCurrentCash(shopId: string): Promise<number> {
     } catch {
       return 0
     }
-  } else {
-    try {
-      const { getLocalDb } = await import('@/lib/localDb')
-      const validSet = new Set(targetShopIds)
-      return calculateCash(getLocalDb().filter(s => validSet.has(s.shop_id)))
-    } catch {
-      return 0
-    }
   }
+  return 0
 }
 

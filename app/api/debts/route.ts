@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, Database } from '@/lib/supabase'
-import type { OfflineSale } from '@/lib/offlineDb'
 import { randomUUID } from 'crypto'
 export const dynamic = 'force-dynamic'
-import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 import { calculateCash } from '@/lib/sales/cashDrawerCalculator'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 type SaleRow = Database['public']['Tables']['sales']['Row']
 type DebtRow = Database['public']['Tables']['debts']['Row']
 type SupplierDebtRow = Database['public']['Tables']['supplier_debts']['Row']
-type LocalSaleItem = Partial<OfflineSale> & {
-  client_name?: string
-  total_amount?: number
-  paid_amount?: number
-  debt_amount?: number
-}
-
 interface DebtHistoryEntry {
   id: string
   date: string
@@ -48,17 +39,17 @@ async function getCurrentCash(shopId: string): Promise<number> {
   return calculateCash(salesList)
 }
 
-async function getAllSales(shopId: string): Promise<SaleRow[] | LocalSaleItem[]> {
+async function getAllSales(shopId: string): Promise<SaleRow[]> {
   const targetShopIds = getDualShopIds(shopId)
-  if (isSupabaseConfigured()) {
+  if (isSupabaseConfigured() && supabase) {
     try {
       const { data } = await supabase.from('sales').select('*').in('shop_id', targetShopIds)
-      return data || []
+      return (data || []) as SaleRow[]
     } catch (e) {
       console.error('Erreur Supabase dans debts API:', e)
     }
   }
-  return (getLocalDb() as LocalSaleItem[]).filter(s => targetShopIds.includes(s.shop_id || ''))
+  return []
 }
 
 export async function GET(request: NextRequest) {
@@ -124,7 +115,7 @@ export async function GET(request: NextRequest) {
           console.error('Erreur Supabase Grossistes:', e)
         }
       }
-      return NextResponse.json({ suppliers: getLocalSuppliers(shopId) })
+      return NextResponse.json({ suppliers: [] })
     }
 
     // Default: return BOTH clients and suppliers for DebtsBook.tsx
@@ -225,14 +216,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Local fallback
-    const localClients: NormalizedDebtItem[] = getLocalClients(shopId).map(c => ({
-      id: c.id, client_name: c.name, amount_owed: c.amount, paid_amount: c.paid, status: c.status, history: c.history, debt_type: 'client'
-    }))
-    const localSuppliers: NormalizedDebtItem[] = getLocalSuppliers(shopId).map(c => ({
-      id: c.id, client_name: c.name, amount_owed: c.amount, paid_amount: c.paid, status: c.status, history: c.history, debt_type: 'supplier'
-    }))
-    return NextResponse.json({ debts: [...localClients, ...localSuppliers] })
+    return NextResponse.json({ debts: [] })
   } catch (error) {
     if ((error as { status?: number })?.status === 401 || (error as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(error)
     console.error('Erreur API GET debts:', error)
@@ -311,48 +295,35 @@ export async function POST(request: NextRequest) {
       articles: []
     }
 
-    // 3. Enregistrer dans la base (idempotent via upsert)
-    if (isSupabaseConfigured()) {
-      try {
-        const { error: sError } = await supabase
-          .from('sales')
-          .upsert([
-            {
-              id: saleId,
-              shop_id: shopId,
-              date: dateStr,
-              time: timeStr,
-              client_name: name,
-              total_amount: amount,
-              paid_amount: action === 'pay' ? amount : 0,
-              debt_amount: action === 'credit' ? amount : 0,
-              status: action === 'credit' ? 'debt' : 'paid',
-              type: salesType,
-              pen_color: penColor,
-              notes: text,
-              created_at: createdAtStr
-            }
-          ], { onConflict: 'id' })
-
-        if (sError) throw sError
-
-        if (type === 'client') {
-          // Les opérations clients sont désormais uniquement gérées via la table 'sales'
-          // L'endpoint GET aggrège automatiquement les anciennes dettes et les nouvelles ventes.
-        } else if (type === 'supplier') {
-          // Les opérations fournisseurs sont désormais uniquement gérées via la table 'sales'
-          // L'endpoint GET aggrège automatiquement les anciennes dettes et les nouvelles ventes.
-        }
-
-      } catch (e) {
-        console.error('Erreur Supabase insertion debts POST:', e)
-      }
+    // 3. Enregistrer dans la base Supabase (Source unique d'autorité)
+    if (!isSupabaseConfigured() || !supabase) {
+      return NextResponse.json({ error: 'Supabase non configuré sur le serveur' }, { status: 503 })
     }
 
-    // Toujours pousser sur le cache local pour la synchronisation
-    const db = getLocalDb()
-    db.push(newSale)
-    saveLocalDb(db)
+    const { error: sError } = await supabase
+      .from('sales')
+      .upsert([
+        {
+          id: saleId,
+          shop_id: shopId,
+          date: dateStr,
+          time: timeStr,
+          client_name: name,
+          total_amount: amount,
+          paid_amount: action === 'pay' ? amount : 0,
+          debt_amount: action === 'credit' ? amount : 0,
+          status: action === 'credit' ? 'debt' : 'paid',
+          type: salesType,
+          pen_color: penColor,
+          notes: text,
+          created_at: createdAtStr
+        }
+      ], { onConflict: 'id' })
+
+    if (sError) {
+      console.error('Erreur Supabase insertion debts POST:', sError)
+      return NextResponse.json({ error: sError.message }, { status: 500 })
+    }
 
     return NextResponse.json({ success: true, sale: newSale })
   } catch (error) {
@@ -360,91 +331,4 @@ export async function POST(request: NextRequest) {
     console.error('Erreur POST debts:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
-}
-
-// Helpers locaux en mémoire pour l'extraction dynamique
-function getLocalClients(shopId: string) {
-  const targetShopIds = getDualShopIds(shopId)
-  const sales = (getLocalDb() as LocalSaleItem[]).filter(s => s.status !== 'crossed_out' && targetShopIds.includes(s.shop_id || ''))
-  const clientNameMap = new Map<string, string>()
-  sales
-    .filter(s => (s.type === 'sale_credit' || s.type === 'payment_client') && (s.client || s.client_name))
-    .forEach(s => {
-      const trimmed = String(s.client_name).trim()
-      const lower = trimmed.toLowerCase()
-      if (!clientNameMap.has(lower)) {
-        clientNameMap.set(lower, trimmed)
-      }
-    })
-  
-  return Array.from(clientNameMap.values()).map(name => {
-    const lower = name.toLowerCase().trim()
-    const clientSales = sales.filter(s => ((s.client || s.client_name) || '').toLowerCase().trim() === lower)
-    const credits = clientSales.filter(s => s.type === 'sale_credit').reduce((sum: number, s) => sum + (s.debt ?? s.debt_amount ?? s.total ?? s.total_amount ?? 0), 0)
-    const downPayments = clientSales.filter(s => s.type === 'sale_credit').reduce((sum: number, s) => sum + (s.paid ?? s.paid_amount ?? 0), 0)
-    const payments = clientSales.filter(s => s.type === 'payment_client').reduce((sum: number, s) => sum + (s.paid ?? s.paid_amount ?? s.total ?? s.total_amount ?? 0), 0)
-    const balance = Math.max(0, credits - payments)
-
-    const history: DebtHistoryEntry[] = clientSales
-      .filter(s => s.type === 'sale_credit' || s.type === 'payment_client')
-      .map(s => ({
-        id: s.id || randomUUID(),
-        date: s.date || '',
-        time: s.time || '',
-        description: s.notes || (s.type === 'sale_credit' ? 'Achat à crédit' : 'Remboursement crédit'),
-        amount: Number(s.type === 'sale_credit' ? (s.debt ?? s.debt_amount ?? s.total ?? s.total_amount ?? 0) : -Number(s.paid ?? s.paid_amount ?? s.total ?? s.total_amount ?? 0))
-      }))
-
-    return {
-      id: randomUUID(),
-      name,
-      amount: balance,
-      paid: payments + downPayments,
-      status: (balance === 0 ? 'settled' : 'pending') as 'settled' | 'pending',
-      history
-    }
-  })
-}
-
-function getLocalSuppliers(shopId: string) {
-  const targetShopIds = getDualShopIds(shopId)
-  const sales = (getLocalDb() as LocalSaleItem[]).filter(s => s.status !== 'crossed_out' && targetShopIds.includes(s.shop_id || ''))
-  const suppNameMap = new Map<string, string>()
-  sales
-    .filter(s => (s.type === 'purchase_credit' || s.type === 'payment_supplier') && (s.client || s.client_name))
-    .forEach(s => {
-      const trimmed = String(s.client_name).trim()
-      const lower = trimmed.toLowerCase()
-      if (!suppNameMap.has(lower)) {
-        suppNameMap.set(lower, trimmed)
-      }
-    })
-
-  return Array.from(suppNameMap.values()).map(name => {
-    const lower = name.toLowerCase().trim()
-    const supplierSales = sales.filter(s => ((s.client || s.client_name) || '').toLowerCase().trim() === lower)
-    const credits = supplierSales.filter(s => s.type === 'purchase_credit').reduce((sum: number, s) => sum + (s.debt ?? s.debt_amount ?? s.total ?? s.total_amount ?? 0), 0)
-    const downPayments = supplierSales.filter(s => s.type === 'purchase_credit').reduce((sum: number, s) => sum + (s.paid ?? s.paid_amount ?? 0), 0)
-    const payments = supplierSales.filter(s => s.type === 'payment_supplier').reduce((sum: number, s) => sum + (s.paid ?? s.paid_amount ?? s.total ?? s.total_amount ?? 0), 0)
-    const balance = Math.max(0, credits - payments)
-
-    const history: DebtHistoryEntry[] = supplierSales
-      .filter(s => s.type === 'purchase_credit' || s.type === 'payment_supplier')
-      .map(s => ({
-        id: s.id || randomUUID(),
-        date: s.date || '',
-        time: s.time || '',
-        description: s.notes || (s.type === 'purchase_credit' ? 'Achat à crédit fournisseur' : 'Remboursement fournisseur'),
-        amount: Number(s.type === 'purchase_credit' ? (s.debt ?? s.debt_amount ?? s.total ?? s.total_amount ?? 0) : -Number(s.paid ?? s.paid_amount ?? s.total ?? s.total_amount ?? 0))
-      }))
-
-    return {
-      id: randomUUID(),
-      name,
-      amount: balance,
-      paid: payments + downPayments,
-      status: (balance === 0 ? 'settled' : 'pending') as 'settled' | 'pending',
-      history
-    }
-  })
 }

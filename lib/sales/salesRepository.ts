@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase'
 import { isSupabaseConfigured } from './cashDrawerCalculator'
-import { getLocalDb } from '@/lib/localDb'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export async function feedMarketKnowledge(
@@ -32,20 +31,9 @@ export async function feedMarketKnowledge(
 }
 
 
-export function getLocalSales(dateParam: string | null, shopId: string): any[] {
-  const salesDatabase = getLocalDb()
-  const validShopIds = new Set(getDualShopIds(shopId))
-  let filtered = salesDatabase.filter(s => validShopIds.has(s.shop_id))
-  if (dateParam === 'today') {
-    const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
-    filtered = filtered.filter(s => s.date === today)
-  }
-  return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-}
-
 export async function fetchSalesHistory(dateParam: string | null, shopId: string) {
-  if (!isSupabaseConfigured()) {
-    return getLocalSales(dateParam, shopId)
+  if (!isSupabaseConfigured() || !supabase) {
+    return []
   }
 
   try {
@@ -108,7 +96,7 @@ export async function fetchSalesHistory(dateParam: string | null, shopId: string
       category: sale.category || 'Divers'
     }))
   } catch (e) {
-    console.error('Erreur lecture Supabase GET, repli sur local:', e)
-    return getLocalSales(dateParam, shopId)
+    console.error('Erreur lecture Supabase GET:', e)
+    return []
   }
 }

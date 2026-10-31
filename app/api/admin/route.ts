@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getLocalDb } from '@/lib/localDb'
 import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
 
 const isSupabaseConfigured = () => {
@@ -131,22 +130,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(stats)
     }
 
-    // Fallback Mock Local
-    const localSales = getLocalDb()
-    
-    // Dériver des utilisateurs locaux factices à partir des écritures locales
-    const uniqueShops = Array.from(new Set(localSales.map(s => s.shop_id || 'default-shop')))
-    const fakeUsers = uniqueShops.map((shopId, idx) => ({
-      id: `fake_u_${idx}`,
-      shop_id: shopId,
-      name: idx === 0 ? 'Chantal' : `Boutiquier ${idx}`,
-      email: idx === 0 ? 'chantal@cahier.com' : `owner_${idx}@cahier.com`,
-      role: 'owner',
-      created_at: new Date().toISOString()
-    }))
-
-    const stats = buildAdminStats(fakeUsers, localSales)
-    return NextResponse.json(stats)
+    return NextResponse.json({ error: 'Supabase non configuré sur le serveur' }, { status: 503 })
 
   } catch (err) {
     console.error('Erreur GET /api/admin:', err)

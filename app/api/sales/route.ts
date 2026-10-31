@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, Database } from '@/lib/supabase'
-import type { OfflineSale } from '@/lib/offlineDb'
 import { randomUUID } from 'crypto'
-import { getLocalDb, saveLocalDb } from '@/lib/localDb'
 import { isSupabaseConfigured, getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
 import { parseTextWithOpenAI, ParsedSale } from '@/lib/sales/openAiSaleParser'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
@@ -138,44 +136,39 @@ export async function POST(request: NextRequest) {
       synced: true,
     }
 
-    // Sauvegarde Supabase ou DB Locale
-    if (isSupabaseConfigured() && supabase) {
-      const { error: saleErr } = await supabase.from('sales').upsert([saleRecord], { onConflict: 'id' })
-      if (saleErr) {
-        console.error('Erreur Supabase, bascule locale :', saleErr)
-        const localSales = getLocalDb()
-        localSales.unshift(newSale)
-        saveLocalDb(localSales)
-      } else {
-        if (parsedData?.articles && parsedData.articles.length > 0) {
-          // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de retry
-          await supabase.from('sold_articles').delete().eq('sale_id', saleId)
+    // Persistance Supabase (Seule source d'autorité Cloud)
+    if (!isSupabaseConfigured() || !supabase) {
+      return NextResponse.json({ error: 'Supabase n\'est pas configuré sur le serveur' }, { status: 503 })
+    }
 
-          const soldArticlesRecords: SoldArticleInsert[] = parsedData.articles.map(a => {
-            const qty = a.quantite || 1;
-            const price = a.prix_unitaire || 0;
-            return {
-              sale_id: saleId,
-              shop_id: shopId,
-              product_name: a.nom,
-              quantity: qty,
-              unit_price: price,
-              subtotal: qty * price
-            };
-          })
-          const { error: artErr } = await supabase.from('sold_articles').insert(soldArticlesRecords)
-          if (artErr) console.warn('Erreur insertion sold_articles:', artErr)
+    const { error: saleErr } = await supabase.from('sales').upsert([saleRecord], { onConflict: 'id' })
+    if (saleErr) {
+      console.error('Erreur Supabase lors de la sauvegarde vente:', saleErr)
+      return NextResponse.json({ error: 'Erreur Supabase: ' + saleErr.message }, { status: 500 })
+    }
 
-          const reqCountry = request.headers.get('x-shop-country') || body.country || 'BJ'
-          const reqCity = request.headers.get('x-shop-city') || body.city || null
-          await feedMarketKnowledge(parsedData.articles, type, shopId, reqCountry, reqCity)
-        }
+    if (parsedData?.articles && parsedData.articles.length > 0) {
+      // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de retry
+      await supabase.from('sold_articles').delete().eq('sale_id', saleId)
 
-      }
-    } else {
-      const localSales = getLocalDb()
-      localSales.unshift(newSale)
-      saveLocalDb(localSales)
+      const soldArticlesRecords: SoldArticleInsert[] = parsedData.articles.map(a => {
+        const qty = a.quantite || 1;
+        const price = a.prix_unitaire || 0;
+        return {
+          sale_id: saleId,
+          shop_id: shopId,
+          product_name: a.nom,
+          quantity: qty,
+          unit_price: price,
+          subtotal: qty * price
+        };
+      })
+      const { error: artErr } = await supabase.from('sold_articles').insert(soldArticlesRecords)
+      if (artErr) console.warn('Erreur insertion sold_articles:', artErr)
+
+      const reqCountry = request.headers.get('x-shop-country') || body.country || 'BJ'
+      const reqCity = request.headers.get('x-shop-city') || body.city || null
+      await feedMarketKnowledge(parsedData.articles, type, shopId, reqCountry, reqCity)
     }
 
     return NextResponse.json({ success: true, sale: newSale })
@@ -216,6 +209,10 @@ export async function PATCH(request: NextRequest) {
     const targetShopIds = getDualShopIds(shopId)
     const { id, action, text, penColor, articles, clientName, category } = body
 
+    if (!isSupabaseConfigured() || !supabase) {
+      return NextResponse.json({ error: 'Supabase non configuré' }, { status: 503 })
+    }
+
     if (!id) {
       return NextResponse.json({ error: 'ID de vente manquant' }, { status: 400 })
     }
@@ -230,68 +227,47 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Saisie d\'article non reconnue' }, { status: 400 })
       }
 
-      if (isSupabaseConfigured() && supabase) {
-        const { data: currentSale, error: fetchErr } = await supabase
-          .from('sales')
-          .select('*, sold_articles(*)')
-          .eq('id', id)
-          .in('shop_id', targetShopIds)
-          .single()
+      const { data: currentSale, error: fetchErr } = await supabase
+        .from('sales')
+        .select('*, sold_articles(*)')
+        .eq('id', id)
+        .in('shop_id', targetShopIds)
+        .single()
 
-        if (currentSale && !fetchErr) {
-          const addedAmount = parsed.total_facture || 0
-          const newTotal = (currentSale.total_amount || 0) + addedAmount
-          const newPaid = currentSale.type === 'cash_in' ? newTotal : (currentSale.paid_amount || 0)
-          const newDebt = currentSale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : (currentSale.debt_amount || 0)
-          const newNotes = currentSale.notes ? `${currentSale.notes}, ${text}` : text
-          const newStatus = newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid'
-
-          await supabase.from('sales').update({
-            total_amount: newTotal,
-            paid_amount: newPaid,
-            debt_amount: newDebt,
-            notes: newNotes,
-            status: newStatus,
-          }).eq('id', id).in('shop_id', targetShopIds)
-
-          const newSoldArticles = parsed.articles.map(a => ({
-            sale_id: id,
-            shop_id: currentSale.shop_id || shopId,
-            product_name: a.nom,
-            quantity: a.quantite,
-            unit_price: a.prix_unitaire,
-          }))
-          await supabase.from('sold_articles').insert(newSoldArticles)
-
-          return NextResponse.json({ success: true })
-        }
+      if (fetchErr || !currentSale) {
+        return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
       }
 
-      const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: Partial<OfflineSale>) => s.id === id && (targetShopIds.includes(s.shop_id || '') || !s.shop_id))
-      if (idx !== -1) {
-        const sale = localSales[idx]
-        const addedAmount = parsed.total_facture || 0
-        const newTotal = (sale.total_amount || 0) + addedAmount
-        const newPaid = sale.type === 'cash_in' ? newTotal : (sale.paid_amount || 0)
-        const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : (sale.debt_amount || 0)
-        sale.total_amount = newTotal
-        sale.paid_amount = newPaid
-        sale.debt_amount = newDebt
-        sale.notes = sale.notes ? `${sale.notes}, ${text}` : text
-        sale.status = newDebt > 0 && sale.type === 'sale_credit' ? 'debt' : 'paid'
-        sale.articles = [
-          ...(sale.articles || []),
-          ...parsed.articles.map(a => ({
-            name: a.nom,
-            quantity: a.quantite,
-            unit_price: a.prix_unitaire,
-          }))
-        ]
-        saveLocalDb(localSales)
-        return NextResponse.json({ success: true, sale })
+      const addedAmount = parsed.total_facture || 0
+      const newTotal = (currentSale.total_amount || 0) + addedAmount
+      const newPaid = currentSale.type === 'cash_in' ? newTotal : (currentSale.paid_amount || 0)
+      const newDebt = currentSale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : (currentSale.debt_amount || 0)
+      const newNotes = currentSale.notes ? `${currentSale.notes}, ${text}` : text
+
+      const patchObj: SaleUpdate = {
+        total_amount: newTotal,
+        paid_amount: newPaid,
+        debt_amount: newDebt,
+        notes: newNotes,
+        status: newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid',
       }
-      return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
+
+      const { error: updateErr } = await supabase.from('sales').update(patchObj).eq('id', id).in('shop_id', targetShopIds)
+      if (updateErr) {
+        return NextResponse.json({ error: updateErr.message }, { status: 500 })
+      }
+
+      const newArticles = parsed.articles.map(a => ({
+        sale_id: id,
+        shop_id: currentSale.shop_id || shopId,
+        product_name: a.nom,
+        quantity: a.quantite,
+        unit_price: a.prix_unitaire,
+      }))
+      const { error: artErr } = await supabase.from('sold_articles').insert(newArticles)
+      if (artErr) console.warn('Erreur insertion sold_articles:', artErr)
+
+      return NextResponse.json({ success: true })
     }
 
     if (action === 'update_sale') {
@@ -299,101 +275,63 @@ export async function PATCH(request: NextRequest) {
       const newTotal = updatedArticles.reduce((acc: number, a) => acc + ((a.quantity || a.quantite || 0) * (a.unit_price || a.prix_unitaire || 0)), 0)
       const newNotes = updatedArticles.map(a => `${a.quantity || a.quantite || 1} ${a.name || a.nom || ''} à ${a.unit_price || a.prix_unitaire || 0}`).join(', ')
 
-      if (isSupabaseConfigured() && supabase) {
-        const { data: currentSale } = await supabase
-          .from('sales')
-          .select('*')
-          .eq('id', id)
-          .in('shop_id', targetShopIds)
-          .single()
-        if (currentSale) {
-          const isCashIn = currentSale.type === 'cash_in'
-          const newPaid = isCashIn ? newTotal : (currentSale.paid_amount || 0)
-          const newDebt = currentSale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
-          const patchObj: SaleUpdate = {
-            total_amount: newTotal,
-            paid_amount: newPaid,
-            debt_amount: newDebt,
-            notes: newNotes,
-            status: newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid',
-          }
-          if (clientName) patchObj.client_name = clientName
-          await supabase.from('sales').update(patchObj).eq('id', id).in('shop_id', targetShopIds)
-
-          await supabase.from('sold_articles').delete().eq('sale_id', id)
-          if (updatedArticles.length > 0) {
-            await supabase.from('sold_articles').insert(
-              updatedArticles.map(a => ({
-                sale_id: id,
-                shop_id: currentSale.shop_id || shopId,
-                product_name: a.name || a.nom,
-                quantity: a.quantity || a.quantite,
-                unit_price: a.unit_price || a.prix_unitaire,
-              }))
-            )
-          }
-          return NextResponse.json({ success: true })
-        }
+      const { data: currentSale } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('id', id)
+        .in('shop_id', targetShopIds)
+        .single()
+      if (!currentSale) {
+        return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
       }
 
-      const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: Partial<OfflineSale>) => s.id === id && (targetShopIds.includes(s.shop_id || '') || !s.shop_id))
-      if (idx !== -1) {
-        const sale = localSales[idx]
-        const isCashIn = sale.type === 'cash_in'
-        const newPaid = isCashIn ? newTotal : (sale.paid_amount || 0)
-        const newDebt = sale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
-        sale.total_amount = newTotal
-        sale.paid_amount = newPaid
-        sale.debt_amount = newDebt
-        sale.notes = newNotes
-        if (clientName) sale.client_name = clientName
-        sale.articles = updatedArticles.map(a => ({
-          name: a.name || a.nom,
-          quantity: a.quantity || a.quantite,
-          unit_price: a.unit_price || a.prix_unitaire,
-        }))
-        saveLocalDb(localSales)
-        return NextResponse.json({ success: true, sale })
+      const isCashIn = currentSale.type === 'cash_in'
+      const newPaid = isCashIn ? newTotal : (currentSale.paid_amount || 0)
+      const newDebt = currentSale.type === 'sale_credit' ? Math.max(0, newTotal - newPaid) : 0
+      const patchObj: SaleUpdate = {
+        total_amount: newTotal,
+        paid_amount: newPaid,
+        debt_amount: newDebt,
+        notes: newNotes,
+        status: newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid',
       }
-      return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
+      if (clientName) patchObj.client_name = clientName
+      await supabase.from('sales').update(patchObj).eq('id', id).in('shop_id', targetShopIds)
+
+      await supabase.from('sold_articles').delete().eq('sale_id', id)
+      if (updatedArticles.length > 0) {
+        await supabase.from('sold_articles').insert(
+          updatedArticles.map(a => ({
+            sale_id: id,
+            shop_id: currentSale.shop_id || shopId,
+            product_name: a.name || a.nom,
+            quantity: a.quantity || a.quantite,
+            unit_price: a.unit_price || a.prix_unitaire,
+          }))
+        )
+      }
+      return NextResponse.json({ success: true })
     }
 
     if (action === 'update_category') {
-      if (isSupabaseConfigured() && supabase) {
-        await supabase.from('sales').update({ category }).eq('id', id).in('shop_id', targetShopIds)
-        return NextResponse.json({ success: true })
+      const { error: catErr } = await supabase.from('sales').update({ category }).eq('id', id).in('shop_id', targetShopIds)
+      if (catErr) {
+        return NextResponse.json({ error: catErr.message }, { status: 500 })
       }
-      const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: Partial<OfflineSale>) => s.id === id && (targetShopIds.includes(s.shop_id || '') || !s.shop_id))
-      if (idx !== -1) {
-        localSales[idx].category = category
-        saveLocalDb(localSales)
-        return NextResponse.json({ success: true })
-      }
-      return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
+      return NextResponse.json({ success: true })
     }
 
     if (action === 'settle_debt') {
       const { debt_amount, paid_amount, status: newStatus } = body
-      if (isSupabaseConfigured() && supabase) {
-        await supabase.from('sales').update({
-          debt_amount: Number(debt_amount || 0),
-          paid_amount: Number(paid_amount || 0),
-          status: newStatus || (Number(debt_amount || 0) <= 0 ? 'paid' : 'debt'),
-        }).eq('id', id).in('shop_id', targetShopIds)
-        return NextResponse.json({ success: true })
+      const { error: debtErr } = await supabase.from('sales').update({
+        debt_amount: Number(debt_amount || 0),
+        paid_amount: Number(paid_amount || 0),
+        status: newStatus || (Number(debt_amount || 0) <= 0 ? 'paid' : 'debt'),
+      }).eq('id', id).in('shop_id', targetShopIds)
+      if (debtErr) {
+        return NextResponse.json({ error: debtErr.message }, { status: 500 })
       }
-      const localSales = getLocalDb()
-      const idx = localSales.findIndex((s: Partial<OfflineSale>) => s.id === id && (targetShopIds.includes(s.shop_id || '') || !s.shop_id))
-      if (idx !== -1) {
-        localSales[idx].debt_amount = Number(debt_amount || 0)
-        localSales[idx].paid_amount = Number(paid_amount || 0)
-        localSales[idx].status = newStatus || (Number(debt_amount || 0) <= 0 ? 'paid' : 'debt')
-        saveLocalDb(localSales)
-        return NextResponse.json({ success: true })
-      }
-      return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
+      return NextResponse.json({ success: true })
     }
 
     return NextResponse.json({ error: 'Action inconnue' }, { status: 400 })
