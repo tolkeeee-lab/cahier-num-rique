@@ -1,25 +1,26 @@
 /* Service Worker PWA Robust Offline Shell — Cahier Numérique */
 
-const CACHE_NAME = 'cahier-pwa-v28'
+const CACHE_NAME = 'cahier-pwa-v30'
 const STATIC_ASSETS = [
   '/',
   '/journal',
   '/manifest.json',
+  '/manifest.json?v=3',
   '/manifest.webmanifest',
+  '/icons/pwa-192.png?v=3',
+  '/icons/pwa-512.png?v=3',
+  '/icons/pwa-maskable-192.png?v=3',
+  '/icons/pwa-maskable-512.png?v=3',
+  '/icons/pwa-apple-touch-icon.png?v=3',
+  '/icons/pwa-192.png',
+  '/icons/pwa-512.png',
   '/icons/favicon-32.png',
   '/icons/favicon-48.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/icon-maskable-192.png',
-  '/icons/icon-maskable-512.png',
-  '/icons/apple-touch-icon.png',
   '/icons/icon-any.svg',
   '/logo/logo-horizontal.svg',
   '/logo/logo-symbole.svg',
-  '/icon.svg',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/apple-touch-icon.png',
 ]
 
 // Installation : Pre-caching robuste asset par asset avec Promise.allSettled
@@ -73,6 +74,22 @@ self.addEventListener('fetch', (event) => {
 
   // 1. Ignorer les API dynamiques et requêtes non-GET (gérées côté client avec IndexedDB)
   if (url.pathname.startsWith('/api/') || event.request.method !== 'GET') {
+    return
+  }
+
+    // 1.5. Manifeste PWA et Icônes : Toujours chercher sur le réseau en priorité (anti-cache)
+  if (url.pathname.includes('manifest') || url.pathname.includes('/icons/') || url.pathname.includes('pwa-')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+          }
+          return response
+        })
+        .catch(() => caches.match(event.request))
+    )
     return
   }
 

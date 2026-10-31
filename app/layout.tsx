@@ -32,7 +32,7 @@ export const viewport = {
 export const metadata: Metadata = {
   title: 'Cahier Numérique - Gestion de Boutique',
   description: 'Gérez votre boutique simplement, comme un cahier physique.',
-  manifest: '/manifest.json',
+  manifest: '/manifest.json?v=3',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -40,17 +40,16 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icons/favicon-48.png', sizes: '48x48', type: 'image/png' },
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-      { url: '/icons/icon-any.svg', type: 'image/svg+xml' },
-      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/favicon-32.png?v=3', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/favicon-48.png?v=3', sizes: '48x48', type: 'image/png' },
+      { url: '/icons/pwa-192.png?v=3', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/pwa-512.png?v=3', sizes: '512x512', type: 'image/png' },
+      { url: '/icons/icon-any.svg?v=3', type: 'image/svg+xml' },
     ],
-    shortcut: '/icons/favicon-32.png',
+    shortcut: '/icons/favicon-32.png?v=3',
     apple: [
-      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icons/pwa-apple-touch-icon.png?v=3', sizes: '180x180', type: 'image/png' },
+      { url: '/icons/apple-touch-icon.png?v=3', sizes: '180x180', type: 'image/png' },
     ],
   },
 }
@@ -69,14 +68,15 @@ export default function RootLayout({
           {children}
         </FeatureProvider>
         
-        {/* Enregistrement du Service Worker pour le support PWA */}
+                {/* Enregistrement du Service Worker pour le support PWA */}
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
               var registerSW = function() {
-                navigator.serviceWorker.register('/sw.js').then(
+                navigator.serviceWorker.register('/sw.js?v=3').then(
                   function(reg) {
                     console.log('SW enregistré scope:', reg.scope);
+                    reg.update(); // Force vérification de mise à jour immédiate
                   },
                   function(err) {
                     console.error('SW échec enregistrement:', err);
