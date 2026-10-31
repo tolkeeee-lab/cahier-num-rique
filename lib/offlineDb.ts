@@ -5,7 +5,6 @@
  * pour le mode hors-ligne du Cahier Numérique.
  *
  * IMPORTANT : Ce fichier est uniquement destiné au navigateur (côté client).
- * Pour le fallback côté API Route (serveur), voir lib/localDb.ts.
  */
 
 import {
