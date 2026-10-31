@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase, Database } from '@/lib/supabase'
+import { supabase, Database, isBackendSupabaseConfigured } from '@/lib/supabase'
 import { normalizeProductName, sanitizeProductData, CleanableProduct } from '@/lib/productUtils'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 type ProductRow = Database['public']['Tables']['products']['Row'] & { tracking_started_at?: string | null }
@@ -23,11 +23,8 @@ interface StockMovementItem {
 }
 
 
-const isSupabaseConfigured = () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  return url.includes('supabase.co') && key.length > 20
-}
+// Utilise la configuration backend officielle importée de @/lib/supabase
+  const isSupabaseConfigured = isBackendSupabaseConfigured
 
 // ─── GET /api/stock ───────────────────────────────────────────────────────────
 // Retourne le catalogue produits + stock calculé depuis les écritures

@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, isBackendSupabaseConfigured } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
 import { requireShopAccess, requireShopOwner, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
-const isSupabaseConfigured = () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  return url && !url.includes('placeholder') && key && !key.includes('placeholder')
-}
+const isSupabaseConfigured = isBackendSupabaseConfigured
 
 
 // GET /api/employees

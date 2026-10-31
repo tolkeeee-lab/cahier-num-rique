@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, isBackendSupabaseConfigured } from '@/lib/supabase'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 import type { Database } from '@/lib/types/database.types'
 
 type CashClosingRow = Database['public']['Tables']['cash_closings']['Row']
 type CashClosingInsert = Database['public']['Tables']['cash_closings']['Insert']
 
-const isSupabaseConfigured = () => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  return url.includes('supabase.co') && key.length > 20
-}
+// Utilise la configuration backend officielle importée de @/lib/supabase
+  const isSupabaseConfigured = isBackendSupabaseConfigured
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)

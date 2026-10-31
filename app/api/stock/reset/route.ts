@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, isBackendSupabaseConfigured } from '@/lib/supabase'
 import { requireShopOwner, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 export async function POST(request: Request) {
@@ -8,11 +8,8 @@ export async function POST(request: Request) {
   let shopId: string
   try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
 
-  const isSupabaseConfigured = () => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    return url.includes('supabase.co') && key.length > 20
-  }
+  // Utilise la configuration backend officielle importée de @/lib/supabase
+  const isSupabaseConfigured = isBackendSupabaseConfigured
 
   try {
     if (isSupabaseConfigured()) {
