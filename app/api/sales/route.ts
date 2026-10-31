@@ -5,7 +5,6 @@ import { isSupabaseConfigured, getCurrentCash } from '@/lib/sales/cashDrawerCalc
 import { parseTextWithOpenAI, ParsedSale } from '@/lib/sales/openAiSaleParser'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { fetchSalesHistory, feedMarketKnowledge } from '@/lib/sales/salesRepository'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 
 type SaleInsert = Database['public']['Tables']['sales']['Insert']
@@ -206,7 +205,6 @@ export async function PATCH(request: NextRequest) {
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
     const { shop } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
-    const targetShopIds = getDualShopIds(shopId)
     const { id, action, text, penColor, articles, clientName, category } = body
 
     if (!isSupabaseConfigured() || !supabase) {
@@ -231,7 +229,7 @@ export async function PATCH(request: NextRequest) {
         .from('sales')
         .select('*, sold_articles(*)')
         .eq('id', id)
-        .in('shop_id', targetShopIds)
+        .eq('shop_id', shopId)
         .single()
 
       if (fetchErr || !currentSale) {
@@ -252,7 +250,7 @@ export async function PATCH(request: NextRequest) {
         status: newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid',
       }
 
-      const { error: updateErr } = await supabase.from('sales').update(patchObj).eq('id', id).in('shop_id', targetShopIds)
+      const { error: updateErr } = await supabase.from('sales').update(patchObj).eq('id', id).eq('shop_id', shopId)
       if (updateErr) {
         return NextResponse.json({ error: updateErr.message }, { status: 500 })
       }
@@ -279,7 +277,7 @@ export async function PATCH(request: NextRequest) {
         .from('sales')
         .select('*')
         .eq('id', id)
-        .in('shop_id', targetShopIds)
+        .eq('shop_id', shopId)
         .single()
       if (!currentSale) {
         return NextResponse.json({ error: 'Vente non trouvée' }, { status: 404 })
@@ -296,7 +294,7 @@ export async function PATCH(request: NextRequest) {
         status: newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid',
       }
       if (clientName) patchObj.client_name = clientName
-      await supabase.from('sales').update(patchObj).eq('id', id).in('shop_id', targetShopIds)
+      await supabase.from('sales').update(patchObj).eq('id', id).eq('shop_id', shopId)
 
       await supabase.from('sold_articles').delete().eq('sale_id', id)
       if (updatedArticles.length > 0) {
@@ -314,7 +312,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'update_category') {
-      const { error: catErr } = await supabase.from('sales').update({ category }).eq('id', id).in('shop_id', targetShopIds)
+      const { error: catErr } = await supabase.from('sales').update({ category }).eq('id', id).eq('shop_id', shopId)
       if (catErr) {
         return NextResponse.json({ error: catErr.message }, { status: 500 })
       }
@@ -327,7 +325,7 @@ export async function PATCH(request: NextRequest) {
         debt_amount: Number(debt_amount || 0),
         paid_amount: Number(paid_amount || 0),
         status: newStatus || (Number(debt_amount || 0) <= 0 ? 'paid' : 'debt'),
-      }).eq('id', id).in('shop_id', targetShopIds)
+      }).eq('id', id).eq('shop_id', shopId)
       if (debtErr) {
         return NextResponse.json({ error: debtErr.message }, { status: 500 })
       }

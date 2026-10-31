@@ -3,7 +3,6 @@ import { supabase, Database } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
 export const dynamic = 'force-dynamic'
 import { calculateCash } from '@/lib/sales/cashDrawerCalculator'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 type SaleRow = Database['public']['Tables']['sales']['Row']
 type DebtRow = Database['public']['Tables']['debts']['Row']
@@ -40,10 +39,9 @@ async function getCurrentCash(shopId: string): Promise<number> {
 }
 
 async function getAllSales(shopId: string): Promise<SaleRow[]> {
-  const targetShopIds = getDualShopIds(shopId)
   if (isSupabaseConfigured() && supabase) {
     try {
-      const { data } = await supabase.from('sales').select('*').in('shop_id', targetShopIds)
+      const { data } = await supabase.from('sales').select('*').eq('shop_id', shopId)
       return (data || []) as SaleRow[]
     } catch (e) {
       console.error('Erreur Supabase dans debts API:', e)
@@ -60,14 +58,13 @@ export async function GET(request: NextRequest) {
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
     const { shop } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
-    const targetShopIds = getDualShopIds(shopId)
 
     if (type === 'supplier') {
       // Logic for explicit supplier request (maybe used elsewhere, keep it)
       if (isSupabaseConfigured()) {
         try {
-          const { data: debts } = await supabase.from('supplier_debts').select('*').in('shop_id', targetShopIds).order('supplier_name', { ascending: true }) as { data: SupplierDebtRow[] | null }
-          const { data: sales } = await supabase.from('sales').select('*').in('shop_id', targetShopIds).in('type', ['purchase_credit', 'payment_supplier'])
+          const { data: debts } = await supabase.from('supplier_debts').select('*').eq('shop_id', shopId).order('supplier_name', { ascending: true }) as { data: SupplierDebtRow[] | null }
+          const { data: sales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier'])
 
           const suppMap = new Map<string, string>()
           ;[...(debts || []).map(d => d.supplier_name), ...(sales || []).filter(s => s.client_name).map(s => s.client_name)]
@@ -124,8 +121,8 @@ export async function GET(request: NextRequest) {
     if (isSupabaseConfigured()) {
       try {
         // --- CLIENTS ---
-        const { data: cDebts } = await supabase.from('debts').select('*').in('shop_id', targetShopIds) as { data: DebtRow[] | null }
-        const { data: cSales } = await supabase.from('sales').select('*').in('shop_id', targetShopIds).in('type', ['sale_credit', 'payment_client'])
+        const { data: cDebts } = await supabase.from('debts').select('*').eq('shop_id', shopId) as { data: DebtRow[] | null }
+        const { data: cSales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['sale_credit', 'payment_client'])
         
         // Regroupement insensible à la casse et sans espaces résiduels
         const clientNameMap = new Map<string, string>()
@@ -168,8 +165,8 @@ export async function GET(request: NextRequest) {
         allDebts.push(...clientList)
 
         // --- SUPPLIERS ---
-        const { data: sDebts } = await supabase.from('supplier_debts').select('*').in('shop_id', targetShopIds)
-        const { data: sSales } = await supabase.from('sales').select('*').in('shop_id', targetShopIds).in('type', ['purchase_credit', 'payment_supplier'])
+        const { data: sDebts } = await supabase.from('supplier_debts').select('*').eq('shop_id', shopId)
+        const { data: sSales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier'])
         
         const suppNameMap = new Map<string, string>()
         ;[...(sDebts || []).map(d => d.supplier_name), ...(sSales || []).filter(s => s.client_name).map(s => s.client_name)]

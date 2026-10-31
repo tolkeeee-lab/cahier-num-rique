@@ -3,7 +3,6 @@ import { Plus, Trash2, Share2, Sparkles, Check, Search, Send, PenTool, Lightbulb
 import { formatCurrency } from '@/lib/currencyUtils'
 import { recordRequestedProductInStorage, RequestedProduct } from '@/lib/requestedProductsUtils'
 import { getOfflineSales } from '@/lib/offlineDb'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
 import { getTodayDateString } from '@/lib/dateUtils'
 
 interface RequestedProductsManagerProps {
@@ -27,28 +26,18 @@ export function RequestedProductsManager({
   const [estimatedPrice, setEstimatedPrice] = useState('')
   const [notes, setNotes] = useState('')
 
-  // Storage key avec support multi-tenant et alias complets
-  const targetShopIds = getDualShopIds(shopId)
   const storageKey = `cahier_requested_products_${shopId}`
 
   const loadItems = React.useCallback(() => {
     try {
-      const localItemsMap = new Map<string, RequestedProduct>()
-      for (const sId of targetShopIds) {
-        const stored = localStorage.getItem(`cahier_requested_products_${sId}`)
-        if (stored) {
-          try {
-            const parsed: RequestedProduct[] = JSON.parse(stored)
-            if (Array.isArray(parsed)) {
-              parsed.forEach(i => {
-                const clean = (i?.name || '').toLowerCase().trim()
-                if (clean) localItemsMap.set(clean, i)
-              })
-            }
-          } catch {}
-        }
+      let localItems: RequestedProduct[] = []
+      const stored = localStorage.getItem(storageKey)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) localItems = parsed
+        } catch {}
       }
-      const localItems: RequestedProduct[] = Array.from(localItemsMap.values())
 
       // Fusionner avec les ventes de type 'client_request' (patron ↔ employé)
       const salesSource = sales || getOfflineSales(shopId)
@@ -97,11 +86,9 @@ export function RequestedProductsManager({
 
       const mergedList = Array.from(mergedMap.values())
       setItems(mergedList)
-      for (const sId of targetShopIds) {
-        localStorage.setItem(`cahier_requested_products_${sId}`, JSON.stringify(mergedList))
-      }
+      localStorage.setItem(storageKey, JSON.stringify(mergedList))
     } catch { }
-  }, [storageKey, targetShopIds.join(','), sales, shopId])
+  }, [storageKey, sales, shopId])
 
   useEffect(() => {
     loadItems()
@@ -130,9 +117,7 @@ export function RequestedProductsManager({
   const saveItems = (updated: RequestedProduct[]) => {
     setItems(updated)
     try {
-      for (const sId of targetShopIds) {
-        localStorage.setItem(`cahier_requested_products_${sId}`, JSON.stringify(updated))
-      }
+      localStorage.setItem(storageKey, JSON.stringify(updated))
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cahier_requested_products_updated'))
       }

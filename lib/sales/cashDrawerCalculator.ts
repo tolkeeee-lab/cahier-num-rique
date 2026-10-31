@@ -77,19 +77,13 @@ export function calculateCash(list: any[]): number {
 }
 
 export async function getCurrentCash(shopId: string): Promise<number> {
-  const { getDualShopIds } = await import('@/lib/shopCodeUtils')
-  const targetShopIds = getDualShopIds(shopId)
-  const orFilter = targetShopIds.length > 1
-    ? targetShopIds.map(id => `shop_id.eq.${id}`).join(',')
-    : `shop_id.eq.${shopId}`
-
   if (isSupabaseConfigured()) {
     try {
       const { supabase } = await import('@/lib/supabase')
       const { data, error } = await supabase
         .from('sales')
         .select('type, paid_amount, total_amount, status, notes, client_name, pen_color')
-        .or(orFilter)
+        .eq('shop_id', shopId)
 
       if (error) throw error
       return calculateCash(data || [])
@@ -100,13 +94,7 @@ export async function getCurrentCash(shopId: string): Promise<number> {
   if (typeof window !== 'undefined') {
     try {
       const { getOfflineSales } = await import('@/lib/offlineDb')
-      const mergedMap = new Map()
-      for (const id of targetShopIds) {
-        for (const s of getOfflineSales(id)) {
-          if (s?.id) mergedMap.set(s.id, s)
-        }
-      }
-      return calculateCash(Array.from(mergedMap.values()))
+      return calculateCash(getOfflineSales(shopId))
     } catch {
       return 0
     }

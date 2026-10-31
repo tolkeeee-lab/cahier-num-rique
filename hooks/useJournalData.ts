@@ -13,7 +13,6 @@ import { logAuditEvent } from '@/lib/auditLogger'
 
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
-import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export interface Sale {
   id: string
@@ -175,7 +174,6 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
       try {
         if (isSupabaseClientConfigured() && isOnline) {
-          const targetShopIds = getDualShopIds(shopId)
           const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
             setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 3500)
           )
@@ -185,7 +183,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             supabaseClient
               .from('sales')
               .select('*, sold_articles(*)')
-              .in('shop_id', targetShopIds)
+              .eq('shop_id', shopId)
               .order('created_at', { ascending: false }),
             timeoutPromise
           ])
@@ -197,7 +195,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             const fallback = await supabaseClient
               .from('sales')
               .select('*')
-              .in('shop_id', targetShopIds)
+              .eq('shop_id', shopId)
               .order('created_at', { ascending: false })
             data = fallback.data
             error = fallback.error
@@ -382,42 +380,37 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     let channel: any = null
     if (isSupabaseClientConfigured() && isOnline && shopId) {
       try {
-        const dualIds = getDualShopIds(shopId)
-        const activeIds = dualIds.length > 0 ? dualIds : [shopId]
         channel = supabaseClient.channel(`realtime_shop_${shopId}_${Date.now()}`)
 
-        // Écoute sur les ventes, produits et courses pour chaque identifiant possible
-        activeIds.forEach(id => {
-          channel
-            .on(
-              'postgres_changes',
-              { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${id}` },
-              () => {
-                if (isMounted) {
-                  // Rechargement immédiat de la caisse dès qu'une vente est faite sur un autre appareil
-                  reloadData()
-                }
+        // Écoute directe sur le shopId canonique
+        channel
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${shopId}` },
+            () => {
+              if (isMounted) {
+                reloadData()
               }
-            )
-            .on(
-              'postgres_changes',
-              { event: '*', schema: 'public', table: 'products', filter: `shop_id=eq.${id}` },
-              () => {
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
-                }
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'products', filter: `shop_id=eq.${shopId}` },
+            () => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
               }
-            )
-            .on(
-              'postgres_changes',
-              { event: '*', schema: 'public', table: 'shopping_list', filter: `shop_id=eq.${id}` },
-              () => {
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
-                }
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'shopping_list', filter: `shop_id=eq.${shopId}` },
+            () => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
               }
-            )
-        })
+            }
+          )
 
         channel.subscribe((status: string) => {
           if (status === 'SUBSCRIBED') {
@@ -534,12 +527,11 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     if (isSupabaseClientConfigured() && isOnline) {
       try {
-        const targetShopIds = getDualShopIds(shopId)
         await supabaseClient
           .from('sales')
           .update({ status: 'crossed_out' })
           .eq('id', saleId)
-          .in('shop_id', targetShopIds)
+          .eq('shop_id', shopId)
       } catch (e) {
         console.warn('Erreur mise à jour status Supabase:', e)
       }
