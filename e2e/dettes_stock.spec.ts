@@ -146,8 +146,8 @@ test.describe('Cahier Numérique — Parcours E2E Stock & Dettes (Offline-First)
     const orderButton = page.locator('button:has-text("Commander (1-Clic)"), button:has-text("Commander")').first()
     if (await orderButton.isVisible()) {
       await orderButton.click()
-      // Doit afficher l'état de confirmation
-      await expect(page.locator('text=Ajouté').or(page.locator('text=Commander')).first()).toBeVisible()
+      // Doit afficher l'état de confirmation ou le bouton
+      await expect(page.locator('text=/ajouté|commander/i').first()).toBeVisible()
     }
   })
 

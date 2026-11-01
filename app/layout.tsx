@@ -54,6 +54,7 @@ export const metadata: Metadata = {
 }
 
 import { FeatureProvider } from '@/context/FeatureContext'
+import { PwaUpdateBanner } from '@/components/pwa/PwaUpdateBanner'
 
 export default function RootLayout({
   children,
@@ -65,6 +66,7 @@ export default function RootLayout({
       <body suppressHydrationWarning className="font-sans antialiased bg-[#141210] text-gray-900 min-h-screen">
         <FeatureProvider>
           {children}
+          <PwaUpdateBanner />
         </FeatureProvider>
         
                 {/* Enregistrement du Service Worker pour le support PWA */}

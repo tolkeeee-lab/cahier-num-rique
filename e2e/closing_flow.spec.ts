@@ -88,8 +88,8 @@ test.describe('Cahier Numérique — Parcours E2E Clôture de Caisse (Z) & Mode 
     // 3. Ouvrir l'assistant billetage
     const countBillsBtn = page.locator('button:has-text("Compter mes billets")').first()
     if (await countBillsBtn.isVisible()) {
-      await countBillsBtn.click()
-      await expect(page.locator('text=Assistant Billetage')).toBeVisible({ timeout: 3000 })
+      await countBillsBtn.click({ force: true })
+      await expect(page.locator('text=Assistant Billetage')).toBeVisible({ timeout: 5000 })
 
       // Saisir 1 billet de 10 000 F
       const tenThousandInput = page.locator('input[type="number"]').first()

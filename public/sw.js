@@ -63,6 +63,13 @@ self.addEventListener('activate', (event) => {
   self.clients.claim()
 })
 
+// Réception des messages du client (forcer la mise à jour immédiate)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
+
 // Interception des requêtes réseau
 self.addEventListener('fetch', (event) => {
   // Ignorer toute requête non HTTP/HTTPS (ex: chrome-extension://, moz-extension://, data:)
