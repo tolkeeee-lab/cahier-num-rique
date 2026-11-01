@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, Database } from '@/lib/supabase'
+import { supabase, Database, isBackendSupabaseConfigured } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
-import { isSupabaseConfigured, getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
+import { getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
 import { parseTextWithOpenAI, ParsedSale } from '@/lib/sales/openAiSaleParser'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { fetchSalesHistory, feedMarketKnowledge } from '@/lib/sales/salesRepository'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+
+const isSupabaseConfigured = isBackendSupabaseConfigured
 
 type SaleInsert = Database['public']['Tables']['sales']['Insert']
 type SaleUpdate = Database['public']['Tables']['sales']['Update']

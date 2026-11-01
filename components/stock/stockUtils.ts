@@ -1,31 +1,37 @@
+import { formatPrice as canonicalFormatPrice } from '@/lib/productUtils'
 import { StockItem, StockStatus, StockFormState } from './types'
 import { getTodayDateString } from '@/lib/dateUtils'
 
 export const CATEGORIES = [
   'Général',
-  'Boissons',
-  'Boissons & Bar',
+  'Épicerie & Vivres',
+  'Boissons & Brasserie',
+  'Alimentation',
+  'Produits Laitiers',
+  'Hygiène & Entretien',
+  'Quincaillerie & Énergie',
   'Cuisiné / Plats',
   'Cafétéria / Ptis-dej',
   'Matières Premières / Ingrédients',
   'Prestations & Services',
-  'Alimentation',
-  'Hygiène',
   'Autre',
 ]
 
 export const UNITS = [
   'unité',
   'pièce',
+  'bouteille',
+  'boîte',
+  'paquet',
+  'sachet',
   'kg',
   'g',
   'litre',
   'cl',
   'carton',
   'sac',
+  'casier',
   'colis',
-  'boîte',
-  'bouteille',
 ]
 
 export const EMPTY_FORM: StockFormState = {
@@ -43,8 +49,7 @@ export const EMPTY_FORM: StockFormState = {
 }
 
 export function formatPrice(price: number): string {
-  const safe = Number.isFinite(price) ? price : 0
-  return new Intl.NumberFormat('fr-FR').format(safe) + ' F'
+  return canonicalFormatPrice(price, 'F')
 }
 
 export function getItemPurchaseValue(item: StockItem): number {

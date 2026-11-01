@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, Database, isBackendSupabaseConfigured } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
 export const dynamic = 'force-dynamic'
-import { calculateCash } from '@/lib/sales/cashDrawerCalculator'
+import { getCurrentCash } from '@/lib/sales/cashDrawerCalculator'
 import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
-type SaleRow = Database['public']['Tables']['sales']['Row']
 type DebtRow = Database['public']['Tables']['debts']['Row']
 type SupplierDebtRow = Database['public']['Tables']['supplier_debts']['Row']
 interface DebtHistoryEntry {
@@ -27,24 +26,6 @@ interface NormalizedDebtItem {
 
 
 const isSupabaseConfigured = isBackendSupabaseConfigured
-
-// Calcule le solde du tiroir-caisse avec la logique unifiée
-async function getCurrentCash(shopId: string): Promise<number> {
-  const salesList = await getAllSales(shopId)
-  return calculateCash(salesList)
-}
-
-async function getAllSales(shopId: string): Promise<SaleRow[]> {
-  if (isSupabaseConfigured() && supabase) {
-    try {
-      const { data } = await supabase.from('sales').select('*').eq('shop_id', shopId)
-      return (data || []) as SaleRow[]
-    } catch (e) {
-      console.error('Erreur Supabase dans debts API:', e)
-    }
-  }
-  return []
-}
 
 export async function GET(request: NextRequest) {
   try {

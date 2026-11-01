@@ -1,3 +1,4 @@
+import { formatPrice as canonicalFormatPrice } from '@/lib/productUtils'
 export interface Pen {
   id: string
   name: string
@@ -12,9 +13,7 @@ export interface Pen {
 export type FilterId = 'all' | 'blue' | 'red' | 'green' | 'purple' | 'yellow'
 
 export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: 0,
-  }).format(price) + ' FCFA'
+  return canonicalFormatPrice(price, 'FCFA')
 }
 
 export function getPens(activity?: string): Pen[] {

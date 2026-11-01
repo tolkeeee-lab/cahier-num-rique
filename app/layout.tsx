@@ -49,7 +49,6 @@ export const metadata: Metadata = {
     shortcut: '/icons/favicon-32.png?v=3',
     apple: [
       { url: '/icons/pwa-apple-touch-icon.png?v=3', sizes: '180x180', type: 'image/png' },
-      { url: '/icons/apple-touch-icon.png?v=3', sizes: '180x180', type: 'image/png' },
     ],
   },
 }

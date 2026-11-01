@@ -1,4 +1,5 @@
 'use client'
+import { formatPrice } from '@/lib/productUtils'
 
 /**
  * StockConfirmationModal.tsx
@@ -31,10 +32,6 @@ interface StockConfirmationModalProps {
   onConfirm: () => Promise<void>
   onModify: () => void    // Ouvre le wizard pour modifier les infos
   onCancel: () => void
-}
-
-function formatPrice(n: number) {
-  return n.toLocaleString('fr-FR') + ' F'
 }
 
 export function StockConfirmationModal({

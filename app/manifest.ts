@@ -42,18 +42,7 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/svg+xml',
         purpose: 'any',
       },
-      {
-        src: '/pwa-192.png?v=3',
-        sizes: '192x192',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: '/pwa-512.png?v=3',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any',
-      },
+
     ],
   }
 }

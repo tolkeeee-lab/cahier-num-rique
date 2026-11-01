@@ -318,3 +318,13 @@ export function sanitizeProductData<T extends CleanableProduct>(product: T): T {
 
 // Alias de compatibilité unifié
 export const calculateLevenshteinDistance = levenshteinDistance;
+
+
+/**
+ * Formateur universel de prix marchand (FCFA/F) résilient aux NaN et flottants.
+ */
+export function formatPrice(price: number, suffix: string = 'F'): string {
+  const safe = Number.isFinite(price) ? Math.round(price) : 0
+  const formatted = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(safe)
+  return suffix ? `${formatted} ${suffix}` : formatted
+}

@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react'
 import { X, Save, Edit3, Tag, Package, Coins, TrendingUp, AlertTriangle, Barcode, Layers } from 'lucide-react'
 import { StockItem, StockFormState } from './types'
+import { CATEGORIES, UNITS } from './stockUtils'
 import { formatPrice } from '@/lib/penUtils'
 
 interface ProductModalProps {
@@ -17,30 +18,6 @@ interface ProductModalProps {
   deductPastSales?: boolean
   setDeductPastSales?: (val: boolean) => void
 }
-
-const CATEGORIES = [
-  'Épicerie & Vivres',
-  'Boissons & Brasserie',
-  'Produits Laitiers',
-  'Hygiène & Entretien',
-  'Quincaillerie & Énergie',
-  'Papeterie',
-  'Alimentation',
-  'Divers',
-]
-
-const UNITS = [
-  'unité',
-  'bouteille',
-  'boîte',
-  'paquet',
-  'sachet',
-  'kg',
-  'litre',
-  'carton',
-  'sac',
-  'casier',
-]
 
 export function ProductModal({
   isOpen,

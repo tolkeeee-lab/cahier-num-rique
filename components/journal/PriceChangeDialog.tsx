@@ -1,4 +1,5 @@
 'use client'
+import { formatPrice } from '@/lib/productUtils'
 
 /**
  * PriceChangeDialog.tsx
@@ -22,10 +23,6 @@ interface PriceChangeDialogProps {
   onAcceptNewPrice: () => Promise<void>    // Enregistre avec nouveau prix + MAJ catalogue
   onKeepOldPrice: () => Promise<void>     // Enregistre avec l'ancien prix
   onCancel: () => void
-}
-
-function formatPrice(n: number) {
-  return n.toLocaleString('fr-FR') + ' F'
 }
 
 export function PriceChangeDialog({
