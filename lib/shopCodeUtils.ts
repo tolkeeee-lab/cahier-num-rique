@@ -5,11 +5,16 @@ import { supabaseClient } from './supabaseClient'
  */
 
 /**
- * Normalise un code boutique (ex: "SHOP-58C54" -> "58C54", "BTQ-58C54" -> "58C54")
+ * Normalise un code boutique (ex: "SHOP-58C54" -> "58C54", "BTQ-58C54" -> "58C54", UUID -> "58C54")
+ * Unifie déterministement PC et Mobile sur le même identifiant court canonique.
  */
 export function normalizeShopCode(shopId: string): string {
   if (!shopId) return ''
-  return shopId.trim().toUpperCase().replace(/^(BTQ-|SHOP-)/i, '')
+  const trimmed = shopId.trim()
+  if (isRealUuid(trimmed)) {
+    return trimmed.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase()
+  }
+  return trimmed.toUpperCase().replace(/^(BTQ-|SHOP-)/i, '')
 }
 
 /**
@@ -45,9 +50,6 @@ export function matchShopByCode(inputCode: string, shops: Array<{ id: string; na
   return shortMatch ? shortMatch.id : null
 }
 
-/**
- * Vérifie si un identifiant de boutique est un vrai UUID Supabase long
- */
 /**
  * Vérifie si un identifiant de boutique est un vrai UUID v4 standard
  */
@@ -135,7 +137,7 @@ export async function findShopIdByCode(inputCode: string): Promise<string> {
 }
 
 /**
- * Retourne la liste des identifiants équivalents (ex: ['58C54', 'SHOP-58C54', 'BTQ-58C54'])
+ * Retourne la liste des identifiants équivalents (ex: ['58C54', 'SHOP-58C54', 'BTQ-58C54', UUID...])
  */
 export function getDualShopIds(shopId: string): string[] {
   if (!shopId) return []
@@ -158,10 +160,34 @@ export function getDualShopIds(shopId: string): string[] {
       ids.add(`SHOP-${shortClean}`)
       ids.add(`BTQ-${shortClean}`)
     }
+  } else if (typeof window !== 'undefined') {
+    // Si c'est un code court, inclure l'UUID complet associé s'il est connu en local
+    try {
+      const storedShopId = localStorage.getItem('cahier_current_shop_id')
+      if (storedShopId && isRealUuid(storedShopId)) {
+        if (normalizeShopCode(storedShopId) === clean) {
+          ids.add(storedShopId)
+        }
+      }
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith('cahier_user_shops_')) {
+          try {
+            const parsed = JSON.parse(localStorage.getItem(k) || '[]')
+            if (Array.isArray(parsed)) {
+              for (const s of parsed) {
+                if (s?.id && isRealUuid(s.id)) {
+                  if (normalizeShopCode(s.id) === clean) {
+                    ids.add(s.id)
+                  }
+                }
+              }
+            }
+          } catch {}
+        }
+      }
+    } catch {}
   }
 
   return Array.from(ids)
 }
-
-
-

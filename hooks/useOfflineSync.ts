@@ -29,6 +29,7 @@ import {
 import { idbGetSyncQueue, idbRemoveSyncItem } from '@/lib/indexedDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { broadcastInstantSync } from '@/lib/realtimeSync'
+import { captureAppError } from '@/lib/errorDiagnostics'
 import type { SyncStatus } from '@/hooks/useNetworkStatus'
 
 interface UseOfflineSyncOptions {
@@ -90,11 +91,22 @@ export function useOfflineSync({
         const { data: refreshed } = await supabaseClient.auth.refreshSession()
         accessToken = refreshed.session?.access_token ?? null
       }
+
+      // Si le refresh immédiat a échoué (ex: reconnexion réseau récente), retenter une fois après 600ms
+      if (!accessToken) {
+        await new Promise(r => setTimeout(r, 600))
+        const { data: retrySession } = await supabaseClient.auth.getSession()
+        accessToken = retrySession.session?.access_token ?? null
+      }
     }
 
     if (!accessToken) {
       isSyncing.current = false
       setSyncStatus('error')
+      captureAppError('Session utilisateur expirée ou absente : veuillez vous reconnecter pour synchroniser les données avec le serveur distant.', {
+        shopId,
+        source: 'useOfflineSync',
+      })
       return
     }
 

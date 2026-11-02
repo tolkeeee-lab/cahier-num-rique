@@ -19,8 +19,8 @@
  * 
  * 4. Cycle de vie unifié (Single Source of Truth) :
  *    - Un seul point de création de canal (getOrCreateRealtimeChannel).
- *    - Tous les écouteurs sont attachés avant l'appel à channel.subscribe().
- *    - Registre dynamique de callbacks permettant d'ajouter ou retirer des écouteurs sans jamais recréer le canal.
+ *    - File d'attente résiliente (pendingBroadcasts) envoyée dès que le canal passe en état SUBSCRIBED.
+ *    - Tolérance absolue des formats d'identifiants (UUID complet <-> Code Court BTQ).
  */
 
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -64,7 +64,7 @@ export function getLocalDeviceId(): string {
 
 /**
  * Retourne le nom de canal Supabase Realtime déterministe et partagé pour la boutique.
- * Exemple: 'realtime_shop_58C54' pour 'BTQ-58C54', 'SHOP-58C54' ou '58C54'.
+ * Exemple: 'realtime_shop_58C54' pour 'BTQ-58C54', 'SHOP-58C54' ou UUID '58c54123-...'.
  */
 export function getRealtimeChannelName(shopId: string): string {
   if (!shopId) return 'realtime_shop_default'
@@ -75,7 +75,9 @@ export function getRealtimeChannelName(shopId: string): string {
 // Référence vers le canal actif singleton et registre partagé de callbacks
 let activeChannel: any = null
 let activeChannelName: string | null = null
+let isChannelSubscribed = false
 const registeredCallbacks = new Set<RealtimeSyncCallbacks>()
+const pendingBroadcasts: RealtimeSyncPayload[] = []
 
 /**
  * Récupère ou instancie le canal Realtime Supabase pour la boutique.
@@ -97,12 +99,13 @@ export function getOrCreateRealtimeChannel(shopId: string) {
     } catch {}
     activeChannel = null
     activeChannelName = null
+    isChannelSubscribed = false
   }
 
   try {
     const channel = supabaseClient.channel(channelName, {
       config: {
-        broadcast: { ack: false, self: false },
+        broadcast: { ack: true, self: false },
       },
     })
 
@@ -147,14 +150,17 @@ export function getOrCreateRealtimeChannel(shopId: string) {
       if (!payload) return
 
       // Ignorer ses propres messages pour éviter les échos
-      if (payload.senderDeviceId === myDeviceId) return
+      if (payload.senderDeviceId && payload.senderDeviceId === myDeviceId) return
 
-      // Vérifier que le message concerne bien notre boutique (support multi-alias)
-      if (payload.shopId && !matchingShopIds.has(payload.shopId)) {
-        const normalizedMsgCode = normalizeShopCode(payload.shopId)
-        const normalizedOurCode = normalizeShopCode(shopId)
-        if (normalizedMsgCode !== normalizedOurCode) return
-      }
+      // Vérifier que le message concerne bien notre boutique (support universel multi-alias)
+      const normalizedMsgCode = normalizeShopCode(payload.shopId)
+      const normalizedOurCode = normalizeShopCode(shopId)
+      const isMatching =
+        normalizedMsgCode === normalizedOurCode ||
+        matchingShopIds.has(payload.shopId) ||
+        !payload.shopId
+
+      if (!isMatching) return
 
       handleEntityUpdate(payload.entity)
     })
@@ -186,11 +192,25 @@ export function getOrCreateRealtimeChannel(shopId: string) {
         }
       })
 
-    // 3. Souscrire une seule fois au canal
+    // 3. Souscrire une seule fois au canal avec gestion de la file d'attente
     channel.subscribe((status: string, err?: any) => {
       if (status === 'SUBSCRIBED') {
-        console.log(`[Realtime] Synchronisation PC <-> Téléphone active pour boutique ${shopId}`)
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        isChannelSubscribed = true
+        console.log(`[Realtime] Synchronisation PC <-> Téléphone active sur ${channelName}`)
+
+        // Vider immédiatement les diffusions mises en file d'attente pendant la connexion
+        while (pendingBroadcasts.length > 0) {
+          const item = pendingBroadcasts.shift()
+          if (item) {
+            channel.send({
+              type: 'broadcast',
+              event: 'cahier_instant_sync',
+              payload: item,
+            }).catch(() => {})
+          }
+        }
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        isChannelSubscribed = false
         console.warn(`[Realtime] Statut canal ${status}:`, err)
         captureAppError(err || `Canal Realtime en statut ${status}`, {
           shopId,
@@ -213,6 +233,7 @@ export function getOrCreateRealtimeChannel(shopId: string) {
 /**
  * Diffuse instantanément un événement de synchronisation vers tous les autres appareils.
  * Latence moyenne WebSocket : 30ms - 80ms.
+ * Si le canal est en cours de négociation, met en file d'attente pour expédition garantie.
  */
 export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 'all'): Promise<void> {
   if (!isSupabaseClientConfigured() || !shopId) return
@@ -228,11 +249,31 @@ export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 
       timestamp: Date.now(),
     }
 
-    await channel.send({
+    if (!isChannelSubscribed) {
+      pendingBroadcasts.push(payload)
+      return
+    }
+
+    const res = await channel.send({
       type: 'broadcast',
       event: 'cahier_instant_sync',
       payload,
     })
+
+    if (res === 'error' || res === 'timed out') {
+      console.warn(`[Realtime Broadcast] Réessai diffusion (${res})...`)
+      setTimeout(async () => {
+        try {
+          if (activeChannel) {
+            await activeChannel.send({
+              type: 'broadcast',
+              event: 'cahier_instant_sync',
+              payload,
+            })
+          }
+        } catch {}
+      }, 250)
+    }
   } catch (err) {
     console.warn('[Realtime Broadcast] Erreur diffusion:', err)
   }

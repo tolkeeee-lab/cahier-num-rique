@@ -104,3 +104,4 @@ flowchart TD
 
 4. **Vérification Continue dans les Tests** :
    Le script de contrôle `scripts/guard_anti_duplicate.ts` et la suite de résilience `scripts/test_deep_resilience.ts` doivent valider en permanence la présence et l'intégrité de `@/lib/errorDiagnostics` et de ce skill.
+

@@ -11,6 +11,7 @@ import {
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { logAuditEvent } from '@/lib/auditLogger'
 import { setupRealtimeSync, broadcastInstantSync } from '@/lib/realtimeSync'
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
@@ -179,12 +180,13 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 3500)
           )
 
-          // Requête principale avec les articles détaillés
+          // Requête principale multi-alias (unifie UUID et codes courts BTQ/SHOP)
+          const targetShopIds = getDualShopIds(shopId)
           let { data, error } = await Promise.race([
             supabaseClient
               .from('sales')
               .select('*, sold_articles(*)')
-              .eq('shop_id', shopId)
+              .in('shop_id', targetShopIds)
               .order('created_at', { ascending: false }),
             timeoutPromise
           ])
@@ -196,7 +198,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             const fallback = await supabaseClient
               .from('sales')
               .select('*')
-              .eq('shop_id', shopId)
+              .in('shop_id', targetShopIds)
               .order('created_at', { ascending: false })
             data = fallback.data
             error = fallback.error
@@ -382,7 +384,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     if (shopId && isOnline) {
       cleanupRealtime = setupRealtimeSync(shopId, {
         onSalesUpdated: () => {
-          if (isMounted) reloadData()
+          if (isMounted) {
+            reloadData()
+            setTimeout(() => {
+              if (isMounted) reloadData()
+            }, 500)
+          }
         },
         onStockUpdated: () => {
           if (typeof window !== 'undefined') {
@@ -513,7 +520,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
           .from('sales')
           .update({ status: 'crossed_out' })
           .eq('id', saleId)
-          .eq('shop_id', shopId)
+          .in('shop_id', getDualShopIds(shopId))
         broadcastInstantSync(shopId, 'sales')
       } catch (e) {
         console.warn('Erreur mise à jour status Supabase:', e)

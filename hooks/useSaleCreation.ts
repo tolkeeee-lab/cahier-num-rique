@@ -25,6 +25,7 @@ import {
   parseRequestedProductFromNotebookText,
   recordRequestedProductInStorage,
 } from '@/lib/requestedProductsUtils'
+import { broadcastInstantSync } from '@/lib/realtimeSync'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -121,6 +122,9 @@ export function useSaleCreation({
     }
 
     saveOfflineSale(shopId, sale)
+
+    // Diffusion instantanée WebSocket (< 50ms) vers le PC et les autres téléphones
+    broadcastInstantSync(shopId, 'sales')
 
     // Notifier le sous-système de synchronisation (useOfflineSync) qu'une nouvelle vente locale est prête
     if (typeof window !== 'undefined') {

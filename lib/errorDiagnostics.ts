@@ -434,3 +434,4 @@ export function generateWhatsAppErrorReportUrl(
   const cleanPhone = phoneNumber.replace(/[^0-9]/g, '')
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(report)}`
 }
+
