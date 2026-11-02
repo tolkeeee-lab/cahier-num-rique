@@ -10,6 +10,7 @@ import {
 } from '@/lib/offlineDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { logAuditEvent } from '@/lib/auditLogger'
+import { setupRealtimeSync, broadcastInstantSync } from '@/lib/realtimeSync'
 
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 import { getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
@@ -376,53 +377,32 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     loadJournal()
 
-    // ── Supabase Realtime Channel pour synchronisation multi-appareils instantanée (PC <-> Téléphone PWA) ──
-    let channel: any = null
-    if (isSupabaseClientConfigured() && isOnline && shopId) {
-      try {
-        channel = supabaseClient.channel(`realtime_shop_${shopId}_${Date.now()}`)
+    // ── Supabase Realtime Channel & Broadcast Instantané (PC <-> Téléphone PWA < 50ms) ──
+    const cleanupRealtime = setupRealtimeSync(shopId, {
+      onSalesUpdated: () => {
+        if (isMounted) reloadData()
+      },
+      onStockUpdated: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+        }
+      },
+      onShoppingUpdated: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
+        }
+      },
+    })
 
-        // Écoute directe sur le shopId canonique
-        channel
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'sales', filter: `shop_id=eq.${shopId}` },
-            () => {
-              if (isMounted) {
-                reloadData()
-              }
-            }
-          )
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'products', filter: `shop_id=eq.${shopId}` },
-            () => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
-              }
-            }
-          )
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'shopping_list', filter: `shop_id=eq.${shopId}` },
-            () => {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
-              }
-            }
-          )
-
-        channel.subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            console.log(`[Realtime] Synchronisation PC <-> Téléphone active pour boutique ${shopId}`)
-          }
-        })
-      } catch (err) {
-        console.warn('[Realtime] Souscription non active:', err)
-      }
+    // Écouter les événements locaux de mise à jour des ventes pour recharger immédiatement le journal
+    const handleSalesUpdated = () => {
+      if (isMounted) reloadData()
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('cahier_sales_updated', handleSalesUpdated)
     }
 
-    // Polling de secours actif (15s au lieu de 120s) pour garantir la synchronisation PC/Téléphone
+    // Polling de secours actif (15s) pour garantir la synchronisation PC/Téléphone
     // même si les WebSockets Realtime sont coupés par le mode veille ou l'économie d'énergie mobile.
     const pollInterval = setInterval(() => {
       if (isOnline && isMounted) {
@@ -443,13 +423,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     return () => {
       isMounted = false
-      if (channel) {
-        try { supabaseClient.removeChannel(channel) } catch {}
-      }
-      clearInterval(pollInterval)
-      if (typeof document !== 'undefined') {
+      cleanupRealtime()
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('cahier_sales_updated', handleSalesUpdated)
         document.removeEventListener('visibilitychange', handleVisibilityChange)
       }
+      clearInterval(pollInterval)
     }
   }, [shopId, isOnline, refreshTrigger, reloadData])
 
@@ -532,6 +511,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
           .update({ status: 'crossed_out' })
           .eq('id', saleId)
           .eq('shop_id', shopId)
+        broadcastInstantSync(shopId, 'sales')
       } catch (e) {
         console.warn('Erreur mise à jour status Supabase:', e)
       }
@@ -600,7 +580,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     if (isSupabaseClientConfigured() && isOnline) {
       try {
-        await fetch('/api/sales', {
+        const res = await fetch('/api/sales', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -628,6 +608,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             },
           }),
         })
+        if (res.ok) {
+          broadcastInstantSync(shopId, 'sales')
+        }
       } catch (err) {
         console.warn('Erreur synchronisation retour marchandise:', err)
       }
@@ -676,7 +659,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     if (isSupabaseClientConfigured() && isOnline) {
       try {
-        await fetch('/api/sales', {
+        const res = await fetch('/api/sales', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -689,6 +672,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             penColor: activePen,
           }),
         })
+        if (res.ok) {
+          broadcastInstantSync(shopId, 'sales')
+        }
       } catch (e) {
         console.warn('Erreur PATCH add_article:', e)
       }
@@ -730,7 +716,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     if (isSupabaseClientConfigured() && isOnline) {
       try {
-        await fetch('/api/sales', {
+        const res = await fetch('/api/sales', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -743,6 +729,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             clientName,
           }),
         })
+        if (res.ok) {
+          broadcastInstantSync(shopId, 'sales')
+        }
       } catch (e) {
         console.warn('Erreur PATCH update_sale:', e)
       }
@@ -764,7 +753,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     if (isSupabaseClientConfigured() && isOnline) {
       try {
-        await fetch('/api/sales', {
+        const res = await fetch('/api/sales', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -776,6 +765,9 @@ export function useJournalData(shopId: string, isOnline: boolean) {
             category,
           }),
         })
+        if (res.ok) {
+          broadcastInstantSync(shopId, 'sales')
+        }
       } catch (e) {
         console.warn('Erreur PATCH update_category:', e)
       }
@@ -881,6 +873,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
           match.is_synced = true
           replaceOfflineSales(shopId, currentOffline)
         }
+        broadcastInstantSync(shopId, 'debts')
       }
     } catch (e) {
       console.warn('Règlement enregistré en local (mode hors-ligne):', e)

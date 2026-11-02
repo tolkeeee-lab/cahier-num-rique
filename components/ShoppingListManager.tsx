@@ -6,6 +6,7 @@ import { SupplierComparisonModal } from '@/components/shopping/SupplierCompariso
 import { ShoppingListToolbar } from '@/components/shopping/ShoppingListToolbar'
 import { formatPrice } from '@/lib/penUtils'
 import { ShoppingBag, Plus } from 'lucide-react'
+import { broadcastInstantSync } from '@/lib/realtimeSync'
 
 interface ShoppingItem {
   id: string
@@ -178,7 +179,9 @@ export function ShoppingListManager({
             })),
             { onConflict: 'id' }
           )
-      ).catch((err: any) => console.warn('[ShoppingList] Sync error:', err))
+      ).then(() => {
+        if (shopId) broadcastInstantSync(shopId, 'shopping')
+      }).catch((err: any) => console.warn('[ShoppingList] Sync error:', err))
     }
   }
 

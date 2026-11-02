@@ -28,6 +28,7 @@ import {
 } from '@/lib/offlineDb'
 import { idbGetSyncQueue, idbRemoveSyncItem } from '@/lib/indexedDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
+import { broadcastInstantSync } from '@/lib/realtimeSync'
 import type { SyncStatus } from '@/hooks/useNetworkStatus'
 
 interface UseOfflineSyncOptions {
@@ -266,12 +267,14 @@ export function useOfflineSync({
     if (errorCount === 0) {
       setSyncStatus('success')
       onSyncComplete?.()
+      broadcastInstantSync(shopId, 'all')
       // Réinitialiser le badge après 3s
       statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 3000)
     } else if (successCount > 0) {
       // Sync partielle : certaines ont réussi, d'autres non
       setSyncStatus('success')
       onSyncComplete?.()
+      broadcastInstantSync(shopId, 'all')
       statusTimerRef.current = setTimeout(() => setSyncStatus('idle'), 3000)
     } else {
       setSyncStatus('error')

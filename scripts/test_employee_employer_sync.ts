@@ -66,6 +66,15 @@ console.log('\n--- 4. TEST SOUSCRIPTION TEMPS RÉEL (Supabase Channel) ---')
 const realtimeChannelName = `realtime_sales_${patronShopId}`
 assert(realtimeChannelName === 'realtime_sales_SHOP_BOUTIQUE_CENTRE_01', 'Le canal temps réel écoute la boutique exacte du patron')
 
+const { getRealtimeChannelName } = require('../lib/realtimeSync')
+const chFromBtq = getRealtimeChannelName('BTQ-58C54')
+const chFromShop = getRealtimeChannelName('SHOP-58C54')
+const chFromClean = getRealtimeChannelName('58C54')
+assert(chFromBtq === 'realtime_shop_58C54', 'Le canal temps réel unifie le préfixe BTQ')
+assert(chFromShop === 'realtime_shop_58C54', 'Le canal temps réel unifie le préfixe SHOP')
+assert(chFromClean === 'realtime_shop_58C54', 'Le canal temps réel unifie le code brut')
+assert(chFromBtq === chFromShop && chFromShop === chFromClean, 'PC et Téléphone partagent le même topic Realtime exact')
+
 console.log('\n============================================================')
 console.log(`📊 RÉSULTAT DU CONTRÔLE : ${passedTests} SUCCÈS / ${failedTests} ÉCHECS`)
 console.log('============================================================\n')

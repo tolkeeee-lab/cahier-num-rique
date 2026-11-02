@@ -29,6 +29,7 @@ import {
 import { getTodayDateString } from '@/lib/dateUtils'
 import { audioFeedback } from '@/lib/audioFeedback'
 import { findDuplicateCandidates } from '@/lib/productUtils'
+import { broadcastInstantSync } from '@/lib/realtimeSync'
 import type { OfflineShoppingItem } from '@/lib/indexedDb'
 
 interface Product {
@@ -159,6 +160,16 @@ export function StockManager({
     loadStock()
   }, [loadStock])
 
+  useEffect(() => {
+    const handleStockUpdate = () => {
+      loadStock()
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('cahier_stock_updated', handleStockUpdate)
+      return () => window.removeEventListener('cahier_stock_updated', handleStockUpdate)
+    }
+  }, [loadStock])
+
   const handleOpenAddModal = () => {
     const input = document.getElementById('smart-product-quick-add-input') as HTMLInputElement | null
     if (input) {
@@ -241,6 +252,7 @@ export function StockManager({
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+        broadcastInstantSync(shopId, 'stock')
       }
 
       setIsProductModalOpen(false)
@@ -371,6 +383,7 @@ export function StockManager({
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+        broadcastInstantSync(shopId, 'stock')
       }
 
       // 3. Liaison automatique Trésorerie : Sortie de Caisse ou Crédit Fournisseur
@@ -815,6 +828,7 @@ export function StockManager({
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+        broadcastInstantSync(shopId, 'stock')
       }
 
       // 2. Synchronisation distante

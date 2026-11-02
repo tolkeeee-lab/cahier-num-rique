@@ -19,6 +19,7 @@ import {
   Clock
 } from 'lucide-react'
 import { calculateCash, getItemCashDelta } from '@/lib/sales/cashDrawerCalculator'
+import { broadcastInstantSync } from '@/lib/realtimeSync'
 import { 
   getOfflineCashClosings, 
   saveOfflineCashClosing, 
@@ -228,6 +229,7 @@ export function CashClosingModal({
           if (data?.closing) {
             saveOfflineCashClosing(shopId, { ...closingRecord, is_synced: true })
           }
+          broadcastInstantSync(shopId, 'closings')
         }
       } catch (e) {
         console.warn('[CashClosing] Sauvegarde réseau en attente de reconnexion')
