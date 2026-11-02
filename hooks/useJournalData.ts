@@ -10,7 +10,7 @@ import {
 } from '@/lib/offlineDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { logAuditEvent } from '@/lib/auditLogger'
-import { setupRealtimeSync, broadcastInstantSync, reconnectRealtimeSync, isRealtimeActive } from '@/lib/realtimeSync'
+import { setupRealtimeSync, broadcastInstantSync, reconnectRealtimeSync } from '@/lib/realtimeSync'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
@@ -412,12 +412,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       window.addEventListener('cahier_sales_updated', handleSalesUpdated)
     }
 
-    // Polling de secours adaptatif : rapide (5s) si le WebSocket est en reconnexion, normal (15s) si connecté
+    // Polling haute fréquence et résilient au premier plan (4 secondes)
     const pollInterval = setInterval(() => {
-      if (isOnline && isMounted) {
+      if (isOnline && isMounted && typeof document !== 'undefined' && document.visibilityState === 'visible') {
         reloadData()
       }
-    }, isRealtimeActive() ? 15_000 : 5_000)
+    }, 4_000)
 
     // Écouter le retour au premier plan (déverrouillage téléphone iPhone/Android ou retour onglet PC)
     const handleVisibilityChange = () => {

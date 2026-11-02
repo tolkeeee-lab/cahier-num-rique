@@ -68,6 +68,13 @@ export default function GlobalError({
     try {
       reset()
     } catch {}
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then((reg) => {
+        if (reg?.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+        }
+      }).catch(() => {})
+    }
     if (typeof window !== 'undefined') {
       window.location.reload()
     }
