@@ -17,8 +17,10 @@ import {
   generateOfflineId,
   saveOfflineSale,
   getOfflineProducts,
+  markAsSynced,
   OfflineSale,
 } from '@/lib/offlineDb'
+import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
 
 import {
@@ -122,6 +124,57 @@ export function useSaleCreation({
     }
 
     saveOfflineSale(shopId, sale)
+
+    // Persistance directe Cloud immédiate si le navigateur est en ligne et Supabase configuré
+    if (typeof navigator !== 'undefined' && navigator.onLine && isSupabaseClientConfigured()) {
+      void (async () => {
+        try {
+          const { data: sessionData } = await supabaseClient.auth.getSession()
+          if (!sessionData.session) return
+
+          const saleRecord = {
+            id: sale.id,
+            shop_id: shopId,
+            created_at: sale.created_at,
+            date: sale.date,
+            time: sale.time,
+            type: sale.type,
+            raw_text: sale.notes || '',
+            notes: sale.notes || '',
+            total_amount: sale.total,
+            paid_amount: sale.paid,
+            debt_amount: sale.debt,
+            client_name: sale.client || 'Client anonyme',
+            status: sale.status,
+            category: sale.category || 'Général',
+            pen_color: sale.pen_color || 'blue',
+          }
+
+          const { error: saleErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
+          if (saleErr) return
+
+          if (sale.articles && sale.articles.length > 0) {
+            const soldArts = sale.articles.map(a => {
+              const qty = Number(a.quantity || a.pieces_count || 1)
+              const price = Number(a.unit_price || 0)
+              return {
+                sale_id: sale.id,
+                shop_id: shopId,
+                product_name: a.name || 'Article',
+                quantity: qty,
+                unit_price: price,
+                subtotal: qty * price,
+              }
+            })
+            await supabaseClient.from('sold_articles').delete().eq('sale_id', sale.id)
+            await supabaseClient.from('sold_articles').insert(soldArts)
+          }
+          markAsSynced(shopId, sale.id)
+        } catch {
+          // Sync en tâche de fond : useOfflineSync prendra le relais en cas de pépin
+        }
+      })()
+    }
 
     // Diffusion instantanée WebSocket (< 50ms) vers le PC et les autres téléphones
     broadcastInstantSync(shopId, 'sales')

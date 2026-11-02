@@ -33,18 +33,19 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') // client ou supplier
     const requestedShopId = request.headers.get('x-shop-id')
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop } = await requireShopAccess(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
+    const targetClient: any = dbClient || supabase
 
     if (type === 'supplier') {
       // Logic for explicit supplier request (maybe used elsewhere, keep it)
       if (isSupabaseConfigured()) {
         try {
-          const { data: debts } = await supabase.from('supplier_debts').select('*').eq('shop_id', shopId).order('supplier_name', { ascending: true }) as { data: SupplierDebtRow[] | null }
-          const { data: sales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier'])
+          const { data: debts } = await targetClient.from('supplier_debts').select('*').eq('shop_id', shopId).order('supplier_name', { ascending: true }) as { data: SupplierDebtRow[] | null }
+          const { data: sales } = await targetClient.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier']) as { data: any[] | null }
 
           const suppMap = new Map<string, string>()
-          ;[...(debts || []).map(d => d.supplier_name), ...(sales || []).filter(s => s.client_name).map(s => s.client_name)]
+          ;[...(debts || []).map((d: any) => d.supplier_name), ...(sales || []).filter((s: any) => s.client_name).map((s: any) => s.client_name)]
             .filter(Boolean)
             .forEach(rawName => {
               const trimmed = String(rawName).trim()
@@ -56,13 +57,13 @@ export async function GET(request: NextRequest) {
 
           const list = Array.from(suppMap.values()).map(name => {
             const lowerName = name.toLowerCase().trim()
-            const supplierDebts = (debts || []).filter(d => (d.supplier_name || '').toLowerCase().trim() === lowerName)
-            const legacyOwed = supplierDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
-            const legacyPaid = supplierDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
+            const supplierDebts = (debts || []).filter((d: any) => (d.supplier_name || '').toLowerCase().trim() === lowerName)
+            const legacyOwed = supplierDebts.reduce((sum, d: any) => sum + (d.amount_owed || 0), 0)
+            const legacyPaid = supplierDebts.reduce((sum, d: any) => sum + (d.paid_amount || 0), 0)
             
             const history = (sales || [])
-              .filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out')
-              .map(s => ({
+              .filter((s: any) => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out')
+              .map((s: any) => ({
                 id: s.id || randomUUID(),
                 date: s.date || '',
                 time: s.time || '',
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
               }))
             
             const salesOwed = history.reduce((sum, h) => sum + (h.amount > 0 ? h.amount : 0), 0)
-            const initialDownPayments = (sales || []).filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out' && s.type === 'purchase_credit').reduce((sum, s) => sum + (s.paid_amount || 0), 0)
+            const initialDownPayments = (sales || []).filter((s: any) => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out' && s.type === 'purchase_credit').reduce((sum, s: any) => sum + (s.paid_amount || 0), 0)
             const salesPaid = history.reduce((sum, h) => sum + (h.amount < 0 ? Math.abs(h.amount) : 0), 0) + initialDownPayments
             const totalAmountOwed = (legacyOwed - legacyPaid) + (salesOwed - salesPaid + initialDownPayments)
 
@@ -98,12 +99,12 @@ export async function GET(request: NextRequest) {
     if (isSupabaseConfigured()) {
       try {
         // --- CLIENTS ---
-        const { data: cDebts } = await supabase.from('debts').select('*').eq('shop_id', shopId) as { data: DebtRow[] | null }
-        const { data: cSales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['sale_credit', 'payment_client'])
+        const { data: cDebts } = await targetClient.from('debts').select('*').eq('shop_id', shopId) as { data: DebtRow[] | null }
+        const { data: cSales } = await targetClient.from('sales').select('*').eq('shop_id', shopId).in('type', ['sale_credit', 'payment_client']) as { data: any[] | null }
         
         // Regroupement insensible à la casse et sans espaces résiduels
         const clientNameMap = new Map<string, string>()
-        ;[...(cDebts || []).map(d => d.client_name), ...(cSales || []).filter(s => s.client_name).map(s => s.client_name)]
+        ;[...(cDebts || []).map((d: any) => d.client_name), ...(cSales || []).filter((s: any) => s.client_name).map((s: any) => s.client_name)]
           .filter(Boolean)
           .forEach(rawName => {
             const trimmed = String(rawName).trim()
@@ -115,17 +116,17 @@ export async function GET(request: NextRequest) {
 
         const clientList: NormalizedDebtItem[] = Array.from(clientNameMap.values()).map(name => {
           const lowerName = name.toLowerCase().trim()
-          const clientDebts = (cDebts || []).filter(d => (d.client_name || '').toLowerCase().trim() === lowerName)
-          const legacyOwed = clientDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
-          const legacyPaid = clientDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
+          const clientDebts = (cDebts || []).filter((d: any) => (d.client_name || '').toLowerCase().trim() === lowerName)
+          const legacyOwed = clientDebts.reduce((sum, d: any) => sum + (d.amount_owed || 0), 0)
+          const legacyPaid = clientDebts.reduce((sum, d: any) => sum + (d.paid_amount || 0), 0)
           
-          const history = (cSales || []).filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out').map(s => ({
+          const history = (cSales || []).filter((s: any) => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out').map((s: any) => ({
             id: s.id || randomUUID(), date: s.date || '', time: s.time || '',
             description: s.type === 'sale_credit' ? `Achat à crédit: ${s.notes || 'Articles divers'}` : 'Remboursement crédit',
             amount: s.type === 'sale_credit' ? s.debt_amount : -s.paid_amount
           }))
           const salesOwed = history.reduce((sum, h) => sum + (h.amount > 0 ? h.amount : 0), 0)
-          const initialDownPayments = (cSales || []).filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out' && s.type === 'sale_credit').reduce((sum, s) => sum + (s.paid_amount || 0), 0)
+          const initialDownPayments = (cSales || []).filter((s: any) => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out' && s.type === 'sale_credit').reduce((sum, s: any) => sum + (s.paid_amount || 0), 0)
           const salesPaid = history.reduce((sum, h) => sum + (h.amount < 0 ? Math.abs(h.amount) : 0), 0) + initialDownPayments
           const totalAmountOwed = (legacyOwed - legacyPaid) + (salesOwed - salesPaid + initialDownPayments)
 
@@ -142,11 +143,11 @@ export async function GET(request: NextRequest) {
         allDebts.push(...clientList)
 
         // --- SUPPLIERS ---
-        const { data: sDebts } = await supabase.from('supplier_debts').select('*').eq('shop_id', shopId)
-        const { data: sSales } = await supabase.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier'])
+        const { data: sDebts } = await targetClient.from('supplier_debts').select('*').eq('shop_id', shopId) as { data: any[] | null }
+        const { data: sSales } = await targetClient.from('sales').select('*').eq('shop_id', shopId).in('type', ['purchase_credit', 'payment_supplier']) as { data: any[] | null }
         
         const suppNameMap = new Map<string, string>()
-        ;[...(sDebts || []).map(d => d.supplier_name), ...(sSales || []).filter(s => s.client_name).map(s => s.client_name)]
+        ;[...(sDebts || []).map((d: any) => d.supplier_name), ...(sSales || []).filter((s: any) => s.client_name).map((s: any) => s.client_name)]
           .filter(Boolean)
           .forEach(rawName => {
             const trimmed = String(rawName).trim()
@@ -158,17 +159,17 @@ export async function GET(request: NextRequest) {
 
         const supplierList: NormalizedDebtItem[] = Array.from(suppNameMap.values()).map(name => {
           const lowerName = name.toLowerCase().trim()
-          const supplierDebts = (sDebts || []).filter(d => (d.supplier_name || '').toLowerCase().trim() === lowerName)
-          const legacyOwed = supplierDebts.reduce((sum, d) => sum + (d.amount_owed || 0), 0)
-          const legacyPaid = supplierDebts.reduce((sum, d) => sum + (d.paid_amount || 0), 0)
+          const supplierDebts = (sDebts || []).filter((d: any) => (d.supplier_name || '').toLowerCase().trim() === lowerName)
+          const legacyOwed = supplierDebts.reduce((sum, d: any) => sum + (d.amount_owed || 0), 0)
+          const legacyPaid = supplierDebts.reduce((sum, d: any) => sum + (d.paid_amount || 0), 0)
           
-          const history = (sSales || []).filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out').map(s => ({
+          const history = (sSales || []).filter((s: any) => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out').map((s: any) => ({
             id: s.id, date: s.date, time: s.time,
             description: s.type === 'purchase_credit' ? `Achat à crédit: ${s.notes || 'Articles divers'}` : 'Remboursement fournisseur',
             amount: s.type === 'purchase_credit' ? s.debt_amount : -s.paid_amount
           }))
           const salesOwed = history.reduce((sum, h) => sum + (h.amount > 0 ? h.amount : 0), 0)
-          const suppInitialDownPayments = (sSales || []).filter(s => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out' && s.type === 'purchase_credit').reduce((sum, s) => sum + (s.paid_amount || 0), 0)
+          const suppInitialDownPayments = (sSales || []).filter((s: any) => (s.client_name || '').toLowerCase().trim() === lowerName && s.status !== 'crossed_out' && s.type === 'purchase_credit').reduce((sum, s: any) => sum + (s.paid_amount || 0), 0)
           const salesPaid = history.reduce((sum, h) => sum + (h.amount < 0 ? Math.abs(h.amount) : 0), 0) + suppInitialDownPayments
           const totalAmountOwed = (legacyOwed - legacyPaid) + (salesOwed - salesPaid + suppInitialDownPayments)
 
@@ -204,8 +205,9 @@ export async function POST(request: NextRequest) {
     const { id, date, time, created_at, name, amount, type, action, description } = body
     const requestedShopId = request.headers.get('x-shop-id')
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop } = await requireShopAccess(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
+    const targetClient: any = dbClient || supabase
 
     if (!name || !amount || amount <= 0 || !type || !action) {
       return NextResponse.json({ error: 'Données incomplètes' }, { status: 400 })
@@ -219,7 +221,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Vérification solvabilité si remboursement de dette fournisseur (retrait du tiroir)
     if (type === 'supplier' && action === 'pay') {
-      const currentCash = await getCurrentCash(shopId)
+      const currentCash = await getCurrentCash(shopId, targetClient)
       if (currentCash < amount) {
         return NextResponse.json({
           error: `Opération refusée : solde insuffisant dans le tiroir-caisse (${currentCash} FCFA dispo, besoin de ${amount} FCFA).`,
@@ -270,11 +272,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Enregistrer dans la base Supabase (Source unique d'autorité)
-    if (!isSupabaseConfigured() || !supabase) {
+    if (!isSupabaseConfigured() || !targetClient) {
       return NextResponse.json({ error: 'Supabase non configuré sur le serveur' }, { status: 503 })
     }
 
-    const { error: sError } = await supabase
+    const { error: sError } = await targetClient
       .from('sales')
       .upsert([
         {

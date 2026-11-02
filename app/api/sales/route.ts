@@ -32,8 +32,9 @@ export async function POST(request: NextRequest) {
 
     const requestedShopId = request.headers.get('x-shop-id') || body.shop_id
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop } = await requireShopAccess(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
+    const targetClient: any = dbClient || supabase
 
     if ((!text || typeof text !== 'string' || text.trim().length === 0) && !overrideData) {
       return NextResponse.json({ error: 'Texte de transaction invalide' }, { status: 400 })
@@ -138,11 +139,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Persistance Supabase (Seule source d'autorité Cloud)
-    if (!isSupabaseConfigured() || !supabase) {
+    if (!isSupabaseConfigured() || !targetClient) {
       return NextResponse.json({ error: 'Supabase n\'est pas configuré sur le serveur' }, { status: 503 })
     }
 
-    const { error: saleErr } = await supabase.from('sales').upsert([saleRecord], { onConflict: 'id' })
+    const { error: saleErr } = await targetClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
     if (saleErr) {
       console.error('Erreur Supabase lors de la sauvegarde vente:', saleErr)
       return NextResponse.json({ error: 'Erreur Supabase: ' + saleErr.message }, { status: 500 })
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
 
     if (parsedData?.articles && parsedData.articles.length > 0) {
       // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de retry
-      await supabase.from('sold_articles').delete().eq('sale_id', saleId)
+      await targetClient.from('sold_articles').delete().eq('sale_id', saleId)
 
       const soldArticlesRecords: SoldArticleInsert[] = parsedData.articles.map(a => {
         const qty = a.quantite || 1;
@@ -164,12 +165,12 @@ export async function POST(request: NextRequest) {
           subtotal: qty * price
         };
       })
-      const { error: artErr } = await supabase.from('sold_articles').insert(soldArticlesRecords)
+      const { error: artErr } = await targetClient.from('sold_articles').insert(soldArticlesRecords)
       if (artErr) console.warn('Erreur insertion sold_articles:', artErr)
 
       const reqCountry = request.headers.get('x-shop-country') || body.country || 'BJ'
       const reqCity = request.headers.get('x-shop-city') || body.city || null
-      await feedMarketKnowledge(parsedData.articles, type, shopId, reqCountry, reqCity)
+      await feedMarketKnowledge(parsedData.articles, type, shopId, reqCountry, reqCity, targetClient)
     }
 
     return NextResponse.json({ success: true, sale: newSale })
@@ -188,11 +189,11 @@ export async function GET(request: NextRequest) {
   try {
     const requestedShopId = request.headers.get('x-shop-id')
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop } = await requireShopAccess(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
     const dateParam = request.nextUrl.searchParams.get('date')
-    const sales = await fetchSalesHistory(dateParam === 'all' ? null : dateParam, shopId)
-    const cashDrawer = await getCurrentCash(shopId)
+    const sales = await fetchSalesHistory(dateParam === 'all' ? null : dateParam, shopId, dbClient)
+    const cashDrawer = await getCurrentCash(shopId, dbClient)
     return NextResponse.json({ sales, cashDrawer })
   } catch (err: unknown) {
     if ((err as { status?: number })?.status === 401 || (err as { status?: number })?.status === 403) return shopAuthorizationErrorResponse(err)
@@ -205,11 +206,12 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const requestedShopId = request.headers.get('x-shop-id') || body.shop_id
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop } = await requireShopAccess(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
+    const targetClient: any = dbClient || supabase
     const { id, action, text, penColor, articles, clientName, category } = body
 
-    if (!isSupabaseConfigured() || !supabase) {
+    if (!isSupabaseConfigured() || !targetClient) {
       return NextResponse.json({ error: 'Supabase non configuré' }, { status: 503 })
     }
 
@@ -227,7 +229,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Saisie d\'article non reconnue' }, { status: 400 })
       }
 
-      const { data: currentSale, error: fetchErr } = await supabase
+      const { data: currentSale, error: fetchErr } = await targetClient
         .from('sales')
         .select('*, sold_articles(*)')
         .eq('id', id)
@@ -252,7 +254,7 @@ export async function PATCH(request: NextRequest) {
         status: newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid',
       }
 
-      const { error: updateErr } = await supabase.from('sales').update(patchObj).eq('id', id).eq('shop_id', shopId)
+      const { error: updateErr } = await targetClient.from('sales').update(patchObj).eq('id', id).eq('shop_id', shopId)
       if (updateErr) {
         return NextResponse.json({ error: updateErr.message }, { status: 500 })
       }
@@ -264,7 +266,7 @@ export async function PATCH(request: NextRequest) {
         quantity: a.quantite,
         unit_price: a.prix_unitaire,
       }))
-      const { error: artErr } = await supabase.from('sold_articles').insert(newArticles)
+      const { error: artErr } = await targetClient.from('sold_articles').insert(newArticles)
       if (artErr) console.warn('Erreur insertion sold_articles:', artErr)
 
       return NextResponse.json({ success: true })
@@ -275,7 +277,7 @@ export async function PATCH(request: NextRequest) {
       const newTotal = updatedArticles.reduce((acc: number, a) => acc + ((a.quantity || a.quantite || 0) * (a.unit_price || a.prix_unitaire || 0)), 0)
       const newNotes = updatedArticles.map(a => `${a.quantity || a.quantite || 1} ${a.name || a.nom || ''} à ${a.unit_price || a.prix_unitaire || 0}`).join(', ')
 
-      const { data: currentSale } = await supabase
+      const { data: currentSale } = await targetClient
         .from('sales')
         .select('*')
         .eq('id', id)
@@ -296,11 +298,11 @@ export async function PATCH(request: NextRequest) {
         status: newDebt > 0 && currentSale.type === 'sale_credit' ? 'debt' : 'paid',
       }
       if (clientName) patchObj.client_name = clientName
-      await supabase.from('sales').update(patchObj).eq('id', id).eq('shop_id', shopId)
+      await targetClient.from('sales').update(patchObj).eq('id', id).eq('shop_id', shopId)
 
-      await supabase.from('sold_articles').delete().eq('sale_id', id)
+      await targetClient.from('sold_articles').delete().eq('sale_id', id)
       if (updatedArticles.length > 0) {
-        await supabase.from('sold_articles').insert(
+        await targetClient.from('sold_articles').insert(
           updatedArticles.map(a => ({
             sale_id: id,
             shop_id: currentSale.shop_id || shopId,
@@ -314,7 +316,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'update_category') {
-      const { error: catErr } = await supabase.from('sales').update({ category }).eq('id', id).eq('shop_id', shopId)
+      const { error: catErr } = await targetClient.from('sales').update({ category }).eq('id', id).eq('shop_id', shopId)
       if (catErr) {
         return NextResponse.json({ error: catErr.message }, { status: 500 })
       }
@@ -323,7 +325,7 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'settle_debt') {
       const { debt_amount, paid_amount, status: newStatus } = body
-      const { error: debtErr } = await supabase.from('sales').update({
+      const { error: debtErr } = await targetClient.from('sales').update({
         debt_amount: Number(debt_amount || 0),
         paid_amount: Number(paid_amount || 0),
         status: newStatus || (Number(debt_amount || 0) <= 0 ? 'paid' : 'debt'),

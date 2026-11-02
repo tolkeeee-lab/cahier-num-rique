@@ -7,21 +7,28 @@ type CashClosingRow = Database['public']['Tables']['cash_closings']['Row']
 type CashClosingInsert = Database['public']['Tables']['cash_closings']['Insert']
 
 // Utilise la configuration backend officielle importée de @/lib/supabase
-  const isSupabaseConfigured = isBackendSupabaseConfigured
+const isSupabaseConfigured = isBackendSupabaseConfigured
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const requestedShopId = request.headers.get('x-shop-id') || searchParams.get('shop_id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
-  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  let targetClient: any = supabase
+  try {
+    const auth = await requireShopAccess(request, requestedShopId)
+    shopId = auth.shop.id
+    targetClient = auth.client || supabase
+  } catch (err) {
+    return shopAuthorizationErrorResponse(err)
+  }
 
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || !targetClient) {
     return NextResponse.json({ closings: [], offline: true })
   }
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (targetClient as any)
       .from('cash_closings')
       .select('*')
       .eq('shop_id', shopId)
@@ -49,8 +56,9 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as Record<string, unknown>
     const requestedShopId = request.headers.get('x-shop-id') || (typeof body.shop_id === 'string' ? body.shop_id : null)
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop } = await requireShopAccess(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
+    const targetClient = dbClient || supabase
 
     if (!body.date || typeof body.date !== 'string') {
       return NextResponse.json({ error: 'La date est requise pour la clôture de caisse' }, { status: 400 })
@@ -72,12 +80,12 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }
 
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseConfigured() || !targetClient) {
       return NextResponse.json({ closing: payload, offline: true })
     }
 
     // Upsert sur la clé unique (shop_id, date)
-    const { data, error } = await supabase
+    const { data, error } = await (targetClient as any)
       .from('cash_closings')
       .upsert(payload, { onConflict: 'shop_id,date' })
       .select()

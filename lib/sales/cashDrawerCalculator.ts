@@ -74,17 +74,20 @@ export function calculateCash(list: any[]): number {
   return Math.round(sum * 100) / 100
 }
 
-export async function getCurrentCash(shopId: string): Promise<number> {
+export async function getCurrentCash(shopId: string, client?: any): Promise<number> {
   if (isSupabaseConfigured()) {
     try {
       const { supabase } = await import('@/lib/supabase')
-      const { data, error } = await supabase
-        .from('sales')
-        .select('type, paid_amount, total_amount, status, notes, client_name, pen_color')
-        .eq('shop_id', shopId)
+      const db = client || supabase
+      if (db) {
+        const { data, error } = await db
+          .from('sales')
+          .select('type, paid_amount, total_amount, status, notes, client_name, pen_color')
+          .eq('shop_id', shopId)
 
-      if (error) throw error
-      return calculateCash(data || [])
+        if (error) throw error
+        return calculateCash(data || [])
+      }
     } catch (e) {
       console.error('Erreur lecture cash Supabase, repli sur local:', e)
     }

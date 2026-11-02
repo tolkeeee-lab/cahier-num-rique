@@ -4,13 +4,33 @@ import { requireAuthenticatedUser } from '@/lib/server/auth'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-function adminClient() {
-  if (!supabaseUrl || !serviceRoleKey) {
+/**
+ * Retourne un client Supabase autorisé pour les opérations serveur :
+ * 1. Priorité au Service Role Key si configuré (contourne RLS).
+ * 2. Si absent, repli sur l'Anon Key avec le Bearer token de l'utilisateur (respecte RLS 'authenticated').
+ */
+export function getAuthorizedServerClient(accessToken?: string) {
+  if (serviceRoleKey && supabaseUrl) {
+    return createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    })
+  }
+
+  const key = anonKey
+  if (!supabaseUrl || !key) {
     throw new Error('Supabase server authorization is not configured')
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
+  return createClient(supabaseUrl, key, {
+    global: {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    },
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -18,6 +38,7 @@ function adminClient() {
     },
   })
 }
+
 
 export type AuthorizedShop = {
   id: string
@@ -32,7 +53,7 @@ function normalizeShopId(value: string) {
 export async function requireShopAccess(
   request: Request,
   requestedShopId: string,
-): Promise<{ user: User; shop: AuthorizedShop; accessToken: string }> {
+): Promise<{ user: User; shop: AuthorizedShop; accessToken: string; client: any }> {
   const { user, accessToken } = await requireAuthenticatedUser(request)
   const shopId = normalizeShopId(requestedShopId)
 
@@ -42,7 +63,7 @@ export async function requireShopAccess(
     throw error
   }
 
-  const client = adminClient()
+  const client = getAuthorizedServerClient(accessToken)
 
   let { data: shop, error: shopError } = await client
     .from('shops')
@@ -75,6 +96,7 @@ export async function requireShopAccess(
       user,
       accessToken,
       shop: { id: shop.id, shopCode: shop.shop_code, role: 'owner' },
+      client,
     }
   }
 
@@ -115,6 +137,7 @@ export async function requireShopAccess(
       shopCode: shop.shop_code,
       role: employee.role || 'employee',
     },
+    client,
   }
 }
 
@@ -133,11 +156,10 @@ export function shopAuthorizationErrorResponse(error: unknown) {
   )
 }
 
-
 export async function requireShopOwner(
   request: Request,
   requestedShopId: string,
-): Promise<{ user: User; shop: AuthorizedShop; accessToken: string }> {
+): Promise<{ user: User; shop: AuthorizedShop; accessToken: string; client: any }> {
   const result = await requireShopAccess(request, requestedShopId)
   if (result.shop.role !== 'owner') {
     const error = new Error('Owner permission required')

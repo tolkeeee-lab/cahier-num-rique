@@ -6,7 +6,8 @@ export async function feedMarketKnowledge(
   transactionType: string,
   _shopId: string,
   country: string = 'BJ',
-  city: string | null = null
+  city: string | null = null,
+  client?: any
 ) {
   if (!isSupabaseConfigured()) return
 
@@ -14,12 +15,15 @@ export async function feedMarketKnowledge(
   const isSale = ['cash_in', 'sale_credit'].includes(transactionType)
   if (!isPurchase && !isSale) return
 
+  const db = client || supabase
+  if (!db) return
+
   for (const article of articles) {
     const name = article.nom?.trim()
     const price = article.prix_unitaire || 0
     if (!name || price <= 0) continue
 
-    await supabase.rpc('update_market_knowledge', {
+    await db.rpc('update_market_knowledge', {
       p_product_name: name.toLowerCase(),
       p_unit_price: isSale ? price : 0,
       p_unit_cost: isPurchase ? price : 0,
@@ -30,13 +34,16 @@ export async function feedMarketKnowledge(
 }
 
 
-export async function fetchSalesHistory(dateParam: string | null, shopId: string) {
-  if (!isSupabaseConfigured() || !supabase) {
+export async function fetchSalesHistory(dateParam: string | null, shopId: string, client?: any) {
+  if (!isSupabaseConfigured()) {
     return []
   }
 
+  const db = client || supabase
+  if (!db) return []
+
   try {
-    let query = supabase
+    let query = db
       .from('sales')
       .select(`
         id,

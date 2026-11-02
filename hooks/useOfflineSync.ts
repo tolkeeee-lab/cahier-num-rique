@@ -257,7 +257,59 @@ export function useOfflineSync({
           }),
         })
 
+        // Double rempart de sécurité : fonction de persistance directe Supabase
+        const persistDirectlyToSupabase = async (): Promise<boolean> => {
+          if (!isSupabaseClientConfigured()) return false
+          try {
+            const saleRecord = {
+              id: sale.id,
+              shop_id: shopId,
+              created_at: sale.created_at || new Date().toISOString(),
+              date: sale.date,
+              time: sale.time,
+              type: sale.type,
+              raw_text: sale.notes || '',
+              notes: sale.notes || '',
+              total_amount: sale.total,
+              paid_amount: sale.paid,
+              debt_amount: sale.debt,
+              client_name: sale.client || 'Client anonyme',
+              status: sale.status,
+              category: sale.category || 'Général',
+              pen_color: sale.pen_color || 'blue',
+            }
+            const { error: directErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
+            if (directErr) return false
+
+            if (sale.articles && sale.articles.length > 0) {
+              await supabaseClient.from('sold_articles').delete().eq('sale_id', sale.id)
+              await supabaseClient.from('sold_articles').insert(sale.articles.map((a: any) => {
+                const qty = Number(a.quantity || a.quantite || 1)
+                const price = Number(a.unit_price || a.prix_unitaire || 0)
+                return {
+                  sale_id: sale.id,
+                  shop_id: shopId,
+                  product_name: a.name || a.nom || 'Article',
+                  quantity: qty,
+                  unit_price: price,
+                  subtotal: qty * price,
+                }
+              }))
+            }
+            return true
+          } catch {
+            return false
+          }
+        }
+
         if (!response.ok) {
+          const directOk = await persistDirectlyToSupabase()
+          if (directOk) {
+            markAsSynced(shopId, sale.id)
+            successCount++
+            continue
+          }
+
           const err = await response.json().catch(() => ({}))
           throw new Error(err?.error || `HTTP ${response.status}`)
         }
@@ -265,6 +317,50 @@ export function useOfflineSync({
         markAsSynced(shopId, sale.id)
         successCount++
       } catch (err) {
+        // En cas d'échec réseau sur fetch, tentative directe de secours
+        try {
+          if (isSupabaseClientConfigured()) {
+            const saleRecord = {
+              id: sale.id,
+              shop_id: shopId,
+              created_at: sale.created_at || new Date().toISOString(),
+              date: sale.date,
+              time: sale.time,
+              type: sale.type,
+              raw_text: sale.notes || '',
+              notes: sale.notes || '',
+              total_amount: sale.total,
+              paid_amount: sale.paid,
+              debt_amount: sale.debt,
+              client_name: sale.client || 'Client anonyme',
+              status: sale.status,
+              category: sale.category || 'Général',
+              pen_color: sale.pen_color || 'blue',
+            }
+            const { error: directErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
+            if (!directErr) {
+              if (sale.articles && sale.articles.length > 0) {
+                await supabaseClient.from('sold_articles').delete().eq('sale_id', sale.id)
+                await supabaseClient.from('sold_articles').insert(sale.articles.map((a: any) => {
+                  const qty = Number(a.quantity || a.quantite || 1)
+                  const price = Number(a.unit_price || a.prix_unitaire || 0)
+                  return {
+                    sale_id: sale.id,
+                    shop_id: shopId,
+                    product_name: a.name || a.nom || 'Article',
+                    quantity: qty,
+                    unit_price: price,
+                    subtotal: qty * price,
+                  }
+                }))
+              }
+              markAsSynced(shopId, sale.id)
+              successCount++
+              continue
+            }
+          }
+        } catch {}
+
         const msg = err instanceof Error ? err.message : 'Erreur inconnue'
         markSyncError(shopId, sale.id, msg)
         errorCount++
