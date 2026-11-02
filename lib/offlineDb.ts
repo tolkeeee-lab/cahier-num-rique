@@ -262,6 +262,20 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
+function writeJson<T>(key: string, value: T): void {
+  try {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch (e: any) {
+    console.warn(`[offlineDb] LocalStorage saturé ou inaccessible pour "${key}":`, e?.message)
+    if (typeof window !== 'undefined' && e?.name === 'QuotaExceededError') {
+      window.dispatchEvent(new CustomEvent('cahier_storage_full', {
+        detail: { key, count: Array.isArray(value) ? value.length : 0 }
+      }))
+    }
+  }
+}
+
 export function generateOfflineId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -374,7 +388,13 @@ export function saveOfflineSale(shopId: string, sale: OfflineSale): void {
   // 1. Mise à jour instantanée du cache mémoire
   _salesCache.set(shopId, sales)
 
-  // 2. Persistance d'autorité dans IndexedDB (illimité)
+  // 2. Persistance locale physique dans localStorage (Plafonné à 250 + non-synchronisées)
+  const pendingSales = sales.filter(s => s.is_synced === false)
+  const syncedSales = sales.filter(s => s.is_synced !== false)
+  const trimmedSales = [...pendingSales, ...syncedSales.slice(0, 250)]
+  writeJson(salesKey(shopId), trimmedSales)
+
+  // 3. Persistance d'autorité dans IndexedDB (illimité)
   idbSaveSale(sale).catch(() => {})
 
   // Répercussion immédiate sur le stock local pour tout mouvement de marchandise
@@ -449,6 +469,10 @@ export function updateOfflineSale(
     // Mettre à jour l'horodatage de modification pour résolution de conflits
     sales[idx] = { ...sales[idx], ...patch, updated_at: new Date().toISOString() }
     _salesCache.set(shopId, sales)
+    const pendingSales = sales.filter(s => s.is_synced === false)
+    const syncedSales = sales.filter(s => s.is_synced !== false)
+    const trimmedSales = [...pendingSales, ...syncedSales.slice(0, 250)]
+    writeJson(salesKey(shopId), trimmedSales)
     idbSaveSale(sales[idx]).catch(() => {})
   }
 }
@@ -467,6 +491,10 @@ export function replaceOfflineSaleId(shopId: string, oldId: string, newSale: Off
     }
   }
   _salesCache.set(shopId, sales)
+  const pendingSales = sales.filter(s => s.is_synced === false)
+  const syncedSales = sales.filter(s => s.is_synced !== false)
+  const trimmedSales = [...pendingSales, ...syncedSales.slice(0, 250)]
+  writeJson(salesKey(shopId), trimmedSales)
   idbReplaceSales(shopId, sales).catch(() => {})
 }
 
@@ -474,7 +502,13 @@ export function replaceOfflineSales(shopId: string, sales: OfflineSale[]): void 
   // 1. Mise à jour instantanée du cache mémoire avec 100% des ventes
   _salesCache.set(shopId, sales)
 
-  // 2. Persistance d'autorité exhaustive dans IndexedDB (illimité)
+  // 2. Persistance locale physique dans localStorage (Plafonné à 250 + non-synchronisées)
+  const pendingSales = sales.filter(s => s.is_synced === false)
+  const syncedSales = sales.filter(s => s.is_synced !== false)
+  const trimmedSales = [...pendingSales, ...syncedSales.slice(0, 250)]
+  writeJson(salesKey(shopId), trimmedSales)
+
+  // 3. Persistance d'autorité exhaustive dans IndexedDB (illimité)
   idbReplaceSales(shopId, sales).catch(() => {})
 }
 
@@ -546,6 +580,7 @@ export async function getOfflineClientsAsync(shopId: string): Promise<OfflineDeb
 
 export function replaceOfflineClients(shopId: string, clients: OfflineDebt[]): void {
   _clientsCache.set(shopId, clients)
+  writeJson(clientsKey(shopId), clients)
   const idbFormatted = clients.map((c, idx) => ({
     id: `cli_${shopId}_${idx}_${c.client_name}`,
     shop_id: shopId,
@@ -622,6 +657,7 @@ export async function getOfflineSuppliersAsync(shopId: string): Promise<OfflineD
 
 export function replaceOfflineSuppliers(shopId: string, suppliers: OfflineDebt[]): void {
   _suppliersCache.set(shopId, suppliers)
+  writeJson(suppliersKey(shopId), suppliers)
   const idbFormatted = suppliers.map((s, idx) => ({
     id: `sup_${shopId}_${idx}_${s.client_name}`,
     shop_id: shopId,
@@ -708,11 +744,13 @@ export async function getOfflineProductsAsync(shopId: string): Promise<OfflinePr
 export function replaceOfflineProducts(shopId: string, products: OfflineProduct[]): void {
   const clean = products.map(p => sanitizeProductData(p as any))
   _productsCache.set(shopId, clean)
+  writeJson(productsKey(shopId), clean)
   idbReplaceProducts(shopId, clean).catch(() => {})
 }
 
 export function clearOfflineProducts(shopId: string): void {
   _productsCache.set(shopId, [])
+  writeJson(productsKey(shopId), [])
   idbReplaceProducts(shopId, []).catch(() => {})
 }
 
@@ -729,6 +767,7 @@ export function saveOfflineProduct(shopId: string, product: OfflineProduct): voi
     products.push(cleanProduct)
   }
   _productsCache.set(shopId, products)
+  writeJson(productsKey(shopId), products)
   idbSaveProduct(cleanProduct).catch(() => {})
 }
 
