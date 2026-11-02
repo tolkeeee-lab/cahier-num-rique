@@ -29,6 +29,12 @@ export function PwaUpdateBanner() {
 
     if (worker) {
       worker.postMessage({ type: 'SKIP_WAITING' })
+    } else if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg?.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+        }
+      }).catch(() => {})
     }
 
     // Sécurité : si l'événement controllerchange tarde, forcer le reload après 800ms

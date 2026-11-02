@@ -17,9 +17,10 @@
  * 3. Filtrage d'écho par deviceId :
  *    - Chaque appareil dispose d'un identifiant de session unique pour ignorer ses propres diffusions.
  * 
- * 4. Cycle de vie immunisé (Safe Single-Subscription) :
- *    - Les écouteurs sont enregistrés une seule fois avant channel.subscribe().
- *    - Les re-renders React n'appellent jamais channel.on() sur un canal déjà souscrit.
+ * 4. Cycle de vie unifié (Single Source of Truth) :
+ *    - Un seul point de création de canal (getOrCreateRealtimeChannel).
+ *    - Tous les écouteurs sont attachés avant l'appel à channel.subscribe().
+ *    - Registre dynamique de callbacks permettant d'ajouter ou retirer des écouteurs sans jamais recréer le canal.
  */
 
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -70,13 +71,14 @@ export function getRealtimeChannelName(shopId: string): string {
   return `realtime_shop_${clean}`
 }
 
-// Référence vers le canal actif singleton et registre de callbacks
+// Référence vers le canal actif singleton et registre partagé de callbacks
 let activeChannel: any = null
 let activeChannelName: string | null = null
 const registeredCallbacks = new Set<RealtimeSyncCallbacks>()
 
 /**
  * Récupère ou instancie le canal Realtime Supabase pour la boutique.
+ * Attache tous les écouteurs (Broadcast + Postgres Changes) AVANT de souscrire.
  */
 export function getOrCreateRealtimeChannel(shopId: string) {
   if (!isSupabaseClientConfigured() || !shopId) return null
@@ -102,99 +104,18 @@ export function getOrCreateRealtimeChannel(shopId: string) {
         broadcast: { ack: false, self: false },
       },
     })
-    activeChannel = channel
-    activeChannelName = channelName
-    return channel
-  } catch (err) {
-    console.warn('[RealtimeSync] Erreur création canal:', err)
-    return null
-  }
-}
-
-/**
- * Diffuse instantanément un événement de synchronisation vers tous les autres appareils.
- * Latence moyenne WebSocket : 30ms - 80ms.
- */
-export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 'all'): Promise<void> {
-  if (!isSupabaseClientConfigured() || !shopId) return
-
-  try {
-    const channel = getOrCreateRealtimeChannel(shopId)
-    if (!channel) return
-
-    const payload: RealtimeSyncPayload = {
-      entity,
-      shopId,
-      senderDeviceId: getLocalDeviceId(),
-      timestamp: Date.now(),
-    }
-
-    await channel.send({
-      type: 'broadcast',
-      event: 'cahier_instant_sync',
-      payload,
-    })
-  } catch (err) {
-    console.warn('[Realtime Broadcast] Erreur diffusion:', err)
-  }
-}
-
-/**
- * Initialise l'écoute complète (Broadcast + Postgres Changes) sur le canal de la boutique.
- * Protégé contre les re-renders : n'ajoute pas d'écouteurs multiples sur un canal déjà souscrit.
- */
-export function setupRealtimeSync(
-  shopId: string,
-  callbacks: RealtimeSyncCallbacks = {}
-): () => void {
-  if (!isSupabaseClientConfigured() || !shopId) {
-    return () => {}
-  }
-
-  try {
-    const channelName = getRealtimeChannelName(shopId)
-    registeredCallbacks.add(callbacks)
-
-    // Si le canal existe déjà pour cette boutique et est déjà initialisé, ne pas ré-attacher
-    if (activeChannel && activeChannelName === channelName) {
-      return () => {
-        registeredCallbacks.delete(callbacks)
-      }
-    }
-
-    // Si on avait un ancien canal d'une autre boutique, le détruire proprement
-    if (activeChannel) {
-      try {
-        supabaseClient.removeChannel(activeChannel)
-      } catch {}
-      activeChannel = null
-      activeChannelName = null
-    }
-
-    const channel = supabaseClient.channel(channelName, {
-      config: {
-        broadcast: { ack: false, self: false },
-      },
-    })
-    activeChannel = channel
-    activeChannelName = channelName
 
     const myDeviceId = getLocalDeviceId()
     const matchingShopIds = new Set(getDualShopIds(shopId))
 
     const handleEntityUpdate = (entity: SyncEntity) => {
-      // Notifier tous les écouteurs enregistrés
       registeredCallbacks.forEach(cb => {
         try {
-          if (entity === 'sales' || entity === 'debts') {
-            cb.onSalesUpdated?.()
-          } else if (entity === 'stock') {
-            cb.onStockUpdated?.()
-          } else if (entity === 'shopping') {
-            cb.onShoppingUpdated?.()
-          } else if (entity === 'closings') {
-            cb.onClosingsUpdated?.()
-          } else if (entity === 'all') {
+          if (entity === 'sales' || entity === 'debts') cb.onSalesUpdated?.()
+          else if (entity === 'stock') cb.onStockUpdated?.()
+          else if (entity === 'shopping') cb.onShoppingUpdated?.()
+          else if (entity === 'closings') cb.onClosingsUpdated?.()
+          else if (entity === 'all') {
             cb.onSalesUpdated?.()
             cb.onStockUpdated?.()
             cb.onShoppingUpdated?.()
@@ -206,7 +127,6 @@ export function setupRealtimeSync(
         }
       })
 
-      // Déclencher les événements globaux dans la fenêtre
       if (typeof window !== 'undefined') {
         if (entity === 'sales' || entity === 'debts' || entity === 'all') {
           window.dispatchEvent(new CustomEvent('cahier_sales_updated', { detail: { fromBroadcast: true } }))
@@ -272,11 +192,64 @@ export function setupRealtimeSync(
       }
     })
 
+    activeChannel = channel
+    activeChannelName = channelName
+    return channel
+  } catch (err) {
+    console.warn('[RealtimeSync] Erreur création canal:', err)
+    return null
+  }
+}
+
+/**
+ * Diffuse instantanément un événement de synchronisation vers tous les autres appareils.
+ * Latence moyenne WebSocket : 30ms - 80ms.
+ */
+export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 'all'): Promise<void> {
+  if (!isSupabaseClientConfigured() || !shopId) return
+
+  try {
+    const channel = getOrCreateRealtimeChannel(shopId)
+    if (!channel) return
+
+    const payload: RealtimeSyncPayload = {
+      entity,
+      shopId,
+      senderDeviceId: getLocalDeviceId(),
+      timestamp: Date.now(),
+    }
+
+    await channel.send({
+      type: 'broadcast',
+      event: 'cahier_instant_sync',
+      payload,
+    })
+  } catch (err) {
+    console.warn('[Realtime Broadcast] Erreur diffusion:', err)
+  }
+}
+
+/**
+ * Enregistre des callbacks de synchronisation pour le composant appelant.
+ * Retourne une fonction de désinscription.
+ */
+export function setupRealtimeSync(
+  shopId: string,
+  callbacks: RealtimeSyncCallbacks = {}
+): () => void {
+  if (!isSupabaseClientConfigured() || !shopId) {
+    return () => {}
+  }
+
+  try {
+    registeredCallbacks.add(callbacks)
+    getOrCreateRealtimeChannel(shopId)
+
     return () => {
       registeredCallbacks.delete(callbacks)
     }
   } catch (syncErr) {
-    console.warn('[RealtimeSync] Erreur configuration écouteur:', syncErr)
+    console.warn('[RealtimeSync] Erreur setupRealtimeSync:', syncErr)
     return () => {}
   }
 }
