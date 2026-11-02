@@ -49,8 +49,11 @@ Avant toute modification ou ajout de fonctionnalité, vous DEVEZ vérifier et r�
 | **Constantes Stock & Paliers** | `@/components/stock/stockUtils` | `CATEGORIES`, `UNITS`, `getItemPurchaseValue`, `getStockStatus` |
 | **Journal d'Audit Anti-Fraude** | `@/lib/auditLogger` | `logAuditEvent({ shopId, action, targetId, details })` |
 | **Codes Boutiques Multi-Tenants** | `@/lib/shopCodeUtils` | `getDualShopIds(shopId)`, `normalizeShopCode`, `formatShortShopCode` |
+| **Synchronisation Temps Réel** | `@/lib/realtimeSync` | `broadcastInstantSync(shopId, entity)`, `setupRealtimeSync`, `getRealtimeChannelName` |
 | **Persistance Hors-Ligne & Sync** | `@/lib/offlineDb` & `@/lib/indexedDb` | `saveOfflineSale`, `getPendingSync`, `idbAddSyncItem` |
+| **Mises à Jour PWA & SW** | `@/components/pwa/PwaUpdateBanner` | `PwaUpdateBanner`, `SKIP_WAITING` |
 | **Schéma SQL Maître Unique** | `supabase/migrations/000_MASTER_TOUT_EN_UN_DEFINITIF.sql` | 11 tables DDL + indexes + RLS unifiées |
+| **Autorité Centrale SSOT** | `.agents/skills/central-ssot-authority` | Matrice des 10 domaines canoniques |
 
 ---
 

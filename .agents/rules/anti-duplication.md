@@ -13,6 +13,8 @@ Cette règle est d'application obligatoire et permanente sur l'ensemble du proje
    - Constantes de stock (`CATEGORIES`, `UNITS`) : importer depuis `@/components/stock/stockUtils`.
    - Normalisation et Levenshtein : importer depuis `@/lib/productUtils`.
    - Journal d'audit : importer `logAuditEvent` depuis `@/lib/auditLogger`.
+   - Synchronisation temps réel : importer `broadcastInstantSync`, `setupRealtimeSync` depuis `@/lib/realtimeSync`.
+   - Autorité centrale : se conformer à `.agents/skills/central-ssot-authority`.
 
 2. **Pas de composants orphelins résiduels** :
    - Tout composant créé dans `components/` doit être activement utilisé.

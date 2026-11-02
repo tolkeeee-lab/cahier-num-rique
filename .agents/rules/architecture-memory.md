@@ -9,10 +9,12 @@ Ce document consigne les acquis immuables, les règles d'architecture et les arb
 - **Principe d'écriture instantanée (0 ms)** : L'UI écrit **exclusivement** dans le stockage local (IndexedDB via `lib/offlineDb.ts`) et émet l'événement `cahier_local_sale_created`. L'UI ne doit JAMAIS attendre la réponse du réseau pour valider une vente.
 - **Passerelle Réseau Unique** : Le hook `hooks/useOfflineSync.ts` est l'**unique orchestrateur** chargé de dépiler les ventes locales et de les envoyer vers Supabase. Ne jamais réintroduire de fonction réseau parallèle (ex: `syncWithApi`).
 - **Sanctuarisation des données non synchronisées** : Lors d'un fetch Supabase dans `hooks/useJournalData.ts`, les ventes locales ayant `is_synced === false` ou absentes de Supabase sont **strictement préservées** lors de la fusion. Elles ne doivent JAMAIS être écrasées ou filtrées.
-- **Temps Réel & Réveil Mobile** : La synchronisation inter-appareils repose sur :
-  1. Le canal Supabase Realtime (`postgres_changes` sur `sales`).
-  2. L'événement `visibilitychange` (déclenché quand l'utilisateur rouvre l'application sur smartphone).
-  3. Un polling de secours toutes les 15 secondes.
+- **Temps Réel & Réveil Mobile (< 50ms)** : La synchronisation inter-appareils repose sur l'architecture double couche de `@/lib/realtimeSync` :
+  1. Le WebSocket Broadcast instantané (`broadcastInstantSync` < 50ms) sur le topic déterministe `realtime_shop_{code}`.
+  2. Le canal Supabase Realtime (`postgres_changes` multi-alias sur `sales`, `products`, `shopping_list`).
+  3. L'événement `visibilitychange` (déclenché quand l'utilisateur rouvre l'application sur smartphone).
+  4. Un polling de secours toutes les 15 secondes.
+  5. Référence centrale : `.agents/skills/central-ssot-authority/SKILL.md`.
 
 ---
 

@@ -130,6 +130,29 @@ assert(
   'Des scripts temporaires orphelins ont été détectés'
 )
 
+// ── 6. CONTRÔLE DE L'AUTORITÉ CENTRALE SSOT & REALTIME SYNC ──
+console.log('\n--- 6. CONTRÔLE DE L’AUTORITÉ CENTRALE SSOT & REALTIME SYNC ---')
+const hasCentralSkill = fs.existsSync('.agents/skills/central-ssot-authority/SKILL.md')
+assert(
+  hasCentralSkill,
+  'Compétence d’Autorité Centrale SSOT présente (.agents/skills/central-ssot-authority/SKILL.md)',
+  'Fichier .agents/skills/central-ssot-authority/SKILL.md manquant'
+)
+
+let duplicateBroadcastSync: string[] = []
+for (const { path: filePath, content } of allFileContents) {
+  if (filePath.includes('realtimeSync.ts') || filePath.includes('scripts') || filePath.includes('node_modules')) continue
+  if (/function\s+broadcastInstantSync\s*\(/.test(content) || /const\s+broadcastInstantSync\s*=\s*(?:async\s*)?\(/.test(content)) {
+    duplicateBroadcastSync.push(filePath)
+  }
+}
+
+assert(
+  duplicateBroadcastSync.length === 0,
+  'broadcastInstantSync est déclaré exclusivement dans @/lib/realtimeSync (zéro réimplémentation)',
+  `Réimplémentations locales de broadcastInstantSync détectées dans : ${duplicateBroadcastSync.join(', ')}`
+)
+
 console.log('\n============================================================')
 console.log(`RÉSULTAT : ${passes} réussi(s), ${failures} échec(s)`)
 console.log('============================================================')
