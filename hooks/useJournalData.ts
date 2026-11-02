@@ -177,7 +177,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       try {
         if (isSupabaseClientConfigured() && isOnline) {
           const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
-            setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 3500)
+            setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 6000)
           )
 
           // Requête principale multi-alias (unifie UUID et codes courts BTQ/SHOP)

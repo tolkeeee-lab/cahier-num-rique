@@ -42,7 +42,7 @@ export async function testSupabaseConnection(): Promise<{ ok: boolean; message: 
 
   try {
     const timeoutPromise = new Promise<{ error: { code: string; message: string } }>((resolve) =>
-      setTimeout(() => resolve({ error: { code: 'TIMEOUT', message: 'Délai d\'attente dépassé (3.5s)' } }), 3500)
+      setTimeout(() => resolve({ error: { code: 'TIMEOUT', message: 'Délai d\'attente dépassé (6s)' } }), 6000)
     )
 
     const result = await Promise.race([
