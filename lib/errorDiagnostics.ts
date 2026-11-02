@@ -107,6 +107,19 @@ export function translateErrorToPlainLanguage(
       }
     }
 
+    // 1.5. Détection coupure de veille mobile (WebKit / Safari transport failure)
+    if (lower.includes('transport failure')) {
+      return {
+        category: 'supabase_sync',
+        title: 'Reprise après mise en veille mobile',
+        advice:
+          'Votre téléphone est sorti de veille ou a changé de connexion (Wi-Fi/4G). La liaison se rétablit automatiquement. Toutes vos ventes locales restent 100% protégées.',
+        technicalMessage: rawMessage,
+        stack,
+        digest,
+      }
+    }
+
     // 2. Détection Supabase & Synchronisation Temps Réel
     if (
       lower.includes('postgres_changes') ||

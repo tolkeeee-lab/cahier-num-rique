@@ -3,7 +3,7 @@
  *
  * Moteur de synchronisation temps réel instantanée multi-appareils (PC <-> Téléphone PWA).
  * 
- * Architecture Double Couche (Sub-Second Synchronisation) :
+ * Architecture Double Couche Résiliente (Mobile & Desktop) :
  * 1. Broadcast WebSocket peer-to-peer (< 50ms) :
  *    - Dès qu'un appareil (PC ou téléphone) saisit ou modifie des données (ventes, stock, dettes, courses, clôture),
  *      un message broadcast léger est diffusé sur le canal partagé déterministe de la boutique.
@@ -14,13 +14,10 @@
  *    - Écoute directe des mutations de la base de données PostgreSQL sur les tables sales, products, shopping_list, cash_closings.
  *    - Filtrage robuste supportant les alias multi-tenants (getDualShopIds).
  * 
- * 3. Filtrage d'écho par deviceId :
- *    - Chaque appareil dispose d'un identifiant de session unique pour ignorer ses propres diffusions.
- * 
- * 4. Cycle de vie unifié (Single Source of Truth) :
- *    - Un seul point de création de canal (getOrCreateRealtimeChannel).
- *    - File d'attente résiliente (pendingBroadcasts) envoyée dès que le canal passe en état SUBSCRIBED.
- *    - Tolérance absolue des formats d'identifiants (UUID complet <-> Code Court BTQ).
+ * 3. Auto-Rétablissement Mobile (iOS Safari / WebKit Sleep Resilience) :
+ *    - Reconnexion automatique en cas de transport failure (mise en veille, changement de réseau 4G/Wi-Fi).
+ *    - Ré-écoute prioritaire lors des événements 'visibilitychange' et 'online'.
+ *    - Nettoyage immédiat des canaux morts pour éliminer tout blocage en état 'errored'.
  */
 
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -76,8 +73,41 @@ export function getRealtimeChannelName(shopId: string): string {
 let activeChannel: any = null
 let activeChannelName: string | null = null
 let isChannelSubscribed = false
+let currentTrackedShopId: string | null = null
+let reconnectTimer: NodeJS.Timeout | null = null
 const registeredCallbacks = new Set<RealtimeSyncCallbacks>()
 const pendingBroadcasts: RealtimeSyncPayload[] = []
+
+/**
+ * Indique si le canal WebSocket est actuellement connecté et opérationnel.
+ */
+export function isRealtimeActive(): boolean {
+  return isChannelSubscribed && activeChannel !== null
+}
+
+/**
+ * Force la reconnexion propre du canal Realtime (ex: après réveil du téléphone ou retour réseau).
+ */
+export function reconnectRealtimeSync(shopId: string) {
+  if (!shopId || typeof window === 'undefined') return
+
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+
+  // Nettoyer l'ancien canal s'il était en échec ou fermé
+  if (activeChannel) {
+    try {
+      supabaseClient.removeChannel(activeChannel)
+    } catch {}
+    activeChannel = null
+    activeChannelName = null
+    isChannelSubscribed = false
+  }
+
+  getOrCreateRealtimeChannel(shopId)
+}
 
 /**
  * Récupère ou instancie le canal Realtime Supabase pour la boutique.
@@ -86,6 +116,7 @@ const pendingBroadcasts: RealtimeSyncPayload[] = []
 export function getOrCreateRealtimeChannel(shopId: string) {
   if (!isSupabaseClientConfigured() || !shopId) return null
 
+  currentTrackedShopId = shopId
   const channelName = getRealtimeChannelName(shopId)
 
   if (activeChannel && activeChannelName === channelName) {
@@ -192,11 +223,15 @@ export function getOrCreateRealtimeChannel(shopId: string) {
         }
       })
 
-    // 3. Souscrire une seule fois au canal avec gestion de la file d'attente
+    // 3. Souscrire une seule fois au canal avec gestion de la file d'attente et auto-reconnexion
     channel.subscribe((status: string, err?: any) => {
       if (status === 'SUBSCRIBED') {
         isChannelSubscribed = true
         console.log(`[Realtime] Synchronisation PC <-> Téléphone active sur ${channelName}`)
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cahier_realtime_status', { detail: { connected: true } }))
+        }
 
         // Vider immédiatement les diffusions mises en file d'attente pendant la connexion
         while (pendingBroadcasts.length > 0) {
@@ -212,11 +247,30 @@ export function getOrCreateRealtimeChannel(shopId: string) {
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         isChannelSubscribed = false
         console.warn(`[Realtime] Statut canal ${status}:`, err)
-        captureAppError(err || `Canal Realtime en statut ${status}`, {
-          shopId,
-          source: 'realtimeChannel.subscribe',
-          status,
-        })
+
+        // Nettoyer l'ancien canal mort pour permettre un renouvellement propre
+        try {
+          supabaseClient.removeChannel(channel)
+        } catch {}
+        if (activeChannel === channel) {
+          activeChannel = null
+          activeChannelName = null
+        }
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cahier_realtime_status', { detail: { connected: false } }))
+        }
+
+        // Auto-reconnexion rapide si le navigateur est en ligne (1.5s)
+        if (typeof window !== 'undefined' && navigator.onLine) {
+          if (reconnectTimer) clearTimeout(reconnectTimer)
+          reconnectTimer = setTimeout(() => {
+            if (currentTrackedShopId) {
+              console.log('[Realtime] Tentative d\'auto-rétablissement suite à coupure réseau/veille...')
+              getOrCreateRealtimeChannel(currentTrackedShopId)
+            }
+          }, 1500)
+        }
       }
     })
 
@@ -264,7 +318,7 @@ export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 
       console.warn(`[Realtime Broadcast] Réessai diffusion (${res})...`)
       setTimeout(async () => {
         try {
-          if (activeChannel) {
+          if (activeChannel && isChannelSubscribed) {
             await activeChannel.send({
               type: 'broadcast',
               event: 'cahier_instant_sync',
@@ -295,8 +349,32 @@ export function setupRealtimeSync(
     registeredCallbacks.add(callbacks)
     getOrCreateRealtimeChannel(shopId)
 
+    // Attacher les écouteurs de reprise après sommeil mobile
+    const handleForegroundWakeup = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        if (!isChannelSubscribed) {
+          reconnectRealtimeSync(shopId)
+        }
+      }
+    }
+
+    const handleNetworkRecovery = () => {
+      if (!isChannelSubscribed) {
+        reconnectRealtimeSync(shopId)
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      document.addEventListener('visibilitychange', handleForegroundWakeup)
+      window.addEventListener('online', handleNetworkRecovery)
+    }
+
     return () => {
       registeredCallbacks.delete(callbacks)
+      if (typeof window !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleForegroundWakeup)
+        window.removeEventListener('online', handleNetworkRecovery)
+      }
     }
   } catch (syncErr) {
     console.warn('[RealtimeSync] Erreur setupRealtimeSync:', syncErr)

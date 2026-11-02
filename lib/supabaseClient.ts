@@ -11,6 +11,13 @@ export const supabaseClient = createClient(supabaseUrl, supabaseKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+    heartbeatIntervalMs: 15000,
+    reconnectAfterMs: (tries: number) => Math.min(tries * 1000, 5000),
+  },
 })
 
 // Détecte si les variables Supabase client sont valides

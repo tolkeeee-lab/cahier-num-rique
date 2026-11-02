@@ -96,14 +96,25 @@ export function ErrorDiagnosticsProvider({ children }: { children: React.ReactNo
       }
     }
 
+    // 4. Écoute du statut de reconnexion Realtime
+    const handleRealtimeStatus = (event: Event) => {
+      const customEvt = event as CustomEvent<{ connected: boolean }>
+      if (customEvt.detail?.connected) {
+        // La liaison est rétablie avec succès : fermer immédiatement toute alerte de sync
+        setActiveIncident(prev => (prev?.category === 'supabase_sync' ? null : prev))
+      }
+    }
+
     window.addEventListener('error', handleGlobalError)
     window.addEventListener('unhandledrejection', handleUnhandledRejection)
     window.addEventListener('cahier_error_captured', handleCustomCapture)
+    window.addEventListener('cahier_realtime_status', handleRealtimeStatus)
 
     return () => {
       window.removeEventListener('error', handleGlobalError)
       window.removeEventListener('unhandledrejection', handleUnhandledRejection)
       window.removeEventListener('cahier_error_captured', handleCustomCapture)
+      window.removeEventListener('cahier_realtime_status', handleRealtimeStatus)
       if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current)
     }
   }, [handleDismiss])

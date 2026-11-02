@@ -10,7 +10,7 @@ import {
 } from '@/lib/offlineDb'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { logAuditEvent } from '@/lib/auditLogger'
-import { setupRealtimeSync, broadcastInstantSync } from '@/lib/realtimeSync'
+import { setupRealtimeSync, broadcastInstantSync, reconnectRealtimeSync, isRealtimeActive } from '@/lib/realtimeSync'
 import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 import { parseTextLocally } from '@/lib/sales/offlineSaleParser'
@@ -412,23 +412,33 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       window.addEventListener('cahier_sales_updated', handleSalesUpdated)
     }
 
-    // Polling de secours actif (15s) pour garantir la synchronisation PC/Téléphone
-    // même si les WebSockets Realtime sont coupés par le mode veille ou l'économie d'énergie mobile.
+    // Polling de secours adaptatif : rapide (5s) si le WebSocket est en reconnexion, normal (15s) si connecté
     const pollInterval = setInterval(() => {
       if (isOnline && isMounted) {
         reloadData()
       }
-    }, 15_000)
+    }, isRealtimeActive() ? 15_000 : 5_000)
 
-    // Écouter le retour au premier plan (quand l'utilisateur déverrouille son téléphone ou revient sur l'onglet PC)
+    // Écouter le retour au premier plan (déverrouillage téléphone iPhone/Android ou retour onglet PC)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isOnline && isMounted) {
         reloadData()
+        reconnectRealtimeSync(shopId)
+      }
+    }
+
+    const handleOnlineEvent = () => {
+      if (isMounted) {
+        reloadData()
+        reconnectRealtimeSync(shopId)
       }
     }
 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', handleVisibilityChange)
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnlineEvent)
     }
 
     return () => {
@@ -436,6 +446,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       cleanupRealtime()
       if (typeof window !== 'undefined') {
         window.removeEventListener('cahier_sales_updated', handleSalesUpdated)
+        window.removeEventListener('online', handleOnlineEvent)
         document.removeEventListener('visibilitychange', handleVisibilityChange)
       }
       clearInterval(pollInterval)
