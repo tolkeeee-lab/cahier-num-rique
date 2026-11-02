@@ -378,21 +378,24 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     loadJournal()
 
     // ── Supabase Realtime Channel & Broadcast Instantané (PC <-> Téléphone PWA < 50ms) ──
-    const cleanupRealtime = setupRealtimeSync(shopId, {
-      onSalesUpdated: () => {
-        if (isMounted) reloadData()
-      },
-      onStockUpdated: () => {
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
-        }
-      },
-      onShoppingUpdated: () => {
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
-        }
-      },
-    })
+    let cleanupRealtime = () => {}
+    if (shopId && isOnline) {
+      cleanupRealtime = setupRealtimeSync(shopId, {
+        onSalesUpdated: () => {
+          if (isMounted) reloadData()
+        },
+        onStockUpdated: () => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+          }
+        },
+        onShoppingUpdated: () => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
+          }
+        },
+      })
+    }
 
     // Écouter les événements locaux de mise à jour des ventes pour recharger immédiatement le journal
     const handleSalesUpdated = () => {

@@ -14,9 +14,22 @@ export default function GlobalError({
     console.error('Erreur interceptée par l\'Error Boundary Global:', error)
   }, [error])
 
+  const handleReload = () => {
+    try {
+      reset()
+    } catch {}
+    if (typeof window !== 'undefined') {
+      window.location.reload()
+    }
+  }
+
   const handleForceOfflineMode = () => {
     if (typeof window !== 'undefined') {
-      window.location.href = '/journal'
+      try {
+        sessionStorage.setItem('cahier_force_offline', 'true')
+      } catch {}
+      window.location.href = '/journal?offline=true'
+      window.location.reload()
     }
   }
 
@@ -38,6 +51,20 @@ export default function GlobalError({
           </p>
         </div>
 
+        {/* Détail technique de l'erreur pour diagnostic immédiat */}
+        {error?.message && (
+          <div className="p-2.5 bg-black/60 border border-amber-900/40 rounded-xl text-left overflow-x-auto">
+            <p className="text-[10px] text-red-400 font-mono break-all select-text">
+              {error.message}
+            </p>
+            {error.digest && (
+              <p className="text-[9px] text-gray-500 font-mono mt-0.5">
+                Réf: {error.digest}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Note rassurante sur les données */}
         <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl text-[11px] text-emerald-950 font-bold leading-relaxed text-left flex items-start gap-2">
           <div className="p-1 rounded-md bg-emerald-200 text-emerald-900 mt-0.5">
@@ -53,7 +80,7 @@ export default function GlobalError({
         <div className="space-y-2 pt-2">
           <button
             type="button"
-            onClick={() => reset()}
+            onClick={handleReload}
             className="w-full py-3 px-4 bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#fbbf24] hover:to-[#f59e0b] text-white text-xs font-black rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-all"
           >
             <RefreshCw className="w-4 h-4" strokeWidth={2} />

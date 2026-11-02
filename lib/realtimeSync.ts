@@ -16,6 +16,10 @@
  * 
  * 3. Filtrage d'écho par deviceId :
  *    - Chaque appareil dispose d'un identifiant de session unique pour ignorer ses propres diffusions.
+ * 
+ * 4. Cycle de vie immunisé (Safe Single-Subscription) :
+ *    - Les écouteurs sont enregistrés une seule fois avant channel.subscribe().
+ *    - Les re-renders React n'appellent jamais channel.on() sur un canal déjà souscrit.
  */
 
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
@@ -62,13 +66,14 @@ export function getLocalDeviceId(): string {
  */
 export function getRealtimeChannelName(shopId: string): string {
   if (!shopId) return 'realtime_shop_default'
-  const clean = normalizeShopCode(shopId) || shopId.trim()
+  const clean = normalizeShopCode(shopId) || (typeof shopId === 'string' ? shopId.trim() : String(shopId))
   return `realtime_shop_${clean}`
 }
 
-// Référence vers le canal actif singleton
+// Référence vers le canal actif singleton et registre de callbacks
 let activeChannel: any = null
 let activeChannelName: string | null = null
+const registeredCallbacks = new Set<RealtimeSyncCallbacks>()
 
 /**
  * Récupère ou instancie le canal Realtime Supabase pour la boutique.
@@ -136,7 +141,7 @@ export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 
 
 /**
  * Initialise l'écoute complète (Broadcast + Postgres Changes) sur le canal de la boutique.
- * Retourne une fonction de nettoyage.
+ * Protégé contre les re-renders : n'ajoute pas d'écouteurs multiples sur un canal déjà souscrit.
  */
 export function setupRealtimeSync(
   shopId: string,
@@ -146,98 +151,132 @@ export function setupRealtimeSync(
     return () => {}
   }
 
-  const channel = getOrCreateRealtimeChannel(shopId)
-  if (!channel) return () => {}
+  try {
+    const channelName = getRealtimeChannelName(shopId)
+    registeredCallbacks.add(callbacks)
 
-  const myDeviceId = getLocalDeviceId()
-  const matchingShopIds = new Set(getDualShopIds(shopId))
-
-  const handleEntityUpdate = (entity: SyncEntity) => {
-    if (entity === 'sales' || entity === 'debts') {
-      callbacks.onSalesUpdated?.()
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cahier_sales_updated', { detail: { fromBroadcast: true } }))
-      }
-    } else if (entity === 'stock') {
-      callbacks.onStockUpdated?.()
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cahier_stock_updated', { detail: { fromBroadcast: true } }))
-      }
-    } else if (entity === 'shopping') {
-      callbacks.onShoppingUpdated?.()
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cahier_shopping_updated', { detail: { fromBroadcast: true } }))
-      }
-    } else if (entity === 'closings') {
-      callbacks.onClosingsUpdated?.()
-    } else if (entity === 'all') {
-      callbacks.onSalesUpdated?.()
-      callbacks.onStockUpdated?.()
-      callbacks.onShoppingUpdated?.()
-      callbacks.onClosingsUpdated?.()
-      callbacks.onAllUpdated?.()
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cahier_sales_updated', { detail: { fromBroadcast: true } }))
-        window.dispatchEvent(new CustomEvent('cahier_stock_updated', { detail: { fromBroadcast: true } }))
-        window.dispatchEvent(new CustomEvent('cahier_shopping_updated', { detail: { fromBroadcast: true } }))
+    // Si le canal existe déjà pour cette boutique et est déjà initialisé, ne pas ré-attacher
+    if (activeChannel && activeChannelName === channelName) {
+      return () => {
+        registeredCallbacks.delete(callbacks)
       }
     }
-  }
 
-  // 1. Écoute Broadcast Instantané (Peer-to-Peer WebSocket < 50ms)
-  channel.on('broadcast', { event: 'cahier_instant_sync' }, (res: any) => {
-    const payload: RealtimeSyncPayload = res.payload
-    if (!payload) return
-
-    // Ignorer ses propres messages pour éviter les échos
-    if (payload.senderDeviceId === myDeviceId) return
-
-    // Vérifier que le message concerne bien notre boutique (support multi-alias)
-    if (payload.shopId && !matchingShopIds.has(payload.shopId)) {
-      const normalizedMsgCode = normalizeShopCode(payload.shopId)
-      const normalizedOurCode = normalizeShopCode(shopId)
-      if (normalizedMsgCode !== normalizedOurCode) return
+    // Si on avait un ancien canal d'une autre boutique, le détruire proprement
+    if (activeChannel) {
+      try {
+        supabaseClient.removeChannel(activeChannel)
+      } catch {}
+      activeChannel = null
+      activeChannelName = null
     }
 
-    handleEntityUpdate(payload.entity)
-  })
+    const channel = supabaseClient.channel(channelName, {
+      config: {
+        broadcast: { ack: false, self: false },
+      },
+    })
+    activeChannel = channel
+    activeChannelName = channelName
 
-  // 2. Écoute Postgres Changes (Changements dans PostgreSQL)
-  channel
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, (payload: any) => {
-      const targetShop = payload.new?.shop_id || payload.old?.shop_id
-      if (!targetShop || matchingShopIds.has(targetShop) || normalizeShopCode(targetShop) === normalizeShopCode(shopId)) {
-        handleEntityUpdate('sales')
-      }
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload: any) => {
-      const targetShop = payload.new?.shop_id || payload.old?.shop_id
-      if (!targetShop || matchingShopIds.has(targetShop) || normalizeShopCode(targetShop) === normalizeShopCode(shopId)) {
-        handleEntityUpdate('stock')
-      }
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list' }, (payload: any) => {
-      const targetShop = payload.new?.shop_id || payload.old?.shop_id
-      if (!targetShop || matchingShopIds.has(targetShop) || normalizeShopCode(targetShop) === normalizeShopCode(shopId)) {
-        handleEntityUpdate('shopping')
-      }
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_closings' }, (payload: any) => {
-      const targetShop = payload.new?.shop_id || payload.old?.shop_id
-      if (!targetShop || matchingShopIds.has(targetShop) || normalizeShopCode(targetShop) === normalizeShopCode(shopId)) {
-        handleEntityUpdate('closings')
-      }
-    })
+    const myDeviceId = getLocalDeviceId()
+    const matchingShopIds = new Set(getDualShopIds(shopId))
 
-  // Souscrire au canal si pas encore actif
-  channel.subscribe((status: string) => {
-    if (status === 'SUBSCRIBED') {
-      console.log(`[Realtime] Synchronisation PC <-> Téléphone active pour boutique ${shopId}`)
+    const handleEntityUpdate = (entity: SyncEntity) => {
+      // Notifier tous les écouteurs enregistrés
+      registeredCallbacks.forEach(cb => {
+        try {
+          if (entity === 'sales' || entity === 'debts') {
+            cb.onSalesUpdated?.()
+          } else if (entity === 'stock') {
+            cb.onStockUpdated?.()
+          } else if (entity === 'shopping') {
+            cb.onShoppingUpdated?.()
+          } else if (entity === 'closings') {
+            cb.onClosingsUpdated?.()
+          } else if (entity === 'all') {
+            cb.onSalesUpdated?.()
+            cb.onStockUpdated?.()
+            cb.onShoppingUpdated?.()
+            cb.onClosingsUpdated?.()
+            cb.onAllUpdated?.()
+          }
+        } catch (err) {
+          console.warn('[RealtimeSync] Erreur callback:', err)
+        }
+      })
+
+      // Déclencher les événements globaux dans la fenêtre
+      if (typeof window !== 'undefined') {
+        if (entity === 'sales' || entity === 'debts' || entity === 'all') {
+          window.dispatchEvent(new CustomEvent('cahier_sales_updated', { detail: { fromBroadcast: true } }))
+        }
+        if (entity === 'stock' || entity === 'all') {
+          window.dispatchEvent(new CustomEvent('cahier_stock_updated', { detail: { fromBroadcast: true } }))
+        }
+        if (entity === 'shopping' || entity === 'all') {
+          window.dispatchEvent(new CustomEvent('cahier_shopping_updated', { detail: { fromBroadcast: true } }))
+        }
+      }
     }
-  })
 
-  return () => {
-    // Nettoyage géré par le cycle de vie du singleton
+    // 1. Écoute Broadcast Instantané (Peer-to-Peer WebSocket < 50ms)
+    channel.on('broadcast', { event: 'cahier_instant_sync' }, (res: any) => {
+      const payload: RealtimeSyncPayload = res.payload
+      if (!payload) return
+
+      // Ignorer ses propres messages pour éviter les échos
+      if (payload.senderDeviceId === myDeviceId) return
+
+      // Vérifier que le message concerne bien notre boutique (support multi-alias)
+      if (payload.shopId && !matchingShopIds.has(payload.shopId)) {
+        const normalizedMsgCode = normalizeShopCode(payload.shopId)
+        const normalizedOurCode = normalizeShopCode(shopId)
+        if (normalizedMsgCode !== normalizedOurCode) return
+      }
+
+      handleEntityUpdate(payload.entity)
+    })
+
+    // 2. Écoute Postgres Changes (attachement UNIQUE avant subscribe)
+    channel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, (payload: any) => {
+        const targetShop = payload.new?.shop_id || payload.old?.shop_id
+        if (!targetShop || matchingShopIds.has(targetShop) || normalizeShopCode(targetShop) === normalizeShopCode(shopId)) {
+          handleEntityUpdate('sales')
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload: any) => {
+        const targetShop = payload.new?.shop_id || payload.old?.shop_id
+        if (!targetShop || matchingShopIds.has(targetShop) || normalizeShopCode(targetShop) === normalizeShopCode(shopId)) {
+          handleEntityUpdate('stock')
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list' }, (payload: any) => {
+        const targetShop = payload.new?.shop_id || payload.old?.shop_id
+        if (!targetShop || matchingShopIds.has(targetShop) || normalizeShopCode(targetShop) === normalizeShopCode(shopId)) {
+          handleEntityUpdate('shopping')
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_closings' }, (payload: any) => {
+        const targetShop = payload.new?.shop_id || payload.old?.shop_id
+        if (!targetShop || matchingShopIds.has(targetShop) || normalizeShopCode(targetShop) === normalizeShopCode(shopId)) {
+          handleEntityUpdate('closings')
+        }
+      })
+
+    // 3. Souscrire une seule fois au canal
+    channel.subscribe((status: string) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[Realtime] Synchronisation PC <-> Téléphone active pour boutique ${shopId}`)
+      }
+    })
+
+    return () => {
+      registeredCallbacks.delete(callbacks)
+    }
+  } catch (syncErr) {
+    console.warn('[RealtimeSync] Erreur configuration écouteur:', syncErr)
+    return () => {}
   }
 }
-
