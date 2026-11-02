@@ -7,7 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "ask-ai": "node scripts/ask_ai.mjs",
     "test": "npx -y tsx scripts/guard_anti_duplicate.ts && npx -y tsx scripts/test_critical_suite.ts",
     "check:duplicates": "npx -y tsx scripts/guard_anti_duplicate.ts",
     "test:e2e": "playwright test",
