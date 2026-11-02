@@ -55,6 +55,7 @@ export const metadata: Metadata = {
 
 import { FeatureProvider } from '@/context/FeatureContext'
 import { PwaUpdateBanner } from '@/components/pwa/PwaUpdateBanner'
+import { ErrorDiagnosticsProvider } from '@/components/diagnostics/ErrorDiagnosticsProvider'
 
 export default function RootLayout({
   children,
@@ -64,10 +65,12 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning className={`${inter.variable} ${itim.variable} ${jetbrains.variable}`}>
       <body suppressHydrationWarning className="font-sans antialiased bg-[#141210] text-gray-900 min-h-screen">
-        <FeatureProvider>
-          {children}
-          <PwaUpdateBanner />
-        </FeatureProvider>
+        <ErrorDiagnosticsProvider>
+          <FeatureProvider>
+            {children}
+            <PwaUpdateBanner />
+          </FeatureProvider>
+        </ErrorDiagnosticsProvider>
         
                 {/* Enregistrement du Service Worker pour le support PWA */}
         <Script id="register-sw" strategy="afterInteractive">

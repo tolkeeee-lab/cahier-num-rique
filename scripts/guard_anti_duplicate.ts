@@ -153,6 +153,36 @@ assert(
   `Réimplémentations locales de broadcastInstantSync détectées dans : ${duplicateBroadcastSync.join(', ')}`
 )
 
+// ── 7. CONTRÔLE DE LA TÉLÉMÉTRIE & AUTO-DIAGNOSTIC D'INCIDENTS ──
+console.log('\n--- 7. CONTRÔLE DE LA TÉLÉMÉTRIE & AUTO-DIAGNOSTIC D’INCIDENTS ---')
+const hasTelemetrySkill = fs.existsSync('.agents/skills/telemetry-error-monitoring/SKILL.md')
+assert(
+  hasTelemetrySkill,
+  'Compétence Télémétrie & Auto-Diagnostic présente (.agents/skills/telemetry-error-monitoring/SKILL.md)',
+  'Fichier .agents/skills/telemetry-error-monitoring/SKILL.md manquant'
+)
+
+const hasErrorDiagnosticsModule = fs.existsSync('lib/errorDiagnostics.ts')
+assert(
+  hasErrorDiagnosticsModule,
+  'Module canonique de télémétrie présent (lib/errorDiagnostics.ts)',
+  'Fichier lib/errorDiagnostics.ts manquant'
+)
+
+let duplicateDiagnosticHelpers: string[] = []
+for (const { path: filePath, content } of allFileContents) {
+  if (filePath.includes('errorDiagnostics.ts') || filePath.includes('scripts') || filePath.includes('node_modules')) continue
+  if (/function\s+translateErrorToPlainLanguage\s*\(/.test(content) || /function\s+captureAppError\s*\(/.test(content)) {
+    duplicateDiagnosticHelpers.push(filePath)
+  }
+}
+
+assert(
+  duplicateDiagnosticHelpers.length === 0,
+  'translateErrorToPlainLanguage et captureAppError sont déclarés exclusivement dans @/lib/errorDiagnostics',
+  `Réimplémentations locales de fonctions de diagnostic dans : ${duplicateDiagnosticHelpers.join(', ')}`
+)
+
 console.log('\n============================================================')
 console.log(`RÉSULTAT : ${passes} réussi(s), ${failures} échec(s)`)
 console.log('============================================================')

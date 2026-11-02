@@ -25,6 +25,7 @@
 
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { normalizeShopCode, getDualShopIds } from '@/lib/shopCodeUtils'
+import { captureAppError } from '@/lib/errorDiagnostics'
 
 export type SyncEntity = 'sales' | 'stock' | 'shopping' | 'debts' | 'closings' | 'all'
 
@@ -186,9 +187,16 @@ export function getOrCreateRealtimeChannel(shopId: string) {
       })
 
     // 3. Souscrire une seule fois au canal
-    channel.subscribe((status: string) => {
+    channel.subscribe((status: string, err?: any) => {
       if (status === 'SUBSCRIBED') {
         console.log(`[Realtime] Synchronisation PC <-> Téléphone active pour boutique ${shopId}`)
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn(`[Realtime] Statut canal ${status}:`, err)
+        captureAppError(err || `Canal Realtime en statut ${status}`, {
+          shopId,
+          source: 'realtimeChannel.subscribe',
+          status,
+        })
       }
     })
 
@@ -197,6 +205,7 @@ export function getOrCreateRealtimeChannel(shopId: string) {
     return channel
   } catch (err) {
     console.warn('[RealtimeSync] Erreur création canal:', err)
+    captureAppError(err, { shopId, source: 'getOrCreateRealtimeChannel' })
     return null
   }
 }

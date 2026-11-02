@@ -15,7 +15,7 @@ Toute modification, création ou évolution technique sur ce dépôt **DOIT OBLI
 
 ---
 
-## 🗺️ 1. Matrice des 10 Domaines Canoniques ("Single Source of Truth")
+## 🗺️ 1. Matrice des 11 Domaines Canoniques ("Single Source of Truth")
 
 Chaque domaine technique dispose d'un **unique point d'entrée officiel**. Il est formellement interdit de réimplémenter ou contourner ces modules :
 
@@ -31,6 +31,7 @@ Chaque domaine technique dispose d'un **unique point d'entrée officiel**. Il es
 | **8** | **PWA, Service Worker & Updates** | `@/components/pwa/PwaUpdateBanner`<br>`public/sw.js`<br>`public/manifest.json` | `PwaUpdateBanner`<br>`SKIP_WAITING`<br>`controllerchange` | Détection proactive (`visibilitychange`, `online`, intervalle 20 min). Rechargement à chaud sans perte de cache IndexedDB. |
 | **9** | **Audit Anti-Fraude** | `@/lib/auditLogger` | `logAuditEvent({ shopId, action, targetId, details })` | Traçabilité inaltérable des annulations, retours et modifications avec bufferisation hors-ligne. |
 | **10** | **Design & Motion Figma-Grade** | `.agents/rules/anti-ai-slop.md`<br>`.agents/skills/impeccable-ui-artisan` | Inset light biseauté (`inset 0 1px 0`)<br>`--ease-spring: cubic-bezier(0.16, 1, 0.3, 1)`<br>`active:scale-[0.97]`, `tabular-nums` | Zéro animation linéaire saccadée. Zéro dégradé violet/cyan fluo. Micro-interactions physiques tactiles. |
+| **11** | **Télémétrie & Auto-Diagnostic** | `@/lib/errorDiagnostics`<br>`.agents/skills/telemetry-error-monitoring` | `translateErrorToPlainLanguage`<br>`captureAppError`, `copyErrorDiagnostics`<br>`generateWhatsAppErrorReportUrl` | Zéro message cryptique. Diagnostic traduit en français commerçant. 1-clic copie & WhatsApp. Zéro crash dans le logger. |
 
 ---
 
