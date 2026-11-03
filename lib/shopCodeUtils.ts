@@ -10,7 +10,7 @@ import { supabaseClient } from './supabaseClient'
  */
 export function normalizeShopCode(shopId: string): string {
   if (!shopId) return ''
-  const trimmed = shopId.trim()
+  const trimmed = shopId.trim().replace(/-main$/i, '')
   if (isRealUuid(trimmed)) {
     return trimmed.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase()
   }

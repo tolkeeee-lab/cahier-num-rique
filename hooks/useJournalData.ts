@@ -407,9 +407,56 @@ export function useJournalData(shopId: string, isOnline: boolean) {
 
     // ── Supabase Realtime Channel (< 50ms) + BroadcastChannel W3C ──
     const cleanupRealtime = setupRealtimeSync(shopId, {
-      onSalesUpdated: () => {
+      onSalesUpdated: (incomingData?: any) => {
+        // ⚡ RÉCEPTION TEMPS RÉEL (0ms) : injection directe en mémoire pour perception instantanée cross-device
+        if (incomingData?.crossedOutId) {
+          const targetId = incomingData.crossedOutId
+          setAllSales(prev => {
+            const next = prev.map(s => s.id === targetId ? { ...s, status: 'crossed_out' as const } : s)
+            const reconciled = reconcileDebts(next)
+            const todays = reconciled.filter(s => s.date === getTodayDateString())
+            setSales(todays)
+            calculateSummary(reconciled, todays)
+            return reconciled
+          })
+        } else if (incomingData?.id) {
+          const today = getTodayDateString()
+          const newSale: Sale = {
+            id: incomingData.id,
+            shop_id: incomingData.shop_id || shopId,
+            date: (incomingData.date || '').split('T')[0] || today,
+            time: incomingData.time || '00:00',
+            client: incomingData.client || incomingData.client_name || 'Client',
+            articles: (incomingData.articles || []).map((art: any) => ({
+              name: art.name || art.nom || art.product_name || 'Produit',
+              quantity: Number(art.quantity || art.quantite) || 1,
+              unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
+            })),
+            total: Number(incomingData.total ?? incomingData.total_amount) || 0,
+            paid: Number(incomingData.paid ?? incomingData.paid_amount) || 0,
+            debt: Number(incomingData.debt ?? incomingData.debt_amount) || 0,
+            status: incomingData.status || 'paid',
+            type: incomingData.type || 'sale',
+            pen_color: incomingData.pen_color || 'blue',
+            notes: incomingData.notes || '',
+            category: incomingData.category,
+            created_at: incomingData.created_at || new Date().toISOString(),
+            is_synced: true,
+          }
+
+          setAllSales(prev => {
+            if (prev.some(s => s.id === newSale.id)) return prev
+            const next = [newSale, ...prev]
+            const reconciled = reconcileDebts(next)
+            const todays = reconciled.filter(s => s.date === today)
+            setSales(todays)
+            calculateSummary(reconciled, todays)
+            return reconciled
+          })
+        }
+
+        // Convergence autoritaire avec la base de données
         loadJournal()
-        // Deuxième rafraîchissement à +800ms pour garantir la convergence avec la réplication Cloud
         setTimeout(() => {
           loadJournal()
         }, 800)
@@ -427,21 +474,25 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     })
 
     // Écouter les événements locaux de mise à jour des ventes
-    const handleSalesUpdated = () => {
+    const handleSalesUpdated = (evt: any) => {
+      const incoming = evt?.detail?.data
+      if (incoming?.id || incoming?.crossedOutId) {
+        // Déjà géré ou immédiat
+      }
       loadJournal()
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('cahier_sales_updated', handleSalesUpdated)
     }
 
-    // Polling de courtoisie en arrière-plan (toutes les 4s quand la page est visible)
+    // Polling doux de sécurité (3s) quand l'écran est visible pour garantir que rien n'échappe à la synchro
     const pollInterval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         loadJournal()
       }
-    }, 4000)
+    }, 3000)
 
-    // Réveil après veille mobile ou retour au premier plan
+    // Réveil après mise en veille ou retour au premier plan / focus fenêtre
     const handleVisibilityChange = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         loadJournal()
@@ -458,6 +509,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       document.addEventListener('visibilitychange', handleVisibilityChange)
     }
     if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleVisibilityChange)
       window.addEventListener('online', handleOnlineEvent)
     }
 
@@ -466,6 +518,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       clearInterval(pollInterval)
       if (typeof window !== 'undefined') {
         window.removeEventListener('cahier_sales_updated', handleSalesUpdated)
+        window.removeEventListener('focus', handleVisibilityChange)
         window.removeEventListener('online', handleOnlineEvent)
       }
       if (typeof document !== 'undefined') {
@@ -516,7 +569,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
           .update({ status: 'crossed_out' })
           .eq('id', saleId)
           .in('shop_id', getDualShopIds(shopId))
-        broadcastInstantSync(shopId, 'sales')
+        broadcastInstantSync(shopId, 'sales', { crossedOutId: saleId })
       } catch (e) {
         console.warn('Erreur mise à jour status Supabase:', e)
       }
