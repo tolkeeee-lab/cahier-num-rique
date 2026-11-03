@@ -308,7 +308,12 @@ export function useShopManager(mappedUser: MappedUser | null | undefined) {
 
       if (isMounted) {
         setUserShops(resolvedShops)
-        setSelectedShopId((prev) => prev || resolvedShops[0].id)
+        setSelectedShopId((prev) => {
+          if (prev && resolvedShops.some((s) => s.id === prev)) {
+            return prev
+          }
+          return resolvedShops[0]?.id || prev
+        })
       }
       localStorage.setItem(`cahier_user_shops_${uId}`, JSON.stringify(resolvedShops))
       if (resolvedShops[0]?.name && resolvedShops[0]?.id) {

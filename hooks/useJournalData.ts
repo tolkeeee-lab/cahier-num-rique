@@ -119,7 +119,7 @@ export function reconcileDebts(salesList: Sale[]): Sale[] {
   })
 }
 
-export function useJournalData(shopId: string, isOnline: boolean) {
+export function useJournalData(shopId: string, isOnline: boolean, extraShopIds: string[] = []) {
   const [sales, setSales] = useState<Sale[]>([])
   const [allSales, setAllSales] = useState<Sale[]>([])
   const [tiroirCaisse, setTiroirCaisse] = useState(0)
@@ -209,8 +209,11 @@ export function useJournalData(shopId: string, isOnline: boolean) {
           setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 6000)
         )
 
-        // Requête principale multi-alias (unifie UUID et codes courts BTQ/SHOP)
-        const targetShopIds = getDualShopIds(shopId)
+        // Requête principale multi-alias (unifie UUID boutique, codes courts et alias utilisateur/patron)
+        const targetShopIds = Array.from(new Set([
+          ...getDualShopIds(shopId),
+          ...extraShopIds.flatMap(id => getDualShopIds(id))
+        ]))
         let { data, error } = await Promise.race([
           supabaseClient
             .from('sales')
@@ -390,7 +393,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     setSales(todays)
     calculateSummary(reconciledOffline, todays)
     setIsLoading(false)
-  }, [shopId, isOnline, calculateSummary])
+  }, [shopId, isOnline, calculateSummary, extraShopIds])
 
   const reloadData = useCallback(() => {
     loadJournal()
@@ -471,7 +474,7 @@ export function useJournalData(shopId: string, isOnline: boolean) {
           window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
         }
       },
-    })
+    }, extraShopIds)
 
     // Écouter les événements locaux de mise à jour des ventes
     const handleSalesUpdated = (evt: any) => {

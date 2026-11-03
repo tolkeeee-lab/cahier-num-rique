@@ -307,7 +307,12 @@ export function reconnectRealtimeSync(shopId: string): void {
  * 1. Tous les composants / onglets locaux (W3C BroadcastChannel + DOM Events, 0ms).
  * 2. Tous les autres appareils distants (Supabase WebSocket, < 50ms).
  */
-export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 'all', data?: any): Promise<void> {
+export async function broadcastInstantSync(
+  shopId: string,
+  entity: SyncEntity = 'all',
+  data?: any,
+  extraShopIds: string[] = []
+): Promise<void> {
   if (!shopId) return
 
   const payload: RealtimeSyncPayload = {
@@ -330,25 +335,28 @@ export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 
 
   // 2. Diffusion distante WebSocket vers les autres appareils (< 50ms)
   if (isSupabaseClientConfigured()) {
-    try {
-      const channel = getOrCreateRealtimeChannel(shopId)
-      if (channel) {
-        if (!isChannelSubscribed) {
-          pendingBroadcasts.push(payload)
-          // Si le socket est en cours de négociation, tenter l'envoi REST immédiat pour garantir la livraison
-          if (typeof (channel as any).httpSend === 'function') {
-            (channel as any).httpSend('cahier_instant_sync', payload).catch(() => {})
+    const allShopIds = Array.from(new Set([shopId, ...extraShopIds].filter(Boolean)))
+    for (const targetId of allShopIds) {
+      try {
+        const channel = getOrCreateRealtimeChannel(targetId)
+        if (channel) {
+          if (!isChannelSubscribed) {
+            pendingBroadcasts.push(payload)
+            // Si le socket est en cours de négociation, tenter l'envoi REST immédiat pour garantir la livraison
+            if (typeof (channel as any).httpSend === 'function') {
+              (channel as any).httpSend('cahier_instant_sync', payload).catch(() => {})
+            }
+          } else {
+            await channel.send({
+              type: 'broadcast',
+              event: 'cahier_instant_sync',
+              payload,
+            })
           }
-        } else {
-          await channel.send({
-            type: 'broadcast',
-            event: 'cahier_instant_sync',
-            payload,
-          })
         }
+      } catch (err) {
+        console.warn(`[Realtime Broadcast] Erreur diffusion WebSocket vers ${targetId}:`, err)
       }
-    } catch (err) {
-      console.warn('[Realtime Broadcast] Erreur diffusion WebSocket:', err)
     }
   }
 }
@@ -359,7 +367,8 @@ export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 
  */
 export function setupRealtimeSync(
   shopId: string,
-  callbacks: RealtimeSyncCallbacks = {}
+  callbacks: RealtimeSyncCallbacks = {},
+  extraShopIds: string[] = []
 ): () => void {
   if (!shopId) {
     return () => {}
@@ -369,6 +378,12 @@ export function setupRealtimeSync(
     registeredCallbacks.add(callbacks)
     getOrCreateBroadcastChannel(shopId)
     getOrCreateRealtimeChannel(shopId)
+
+    for (const extraId of extraShopIds) {
+      if (extraId && extraId !== shopId) {
+        getOrCreateRealtimeChannel(extraId)
+      }
+    }
 
     return () => {
       registeredCallbacks.delete(callbacks)

@@ -385,7 +385,17 @@ export default function JournalPage() {
   const shopManager = useShopManager(mappedUser)
   const effectiveRole = shopManager.employeeRole || mappedUser?.role || 'owner'
   const { isOnline, pendingCount, syncStatus, setSyncStatus, refreshPendingCount } = useNetworkStatus(shopManager.shopId)
-  const journalData = useJournalData(shopManager.shopId, isOnline)
+  const extraShopIds = useMemo(() => {
+    const ids = new Set<string>()
+    if (mappedUser?.id) ids.add(mappedUser.id)
+    if (mappedUser?.shop_id && mappedUser.shop_id !== shopManager.shopId) ids.add(mappedUser.shop_id)
+    shopManager.userShops.forEach((s) => {
+      if (s.id && s.id !== shopManager.shopId) ids.add(s.id)
+    })
+    return Array.from(ids)
+  }, [mappedUser?.id, mappedUser?.shop_id, shopManager.shopId, shopManager.userShops])
+
+  const journalData = useJournalData(shopManager.shopId, isOnline, extraShopIds)
 
   // ── Protection d'accès aux onglets pour les employés ────────────────────────
   useEffect(() => {
