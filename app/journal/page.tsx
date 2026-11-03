@@ -389,8 +389,11 @@ export default function JournalPage() {
     const ids = new Set<string>()
     if (mappedUser?.id) ids.add(mappedUser.id)
     if (mappedUser?.shop_id && mappedUser.shop_id !== shopManager.shopId) ids.add(mappedUser.shop_id)
+    if (mappedUser?.shop_name) ids.add(mappedUser.shop_name)
+    if (shopManager.currentShop?.name) ids.add(shopManager.currentShop.name)
     shopManager.userShops.forEach((s) => {
       if (s.id && s.id !== shopManager.shopId) ids.add(s.id)
+      if (s.name) ids.add(s.name)
     })
     return Array.from(ids)
   }, [mappedUser?.id, mappedUser?.shop_id, shopManager.shopId, shopManager.userShops])
@@ -493,6 +496,7 @@ export default function JournalPage() {
   const saleCreation = useSaleCreation({
     shopId: shopManager.shopId,
     selectedPen,
+    extraShopIds,
     onSaleCreated: journalData.reloadData,
     onAfterSale: (sale) => setActiveCashierSale(sale),
     onError: setPostItMessage,

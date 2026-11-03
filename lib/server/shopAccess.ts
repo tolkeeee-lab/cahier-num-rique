@@ -65,24 +65,70 @@ export async function requireShopAccess(
 
   const client = getAuthorizedServerClient(accessToken)
 
+  // 1. Recherche par UUID exact
   let { data: shop, error: shopError } = await client
     .from('shops')
-    .select('id, shop_code, owner_id')
+    .select('id, shop_code, owner_id, name')
     .eq('id', shopId)
     .maybeSingle()
 
   if (shopError) throw shopError
 
+  // 2. Recherche par shop_code (avec ou sans préfixe BTQ- / SHOP-)
   if (!shop) {
+    const rawClean = shopId.replace(/^(BTQ-|SHOP-)/i, '').trim()
     const result = await client
       .from('shops')
-      .select('id, shop_code, owner_id')
-      .eq('shop_code', shopId)
+      .select('id, shop_code, owner_id, name')
+      .or(`shop_code.eq.${shopId},shop_code.ilike.%${rawClean}%`)
+      .limit(1)
       .maybeSingle()
 
     shop = result.data
-    shopError = result.error
-    if (shopError) throw shopError
+  }
+
+  // 3. Recherche par nom officiel de la boutique (ex: "MAFRO")
+  if (!shop) {
+    const nameResult = await client
+      .from('shops')
+      .select('id, shop_code, owner_id, name')
+      .ilike('name', shopId)
+      .limit(1)
+      .maybeSingle()
+
+    shop = nameResult.data
+  }
+
+  // 4. Si l'utilisateur est propriétaire, résoudre vers sa boutique principale
+  if (!shop && user.id) {
+    const ownerResult = await client
+      .from('shops')
+      .select('id, shop_code, owner_id, name')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    shop = ownerResult.data
+  }
+
+  // 5. Si l'utilisateur est un employé, résoudre vers la boutique de son assignation
+  if (!shop && user.email) {
+    const empResult = await client
+      .from('employees')
+      .select('shop_id')
+      .eq('email', user.email.toLowerCase())
+      .limit(1)
+      .maybeSingle()
+
+    if (empResult.data?.shop_id) {
+      const empShopRes = await client
+        .from('shops')
+        .select('id, shop_code, owner_id, name')
+        .eq('id', empResult.data.shop_id)
+        .maybeSingle()
+      shop = empShopRes.data
+    }
   }
 
   if (!shop) {

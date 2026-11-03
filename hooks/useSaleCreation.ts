@@ -34,6 +34,7 @@ import { broadcastInstantSync } from '@/lib/realtimeSync'
 export interface UseSaleCreationOptions {
   shopId: string
   selectedPen: string
+  extraShopIds?: string[]
   onSaleCreated: () => void          // Appelé après chaque vente pour rafraîchir l'affichage
   onAfterSale?: (sale: OfflineSale) => void  // Optionnel : pour le bandeau caisse, monnaie & reçu WhatsApp
   onError?: (msg: string) => void
@@ -54,6 +55,7 @@ export interface UseSaleCreationReturn {
 export function useSaleCreation({
   shopId,
   selectedPen,
+  extraShopIds = [],
   onSaleCreated,
   onAfterSale,
   onError: _onError,
@@ -123,65 +125,125 @@ export function useSaleCreation({
       is_synced: false,
     }
 
+    // 1. Sauvegarde locale immédiate (0 ms) — fluidité absolue
     saveOfflineSale(shopId, sale)
 
-    // Persistance directe Cloud immédiate si le navigateur est en ligne et Supabase configuré
-    if (typeof navigator !== 'undefined' && navigator.onLine && isSupabaseClientConfigured()) {
+    // 2. Diffusion instantanée WebSocket (< 50ms) vers le PC et les autres téléphones
+    broadcastInstantSync(shopId, 'sales', sale, extraShopIds)
+
+    // 3. Persistance Cloud garantie en tâche de fond (Dual-Path : API Serveur + Secours Supabase)
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
       void (async () => {
         try {
-          const { data: sessionData } = await supabaseClient.auth.getSession()
-          if (!sessionData.session) return
-
-          const saleRecord = {
-            id: sale.id,
-            shop_id: shopId,
-            created_at: sale.created_at,
-            date: sale.date,
-            time: sale.time,
-            type: sale.type,
-            raw_text: sale.notes || '',
-            notes: sale.notes || '',
-            total_amount: sale.total,
-            paid_amount: sale.paid,
-            debt_amount: sale.debt,
-            client_name: sale.client || 'Client anonyme',
-            status: sale.status,
-            category: sale.category || 'Général',
-            pen_color: sale.pen_color || 'blue',
+          let accessToken: string | null = null
+          if (isSupabaseClientConfigured()) {
+            const { data: sessionData } = await supabaseClient.auth.getSession()
+            accessToken = sessionData.session?.access_token || null
           }
 
-          const { error: saleErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
-          if (saleErr) return
+          let savedToCloud = false
 
-          if (sale.articles && sale.articles.length > 0) {
-            const soldArts = sale.articles.map(a => {
-              const qty = Number(a.quantity || a.pieces_count || 1)
-              const price = Number(a.unit_price || 0)
-              return {
-                sale_id: sale.id,
-                shop_id: shopId,
-                product_name: a.name || 'Article',
-                quantity: qty,
-                unit_price: price,
-                subtotal: qty * price,
-              }
+          // A. Voie Principale : API Serveur /api/sales (Résout les alias boutique et contourne les restrictions RLS client)
+          try {
+            const apiRes = await fetch('/api/sales', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-shop-id': shopId,
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+              },
+              body: JSON.stringify({
+                id: sale.id,
+                created_at: sale.created_at,
+                date: sale.date,
+                time: sale.time,
+                type: sale.type,
+                status: sale.status,
+                category: sale.category,
+                text: sale.notes || '',
+                raw_text: sale.notes || '',
+                penColor: sale.pen_color || 'blue',
+                overrideData: {
+                  type: sale.type,
+                  status: sale.status,
+                  category: sale.category,
+                  articles: (sale.articles || []).map((a: any) => ({
+                    name: a.name || a.nom,
+                    quantity: a.quantity || a.pieces_count || a.quantite || 1,
+                    unit_price: a.unit_price || a.prix_unitaire || 0,
+                  })),
+                  total_amount: sale.total,
+                  paid_amount: sale.paid,
+                  debt_amount: sale.debt,
+                  client_name: sale.client || 'Client anonyme',
+                },
+              }),
             })
-            await supabaseClient.from('sold_articles').delete().eq('sale_id', sale.id)
-            await supabaseClient.from('sold_articles').insert(soldArts)
+
+            if (apiRes.ok) {
+              savedToCloud = true
+            }
+          } catch (apiErr) {
+            console.warn('[SaleCreation] Échec API /api/sales, tentative secours direct Supabase:', apiErr)
           }
-          markAsSynced(shopId, sale.id)
-          // Confirmation de synchronisation Cloud réussie vers tous les appareils
-          broadcastInstantSync(shopId, 'sales', sale)
+
+          // B. Voie de Secours : Supabase Client direct
+          if (!savedToCloud && isSupabaseClientConfigured()) {
+            try {
+              const saleRecord = {
+                id: sale.id,
+                shop_id: shopId,
+                created_at: sale.created_at,
+                date: sale.date,
+                time: sale.time,
+                type: sale.type,
+                raw_text: sale.notes || '',
+                notes: sale.notes || '',
+                total_amount: sale.total,
+                paid_amount: sale.paid,
+                debt_amount: sale.debt,
+                client_name: sale.client || 'Client anonyme',
+                status: sale.status,
+                category: sale.category || 'Général',
+                pen_color: sale.pen_color || 'blue',
+              }
+
+              const { error: saleErr } = await supabaseClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
+              if (!saleErr) {
+                if (sale.articles && sale.articles.length > 0) {
+                  const soldArts = sale.articles.map(a => {
+                    const qty = Number(a.quantity || a.pieces_count || 1)
+                    const price = Number(a.unit_price || 0)
+                    return {
+                      sale_id: sale.id,
+                      shop_id: shopId,
+                      product_name: a.name || 'Article',
+                      quantity: qty,
+                      unit_price: price,
+                      subtotal: qty * price,
+                    }
+                  })
+                  await supabaseClient.from('sold_articles').delete().eq('sale_id', sale.id)
+                  await supabaseClient.from('sold_articles').insert(soldArts)
+                }
+                savedToCloud = true
+              }
+            } catch (dbErr) {
+              console.warn('[SaleCreation] Échec secours Supabase direct:', dbErr)
+            }
+          }
+
+          if (savedToCloud) {
+            markAsSynced(shopId, sale.id)
+            broadcastInstantSync(shopId, 'sales', sale, extraShopIds)
+          }
         } catch {
-          // Sync en tâche de fond : useOfflineSync prendra le relais en cas de pépin
+          // Sync en tâche de fond : useOfflineSync prendra le relais en cas de coupure réseau
         }
       })()
     }
 
-    // Diffusion instantanée WebSocket (< 50ms) vers le PC et les autres téléphones
-    broadcastInstantSync(shopId, 'sales', sale)
-
-    // Notifier le sous-système de synchronisation (useOfflineSync) qu'une nouvelle vente locale est prête
+    // 4. Notifier le sous-système de synchronisation (useOfflineSync) qu'une nouvelle vente locale est prête
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('cahier_local_sale_created', { detail: { saleId: sale.id } }))
     }

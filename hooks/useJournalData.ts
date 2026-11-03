@@ -236,6 +236,49 @@ export function useJournalData(shopId: string, isOnline: boolean, extraShopIds: 
           error = fallback.error
         }
 
+        // Repli autoritaire via /api/sales si la requête client directe est bloquée ou vide
+        if ((!data || data.length === 0 || error) && typeof window !== 'undefined') {
+          try {
+            const { data: sessionData } = await supabaseClient.auth.getSession()
+            const token = sessionData?.session?.access_token
+            const res = await fetch('/api/sales?date=all', {
+              headers: {
+                'x-shop-id': shopId,
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+              }
+            })
+            if (res.ok) {
+              const json = await res.json()
+              if (Array.isArray(json?.sales) && json.sales.length > 0) {
+                data = json.sales.map((s: any) => ({
+                  id: s.id,
+                  shop_id: s.shop_id || shopId,
+                  date: s.date,
+                  time: s.time,
+                  client_name: s.client || s.client_name,
+                  total_amount: s.total ?? s.total_amount,
+                  paid_amount: s.paid ?? s.paid_amount,
+                  debt_amount: s.debt ?? s.debt_amount,
+                  status: s.status,
+                  type: s.type,
+                  pen_color: s.pen_color,
+                  notes: s.notes,
+                  category: s.category,
+                  created_at: s.created_at,
+                  sold_articles: (s.articles || []).map((a: any) => ({
+                    product_name: a.name || a.nom,
+                    quantity: a.quantity || a.quantite,
+                    unit_price: a.unit_price || a.prix_unitaire,
+                  }))
+                }))
+                error = null
+              }
+            }
+          } catch (e) {
+            console.warn('[Journal] Échec fetch /api/sales fallback:', e)
+          }
+        }
+
         if (!error && data) {
           const mappedSales: Sale[] = data.map((item: any) => ({
             id: item.id,
@@ -446,6 +489,28 @@ export function useJournalData(shopId: string, isOnline: boolean, extraShopIds: 
             created_at: incomingData.created_at || new Date().toISOString(),
             is_synced: true,
           }
+
+          // Persistance locale immédiate sur l'appareil receveur pour immunité contre tout écrasement local
+          try {
+            saveOfflineSale(shopId, {
+              id: newSale.id,
+              shop_id: newSale.shop_id || shopId,
+              date: newSale.date,
+              time: newSale.time,
+              client: newSale.client,
+              articles: newSale.articles,
+              total: newSale.total,
+              paid: newSale.paid,
+              debt: newSale.debt,
+              status: newSale.status as any,
+              type: newSale.type,
+              pen_color: newSale.pen_color,
+              notes: newSale.notes,
+              category: newSale.category,
+              created_at: newSale.created_at || new Date().toISOString(),
+              is_synced: true,
+            })
+          } catch {}
 
           setAllSales(prev => {
             if (prev.some(s => s.id === newSale.id)) return prev

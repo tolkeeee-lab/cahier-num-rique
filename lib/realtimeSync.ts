@@ -66,11 +66,9 @@ export function getRealtimeChannelName(shopId: string): string {
   return `realtime_shop_${clean}`
 }
 
-// ── État interne du canal singleton ───────────────────────────────────────────
-let activeRealtimeChannel: any = null
-let activeChannelName: string | null = null
-let isChannelSubscribed = false
-let currentTrackedShopId: string | null = null
+// ── État interne des canaux multi-boutiques ─────────────────────────────────
+const activeRealtimeChannels = new Map<string, any>()
+const subscribedChannelNames = new Set<string>()
 let reconnectTimer: any = null
 
 const registeredCallbacks = new Set<RealtimeSyncCallbacks>()
@@ -82,7 +80,7 @@ let currentW3cTopic: string | null = null
  * Indique si la synchronisation temps réel est active.
  */
 export function isRealtimeActive(): boolean {
-  return isChannelSubscribed && activeRealtimeChannel !== null
+  return subscribedChannelNames.size > 0
 }
 
 /**
@@ -175,21 +173,10 @@ function getOrCreateBroadcastChannel(shopId: string): BroadcastChannel | null {
 export function getOrCreateRealtimeChannel(shopId: string) {
   if (!isSupabaseClientConfigured() || !shopId || typeof window === 'undefined') return null
 
-  currentTrackedShopId = shopId
   const channelName = getRealtimeChannelName(shopId)
 
-  if (activeRealtimeChannel && activeChannelName === channelName && isChannelSubscribed) {
-    return activeRealtimeChannel
-  }
-
-  // Nettoyage de l'ancien canal s'il a changé de boutique
-  if (activeRealtimeChannel && activeChannelName !== channelName) {
-    try {
-      supabaseClient.removeChannel(activeRealtimeChannel)
-    } catch {}
-    activeRealtimeChannel = null
-    activeChannelName = null
-    isChannelSubscribed = false
+  if (activeRealtimeChannels.has(channelName)) {
+    return activeRealtimeChannels.get(channelName)
   }
 
   try {
@@ -229,11 +216,9 @@ export function getOrCreateRealtimeChannel(shopId: string) {
     })
 
     // 3. Souscription au canal
-    channel.subscribe((status: string, _err?: any) => {
+    channel.subscribe((status: string, err?: any) => {
       if (status === 'SUBSCRIBED') {
-        isChannelSubscribed = true
-        activeRealtimeChannel = channel
-        activeChannelName = channelName
+        subscribedChannelNames.add(channelName)
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('cahier_realtime_status', { detail: { connected: true } }))
@@ -251,26 +236,25 @@ export function getOrCreateRealtimeChannel(shopId: string) {
           }
         }
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        isChannelSubscribed = false
+        subscribedChannelNames.delete(channelName)
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('cahier_realtime_status', { detail: { connected: false } }))
         }
 
+        if (err) console.warn(`[RealtimeSync] Canal ${channelName} statut: ${status}`, err)
+
         // Tentative d'auto-rétablissement si le navigateur est en ligne (1.5s)
         if (typeof window !== 'undefined' && navigator.onLine) {
           if (reconnectTimer) clearTimeout(reconnectTimer)
           reconnectTimer = setTimeout(() => {
-            if (currentTrackedShopId) {
-              reconnectRealtimeSync(currentTrackedShopId)
-            }
+            reconnectRealtimeSync(shopId)
           }, 1500)
         }
       }
     })
 
-    activeRealtimeChannel = channel
-    activeChannelName = channelName
+    activeRealtimeChannels.set(channelName, channel)
     return channel
   } catch (err) {
     console.warn('[RealtimeSync] Erreur création canal:', err)
@@ -289,13 +273,14 @@ export function reconnectRealtimeSync(shopId: string): void {
     reconnectTimer = null
   }
 
-  if (activeRealtimeChannel) {
+  const channelName = getRealtimeChannelName(shopId)
+  const existing = activeRealtimeChannels.get(channelName)
+  if (existing) {
     try {
-      supabaseClient.removeChannel(activeRealtimeChannel)
+      supabaseClient.removeChannel(existing)
     } catch {}
-    activeRealtimeChannel = null
-    activeChannelName = null
-    isChannelSubscribed = false
+    activeRealtimeChannels.delete(channelName)
+    subscribedChannelNames.delete(channelName)
   }
 
   getOrCreateBroadcastChannel(shopId)
@@ -340,7 +325,8 @@ export async function broadcastInstantSync(
       try {
         const channel = getOrCreateRealtimeChannel(targetId)
         if (channel) {
-          if (!isChannelSubscribed) {
+          const channelName = getRealtimeChannelName(targetId)
+          if (!subscribedChannelNames.has(channelName)) {
             pendingBroadcasts.push(payload)
             // Si le socket est en cours de négociation, tenter l'envoi REST immédiat pour garantir la livraison
             if (typeof (channel as any).httpSend === 'function') {
