@@ -200,48 +200,24 @@ export function getOrCreateRealtimeChannel(shopId: string) {
     })
 
     const myDeviceId = getLocalDeviceId()
-    const matchingShopIds = new Set(getDualShopIds(shopId))
 
     // 1. Écoute des messages de diffusion instantanée (Broadcast peer-to-peer < 50ms)
     channel.on('broadcast', { event: 'cahier_instant_sync' }, (data: any) => {
       const payload: RealtimeSyncPayload = data?.payload || data
       if (!payload) return
+      // Ignorer uniquement les échos envoyés par notre propre onglet
       if (payload.senderDeviceId && payload.senderDeviceId === myDeviceId) return
 
-      const normalizedMsgCode = normalizeShopCode(payload.shopId)
-      const normalizedOurCode = normalizeShopCode(shopId)
-      const isMatching =
-        normalizedMsgCode === normalizedOurCode ||
-        matchingShopIds.has(payload.shopId) ||
-        !payload.shopId
-
-      if (!isMatching) return
-      notifyCallbacks(payload.entity, payload.data)
+      notifyCallbacks(payload.entity || 'all', payload.data)
     })
 
     // 2. Écoute des mutations directes Postgres Changes (sauvegarde Cloud)
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, (payload: any) => {
-      const rowShopId = payload?.new?.shop_id || payload?.old?.shop_id
-      if (rowShopId) {
-        const norm = normalizeShopCode(rowShopId)
-        if (norm === normalizeShopCode(shopId) || matchingShopIds.has(rowShopId)) {
-          notifyCallbacks('sales')
-        }
-      } else {
-        notifyCallbacks('sales')
-      }
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => {
+      notifyCallbacks('sales')
     })
 
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload: any) => {
-      const rowShopId = payload?.new?.shop_id || payload?.old?.shop_id
-      if (rowShopId) {
-        const norm = normalizeShopCode(rowShopId)
-        if (norm === normalizeShopCode(shopId) || matchingShopIds.has(rowShopId)) {
-          notifyCallbacks('stock')
-        }
-      } else {
-        notifyCallbacks('stock')
-      }
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+      notifyCallbacks('stock')
     })
 
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list' }, () => {

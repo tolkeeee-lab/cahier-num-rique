@@ -203,7 +203,8 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     } catch {}
 
     try {
-      if (isSupabaseClientConfigured() && isOnline) {
+      const canQueryCloud = isSupabaseClientConfigured() && (isOnline || (typeof navigator !== 'undefined' && navigator.onLine))
+      if (canQueryCloud) {
         const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
           setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 6000)
         )
