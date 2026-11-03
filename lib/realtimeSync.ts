@@ -158,7 +158,7 @@ function getOrCreateBroadcastChannel(shopId: string): BroadcastChannel | null {
         !payload.shopId
 
       if (!isMatching) return
-      notifyCallbacks(payload.entity)
+      notifyCallbacks(payload.entity, payload.data)
     }
 
     w3cBroadcastChannel = channel
