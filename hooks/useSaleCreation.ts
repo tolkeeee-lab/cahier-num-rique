@@ -170,6 +170,8 @@ export function useSaleCreation({
             await supabaseClient.from('sold_articles').insert(soldArts)
           }
           markAsSynced(shopId, sale.id)
+          // Confirmation de synchronisation Cloud réussie vers tous les appareils
+          broadcastInstantSync(shopId, 'sales', sale)
         } catch {
           // Sync en tâche de fond : useOfflineSync prendra le relais en cas de pépin
         }
@@ -177,7 +179,7 @@ export function useSaleCreation({
     }
 
     // Diffusion instantanée WebSocket (< 50ms) vers le PC et les autres téléphones
-    broadcastInstantSync(shopId, 'sales')
+    broadcastInstantSync(shopId, 'sales', sale)
 
     // Notifier le sous-système de synchronisation (useOfflineSync) qu'une nouvelle vente locale est prête
     if (typeof window !== 'undefined') {

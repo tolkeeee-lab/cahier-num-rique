@@ -408,6 +408,10 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     const cleanupRealtime = setupRealtimeSync(shopId, {
       onSalesUpdated: () => {
         loadJournal()
+        // Deuxième rafraîchissement à +800ms pour garantir la convergence avec la réplication Cloud
+        setTimeout(() => {
+          loadJournal()
+        }, 800)
       },
       onStockUpdated: () => {
         if (typeof window !== 'undefined') {
@@ -429,12 +433,12 @@ export function useJournalData(shopId: string, isOnline: boolean) {
       window.addEventListener('cahier_sales_updated', handleSalesUpdated)
     }
 
-    // Polling de courtoisie en arrière-plan (toutes les 5s quand la page est visible)
+    // Polling de courtoisie en arrière-plan (toutes les 4s quand la page est visible)
     const pollInterval = setInterval(() => {
-      if (isOnline && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         loadJournal()
       }
-    }, 5000)
+    }, 4000)
 
     // Réveil après veille mobile ou retour au premier plan
     const handleVisibilityChange = () => {

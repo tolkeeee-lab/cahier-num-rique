@@ -27,13 +27,14 @@ export interface RealtimeSyncPayload {
   shopId: string
   senderDeviceId: string
   timestamp: number
+  data?: any
 }
 
 export interface RealtimeSyncCallbacks {
-  onSalesUpdated?: () => void
-  onStockUpdated?: () => void
-  onShoppingUpdated?: () => void
-  onClosingsUpdated?: () => void
+  onSalesUpdated?: (data?: any) => void
+  onStockUpdated?: (data?: any) => void
+  onShoppingUpdated?: (data?: any) => void
+  onClosingsUpdated?: (data?: any) => void
   onAllUpdated?: () => void
 }
 
@@ -87,18 +88,18 @@ export function isRealtimeActive(): boolean {
 /**
  * Déclenche les callbacks enregistrés et dispatche les événements DOM locaux.
  */
-function notifyCallbacks(entity: SyncEntity): void {
+function notifyCallbacks(entity: SyncEntity, data?: any): void {
   registeredCallbacks.forEach(cb => {
     try {
-      if (entity === 'sales' || entity === 'debts') cb.onSalesUpdated?.()
-      else if (entity === 'stock') cb.onStockUpdated?.()
-      else if (entity === 'shopping') cb.onShoppingUpdated?.()
-      else if (entity === 'closings') cb.onClosingsUpdated?.()
+      if (entity === 'sales' || entity === 'debts') cb.onSalesUpdated?.(data)
+      else if (entity === 'stock') cb.onStockUpdated?.(data)
+      else if (entity === 'shopping') cb.onShoppingUpdated?.(data)
+      else if (entity === 'closings') cb.onClosingsUpdated?.(data)
       else if (entity === 'all') {
-        cb.onSalesUpdated?.()
-        cb.onStockUpdated?.()
-        cb.onShoppingUpdated?.()
-        cb.onClosingsUpdated?.()
+        cb.onSalesUpdated?.(data)
+        cb.onStockUpdated?.(data)
+        cb.onShoppingUpdated?.(data)
+        cb.onClosingsUpdated?.(data)
         cb.onAllUpdated?.()
       }
     } catch (err) {
@@ -108,13 +109,13 @@ function notifyCallbacks(entity: SyncEntity): void {
 
   if (typeof window !== 'undefined') {
     if (entity === 'sales' || entity === 'debts' || entity === 'all') {
-      window.dispatchEvent(new CustomEvent('cahier_sales_updated', { detail: { fromBroadcast: true } }))
+      window.dispatchEvent(new CustomEvent('cahier_sales_updated', { detail: { fromBroadcast: true, data } }))
     }
     if (entity === 'stock' || entity === 'all') {
-      window.dispatchEvent(new CustomEvent('cahier_stock_updated', { detail: { fromBroadcast: true } }))
+      window.dispatchEvent(new CustomEvent('cahier_stock_updated', { detail: { fromBroadcast: true, data } }))
     }
     if (entity === 'shopping' || entity === 'all') {
-      window.dispatchEvent(new CustomEvent('cahier_shopping_updated', { detail: { fromBroadcast: true } }))
+      window.dispatchEvent(new CustomEvent('cahier_shopping_updated', { detail: { fromBroadcast: true, data } }))
     }
   }
 }
@@ -203,7 +204,7 @@ export function getOrCreateRealtimeChannel(shopId: string) {
 
     // 1. Écoute des messages de diffusion instantanée (Broadcast peer-to-peer < 50ms)
     channel.on('broadcast', { event: 'cahier_instant_sync' }, (data: any) => {
-      const payload: RealtimeSyncPayload = data?.payload
+      const payload: RealtimeSyncPayload = data?.payload || data
       if (!payload) return
       if (payload.senderDeviceId && payload.senderDeviceId === myDeviceId) return
 
@@ -215,7 +216,7 @@ export function getOrCreateRealtimeChannel(shopId: string) {
         !payload.shopId
 
       if (!isMatching) return
-      notifyCallbacks(payload.entity)
+      notifyCallbacks(payload.entity, payload.data)
     })
 
     // 2. Écoute des mutations directes Postgres Changes (sauvegarde Cloud)
@@ -330,7 +331,7 @@ export function reconnectRealtimeSync(shopId: string): void {
  * 1. Tous les composants / onglets locaux (W3C BroadcastChannel + DOM Events, 0ms).
  * 2. Tous les autres appareils distants (Supabase WebSocket, < 50ms).
  */
-export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 'all'): Promise<void> {
+export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 'all', data?: any): Promise<void> {
   if (!shopId) return
 
   const payload: RealtimeSyncPayload = {
@@ -338,10 +339,11 @@ export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 
     shopId,
     senderDeviceId: getLocalDeviceId(),
     timestamp: Date.now(),
+    data,
   }
 
   // 1. Diffusion locale instantanée (0ms)
-  notifyCallbacks(entity)
+  notifyCallbacks(entity, data)
 
   try {
     const localChan = getOrCreateBroadcastChannel(shopId)
@@ -357,6 +359,10 @@ export async function broadcastInstantSync(shopId: string, entity: SyncEntity = 
       if (channel) {
         if (!isChannelSubscribed) {
           pendingBroadcasts.push(payload)
+          // Si le socket est en cours de négociation, tenter l'envoi REST immédiat pour garantir la livraison
+          if (typeof (channel as any).httpSend === 'function') {
+            (channel as any).httpSend('cahier_instant_sync', payload).catch(() => {})
+          }
         } else {
           await channel.send({
             type: 'broadcast',
