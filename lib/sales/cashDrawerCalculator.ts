@@ -1,4 +1,5 @@
 import { isBackendSupabaseConfigured } from '@/lib/supabase'
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export const isSupabaseConfigured = isBackendSupabaseConfigured
 
@@ -83,7 +84,7 @@ export async function getCurrentCash(shopId: string, client?: any): Promise<numb
         const { data, error } = await db
           .from('sales')
           .select('type, paid_amount, total_amount, status, notes, client_name, pen_color')
-          .eq('shop_id', shopId)
+          .in('shop_id', getDualShopIds(shopId))
 
         if (error) throw error
         return calculateCash(data || [])

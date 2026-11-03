@@ -236,8 +236,8 @@ export function useJournalData(shopId: string, isOnline: boolean, extraShopIds: 
           error = fallback.error
         }
 
-        // Repli autoritaire via /api/sales si la requête client directe est bloquée ou vide
-        if ((!data || data.length === 0 || error) && typeof window !== 'undefined') {
+        // Requête autoritaire via /api/sales pour garantir zéro perte cross-device
+        if (typeof window !== 'undefined') {
           try {
             const { data: sessionData } = await supabaseClient.auth.getSession()
             const token = sessionData?.session?.access_token
@@ -249,8 +249,8 @@ export function useJournalData(shopId: string, isOnline: boolean, extraShopIds: 
             })
             if (res.ok) {
               const json = await res.json()
-              if (Array.isArray(json?.sales) && json.sales.length > 0) {
-                data = json.sales.map((s: any) => ({
+              if (Array.isArray(json?.sales)) {
+                const apiMapped = json.sales.map((s: any) => ({
                   id: s.id,
                   shop_id: s.shop_id || shopId,
                   date: s.date,
@@ -271,11 +271,15 @@ export function useJournalData(shopId: string, isOnline: boolean, extraShopIds: 
                     unit_price: a.unit_price || a.prix_unitaire,
                   }))
                 }))
+
+                const existingIds = new Set((data || []).map((item: any) => item.id))
+                const missingFromApi = apiMapped.filter((item: any) => !existingIds.has(item.id))
+                data = [...(data || []), ...missingFromApi]
                 error = null
               }
             }
           } catch (e) {
-            console.warn('[Journal] Échec fetch /api/sales fallback:', e)
+            console.warn('[Journal] Échec fetch /api/sales:', e)
           }
         }
 

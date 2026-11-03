@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { isSupabaseConfigured } from './cashDrawerCalculator'
+import { getDualShopIds } from '@/lib/shopCodeUtils'
 
 export async function feedMarketKnowledge(
   articles: Array<{ nom: string; prix_unitaire: number; [key: string]: any }>,
@@ -65,7 +66,7 @@ export async function fetchSalesHistory(dateParam: string | null, shopId: string
           category
         )
       `)
-      .eq('shop_id', shopId)
+      .in('shop_id', getDualShopIds(shopId))
       .order('created_at', { ascending: false })
 
     if (dateParam === 'today') {
