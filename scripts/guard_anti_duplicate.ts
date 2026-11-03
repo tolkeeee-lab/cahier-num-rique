@@ -183,6 +183,54 @@ assert(
   `Réimplémentations locales de fonctions de diagnostic dans : ${duplicateDiagnosticHelpers.join(', ')}`
 )
 
+// ── 8. CONTRÔLE DES INVARIANTS ARCHITECTURAUX & CONTINUITÉ DU PROJET ──
+console.log('\n--- 8. CONTRÔLE DES INVARIANTS ARCHITECTURAUX & CONTINUITÉ ---')
+const hasInvariantsFile = fs.existsSync('.agents/ARCHITECTURAL_INVARIANTS.md')
+const invariantsContent = hasInvariantsFile ? fs.readFileSync('.agents/ARCHITECTURAL_INVARIANTS.md', 'utf8') : ''
+assert(
+  hasInvariantsFile && invariantsContent.length > 500,
+  'Registre des Invariants Architecturaux présent et documenté (.agents/ARCHITECTURAL_INVARIANTS.md)',
+  'Registre des Invariants Architecturaux manquant ou incomplet (.agents/ARCHITECTURAL_INVARIANTS.md)'
+)
+
+const hasDecisionLog = fs.existsSync('.agents/DECISION_LOG.md')
+const decisionLogContent = hasDecisionLog ? fs.readFileSync('.agents/DECISION_LOG.md', 'utf8') : ''
+assert(
+  hasDecisionLog && decisionLogContent.length > 500,
+  'Journal des Décisions d’Architecture (ADR) présent et documenté (.agents/DECISION_LOG.md)',
+  'Journal des Décisions d’Architecture manquant ou incomplet (.agents/DECISION_LOG.md)'
+)
+
+// Invariant 1 : WebSocket distant Supabase présent et actif dans lib/realtimeSync.ts
+const realtimeContent = fs.existsSync('lib/realtimeSync.ts') ? fs.readFileSync('lib/realtimeSync.ts', 'utf8') : ''
+const hasSupabaseWebSocket = realtimeContent.includes('supabaseClient.channel') &&
+  realtimeContent.includes(".on('broadcast'") &&
+  realtimeContent.includes(".on('postgres_changes'")
+assert(
+  hasSupabaseWebSocket,
+  'Canal distant Supabase Realtime WebSocket présent avec écoute broadcast & postgres_changes',
+  'Régression critique : Supabase Realtime WebSocket manquant ou incomplet dans lib/realtimeSync.ts'
+)
+
+// Invariant 1 (suite) : Stabilité du cycle de vie dans hooks/useJournalData.ts (refreshTrigger exclu des deps du WebSocket)
+const journalHookContent = fs.existsSync('hooks/useJournalData.ts') ? fs.readFileSync('hooks/useJournalData.ts', 'utf8') : ''
+const hasUnstableTriggerInDeps = /useEffect\s*\([^}]*subscribeToInstantSync[^}]*\[[^\]]*refreshTrigger[^\]]*\]/s.test(journalHookContent) ||
+  /\[shopId,\s*isOnline,\s*refreshTrigger\]/.test(journalHookContent)
+assert(
+  !hasUnstableTriggerInDeps,
+  'Cycle de vie WebSocket stable dans hooks/useJournalData.ts (refreshTrigger découplé des dépendances)',
+  'Régression critique : refreshTrigger réintroduit dans les dépendances du WebSocket dans hooks/useJournalData.ts'
+)
+
+// Invariant 3 : Fallback RLS sécurisé dans lib/server/shopAccess.ts
+const shopAccessContent = fs.existsSync('lib/server/shopAccess.ts') ? fs.readFileSync('lib/server/shopAccess.ts', 'utf8') : ''
+const hasAuthorizedClientFallback = shopAccessContent.includes('getAuthorizedServerClient')
+assert(
+  hasAuthorizedClientFallback,
+  'Fallback RLS sécurisé par token présent dans lib/server/shopAccess.ts',
+  'Fallback RLS manquant dans lib/server/shopAccess.ts'
+)
+
 console.log('\n============================================================')
 console.log(`RÉSULTAT : ${passes} réussi(s), ${failures} échec(s)`)
 console.log('============================================================')
