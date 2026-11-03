@@ -127,331 +127,6 @@ export function useJournalData(shopId: string, isOnline: boolean) {
   const [nosDettes, setNosDettes] = useState(0)
   const [soldeDuJour, setSoldeDuJour] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
-
-  const reloadData = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1)
-  }, [])
-
-  useEffect(() => {
-    let isMounted = true
-    setIsLoading(true)
-
-    async function loadJournal() {
-      const today = getTodayDateString()
-
-      // 0. CHARGEMENT INSTANTANÉ DU CACHE LOCAL (0 ms)
-      try {
-        const localRaw = getOfflineSales(shopId)
-        if (localRaw && localRaw.length > 0 && isMounted) {
-          const localClean: Sale[] = localRaw.map(s => ({
-            id: s.id,
-            shop_id: s.shop_id || shopId,
-            date: (s.date || '').split('T')[0] || today,
-            time: s.time || '00:00',
-            client: s.client || 'Client anonyme',
-            articles: (s.articles || []).map(a => ({
-              name: a.name || 'Produit',
-              quantity: Number(a.quantity) || 1,
-              unit_price: Number(a.unit_price) || 0,
-            })),
-            total: Number(s.total) || 0,
-            paid: Number(s.paid) || 0,
-            debt: Number(s.debt) || 0,
-            status: s.status || 'paid',
-            type: s.type || 'sale',
-            pen_color: s.pen_color || 'blue',
-            notes: s.notes || '',
-            category: s.category,
-            created_at: s.created_at || new Date().toISOString(),
-            is_synced: s.is_synced ?? true,
-          }))
-          const todaysLocal = localClean.filter(s => s.date === today)
-          setAllSales(localClean)
-          setSales(todaysLocal)
-          calculateSummary(localClean, todaysLocal)
-          setIsLoading(false)
-        }
-      } catch {}
-
-      try {
-        if (isSupabaseClientConfigured() && isOnline) {
-          const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
-            setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 6000)
-          )
-
-          // Requête principale multi-alias (unifie UUID et codes courts BTQ/SHOP)
-          const targetShopIds = getDualShopIds(shopId)
-          let { data, error } = await Promise.race([
-            supabaseClient
-              .from('sales')
-              .select('*, sold_articles(*)')
-              .in('shop_id', targetShopIds)
-              .order('created_at', { ascending: false }),
-            timeoutPromise
-          ])
-
-          // Si la jointure sold_articles échoue (400 / table inaccessible),
-          // on retente sans la jointure
-          if (error && error.message !== 'timeout') {
-            console.warn('[Journal] Jointure sold_articles échouée, nouvelle tentative sans:', error.message)
-            const fallback = await supabaseClient
-              .from('sales')
-              .select('*')
-              .in('shop_id', targetShopIds)
-              .order('created_at', { ascending: false })
-            data = fallback.data
-            error = fallback.error
-          }
-
-          if (!error && data && isMounted) {
-            const mappedSales: Sale[] = data.map((item: any) => ({
-              id: item.id,
-              shop_id: item.shop_id || shopId,
-              date: (item.date || '').split('T')[0] || today,
-              time: item.time || '00:00',
-              client: item.client_name || 'Client anonyme',
-              articles: (item.sold_articles || []).map((art: any) => ({
-                name: art.product_name || art.name || art.nom || 'Produit',
-                quantity: Number(art.quantity || art.quantite) || 1,
-                unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
-              })),
-              total: Number(item.total_amount) || 0,
-              paid: Number(item.paid_amount) || 0,
-              debt: Number(item.debt_amount) || 0,
-              status: item.status || 'paid',
-              type: item.type || 'sale',
-              pen_color: item.pen_color || 'blue',
-              notes: item.notes || '',
-              category: item.category,
-              created_at: item.created_at || new Date().toISOString(),
-              is_synced: true,
-            }))
-
-            // NOTE: La synchronisation des ventes en attente est EXCLUSIVEMENT gérée par useOfflineSync.
-            // Ne pas pousser les ventes ici pour éviter les doublons et les race conditions.
-
-            // 2. Fusion ultra-sécurisée :
-            // - Supabase est la référence pour les ventes connues.
-            // - TOUTES les ventes locales non synchronisées (is_synced === false ou id non présent)
-            //   sont STRICTEMENT PRÉSERVÉES pour éviter toute disparition au rechargement.
-            const supabaseIds = new Set(mappedSales.map(s => s.id))
-            const currentLocalSales = getOfflineSales(shopId)
-
-            const offlineNotYetInCloud = currentLocalSales.filter(s => {
-              if (!s.id) return false
-              // Si la vente n'est pas encore sur Supabase, on la conserve ABSOLUMENT
-              if (!supabaseIds.has(s.id)) return true
-              // Si la vente porte le flag non-synchronisé, on la garde également
-              if (s.is_synced === false) return true
-              return false
-            })
-
-            const rawCombined = [...mappedSales, ...offlineNotYetInCloud]
-
-            const seenIds = new Set<string>()
-            const combinedSales: Sale[] = []
-
-            for (const s of rawCombined) {
-              if (s.id && seenIds.has(s.id)) continue
-              if (s.id) seenIds.add(s.id)
-
-              const cleanArticles = (s.articles || []).map((art: any) => ({
-                name: art.name || art.nom || art.product_name || 'Produit',
-                quantity: Number(art.quantity || art.quantite) || 1,
-                unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
-              }))
-
-              const saleDate = (s.date || '').split('T')[0] || today
-
-              const cleanSale: Sale = {
-                id: s.id,
-                shop_id: s.shop_id || shopId,
-                date: saleDate,
-                time: s.time || '00:00',
-                client: s.client || (s as any).client_name || 'Client anonyme',
-                articles: cleanArticles,
-                total: Number(s.total ?? (s as any).total_amount) || 0,
-                paid: Number(s.paid ?? (s as any).paid_amount) || 0,
-                debt: Number(s.debt ?? (s as any).debt_amount) || 0,
-                status: s.status || 'paid',
-                type: s.type || 'sale',
-                pen_color: s.pen_color || 'blue',
-                notes: s.notes || '',
-                category: s.category,
-                created_at: s.created_at || new Date().toISOString(),
-                is_synced: s.is_synced ?? true,
-              }
-
-              combinedSales.push(cleanSale)
-            }
-
-
-            combinedSales.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
-            const reconciledSales = reconcileDebts(combinedSales)
-
-            // Mettre à jour le cache local avec la vérité du Cloud Supabase (incluant les dettes réconciliées)
-            try {
-              const offlineFormatted: OfflineSale[] = reconciledSales.map(cs => ({
-                id: cs.id,
-                shop_id: cs.shop_id || shopId,
-                date: cs.date,
-                time: cs.time,
-                client: cs.client,
-                articles: cs.articles.map(a => ({
-                  name: a.name,
-                  quantity: a.quantity,
-                  unit_price: a.unit_price,
-                })),
-                total: cs.total,
-                paid: cs.paid,
-                debt: cs.debt,
-                status: cs.status as any,
-                type: cs.type,
-                pen_color: cs.pen_color,
-                notes: cs.notes,
-                category: cs.category,
-                created_at: cs.created_at || new Date().toISOString(),
-                is_synced: cs.is_synced ?? true,
-              }))
-              replaceOfflineSales(shopId, offlineFormatted)
-            } catch {}
-
-            setAllSales(reconciledSales)
-            const todays = reconciledSales.filter(s => s.date === today)
-            setSales(todays)
-            calculateSummary(reconciledSales, todays)
-            setIsLoading(false)
-            return
-          }
-        }
-      } catch (err) {
-        console.warn('Erreur chargement Supabase, repli offline:', err)
-      }
-
-
-      if (isMounted) {
-        const offlineSales = getOfflineSales(shopId)
-        const seenKeys = new Set<string>()
-        const cleanOffline: Sale[] = []
-
-        for (const s of offlineSales) {
-          const cleanArticles = (s.articles || []).map((art: any) => ({
-            name: art.name || art.nom || art.product_name || 'Produit',
-            quantity: Number(art.quantity || art.quantite) || 1,
-            unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
-          }))
-
-          const cleanSale: Sale = {
-            id: s.id,
-            shop_id: s.shop_id || shopId,
-            date: s.date,
-            time: s.time || '00:00',
-            client: s.client || 'Client anonyme',
-            articles: cleanArticles,
-            total: Number(s.total) || 0,
-            paid: Number(s.paid) || 0,
-            debt: Number(s.debt) || 0,
-            status: s.status || 'paid',
-            type: s.type || 'sale',
-            pen_color: s.pen_color || 'blue',
-            notes: s.notes || '',
-            category: s.category,
-            created_at: s.created_at || new Date().toISOString(),
-            is_synced: s.is_synced ?? true,
-          }
-
-          const dedupKey = `${cleanSale.date}_${cleanSale.time}_${cleanSale.total}_${(cleanSale.notes || '').trim().toLowerCase()}`
-          if (seenKeys.has(dedupKey)) continue
-          seenKeys.add(dedupKey)
-          cleanOffline.push(cleanSale)
-        }
-
-        cleanOffline.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
-        const reconciledOffline = reconcileDebts(cleanOffline)
-        setAllSales(reconciledOffline)
-        const todays = reconciledOffline.filter(s => s.date === today)
-        setSales(todays)
-        calculateSummary(reconciledOffline, todays)
-        setIsLoading(false)
-      }
-    }
-
-    loadJournal()
-
-    // ── Supabase Realtime Channel & Broadcast Instantané (PC <-> Téléphone PWA < 50ms) ──
-    let cleanupRealtime = () => {}
-    if (shopId && isOnline) {
-      cleanupRealtime = setupRealtimeSync(shopId, {
-        onSalesUpdated: () => {
-          if (isMounted) {
-            reloadData()
-            setTimeout(() => {
-              if (isMounted) reloadData()
-            }, 500)
-          }
-        },
-        onStockUpdated: () => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
-          }
-        },
-        onShoppingUpdated: () => {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
-          }
-        },
-      })
-    }
-
-    // Écouter les événements locaux de mise à jour des ventes pour recharger immédiatement le journal
-    const handleSalesUpdated = () => {
-      if (isMounted) reloadData()
-    }
-    if (typeof window !== 'undefined') {
-      window.addEventListener('cahier_sales_updated', handleSalesUpdated)
-    }
-
-    // Polling haute fréquence et résilient au premier plan (4 secondes)
-    const pollInterval = setInterval(() => {
-      if (isOnline && isMounted && typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        reloadData()
-      }
-    }, 4_000)
-
-    // Écouter le retour au premier plan (déverrouillage téléphone iPhone/Android ou retour onglet PC)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isOnline && isMounted) {
-        reloadData()
-        reconnectRealtimeSync(shopId)
-      }
-    }
-
-    const handleOnlineEvent = () => {
-      if (isMounted) {
-        reloadData()
-        reconnectRealtimeSync(shopId)
-      }
-    }
-
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', handleVisibilityChange)
-    }
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', handleOnlineEvent)
-    }
-
-    return () => {
-      isMounted = false
-      cleanupRealtime()
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('cahier_sales_updated', handleSalesUpdated)
-        window.removeEventListener('online', handleOnlineEvent)
-        document.removeEventListener('visibilitychange', handleVisibilityChange)
-      }
-      clearInterval(pollInterval)
-    }
-  }, [shopId, isOnline, refreshTrigger, reloadData])
 
   const calculateSummary = useCallback((all: Sale[], todays: Sale[]) => {
     let cash = 0
@@ -489,6 +164,310 @@ export function useJournalData(shopId: string, isOnline: boolean) {
     setNosDettes(Math.max(0, Math.round(totalSupplierDebts * 100) / 100))
     setSoldeDuJour(Math.round(todayBalance * 100) / 100)
   }, [])
+
+  const loadJournal = useCallback(async () => {
+    const today = getTodayDateString()
+
+    // 0. CHARGEMENT INSTANTANÉ DU CACHE LOCAL (0 ms)
+    try {
+      const localRaw = getOfflineSales(shopId)
+      if (localRaw && localRaw.length > 0) {
+        const localClean: Sale[] = localRaw.map(s => ({
+          id: s.id,
+          shop_id: s.shop_id || shopId,
+          date: (s.date || '').split('T')[0] || today,
+          time: s.time || '00:00',
+          client: s.client || 'Client anonyme',
+          articles: (s.articles || []).map(a => ({
+            name: a.name || 'Produit',
+            quantity: Number(a.quantity) || 1,
+            unit_price: Number(a.unit_price) || 0,
+          })),
+          total: Number(s.total) || 0,
+          paid: Number(s.paid) || 0,
+          debt: Number(s.debt) || 0,
+          status: s.status || 'paid',
+          type: s.type || 'sale',
+          pen_color: s.pen_color || 'blue',
+          notes: s.notes || '',
+          category: s.category,
+          created_at: s.created_at || new Date().toISOString(),
+          is_synced: s.is_synced ?? true,
+        }))
+        const todaysLocal = localClean.filter(s => s.date === today)
+        setAllSales(localClean)
+        setSales(todaysLocal)
+        calculateSummary(localClean, todaysLocal)
+        setIsLoading(false)
+      }
+    } catch {}
+
+    try {
+      if (isSupabaseClientConfigured() && isOnline) {
+        const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+          setTimeout(() => resolve({ data: null, error: { message: 'timeout' } }), 6000)
+        )
+
+        // Requête principale multi-alias (unifie UUID et codes courts BTQ/SHOP)
+        const targetShopIds = getDualShopIds(shopId)
+        let { data, error } = await Promise.race([
+          supabaseClient
+            .from('sales')
+            .select('*, sold_articles(*)')
+            .in('shop_id', targetShopIds)
+            .order('created_at', { ascending: false }),
+          timeoutPromise
+        ])
+
+        // Si la jointure sold_articles échoue (400 / table inaccessible),
+        // on retente sans la jointure
+        if (error && error.message !== 'timeout') {
+          console.warn('[Journal] Jointure sold_articles échouée, nouvelle tentative sans:', error.message)
+          const fallback = await supabaseClient
+            .from('sales')
+            .select('*')
+            .in('shop_id', targetShopIds)
+            .order('created_at', { ascending: false })
+          data = fallback.data
+          error = fallback.error
+        }
+
+        if (!error && data) {
+          const mappedSales: Sale[] = data.map((item: any) => ({
+            id: item.id,
+            shop_id: item.shop_id || shopId,
+            date: (item.date || '').split('T')[0] || today,
+            time: item.time || '00:00',
+            client: item.client_name || 'Client anonyme',
+            articles: (item.sold_articles || []).map((art: any) => ({
+              name: art.product_name || art.name || art.nom || 'Produit',
+              quantity: Number(art.quantity || art.quantite) || 1,
+              unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
+            })),
+            total: Number(item.total_amount) || 0,
+            paid: Number(item.paid_amount) || 0,
+            debt: Number(item.debt_amount) || 0,
+            status: item.status || 'paid',
+            type: item.type || 'sale',
+            pen_color: item.pen_color || 'blue',
+            notes: item.notes || '',
+            category: item.category,
+            created_at: item.created_at || new Date().toISOString(),
+            is_synced: true,
+          }))
+
+          // Fusion ultra-sécurisée :
+          const supabaseIds = new Set(mappedSales.map(s => s.id))
+          const currentLocalSales = getOfflineSales(shopId)
+
+          const offlineNotYetInCloud = currentLocalSales.filter(s => {
+            if (!s.id) return false
+            if (!supabaseIds.has(s.id)) return true
+            if (s.is_synced === false) return true
+            return false
+          })
+
+          const rawCombined = [...mappedSales, ...offlineNotYetInCloud]
+          const seenIds = new Set<string>()
+          const combinedSales: Sale[] = []
+
+          for (const s of rawCombined) {
+            if (s.id && seenIds.has(s.id)) continue
+            if (s.id) seenIds.add(s.id)
+
+            const cleanArticles = (s.articles || []).map((art: any) => ({
+              name: art.name || art.nom || art.product_name || 'Produit',
+              quantity: Number(art.quantity || art.quantite) || 1,
+              unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
+            }))
+
+            const saleDate = (s.date || '').split('T')[0] || today
+
+            const cleanSale: Sale = {
+              id: s.id,
+              shop_id: s.shop_id || shopId,
+              date: saleDate,
+              time: s.time || '00:00',
+              client: s.client || (s as any).client_name || 'Client anonyme',
+              articles: cleanArticles,
+              total: Number(s.total ?? (s as any).total_amount) || 0,
+              paid: Number(s.paid ?? (s as any).paid_amount) || 0,
+              debt: Number(s.debt ?? (s as any).debt_amount) || 0,
+              status: s.status || 'paid',
+              type: s.type || 'sale',
+              pen_color: s.pen_color || 'blue',
+              notes: s.notes || '',
+              category: s.category,
+              created_at: s.created_at || new Date().toISOString(),
+              is_synced: s.is_synced ?? true,
+            }
+
+            combinedSales.push(cleanSale)
+          }
+
+          combinedSales.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
+          const reconciledSales = reconcileDebts(combinedSales)
+
+          try {
+            const offlineFormatted: OfflineSale[] = reconciledSales.map(cs => ({
+              id: cs.id,
+              shop_id: cs.shop_id || shopId,
+              date: cs.date,
+              time: cs.time,
+              client: cs.client,
+              articles: cs.articles.map(a => ({
+                name: a.name,
+                quantity: a.quantity,
+                unit_price: a.unit_price,
+              })),
+              total: cs.total,
+              paid: cs.paid,
+              debt: cs.debt,
+              status: cs.status as any,
+              type: cs.type,
+              pen_color: cs.pen_color,
+              notes: cs.notes,
+              category: cs.category,
+              created_at: cs.created_at || new Date().toISOString(),
+              is_synced: cs.is_synced ?? true,
+            }))
+            replaceOfflineSales(shopId, offlineFormatted)
+          } catch {}
+
+          setAllSales(reconciledSales)
+          const todays = reconciledSales.filter(s => s.date === today)
+          setSales(todays)
+          calculateSummary(reconciledSales, todays)
+          setIsLoading(false)
+          return
+        }
+      }
+    } catch (err) {
+      console.warn('Erreur chargement Supabase, repli offline:', err)
+    }
+
+    const offlineSales = getOfflineSales(shopId)
+    const seenKeys = new Set<string>()
+    const cleanOffline: Sale[] = []
+
+    for (const s of offlineSales) {
+      const cleanArticles = (s.articles || []).map((art: any) => ({
+        name: art.name || art.nom || art.product_name || 'Produit',
+        quantity: Number(art.quantity || art.quantite) || 1,
+        unit_price: Number(art.unit_price || art.prix_unitaire) || 0,
+      }))
+
+      const cleanSale: Sale = {
+        id: s.id,
+        shop_id: s.shop_id || shopId,
+        date: s.date,
+        time: s.time || '00:00',
+        client: s.client || 'Client anonyme',
+        articles: cleanArticles,
+        total: Number(s.total) || 0,
+        paid: Number(s.paid) || 0,
+        debt: Number(s.debt) || 0,
+        status: s.status || 'paid',
+        type: s.type || 'sale',
+        pen_color: s.pen_color || 'blue',
+        notes: s.notes || '',
+        category: s.category,
+        created_at: s.created_at || new Date().toISOString(),
+        is_synced: s.is_synced ?? true,
+      }
+
+      const dedupKey = `${cleanSale.date}_${cleanSale.time}_${cleanSale.total}_${(cleanSale.notes || '').trim().toLowerCase()}`
+      if (seenKeys.has(dedupKey)) continue
+      seenKeys.add(dedupKey)
+      cleanOffline.push(cleanSale)
+    }
+
+    cleanOffline.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime())
+    const reconciledOffline = reconcileDebts(cleanOffline)
+    setAllSales(reconciledOffline)
+    const todays = reconciledOffline.filter(s => s.date === today)
+    setSales(todays)
+    calculateSummary(reconciledOffline, todays)
+    setIsLoading(false)
+  }, [shopId, isOnline, calculateSummary])
+
+  const reloadData = useCallback(() => {
+    loadJournal()
+  }, [loadJournal])
+
+  // Chargement initial des données
+  useEffect(() => {
+    loadJournal()
+  }, [loadJournal])
+
+  // Canal Realtime Supabase permanent (< 50ms) et polling résilient
+  useEffect(() => {
+    if (!shopId) return
+
+    // ── Supabase Realtime Channel (< 50ms) + BroadcastChannel W3C ──
+    const cleanupRealtime = setupRealtimeSync(shopId, {
+      onSalesUpdated: () => {
+        loadJournal()
+      },
+      onStockUpdated: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
+        }
+      },
+      onShoppingUpdated: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cahier_shopping_updated'))
+        }
+      },
+    })
+
+    // Écouter les événements locaux de mise à jour des ventes
+    const handleSalesUpdated = () => {
+      loadJournal()
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('cahier_sales_updated', handleSalesUpdated)
+    }
+
+    // Polling de courtoisie en arrière-plan (toutes les 5s quand la page est visible)
+    const pollInterval = setInterval(() => {
+      if (isOnline && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        loadJournal()
+      }
+    }, 5000)
+
+    // Réveil après veille mobile ou retour au premier plan
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        loadJournal()
+        if (isOnline) reconnectRealtimeSync(shopId)
+      }
+    }
+
+    const handleOnlineEvent = () => {
+      loadJournal()
+      reconnectRealtimeSync(shopId)
+    }
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnlineEvent)
+    }
+
+    return () => {
+      cleanupRealtime()
+      clearInterval(pollInterval)
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('cahier_sales_updated', handleSalesUpdated)
+        window.removeEventListener('online', handleOnlineEvent)
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+      }
+    }
+  }, [shopId, isOnline, loadJournal])
 
   const crossOutSale = useCallback(async (saleId: string) => {
     const updated = allSales.map(s => (s.id === saleId ? { ...s, status: 'crossed_out' as const } : s))
