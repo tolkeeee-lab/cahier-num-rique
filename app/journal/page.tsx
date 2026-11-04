@@ -402,7 +402,7 @@ export default function JournalPage() {
 
   // ── Protection d'accès aux onglets pour les employés ────────────────────────
   useEffect(() => {
-    if (isEmployeeRole(effectiveRole) && (activeTab === 'analytics' || activeTab === 'settings')) {
+    if (isEmployeeRole(effectiveRole) && !['cahier', 'history', 'dettes'].includes(activeTab)) {
       setActiveTab('cahier')
     }
   }, [effectiveRole, activeTab])

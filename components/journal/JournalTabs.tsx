@@ -15,7 +15,7 @@ import {
 import { useFeatures } from '@/context/FeatureContext'
 import { getActivityLabels } from '@/lib/activityLabels'
 
-import { canViewExecutiveDashboard, canAccessAdminSettings } from '@/lib/roleUtils'
+import { canViewExecutiveDashboard, canAccessAdminSettings, isEmployeeRole } from '@/lib/roleUtils'
 
 export type JournalTab = 'cahier' | 'history' | 'stock' | 'dettes' | 'shopping' | 'demandes' | 'analytics' | 'particulier' | 'settings'
 
@@ -38,6 +38,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
 }) => {
   const { features } = useFeatures()
   const labels = getActivityLabels(activity)
+  const isEmployee = isEmployeeRole(userRole)
 
   const tabs = [
     {
@@ -56,7 +57,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
       id: 'stock' as JournalTab,
       label: labels.tabStock,
       icon: Package,
-      show: features.enableStockManagement && activity !== 'particulier',
+      show: !isEmployee && features.enableStockManagement && activity !== 'particulier',
     },
     {
       id: 'dettes' as JournalTab,
@@ -69,32 +70,32 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
       id: 'shopping' as JournalTab,
       label: labels.tabShopping,
       icon: ShoppingCart,
-      show: true,
+      show: !isEmployee,
     },
     {
       id: 'demandes' as JournalTab,
       label: labels.tabDemandes,
       icon: ClipboardList,
       badge: pendingRequestsCount > 0 ? pendingRequestsCount : undefined,
-      show: activity !== 'particulier',
+      show: !isEmployee && activity !== 'particulier',
     },
     {
       id: 'analytics' as JournalTab,
       label: 'Comptabilité & Bilan',
       icon: BarChart3,
-      show: features.enableAnalytics && canViewExecutiveDashboard(userRole),
+      show: !isEmployee && features.enableAnalytics && canViewExecutiveDashboard(userRole),
     },
     {
       id: 'particulier' as JournalTab,
       label: 'Mon Foyer',
       icon: Utensils,
-      show: Boolean(features.enableParticulierMode && activity !== 'particulier'),
+      show: !isEmployee && Boolean(features.enableParticulierMode && activity !== 'particulier'),
     },
     {
       id: 'settings' as JournalTab,
       label: 'Réglages',
       icon: Settings,
-      show: canAccessAdminSettings(userRole),
+      show: !isEmployee && canAccessAdminSettings(userRole),
     },
   ].filter(t => t.show)
 
