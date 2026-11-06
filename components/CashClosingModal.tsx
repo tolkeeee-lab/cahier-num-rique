@@ -277,7 +277,10 @@ export function CashClosingModal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+      >
         
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-amber-200/80 bg-gradient-to-r from-amber-100 to-amber-50 flex items-center justify-between text-amber-950 flex-shrink-0">
@@ -310,6 +313,7 @@ export function CashClosingModal({
           </button>
           <button
             type="button"
+            data-testid="closing-history-tab"
             onClick={() => setActiveTab('history')}
             className={`flex-1 py-1.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.97] ${
               activeTab === 'history'

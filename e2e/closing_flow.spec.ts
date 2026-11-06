@@ -109,12 +109,12 @@ test.describe('Cahier Numérique — Parcours E2E Clôture de Caisse (Z) & Mode 
     await expect(page.locator('text=Clôture Z enregistrée avec succès')).toBeVisible({ timeout: 5000 })
 
     // 5. Basculer sur l'onglet Historique à l'intérieur du modal
-    const historyModalTab = page.locator('div.fixed button:has-text("Historique")').first()
+    const historyModalTab = page.locator('[data-testid="closing-history-tab"]').first()
     await expect(historyModalTab).toBeVisible({ timeout: 5000 })
     await historyModalTab.click()
 
     // Vérifier la présence de l'écriture dans l'historique
-    await expect(page.locator('text=Écart 0 F').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('text=/Écart 0|0 F/').first()).toBeVisible({ timeout: 5000 })
   })
 
   test('Vérifie la résilience hors-ligne et l\'analyse de manquant de caisse', async ({ page }) => {

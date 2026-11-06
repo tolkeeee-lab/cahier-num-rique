@@ -1,6 +1,6 @@
 /* Service Worker PWA Robust Offline Shell — Cahier Numérique */
 
-const CACHE_NAME = 'cahier-pwa-v35'
+const CACHE_NAME = 'cahier-pwa-v36'
 const STATIC_ASSETS = [
   '/',
   '/journal',

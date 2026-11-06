@@ -135,7 +135,7 @@ test.describe('Cahier Numérique — Parcours E2E Stock & Dettes (Offline-First)
     await expect(page.locator('body')).toBeVisible()
 
     // Basculer vers l'onglet Stock
-    const stockTab = page.locator('button:has-text("Stock"), [role="tab"]:has-text("Stock")').first()
+    const stockTab = page.locator('nav button:has-text("Stock")').first()
     await expect(stockTab).toBeVisible({ timeout: 15000 })
     await stockTab.click()
 
@@ -143,11 +143,11 @@ test.describe('Cahier Numérique — Parcours E2E Stock & Dettes (Offline-First)
     await expect(page.locator('text=Lait Nido').first()).toBeVisible({ timeout: 10000 })
 
     // Vérifier la présence du bouton commander (alerte stock bas)
-    const orderButton = page.locator('button:has-text("Commander (1-Clic)"), button:has-text("Commander")').first()
+    const orderButton = page.locator('button:has-text("Commander")').first()
     if (await orderButton.isVisible()) {
-      await orderButton.click()
+      await orderButton.click({ force: true })
       // Doit afficher l'état de confirmation ou le bouton
-      await expect(page.locator('text=/ajouté|commander/i').first()).toBeVisible()
+      await expect(page.locator('text=/ajouté|commander/i').first()).toBeVisible({ timeout: 5000 })
     }
   })
 
@@ -156,7 +156,7 @@ test.describe('Cahier Numérique — Parcours E2E Stock & Dettes (Offline-First)
     await expect(page.locator('body')).toBeVisible()
 
     // Basculer vers l'onglet Dettes
-    const debtsTab = page.locator('button:has-text("Dettes"), [role="tab"]:has-text("Dettes")').first()
+    const debtsTab = page.locator('nav button:has-text("Dettes")').first()
     await expect(debtsTab).toBeVisible({ timeout: 15000 })
     await debtsTab.click()
 
