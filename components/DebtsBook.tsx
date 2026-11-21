@@ -78,7 +78,7 @@ export function DebtsBook({
 
     const salesToMerge = currentSales || sales
 
-    // ─── FUSION AVEC LES VENTES LOCALES (NON SYNCHRONISÉES OU OFFLINE) ───
+    // â”€â”€â”€ FUSION AVEC LES VENTES LOCALES (NON SYNCHRONISÃ‰ES OU OFFLINE) â”€â”€â”€
     if (salesToMerge && salesToMerge.length > 0) {
       const mergedDebts = [...apiDebts]
       const unsyncedSales = salesToMerge.filter((s) => s.status !== 'crossed_out' && s.is_synced === false)
@@ -138,7 +138,7 @@ export function DebtsBook({
     }
   }, [loadDebts])
 
-  // Indexer l'historique des écritures par (type, nom) pour le panneau dépliable de chaque fiche
+  // Indexer l'historique des Ã©critures par (type, nom) pour le panneau dÃ©pliable de chaque fiche
   const historyByKey = useMemo(() => {
     const map = new Map<string, DebtHistoryEntry[]>()
     const list = sales || []
@@ -194,18 +194,18 @@ export function DebtsBook({
       paid: 0,
       debt: amount,
       status: 'debt',
-      notes: newDebtNotes.trim() || `Crédit ${effectiveType === 'supplier' ? 'fournisseur' : 'client'} - ${cleanName}`,
+      notes: newDebtNotes.trim() || `CrÃ©dit ${effectiveType === 'supplier' ? 'fournisseur' : 'client'} - ${cleanName}`,
       pen_color: effectiveType === 'supplier' ? 'purple' : 'yellow',
       articles: [],
       is_synced: false,
       created_at: now.toISOString(),
     }
 
-    // 1. Sauvegarde locale immédiate (Offline-First)
+    // 1. Sauvegarde locale immÃ©diate (Offline-First)
     saveOfflineSale(shopId, newSale)
     broadcastInstantSync(shopId, 'sales', newSale)
 
-    // 2. Synchronisation API en arrière-plan
+    // 2. Synchronisation API en arriÃ¨re-plan
     try {
       const res = await fetch('/api/debts', {
         method: 'POST',
@@ -224,7 +224,7 @@ export function DebtsBook({
       })
       if (res.ok) markAsSynced(shopId, saleId)
     } catch {
-      console.warn('Mode hors-ligne : nouvelle dette enregistrée localement')
+      console.warn('Mode hors-ligne : nouvelle dette enregistrÃ©e localement')
     }
 
     setNewDebtName('')
@@ -296,7 +296,7 @@ export function DebtsBook({
         if (response.ok) markAsSynced(shopId, saleId)
       }
     } catch {
-      console.warn('Mode hors-ligne : remboursement enregistré localement')
+      console.warn('Mode hors-ligne : remboursement enregistrÃ© localement')
     }
 
     setActiveRepayDebt(null)
@@ -388,7 +388,7 @@ export function DebtsBook({
       {showNewDebtForm && (
         <form
           onSubmit={handleCreateNewDebt}
-          className="bg-[#fdfaf2] border border-emerald-900/20 rounded-xl p-4 space-y-3"
+          className="bg-[#faf5e8] border border-emerald-900/20 rounded-xl p-4 space-y-3"
         >
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-semibold text-stone-900">Enregistrer une nouvelle dette</h3>
@@ -414,7 +414,7 @@ export function DebtsBook({
               type="tel"
               value={newDebtPhone}
               onChange={(e) => setNewDebtPhone(e.target.value)}
-              placeholder="Téléphone WhatsApp (facultatif)"
+              placeholder="TÃ©lÃ©phone WhatsApp (facultatif)"
               className="px-3 py-2 bg-white border border-stone-900/15 rounded-lg text-xs font-mono text-stone-900 focus:outline-none focus:border-emerald-700"
             />
             <input
@@ -435,16 +435,16 @@ export function DebtsBook({
                   type="button"
                   onClick={() => setNewDebtType('client')}
                   className={`px-3 py-1.5 rounded-md font-medium cursor-pointer transition-colors ${
-                    newDebtType === 'client' ? 'bg-[#fdfaf2] text-stone-950 shadow-2xs' : 'text-stone-600'
+                    newDebtType === 'client' ? 'bg-[#faf5e8] text-stone-950 shadow-2xs' : 'text-stone-600'
                   }`}
                 >
-                  Crédit client
+                  CrÃ©dit client
                 </button>
                 <button
                   type="button"
                   onClick={() => setNewDebtType('supplier')}
                   className={`px-3 py-1.5 rounded-md font-medium cursor-pointer transition-colors ${
-                    newDebtType === 'supplier' ? 'bg-[#fdfaf2] text-stone-950 shadow-2xs' : 'text-stone-600'
+                    newDebtType === 'supplier' ? 'bg-[#faf5e8] text-stone-950 shadow-2xs' : 'text-stone-600'
                   }`}
                 >
                   Dette grossiste
@@ -456,7 +456,7 @@ export function DebtsBook({
               type="text"
               value={newDebtNotes}
               onChange={(e) => setNewDebtNotes(e.target.value)}
-              placeholder="Motif / articles pris à crédit (facultatif)"
+              placeholder="Motif / articles pris Ã  crÃ©dit (facultatif)"
               className="flex-1 px-3 py-2 bg-white border border-stone-900/15 rounded-lg text-xs text-stone-900 focus:outline-none focus:border-emerald-700"
             />
 
@@ -475,9 +475,9 @@ export function DebtsBook({
       {filteredDebts.length === 0 ? (
         <div className="p-10 text-center bg-[#faf5e8] rounded-xl border border-stone-900/10 space-y-1.5">
           <CheckCircle2 className="w-6 h-6 text-emerald-700 mx-auto" strokeWidth={1.75} />
-          <p className="text-sm font-medium text-stone-800">Aucune dette ne correspond à vos filtres</p>
+          <p className="text-sm font-medium text-stone-800">Aucune dette ne correspond Ã  vos filtres</p>
           <p className="text-xs text-stone-500">
-            Cliquez sur « Nouvelle dette » ou saisissez un crédit directement dans votre Cahier.
+            Cliquez sur Â« Nouvelle dette Â» ou saisissez un crÃ©dit directement dans votre Cahier.
           </p>
         </div>
       ) : (

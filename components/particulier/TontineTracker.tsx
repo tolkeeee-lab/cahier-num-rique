@@ -16,30 +16,29 @@ export const TontineTracker: React.FC<TontineTrackerProps> = ({
   const percentage = Math.min(100, Math.round((totalTontine / (targetGoal || 1)) * 100))
 
   return (
-    <div className="bg-white/90 p-4 rounded-2xl border border-amber-300/80 space-y-3 mb-4 shadow-sm">
+    <div className="bg-[#faf5e8] p-4 rounded-2xl border border-[#e2d6be] space-y-3 mb-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <HandCoins className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-          <h4 className="text-sm font-extrabold text-gray-900">Suivi Tontine & Épargne</h4>
+          <HandCoins className="w-4 h-4 text-emerald-700" strokeWidth={1.5} />
+          <h4 className="text-sm font-semibold text-stone-900">Suivi tontine et épargne</h4>
         </div>
-        <span className="text-xs font-mono font-black text-amber-950 tabular-nums tracking-tight">
+        <span className="text-xs font-mono font-semibold text-stone-900 tabular-nums">
           {formatPrice(totalTontine)} / {formatPrice(targetGoal)}
         </span>
       </div>
 
-      {/* Jauge de progression */}
-      <div className="w-full bg-amber-100/80 h-3.5 rounded-full overflow-hidden border border-amber-200 shadow-inner">
+      <div className="w-full bg-stone-200/80 h-2.5 rounded-full overflow-hidden">
         <div
-          className="bg-gradient-to-r from-amber-500 to-emerald-500 h-full transition-all duration-500 rounded-full shadow-xs"
+          className="bg-emerald-700 h-full transition-[width] duration-300 rounded-full"
           style={{ width: `${percentage}%` }}
         />
       </div>
 
-      <div className="flex justify-between items-center text-xs text-gray-700 font-mono font-bold">
-        <span>Progression : <span className="tabular-nums">{percentage}%</span></span>
+      <div className="flex justify-between items-center text-xs text-stone-600">
+        <span>Progression : <span className="font-mono font-semibold tabular-nums text-stone-900">{percentage}%</span></span>
         {percentage >= 100 && (
-          <span className="text-emerald-700 font-extrabold flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Objectif atteint !
+          <span className="text-emerald-700 font-medium flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.5} /> Objectif atteint
           </span>
         )}
       </div>

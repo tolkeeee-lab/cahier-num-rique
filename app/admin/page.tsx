@@ -36,7 +36,6 @@ export default function SuperAdminPage() {
   const [shops, setShops] = useState<AdminShop[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Modale d'inspection
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null)
   const [selectedShopName, setSelectedShopName] = useState('')
   const [journalSales, setJournalSales] = useState<any[]>([])
@@ -64,7 +63,7 @@ export default function SuperAdminPage() {
       const response = await fetch('/api/admin', { headers })
       const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.error || 'Impossible de récupérer les données d\'administration')
+        throw new Error(data.error || "Impossible de récupérer les données d'administration")
       }
       setKpis(data.kpis)
       setShops(data.shops || [])
@@ -106,7 +105,6 @@ export default function SuperAdminPage() {
           return
         }
       } else {
-        // Mode développement local sans Supabase
         const allowedAdmins = ['admin@cahier.com', 'tolkeeee@gmail.com', 'tolkeeeee@gmail.com']
         if (allowedAdmins.includes(email)) {
           await loadAdminData()
@@ -115,7 +113,7 @@ export default function SuperAdminPage() {
       }
       setError('Identifiants administrateur incorrects.')
     } catch (err: any) {
-      setError(err?.message || 'Erreur d\'authentification administrateur.')
+      setError(err?.message || "Erreur d'authentification administrateur.")
     } finally {
       setLoading(false)
     }
@@ -142,36 +140,38 @@ export default function SuperAdminPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4">
-        <form onSubmit={handleLogin} className="w-full max-w-sm bg-[#1e1a18] p-6 rounded-2xl border border-gray-800 space-y-4 shadow-2xl">
-          <div className="flex items-center gap-2 border-b border-gray-800 pb-3">
-            <Lock className="w-5 h-5 text-amber-400" strokeWidth={1.75} />
-            <h2 className="text-base font-extrabold text-white">Administration Plateforme</h2>
+      <div className="min-h-screen bg-[#f5efe0] flex items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="w-full max-w-sm bg-[#faf5e8] p-6 rounded-2xl border border-[#e2d6be] space-y-4 shadow-sm">
+          <div className="flex items-center gap-2.5 border-b border-stone-200 pb-3">
+            <Lock className="w-4 h-4 text-stone-700" strokeWidth={1.5} />
+            <h2 className="text-base font-semibold text-stone-900">Administration plateforme</h2>
           </div>
 
-          {error && <p className="text-xs text-red-400 font-mono">{error}</p>}
+          {error && (
+            <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>
+          )}
 
           <input
             type="email"
             value={adminEmail}
             onChange={(e) => setAdminEmail(e.target.value)}
-            placeholder="E-mail Admin..."
-            className="w-full px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white focus:outline-none font-mono"
+            placeholder="E-mail administrateur"
+            className="w-full px-3 py-2.5 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
           <input
             type="password"
             value={adminPassword}
             onChange={(e) => setAdminPassword(e.target.value)}
-            placeholder="Mot de passe..."
-            className="w-full px-3 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white focus:outline-none font-mono"
+            placeholder="Mot de passe"
+            className="w-full px-3 py-2.5 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] transition-all cursor-pointer active:scale-[0.97] disabled:opacity-50"
+            className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium rounded-xl transition-colors cursor-pointer active:scale-[0.98] disabled:opacity-50"
           >
-            {loading ? 'Connexion...' : 'Se Connecter'}
+            {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
       </div>
@@ -179,61 +179,59 @@ export default function SuperAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#141210] text-white p-6 space-y-6">
-      {/* En-tête Admin */}
-      <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-        <div className="flex items-center gap-3">
-          <Store className="w-6 h-6 text-amber-400" strokeWidth={1.75} />
-          <h1 className="text-lg font-extrabold text-white">Tableau de Super-Administration</h1>
+    <div className="min-h-screen bg-[#f5efe0] text-stone-900 p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex items-center justify-between border-b border-[#e2d6be] pb-4">
+          <div className="flex items-center gap-2.5">
+            <Store className="w-5 h-5 text-emerald-700" strokeWidth={1.5} />
+            <h1 className="text-lg font-semibold text-stone-900">Administration réseau</h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadAdminData()}
+              className="p-2 rounded-xl bg-[#faf5e8] border border-[#e2d6be] text-stone-600 hover:text-stone-900 transition-colors cursor-pointer active:scale-[0.97]"
+              title="Rafraîchir"
+            >
+              <RefreshCw className="w-4 h-4" strokeWidth={1.5} />
+            </button>
+
+            <button
+              onClick={async () => {
+                try {
+                  await supabaseClient.auth.signOut()
+                } catch {}
+                localStorage.removeItem('cahier_admin_email')
+                setIsAdmin(false)
+              }}
+              className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer active:scale-[0.97]"
+              title="Déconnexion"
+            >
+              <LogOut className="w-4 h-4" strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => loadAdminData()}
-            className="p-2 rounded-xl bg-[#1e1a18] border border-gray-800 text-gray-400 hover:text-white transition-colors cursor-pointer active:scale-[0.97]"
-            title="Rafraîchir"
-          >
-            <RefreshCw className="w-4 h-4" strokeWidth={1.75} />
-          </button>
+        <AdminStatsCards kpis={kpis} />
 
-          <button
-            onClick={async () => {
-              try {
-                await supabaseClient.auth.signOut()
-              } catch {}
-              localStorage.removeItem('cahier_admin_email')
-              setIsAdmin(false)
-            }}
-            className="p-2 rounded-xl bg-red-950/40 border border-red-800/40 text-red-400 hover:bg-red-900/60 transition-colors cursor-pointer active:scale-[0.97]"
-            title="Déconnexion"
-          >
-            <LogOut className="w-4 h-4" strokeWidth={1.75} />
-          </button>
-        </div>
+        <AdminShopsTable
+          shops={shops}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onInspectShop={handleInspectShop}
+        />
+
+        <AdminSubscriptionModal
+          isOpen={!!selectedShopId}
+          onClose={() => setSelectedShopId(null)}
+          shopId={selectedShopId || ''}
+          shopName={selectedShopName}
+          sales={journalSales}
+          activeTab={shopModalTab}
+          onTabChange={setShopModalTab}
+          loading={loadingJournal}
+        />
       </div>
-
-      {/* Cartes KPI */}
-      <AdminStatsCards kpis={kpis} />
-
-      {/* Tableau des Boutiques */}
-      <AdminShopsTable
-        shops={shops}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onInspectShop={handleInspectShop}
-      />
-
-      {/* Modale d'inspection */}
-      <AdminSubscriptionModal
-        isOpen={!!selectedShopId}
-        onClose={() => setSelectedShopId(null)}
-        shopId={selectedShopId || ''}
-        shopName={selectedShopName}
-        sales={journalSales}
-        activeTab={shopModalTab}
-        onTabChange={setShopModalTab}
-        loading={loadingJournal}
-      />
     </div>
   )
 }

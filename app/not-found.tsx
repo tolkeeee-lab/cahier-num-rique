@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useEffect } from 'react'
 import Link from 'next/link'
@@ -15,28 +15,28 @@ export default function NotFound() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4 font-mono select-none">
-      <div className="w-full max-w-md bg-[#fdfaf2] border-2 border-amber-400 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-amber-800 shadow-inner">
-          <BookOpen className="w-8 h-8" strokeWidth={2} />
+    <div className="min-h-screen bg-[#f5efe0] flex items-center justify-center p-4 select-none">
+      <div className="w-full max-w-md bg-[#faf5e8] border border-[#e2d6be] rounded-2xl p-6 sm:p-8 shadow-sm text-center space-y-5">
+        <div className="w-12 h-12 mx-auto rounded-xl bg-white border border-stone-200 flex items-center justify-center text-stone-800">
+          <BookOpen className="w-6 h-6" strokeWidth={1.5} />
         </div>
 
-        <div className="space-y-1">
-          <h2 className="text-xl font-black text-amber-950 font-handwritten tracking-wide">
-            Cahier Numérique
+        <div className="space-y-1.5">
+          <h2 className="text-lg font-semibold text-stone-900 tracking-tight">
+            Page introuvable
           </h2>
-          <p className="text-xs text-amber-900/80 font-bold">
-            Page introuvable. Redirection automatique vers votre cahier en cours...
+          <p className="text-xs text-stone-600">
+            Redirection automatique vers votre cahier en cours
           </p>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-1">
           <Link
             href="/journal"
-            className="w-full py-3 px-4 bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#fbbf24] hover:to-[#f59e0b] text-[#141210] text-xs font-black rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+            className="w-full py-2.5 px-4 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-medium rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
           >
-            <span>Ouvrir mon Cahier</span>
-            <ArrowRight className="w-4 h-4" strokeWidth={2} />
+            <span>Ouvrir mon cahier</span>
+            <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
           </Link>
         </div>
       </div>

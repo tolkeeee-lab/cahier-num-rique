@@ -33,7 +33,7 @@ export function ParticulierDashboard({
 }: ParticulierDashboardProps) {
   const [activeTab, setActiveTab] = useState<'budget' | 'tontine' | 'carnet' | 'historique'>('budget')
 
-  // Calculs Budgétaires Spécifiques Famille / Foyer
+  // Calculs BudgÃ©taires SpÃ©cifiques Famille / Foyer
   const incomeTotal = sales
     .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale'))
     .reduce((sum, s) => sum + (Number(s.paid) || Number(s.total) || 0), 0)
@@ -59,11 +59,11 @@ export function ParticulierDashboard({
 
   const categoryBreakdown = [
     {
-      category: 'Marché',
-      label: 'Marché & Nourriture',
+      category: 'MarchÃ©',
+      label: 'MarchÃ© & Nourriture',
       icon: <ShoppingCart className="w-4 h-4 text-emerald-600 flex-shrink-0" />,
       amount: sales
-        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && (s.notes || '').toLowerCase().includes('marché'))
+        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && (s.notes || '').toLowerCase().includes('marchÃ©'))
         .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
     {
@@ -83,11 +83,11 @@ export function ParticulierDashboard({
         .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
     {
-      category: 'École',
-      label: 'Scolarité & Enfants',
-      icon: <GraduationCap className="w-4 h-4 text-purple-600 flex-shrink-0" />,
+      category: 'Ã‰cole',
+      label: 'ScolaritÃ© & Enfants',
+      icon: <GraduationCap className="w-4 h-4 text-stone-700 flex-shrink-0" />,
       amount: sales
-        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && /ecole|école|scolarité/i.test(s.notes || ''))
+        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && /ecole|Ã©cole|scolaritÃ©/i.test(s.notes || ''))
         .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
   ]
@@ -95,57 +95,57 @@ export function ParticulierDashboard({
   return (
     <div className="space-y-4">
       {/* Navigation Onglets Foyer */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-amber-300/80 scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-[#e2d6be] scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('budget')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold active:scale-[0.97] transition-all duration-100 ease-out border cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium active:scale-[0.97] transition-colors border cursor-pointer ${
             activeTab === 'budget'
-              ? 'bg-amber-800 text-white border-amber-900 shadow-md'
-              : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
+              ? 'bg-stone-900 text-white border-stone-900'
+              : 'bg-[#faf5e8] text-stone-700 border-[#e2d6be] hover:bg-white'
           }`}
         >
-          <Home className="w-4 h-4" strokeWidth={1.75} />
-          <span>Bilan Foyer</span>
+          <Home className="w-4 h-4" strokeWidth={1.5} />
+          <span>Bilan foyer</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('tontine')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold active:scale-[0.97] transition-all duration-100 ease-out border cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium active:scale-[0.97] transition-colors border cursor-pointer ${
             activeTab === 'tontine'
-              ? 'bg-amber-800 text-white border-amber-900 shadow-md'
-              : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
+              ? 'bg-stone-900 text-white border-stone-900'
+              : 'bg-[#faf5e8] text-stone-700 border-[#e2d6be] hover:bg-white'
           }`}
         >
-          <PiggyBank className="w-4 h-4" strokeWidth={1.75} />
-          <span>Tontine & Épargne</span>
+          <PiggyBank className="w-4 h-4" strokeWidth={1.5} />
+          <span>Tontine & Ã©pargne</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('carnet')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold active:scale-[0.97] transition-all duration-100 ease-out border cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium active:scale-[0.97] transition-colors border cursor-pointer ${
             activeTab === 'carnet'
-              ? 'bg-amber-800 text-white border-amber-900 shadow-md'
-              : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
+              ? 'bg-stone-900 text-white border-stone-900'
+              : 'bg-[#faf5e8] text-stone-700 border-[#e2d6be] hover:bg-white'
           }`}
         >
-          <Store className="w-4 h-4" strokeWidth={1.75} />
-          <span>Carnet Boutiquier</span>
+          <Store className="w-4 h-4" strokeWidth={1.5} />
+          <span>Carnet boutiquier</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('historique')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-extrabold active:scale-[0.97] transition-all duration-100 ease-out border cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium active:scale-[0.97] transition-colors border cursor-pointer ${
             activeTab === 'historique'
-              ? 'bg-amber-800 text-white border-amber-900 shadow-md'
-              : 'bg-amber-100/70 text-amber-950 border-amber-300 hover:bg-amber-200'
+              ? 'bg-stone-900 text-white border-stone-900'
+              : 'bg-[#faf5e8] text-stone-700 border-[#e2d6be] hover:bg-white'
           }`}
         >
-          <FileText className="w-4 h-4" strokeWidth={1.75} />
-          <span>Historique Foyer</span>
+          <FileText className="w-4 h-4" strokeWidth={1.5} />
+          <span>Historique foyer</span>
         </button>
       </div>
 

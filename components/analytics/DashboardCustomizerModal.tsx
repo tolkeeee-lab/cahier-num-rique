@@ -17,14 +17,14 @@ interface DashboardCustomizerModalProps {
 const ALL_WIDGETS = [
   {
     id: DASHBOARD_WIDGET_IDS.REVENUE_SUMMARY,
-    label: 'Synthèse des Chiffres d\'Affaires',
-    description: 'Affiche le Total Ventes, Encaissé, Créances et Dépenses sur la période.',
+    label: 'SynthÃ¨se des Chiffres d\'Affaires',
+    description: 'Affiche le Total Ventes, EncaissÃ©, CrÃ©ances et DÃ©penses sur la pÃ©riode.',
     ownerOnly: false,
   },
   {
     id: DASHBOARD_WIDGET_IDS.NET_MARGINS,
-    label: 'Marges & Bénéfices Nets',
-    description: 'Calcul automatique des marges financières (Prix vente - Coût grossiste).',
+    label: 'Marges & BÃ©nÃ©fices Nets',
+    description: 'Calcul automatique des marges financiÃ¨res (Prix vente - CoÃ»t grossiste).',
     ownerOnly: true,
   },
   {
@@ -35,26 +35,26 @@ const ALL_WIDGETS = [
   },
   {
     id: DASHBOARD_WIDGET_IDS.DEBT_SUMMARY,
-    label: 'Suivi des Créances & Dettes',
-    description: 'Abonnés, crédits clients en attente et dettes auprès des grossistes.',
+    label: 'Suivi des CrÃ©ances & Dettes',
+    description: 'AbonnÃ©s, crÃ©dits clients en attente et dettes auprÃ¨s des grossistes.',
     ownerOnly: true,
   },
   {
     id: DASHBOARD_WIDGET_IDS.SYSCOHADA_SUMMARY,
     label: 'Export & Bilan Comptable SYSCOHADA',
-    description: 'Module de pré-comptabilité révisée aux normes ouest-africaines.',
+    description: 'Module de prÃ©-comptabilitÃ© rÃ©visÃ©e aux normes ouest-africaines.',
     ownerOnly: true,
   },
   {
     id: DASHBOARD_WIDGET_IDS.ACTIVITY_WIDGET,
-    label: 'Analyse Métier Spécifique',
-    description: 'Widget adapté au secteur (Commerce, Resto/Maquis, Services, Budget).',
+    label: 'Analyse MÃ©tier SpÃ©cifique',
+    description: 'Widget adaptÃ© au secteur (Commerce, Resto/Maquis, Services, Budget).',
     ownerOnly: false,
   },
   {
     id: DASHBOARD_WIDGET_IDS.DAILY_CAISSE,
-    label: 'État de la Caisse Journalière',
-    description: 'Solde du tiroir-caisse, entrées/sorties en espèces du jour.',
+    label: 'Ã‰tat de la Caisse JournaliÃ¨re',
+    description: 'Solde du tiroir-caisse, entrÃ©es/sorties en espÃ¨ces du jour.',
     ownerOnly: false,
   },
 ]
@@ -119,13 +119,13 @@ export function DashboardCustomizerModal({
             </div>
             <div>
               <h3 className="font-bold text-stone-900 text-lg leading-tight">Personnaliser le Tableau de Bord</h3>
-              <p className="text-xs text-stone-500">Choisissez les indicateurs visibles sur votre écran</p>
+              <p className="text-xs text-stone-500">Choisissez les indicateurs visibles sur votre Ã©cran</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-stone-100 text-stone-500 hover:text-stone-800 hover:bg-stone-200 active:scale-[0.97] flex items-center justify-center transition-all cursor-pointer"
+            className="w-9 h-9 rounded-full bg-stone-100 text-stone-500 hover:text-stone-800 hover:bg-stone-200 active:scale-[0.97] flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" strokeWidth={1.75} />
           </button>
@@ -134,14 +134,14 @@ export function DashboardCustomizerModal({
         {/* Content list */}
         <div className="p-6 overflow-y-auto space-y-3 flex-1">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Indicateurs disponibles</span>
+            <span className="text-xs font-semibold uppercase tracking-normal text-stone-400">Indicateurs disponibles</span>
             <button
               type="button"
               onClick={handleResetDefault}
               className="text-xs text-amber-800 hover:text-amber-900 active:scale-[0.97] font-semibold flex items-center gap-1 hover:underline cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.75} />
-              <span>Réinitialiser</span>
+              <span>RÃ©initialiser</span>
             </button>
           </div>
 
@@ -151,7 +151,7 @@ export function DashboardCustomizerModal({
               <div
                 key={widget.id}
                 onClick={() => toggleWidget(widget.id)}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none active:scale-[0.99] ${
+                className={`p-4 rounded-2xl border transition-colors cursor-pointer flex items-start gap-3 select-none active:scale-[0.99] ${
                   isChecked
                     ? 'border-amber-400 bg-amber-50/50 shadow-xs'
                     : 'border-stone-200 hover:border-stone-300 bg-stone-50/40'
@@ -183,14 +183,14 @@ export function DashboardCustomizerModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl text-stone-600 font-semibold text-sm hover:bg-stone-200/60 active:scale-[0.97] transition-all cursor-pointer"
+            className="px-4 py-2.5 rounded-xl text-stone-600 font-semibold text-sm hover:bg-stone-200/60 active:scale-[0.97] transition-colors cursor-pointer"
           >
             Annuler
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2.5 rounded-xl bg-amber-800 hover:bg-amber-900 active:scale-[0.97] text-amber-50 font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-amber-800 hover:bg-amber-900 active:scale-[0.97] text-amber-50 font-bold text-sm shadow-md transition-colors flex items-center gap-2 cursor-pointer"
           >
             <Check className="w-4 h-4" strokeWidth={1.75} />
             <span>Enregistrer</span>

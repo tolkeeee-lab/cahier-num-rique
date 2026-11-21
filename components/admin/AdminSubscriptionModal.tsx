@@ -39,54 +39,53 @@ export const AdminSubscriptionModal: React.FC<AdminSubscriptionModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-5xl max-h-[90vh] bg-[#1e1a18] border border-[#2a2421] rounded-2xl p-6 shadow-2xl flex flex-col space-y-4">
-        
-        {/* Entête */}
-        <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+      <div className="w-full max-w-5xl max-h-[90vh] bg-[#f5efe0] border border-[#e2d6be] rounded-2xl p-6 shadow-xl flex flex-col space-y-4">
+        <div className="flex items-center justify-between border-b border-[#e2d6be] pb-3">
           <div className="flex items-center gap-3">
-            <BookOpen className="w-6 h-6 text-amber-400" strokeWidth={1.75} />
+            <BookOpen className="w-5 h-5 text-emerald-700" strokeWidth={1.5} />
             <div>
-              <h3 className="text-base font-extrabold text-white">Inspection Admin : {shopName}</h3>
-              <p className="text-xs text-gray-400 font-mono">Shop ID : {shopId}</p>
+              <h3 className="text-base font-semibold text-stone-900">Inspection : {shopName}</h3>
+              <p className="text-xs text-stone-500 font-mono">ID : {shopId}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Onglets de la modale */}
-            <div className="flex items-center gap-1 bg-[#141210] p-1 rounded-xl border border-gray-800">
+            <div className="flex items-center gap-1 bg-[#faf5e8] p-1 rounded-xl border border-[#e2d6be]">
               <button
                 onClick={() => onTabChange('journal')}
-                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer active:scale-[0.97] ${
-                  activeTab === 'journal' ? 'bg-[#2a2421] text-amber-400' : 'text-gray-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.97] ${
+                  activeTab === 'journal' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
-                Journal Ventes
+                Journal ventes
               </button>
               <button
                 onClick={() => onTabChange('analytics')}
-                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer active:scale-[0.97] ${
-                  activeTab === 'analytics' ? 'bg-[#2a2421] text-amber-400' : 'text-gray-400 hover:text-white'
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer active:scale-[0.97] ${
+                  activeTab === 'analytics' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 Statistiques
               </button>
             </div>
 
-            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-white rounded-lg transition-colors cursor-pointer active:scale-[0.97]">
-              <X className="w-5 h-5" strokeWidth={1.75} />
+            <button
+              onClick={onClose}
+              className="p-1.5 text-stone-500 hover:text-stone-900 rounded-lg transition-colors cursor-pointer active:scale-[0.97]"
+            >
+              <X className="w-5 h-5" strokeWidth={1.5} />
             </button>
           </div>
         </div>
 
-        {/* Contenu */}
         <div className="flex-grow overflow-y-auto pr-1 space-y-4">
           {loading ? (
-            <p className="text-xs text-gray-400 italic text-center py-12">Chargement du cahier de la boutique...</p>
+            <p className="text-xs text-stone-500 text-center py-12">Chargement du cahier de la boutique...</p>
           ) : activeTab === 'journal' ? (
             <SalesHistory sales={sales} shopId={shopId} isEmployee={true} />
           ) : (

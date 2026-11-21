@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Share2, Sparkles, Check, Search, Send, PenTool, Lightbulb, ClipboardList, Flame, ShoppingCart, X } from 'lucide-react'
+import { Plus, Trash2, Share2, Check, Search, Send, PenTool, Lightbulb, ClipboardList, Flame, X } from 'lucide-react'
 import { formatPrice } from '@/lib/penUtils'
 import { recordRequestedProductInStorage, RequestedProduct } from '@/lib/requestedProductsUtils'
 import { getOfflineSales } from '@/lib/offlineDb'
@@ -20,7 +20,6 @@ export function RequestedProductsManager({
   const [quickInput, setQuickInput] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
 
-  // Form states
   const [name, setName] = useState('')
   const [category, setCategory] = useState('Alimentation')
   const [estimatedPrice, setEstimatedPrice] = useState('')
@@ -39,7 +38,6 @@ export function RequestedProductsManager({
         } catch {}
       }
 
-      // Fusionner avec les ventes de type 'client_request' (patron ↔ employé)
       const salesSource = sales || getOfflineSales(shopId)
       const requestSales = salesSource.filter((s: any) => s.type === 'client_request' && s.status !== 'crossed_out')
 
@@ -49,7 +47,6 @@ export function RequestedProductsManager({
         if (k) mergedMap.set(k, { ...item })
       }
 
-      // Grouper les demandes provenant des ventes pour obtenir le décompte réel
       const saleCountMap = new Map<string, { count: number; lastSale: any; lastPrice?: number }>()
       for (const s of requestSales) {
         const art = s.articles?.[0]
@@ -87,7 +84,7 @@ export function RequestedProductsManager({
       const mergedList = Array.from(mergedMap.values())
       setItems(mergedList)
       localStorage.setItem(storageKey, JSON.stringify(mergedList))
-    } catch { }
+    } catch {}
   }, [storageKey, sales, shopId])
 
   useEffect(() => {
@@ -121,7 +118,7 @@ export function RequestedProductsManager({
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cahier_requested_products_updated'))
       }
-    } catch { }
+    } catch {}
   }
 
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null)
@@ -130,7 +127,6 @@ export function RequestedProductsManager({
     e.preventDefault()
     if (!quickInput.trim()) return
 
-    // Auto-detect price or clean text
     let cleanName = quickInput.trim()
     let price: number | undefined = undefined
     const priceMatch = cleanName.match(/(?:à\s*|:\s*)?(\d+)\s*(?:f|fcfa)?$/i)
@@ -144,7 +140,7 @@ export function RequestedProductsManager({
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('cahier_requested_products_updated'))
     }
-    setFeedbackMsg(`Demande client « ${cleanName} » inscrite dans votre cahier !`)
+    setFeedbackMsg(`Demande « ${cleanName} » enregistrée`)
     setTimeout(() => setFeedbackMsg(null), 3500)
     setQuickInput('')
   }
@@ -182,7 +178,7 @@ export function RequestedProductsManager({
   }
 
   const handleDeleteItem = (id: string) => {
-    if (!confirm("Supprimer cette demande de produit ?")) return
+    if (!confirm('Supprimer cette demande de produit ?')) return
     const updated = items.filter(item => item.id !== id)
     saveItems(updated)
   }
@@ -201,16 +197,14 @@ export function RequestedProductsManager({
     const pendingItems = items.filter(i => i.status === 'pending')
     if (pendingItems.length === 0) return '#'
 
-    let msg = `🛒 *LISTE DE PRODUITS RÉCLAMÉS PAR LES CLIENTS*\n`
-    msg += `📍 *Point de Vente* : ${shopId}\n`
-    msg += `📅 *Date* : ${new Date().toLocaleDateString('fr-FR')}\n`
-    msg += `═════════════════════════\n`
+    let msg = `*LISTE DE PRODUITS RÉCLAMÉS PAR LES CLIENTS*\n`
+    msg += `Point de vente : ${shopId}\n`
+    msg += `Date : ${new Date().toLocaleDateString('fr-FR')}\n`
+    msg += `─────────────────────\n`
     pendingItems.forEach((item, idx) => {
-      msg += `${idx + 1}. *${item.name}* (${item.requestCount} demandes clients)\n`
+      msg += `${idx + 1}. *${item.name}* (${item.requestCount} demande${item.requestCount > 1 ? 's' : ''})\n`
       if (item.estimatedPrice) msg += `   Prix estimé : ${formatPrice(item.estimatedPrice)}\n`
     })
-    msg += `═════════════════════════\n`
-    msg += `✨ _À ajouter d'urgence au stock de la boutique !_`
 
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`
   }
@@ -223,18 +217,17 @@ export function RequestedProductsManager({
   const totalRequestsCount = items.reduce((sum, i) => sum + i.requestCount, 0)
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fbf9f4] p-3 sm:p-4 space-y-4 pb-24 md:pb-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 border border-amber-200 rounded-2xl shadow-sm">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto space-y-4 pb-24 md:pb-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#faf5e8] p-4 border border-[#e2d6be] rounded-2xl">
         <div>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-700 animate-pulse flex-shrink-0" strokeWidth={1.75} />
-            <h2 className="font-handwritten text-xl sm:text-2xl font-bold text-gray-900">
-              Produits Demandés par les Clients
+            <ClipboardList className="w-4 h-4 text-emerald-700 flex-shrink-0" strokeWidth={1.5} />
+            <h2 className="text-base font-semibold text-stone-900">
+              Produits demandés par les clients
             </h2>
           </div>
-          <p className="text-xs text-gray-500 font-sans mt-0.5">
-            Notez ici les marchandises réclamées par vos clients que votre boutique ne vend pas encore.
+          <p className="text-xs text-stone-600 mt-0.5">
+            Notez les marchandises réclamées par vos clients que vous ne vendez pas encore.
           </p>
         </div>
 
@@ -242,42 +235,39 @@ export function RequestedProductsManager({
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-800 hover:bg-amber-900 active:scale-[0.97] text-white rounded-xl text-xs font-bold transition-all duration-100 ease-out shadow-md cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-stone-900 hover:bg-stone-800 active:scale-[0.97] text-white rounded-xl text-xs font-medium transition-colors cursor-pointer"
           >
-            <Plus className="w-4 h-4" strokeWidth={1.75} />
-            <span>Noter une Demande</span>
+            <Plus className="w-4 h-4" strokeWidth={1.5} />
+            <span>Noter une demande</span>
           </button>
-          
+
           <a
             href={generateWhatsAppOrderLink()}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.97] text-white rounded-xl text-xs font-bold transition-all duration-100 ease-out shadow-md cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.97] text-white rounded-xl text-xs font-medium transition-colors cursor-pointer"
           >
-            <Share2 className="w-4 h-4" strokeWidth={1.75} />
+            <Share2 className="w-4 h-4" strokeWidth={1.5} />
             <span>Envoyer WhatsApp (<span className="font-mono tabular-nums">{items.filter(i => i.status === 'pending').length}</span>)</span>
           </a>
         </div>
       </div>
 
-      {/* Saisie Manuscrite au Cahier (Signature Stylo & Effet Papier) */}
-      <div className="bg-[#fefcf6] border-2 border-amber-300 rounded-2xl p-3.5 shadow-sm space-y-2.5">
+      <div className="bg-[#faf5e8] border border-[#e2d6be] rounded-2xl p-4 space-y-2.5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5">
           <div className="flex items-center gap-2">
-            <div className="p-1 rounded-lg bg-amber-100 text-amber-950">
-              <PenTool className="w-4 h-4" strokeWidth={1.75} />
-            </div>
-            <span className="text-xs font-bold text-amber-950 uppercase tracking-wider">
-              Saisie Manuscrite au Cahier des Demandes
+            <PenTool className="w-4 h-4 text-stone-600" strokeWidth={1.5} />
+            <span className="text-xs font-semibold text-stone-900">
+              Saisie rapide au cahier des demandes
             </span>
           </div>
           {feedbackMsg ? (
-            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full animate-bounce">
+            <span className="text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
               {feedbackMsg}
             </span>
           ) : (
-            <span className="text-[9px] font-mono text-amber-800 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded-full whitespace-normal">
-              Écriture libre • Détection automatique
+            <span className="text-[11px] text-stone-500">
+              Écriture libre · Détection automatique du prix
             </span>
           )}
         </div>
@@ -285,136 +275,126 @@ export function RequestedProductsManager({
         <form onSubmit={handleQuickAddHandwritten} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <input
             type="text"
-            placeholder="Écrivez directement ici comme dans votre cahier... (ex: Eau Possotomè 1.5L à 400 ou 2 Sacs de Riz 25kg)"
+            placeholder="ex : Eau Possotomè 1.5L à 400 ou 2 sacs de riz 25 kg"
             value={quickInput}
             onChange={e => setQuickInput(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm sm:text-base font-handwritten text-purple-950 bg-white border border-amber-300 rounded-xl outline-none focus:border-amber-500 shadow-inner placeholder-gray-400 min-w-0"
+            className="flex-1 px-3 py-2 text-xs text-stone-900 bg-white border border-stone-200 rounded-xl outline-none focus:border-emerald-700 placeholder-stone-400 min-w-0"
           />
           <button
             type="submit"
             disabled={!quickInput.trim()}
-            className="px-4 py-2.5 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all duration-100 ease-out disabled:opacity-40 cursor-pointer shadow-md active:scale-[0.97] flex-shrink-0"
+            className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer active:scale-[0.97] flex-shrink-0"
           >
-            <Send className="w-3.5 h-3.5" strokeWidth={1.75} />
-            <span>Écrire au Cahier</span>
+            <Send className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <span>Ajouter</span>
           </button>
         </form>
 
-        <p className="text-[10px] text-amber-800/80 font-sans italic flex items-center gap-1.5">
-          <Lightbulb className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" strokeWidth={1.75} />
-          <span>Astuce : Vous pouvez aussi écrire vos demandes depuis l'onglet principal <strong>Mon Cahier</strong> en tapant <code>demande client [nom du produit]</code>.</span>
+        <p className="text-[11px] text-stone-500 flex items-center gap-1.5">
+          <Lightbulb className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" strokeWidth={1.5} />
+          <span>Astuce : vous pouvez aussi noter une demande depuis Mon Cahier en tapant <code className="font-mono text-stone-700">demande client [produit]</code>.</span>
         </p>
       </div>
 
-      {/* KPI Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-        <div className="bg-white border border-amber-200 p-2.5 sm:p-3.5 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[9px] font-bold text-amber-800 uppercase tracking-wider block">Articles Réclamés</span>
-            <span className="text-sm sm:text-xl font-bold font-mono text-gray-900 tabular-nums">{items.length} refs</span>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="bg-[#faf5e8] border border-[#e2d6be] p-4 rounded-xl space-y-1">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
+            <span className="w-2 h-2 rounded-full bg-amber-600" />
+            <span>Articles réclamés</span>
           </div>
-          <div className="p-2 bg-amber-50 rounded-xl text-amber-700">
-            <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.75} />
-          </div>
+          <p className="text-xl font-semibold font-mono text-stone-900 tabular-nums">{items.length}</p>
         </div>
 
-        <div className="bg-white border border-rose-200 p-2.5 sm:p-3.5 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[9px] font-bold text-rose-800 uppercase tracking-wider block">Total Demandes</span>
-            <span className="text-sm sm:text-xl font-bold font-mono text-rose-900 tabular-nums">{totalRequestsCount} réclamations</span>
+        <div className="bg-[#faf5e8] border border-[#e2d6be] p-4 rounded-xl space-y-1">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
+            <span className="w-2 h-2 rounded-full bg-rose-600" />
+            <span>Total demandes</span>
           </div>
-          <div className="p-2 bg-rose-50 rounded-xl text-rose-700">
-            <Flame className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.75} />
-          </div>
+          <p className="text-xl font-semibold font-mono text-stone-900 tabular-nums">{totalRequestsCount}</p>
         </div>
 
-        <div className="col-span-2 sm:col-span-1 bg-white border border-emerald-200 p-3.5 rounded-2xl flex items-center justify-between shadow-xs">
-          <div>
-            <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider block">À Commander</span>
-            <span className="text-xl font-bold font-mono text-emerald-900 tabular-nums">{items.filter(i => i.status === 'pending').length} articles</span>
+        <div className="col-span-2 sm:col-span-1 bg-[#faf5e8] border border-[#e2d6be] p-4 rounded-xl space-y-1">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
+            <span className="w-2 h-2 rounded-full bg-emerald-600" />
+            <span>À commander</span>
           </div>
-          <div className="p-2 bg-emerald-50 rounded-xl text-emerald-700">
-            <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.75} />
-          </div>
+          <p className="text-xl font-semibold font-mono text-emerald-800 tabular-nums">{items.filter(i => i.status === 'pending').length}</p>
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="relative">
-        <Search className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" strokeWidth={1.75} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" strokeWidth={1.5} />
         <input
           type="text"
-          placeholder="Rechercher un produit réclamé..."
+          placeholder="Rechercher un produit réclamé"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           onKeyDown={e => {
             if (e.key === 'Escape') setSearchTerm('')
           }}
-          className="w-full pl-10 pr-9 py-2.5 bg-white border border-gray-250 rounded-xl text-xs outline-none focus:border-amber-500 font-sans shadow-xs"
+          className="w-full pl-9 pr-9 py-2.5 bg-[#faf5e8] border border-[#e2d6be] rounded-xl text-xs text-stone-900 placeholder-stone-400 outline-none focus:border-emerald-700"
         />
         {searchTerm && (
           <button
             type="button"
             onClick={() => setSearchTerm('')}
-            className="absolute right-3 top-2.5 p-0.5 text-gray-400 hover:text-gray-600 rounded-md active:scale-[0.97] transition-all duration-100 ease-out"
-            title="Effacer la recherche (Échap)"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-700 rounded-md transition-colors cursor-pointer"
+            title="Effacer la recherche"
           >
-            <X className="w-4 h-4" strokeWidth={1.75} />
+            <X className="w-4 h-4" strokeWidth={1.5} />
           </button>
         )}
       </div>
 
-      {/* Grid of Requested Products */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredItems.map(item => {
           const isHighDemand = item.requestCount >= 5
           return (
             <div
               key={item.id}
-              className={`bg-white border rounded-2xl p-4 shadow-sm flex flex-col justify-between space-y-3 transition-all ${
-                isHighDemand ? 'border-rose-300 bg-rose-50/20' : 'border-gray-200 hover:border-amber-300'
+              className={`bg-[#faf5e8] border rounded-xl p-4 flex flex-col justify-between space-y-3 transition-colors ${
+                isHighDemand ? 'border-rose-300' : 'border-[#e2d6be] hover:bg-white'
               }`}
             >
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="font-bold text-sm text-gray-900 leading-snug">{item.name}</span>
+                  <span className="font-semibold text-sm text-stone-900 leading-snug">{item.name}</span>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 whitespace-nowrap flex items-center gap-1 ${
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-medium flex-shrink-0 whitespace-nowrap flex items-center gap-1 border ${
                       isHighDemand
-                        ? 'bg-rose-100 text-rose-800 border border-rose-250'
-                        : 'bg-amber-100 text-amber-900 border border-amber-250'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
                     }`}
                   >
-                    <Flame className={`w-3 h-3 ${isHighDemand ? 'text-rose-600' : 'text-amber-700'}`} strokeWidth={1.75} />
+                    <Flame className={`w-3 h-3 ${isHighDemand ? 'text-rose-600' : 'text-amber-600'}`} strokeWidth={1.5} />
                     <span className="font-mono tabular-nums">{item.requestCount}</span>
                     <span>demande{item.requestCount > 1 ? 's' : ''}</span>
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500">
-                  <span className="bg-gray-100 px-2 py-0.5 rounded-md font-semibold text-gray-700">{item.category}</span>
+                <div className="flex items-center gap-2 text-xs text-stone-500">
+                  <span className="bg-white border border-stone-200 px-2 py-0.5 rounded-md font-medium text-stone-700">{item.category}</span>
                   {item.estimatedPrice && (
-                    <span className="text-emerald-800 font-bold tabular-nums">Prix : {formatPrice(item.estimatedPrice)}</span>
+                    <span className="text-emerald-800 font-mono font-semibold tabular-nums">{formatPrice(item.estimatedPrice)}</span>
                   )}
                 </div>
 
                 {item.notes && (
-                  <p className="text-xs text-gray-600 bg-amber-50/60 p-2.5 border border-amber-150 rounded-xl font-sans leading-relaxed flex items-start gap-1.5">
-                    <Lightbulb className="w-3.5 h-3.5 text-amber-700 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
-                    <span>{item.notes}</span>
+                  <p className="text-xs text-stone-600 bg-white p-2.5 border border-stone-200 rounded-lg leading-relaxed">
+                    {item.notes}
                   </p>
                 )}
               </div>
 
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+              <div className="pt-2.5 border-t border-[#e2d6be]/70 flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => handleIncrementCount(item.id)}
-                  className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-950 rounded-xl text-xs font-bold transition-all duration-100 ease-out flex items-center gap-1 cursor-pointer active:scale-[0.97]"
+                  className="px-2.5 py-1.5 bg-white hover:bg-stone-50 text-stone-800 border border-stone-200 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer active:scale-[0.97]"
                   title="Ajouter 1 demande client supplémentaire"
                 >
-                  <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                  <span>+1 Demande</span>
+                  <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>+1 demande</span>
                 </button>
 
                 <div className="flex items-center gap-1">
@@ -422,14 +402,14 @@ export function RequestedProductsManager({
                     <button
                       type="button"
                       onClick={() => handleMarkAsOrdered(item.id)}
-                      className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-xl text-[10px] font-bold transition-all duration-100 ease-out flex items-center gap-1 cursor-pointer active:scale-[0.97]"
+                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer active:scale-[0.97]"
                       title="Marquer comme commandé au fournisseur"
                     >
-                      <Check className="w-3 h-3" strokeWidth={1.75} />
+                      <Check className="w-3.5 h-3.5" strokeWidth={1.5} />
                       <span>Commander</span>
                     </button>
                   ) : (
-                    <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-lg text-[9px] font-bold uppercase">
+                    <span className="px-2 py-1 bg-stone-100 text-stone-500 rounded-md text-[11px] font-medium">
                       Commandé
                     </span>
                   )}
@@ -437,9 +417,9 @@ export function RequestedProductsManager({
                   <button
                     type="button"
                     onClick={() => handleDeleteItem(item.id)}
-                    className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all duration-100 ease-out active:scale-[0.97] cursor-pointer"
+                    className="p-1.5 text-stone-400 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors active:scale-[0.97] cursor-pointer"
                   >
-                    <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                 </div>
               </div>
@@ -448,63 +428,62 @@ export function RequestedProductsManager({
         })}
 
         {filteredItems.length === 0 && (
-          <div className="col-span-full py-16 text-center space-y-2 bg-white rounded-2xl border border-gray-200">
-            <ClipboardList className="w-12 h-12 text-amber-300 mx-auto" strokeWidth={1.75} />
-            <h3 className="font-handwritten text-xl font-bold text-gray-700">Aucune demande enregistrée</h3>
-            <p className="text-xs text-gray-400 max-w-sm mx-auto">
-              Quand des clients demandent un produit non disponible en rayon, notez-le ici pour l'ajouter à votre prochain réapprovisionnement.
+          <div className="col-span-full py-14 text-center space-y-2 bg-[#faf5e8] rounded-2xl border border-[#e2d6be]">
+            <ClipboardList className="w-8 h-8 text-stone-400 mx-auto" strokeWidth={1.5} />
+            <h3 className="text-sm font-semibold text-stone-900">Aucune demande enregistrée</h3>
+            <p className="text-xs text-stone-500 max-w-sm mx-auto">
+              Quand des clients demandent un produit non disponible en rayon, notez-le ici pour votre prochain réapprovisionnement.
             </p>
           </div>
         )}
       </div>
 
-      {/* Modal Ajout */}
       {showAddModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/50 p-4 backdrop-blur-xs"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowAddModal(false)
           }}
         >
-          <div className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-amber-200 pb-3">
-              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
-                <span>Enregistrer un Produit Réclamé par un Client</span>
+          <div className="bg-[#faf5e8] border border-[#e2d6be] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+              <h3 className="font-semibold text-sm text-stone-900 flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-emerald-700" strokeWidth={1.5} />
+                <span>Noter un produit réclamé</span>
               </h3>
-              <button 
-                onClick={() => setShowAddModal(false)} 
-                className="text-gray-400 hover:text-gray-700 active:scale-[0.97] p-1 transition-transform cursor-pointer rounded-full"
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-stone-400 hover:text-stone-700 p-1 transition-colors cursor-pointer rounded-lg"
                 title="Fermer"
               >
-                <X className="w-4 h-4" strokeWidth={1.75} />
+                <X className="w-4 h-4" strokeWidth={1.5} />
               </button>
             </div>
 
             <form onSubmit={handleAddRequestedProduct} className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-gray-700 mb-1 uppercase text-[9px] tracking-wider">
-                  Nom du Produit Réclamé *
+                <label className="block font-medium text-stone-700 mb-1">
+                  Nom du produit réclamé *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Eau Possotomè 1.5L, Biscuit Oreos..."
+                  placeholder="ex : Eau Possotomè 1.5L, Biscuit Oreos"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl font-bold text-gray-900 outline-none focus:border-amber-500"
+                  className="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-900 outline-none focus:border-emerald-700"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-bold text-gray-700 mb-1 uppercase text-[9px] tracking-wider">
+                  <label className="block font-medium text-stone-700 mb-1">
                     Catégorie
                   </label>
                   <select
                     value={category}
                     onChange={e => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl font-semibold text-gray-800 outline-none"
+                    className="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-800 outline-none focus:border-emerald-700"
                   >
                     <option value="Alimentation">Alimentation</option>
                     <option value="Boissons">Boissons</option>
@@ -515,43 +494,43 @@ export function RequestedProductsManager({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-gray-700 mb-1 uppercase text-[9px] tracking-wider">
-                    Prix Estimé (FCFA)
+                  <label className="block font-medium text-stone-700 mb-1">
+                    Prix estimé (FCFA)
                   </label>
                   <input
                     type="number"
-                    placeholder="Ex: 500"
+                    placeholder="ex : 500"
                     value={estimatedPrice}
                     onChange={e => setEstimatedPrice(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl font-bold text-gray-900 outline-none"
+                    className="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-900 font-mono tabular-nums outline-none focus:border-emerald-700"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-gray-700 mb-1 uppercase text-[9px] tracking-wider">
-                  Notes / Remarques Client
+                <label className="block font-medium text-stone-700 mb-1">
+                  Notes / remarques
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Ex: 3 clients différents sont venus en réclamer ce matin"
+                  placeholder="ex : 3 clients en ont demandé ce matin"
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-gray-800 outline-none"
+                  className="w-full px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-800 outline-none focus:border-emerald-700"
                 />
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex justify-end gap-2 border-t border-stone-200">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold active:scale-[0.97] transition-all cursor-pointer"
+                  className="px-4 py-2 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 rounded-xl font-medium active:scale-[0.97] transition-colors cursor-pointer"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-amber-800 hover:bg-amber-900 text-white rounded-xl font-bold shadow-md active:scale-[0.97] transition-all cursor-pointer"
+                  className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-medium active:scale-[0.97] transition-colors cursor-pointer"
                 >
                   Enregistrer
                 </button>

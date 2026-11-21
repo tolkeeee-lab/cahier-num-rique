@@ -324,7 +324,7 @@ export function SalesHistory({
       />
 
       {filteredSales.length === 0 ? (
-        <div className="p-12 text-center text-gray-500 bg-white/80 rounded-2xl border border-amber-300/80 font-mono text-xs shadow-sm">
+        <div className="p-12 text-center text-stone-500 bg-[#faf5e8] rounded-2xl border border-[#e2d6be] text-xs">
           Aucune vente ne correspond à vos critères de recherche.
         </div>
       ) : (
@@ -385,158 +385,147 @@ export function SalesHistory({
 
             return (
               <div key={dateKey} className="space-y-2.5">
-                {/* ── Séparateur de Date Interactif avec CA & Déclencheur du Bilan ── */}
                 <button
                   type="button"
                   onClick={() => toggleBilan(dateKey)}
-                  className="w-full text-left flex items-center justify-between gap-2 py-2 px-3.5 bg-gradient-to-r from-amber-100/95 via-yellow-50 to-amber-100/95 hover:from-amber-200/90 hover:via-yellow-100 hover:to-amber-200/90 border border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs transition-all active:scale-[0.99] cursor-pointer group select-none"
+                  className="w-full text-left flex items-center justify-between gap-2 py-2.5 px-4 bg-[#faf5e8] hover:bg-[#f5efe0] border border-[#e2d6be] rounded-xl text-xs transition-colors active:scale-[0.99] cursor-pointer group select-none"
                   title="Cliquer pour ouvrir ou fermer le bilan financier détaillé de cette journée"
                 >
-                  <div className="flex items-center gap-2 font-handwritten font-black text-sm sm:text-base text-amber-950">
-                    <Calendar className="w-4 h-4 text-amber-900 flex-shrink-0" strokeWidth={1.75} />
+                  <div className="flex items-center gap-2 font-semibold text-sm text-stone-900">
+                    <Calendar className="w-4 h-4 text-stone-500 flex-shrink-0" strokeWidth={1.5} />
                     <span>{formatLongDateFr(dateKey)}</span>
                   </div>
 
-                  <div className="flex items-center gap-2 font-mono text-xs flex-wrap justify-end">
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-2xs tabular-nums">
+                  <div className="flex items-center gap-2 text-xs flex-wrap justify-end">
+                    <span className="px-2.5 py-0.5 rounded-md font-semibold text-xs bg-white text-stone-900 border border-stone-200 font-mono tabular-nums">
                       CA : +{formatPrice(salesTotal)}
                     </span>
 
                     {expensesExceedCA ? (
-                      <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-rose-600 text-white border border-rose-700 shadow-2xs tabular-nums flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3 text-white" strokeWidth={2} />
+                      <span className="px-2.5 py-0.5 rounded-md font-semibold text-xs bg-rose-50 text-rose-700 border border-rose-200 font-mono tabular-nums flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-rose-600" strokeWidth={1.5} />
                         <span>Dépenses &gt; CA ({dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`})</span>
                       </span>
                     ) : dayNet > 0 ? (
-                      <span className="px-2.5 py-0.5 rounded-full font-extrabold text-xs bg-emerald-600 text-white shadow-2xs tabular-nums hidden sm:inline-flex">
+                      <span className="px-2.5 py-0.5 rounded-md font-semibold text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono tabular-nums hidden sm:inline-flex">
                         Net : +{formatPrice(dayNet)}
                       </span>
                     ) : null}
 
-                    <span className="px-2.5 py-0.5 rounded-full font-extrabold bg-amber-900/10 text-amber-950 border border-amber-300 text-[11px] tabular-nums">
-                      {validDateSales.length} écriture(s)
+                    <span className="px-2 py-0.5 rounded-md font-medium bg-stone-100 text-stone-600 text-[11px] font-mono tabular-nums">
+                      {validDateSales.length} écriture{validDateSales.length > 1 ? 's' : ''}
                     </span>
 
-                    <span className="px-2 py-0.5 rounded-lg bg-amber-200 text-amber-950 group-hover:bg-amber-300 border border-amber-400/80 transition-colors flex items-center gap-1 text-[11px] font-bold shadow-2xs">
+                    <span className="px-2 py-0.5 rounded-md bg-white text-stone-700 group-hover:bg-stone-50 border border-stone-200 transition-colors flex items-center gap-1 text-[11px] font-medium">
                       <span>Bilan</span>
                       {isExpanded ? (
-                        <ChevronUp className="w-3.5 h-3.5 text-amber-950" strokeWidth={2.2} />
+                        <ChevronUp className="w-3.5 h-3.5 text-stone-500" strokeWidth={1.5} />
                       ) : (
-                        <ChevronDown className="w-3.5 h-3.5 text-amber-950" strokeWidth={2.2} />
+                        <ChevronDown className="w-3.5 h-3.5 text-stone-500" strokeWidth={1.5} />
                       )}
                     </span>
                   </div>
                 </button>
 
-                {/* ── Bilan Financier & Flux de Caisse Déroulant ── */}
                 {isExpanded && (
-                  <div className="p-3.5 sm:p-4 bg-gradient-to-br from-amber-50/95 via-[#fffdf9] to-yellow-50/90 border-2 border-amber-300/90 rounded-2xl font-mono text-xs shadow-md space-y-3">
-                    <div className="flex items-center justify-between border-b-2 border-dashed border-amber-300/80 pb-2 font-handwritten font-black text-amber-950 text-sm sm:text-base">
-                      <div className="flex items-center gap-2">
-                        <Calculator className="w-4 h-4 text-emerald-800" strokeWidth={1.75} />
-                        <span className="tracking-wide uppercase">Bilan & Flux de Caisse de la Journée</span>
+                  <div className="p-4 bg-white border border-[#e2d6be] rounded-xl text-xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-stone-200 pb-2.5">
+                      <div className="flex items-center gap-2 font-semibold text-stone-900 text-sm">
+                        <Calculator className="w-4 h-4 text-emerald-700" strokeWidth={1.5} />
+                        <span>Bilan et flux de caisse</span>
                       </div>
-                      <span className="font-mono text-xs text-amber-950 bg-amber-200/80 px-2.5 py-0.5 rounded-full font-bold border border-amber-300">
+                      <span className="text-xs text-stone-500">
                         {formatLongDateFr(dateKey)}
                       </span>
                     </div>
 
-                    {/* Alerte explicite si les dépenses dépassent les rentrées */}
                     {expensesExceedCA && (
-                      <div className="p-3 bg-rose-50 border border-rose-300 rounded-xl text-rose-950 flex items-start gap-2.5 shadow-2xs">
-                        <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
+                      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 flex items-start gap-2.5">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
                         <div className="text-xs space-y-0.5">
-                          <p className="font-extrabold text-rose-900">
-                            Attention : Les dépenses du jour dépassent le Chiffre d'Affaires !
+                          <p className="font-semibold text-rose-900">
+                            Les dépenses du jour dépassent le chiffre d&apos;affaires
                           </p>
-                          <p className="text-[11px] text-rose-800 font-sans leading-relaxed">
-                            Même si le Chiffre d'Affaires affiche <span className="font-mono font-bold">+{formatPrice(salesTotal)}</span>, le total des sorties réelles de caisse (dépenses, achats stock, règlements fournisseurs) s'élève à <span className="font-mono font-bold">-{formatPrice(totalCashOut)}</span>, laissant un déficit net de caisse de <span className="font-mono font-extrabold text-rose-950">-{formatPrice(Math.abs(dayNet))}</span>.
+                          <p className="text-xs text-rose-800 leading-relaxed">
+                            Même si le chiffre d&apos;affaires affiche <span className="font-mono font-semibold tabular-nums">+{formatPrice(salesTotal)}</span>, les sorties réelles de caisse s&apos;élèvent à <span className="font-mono font-semibold tabular-nums">-{formatPrice(totalCashOut)}</span>, soit un déficit net de <span className="font-mono font-semibold tabular-nums">-{formatPrice(Math.abs(dayNet))}</span>.
                           </p>
                         </div>
                       </div>
                     )}
 
-                    {/* Lignes de décomposition arithmétique */}
-                    <div className="space-y-1.5 pt-1">
-                      {/* Ventes encaissées */}
-                      <div className="flex justify-between items-center bg-blue-100/70 p-2 rounded-xl border border-blue-300/80">
-                        <span className="text-blue-950 font-bold flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
-                          <span>(+) Ventes au comptant (encaissées en caisse)</span>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center bg-[#faf5e8] px-3 py-2 rounded-lg border border-stone-200">
+                        <span className="text-stone-700 font-medium flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
+                          <span>Ventes au comptant (encaissées)</span>
                         </span>
-                        <span className="font-black text-blue-950 text-sm font-mono tabular-nums">+{formatPrice(salesCashTotal)}</span>
+                        <span className="font-semibold text-stone-900 text-sm font-mono tabular-nums">+{formatPrice(salesCashTotal)}</span>
                       </div>
 
-                      {/* Règlements clients */}
                       {repaymentsReceivedTotal > 0 && (
-                        <div className="flex justify-between items-center bg-sky-100/70 p-2 rounded-xl border border-sky-300/80">
-                          <span className="text-sky-950 font-bold flex items-center gap-1.5">
+                        <div className="flex justify-between items-center bg-[#faf5e8] px-3 py-2 rounded-lg border border-stone-200">
+                          <span className="text-stone-700 font-medium flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-sky-600 inline-block" />
-                            <span>(+) Dettes clients remboursées (cash reçu)</span>
+                            <span>Dettes clients remboursées</span>
                           </span>
-                          <span className="font-black text-sky-950 text-sm font-mono tabular-nums">+{formatPrice(repaymentsReceivedTotal)}</span>
+                          <span className="font-semibold text-stone-900 text-sm font-mono tabular-nums">+{formatPrice(repaymentsReceivedTotal)}</span>
                         </div>
                       )}
 
-                      {/* Dépenses */}
-                      <div className="flex justify-between items-center bg-rose-100/70 p-2 rounded-xl border border-rose-300/80">
-                        <span className="text-rose-950 font-bold flex items-center gap-1.5">
+                      <div className="flex justify-between items-center bg-[#faf5e8] px-3 py-2 rounded-lg border border-stone-200">
+                        <span className="text-stone-700 font-medium flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
-                          <span>(-) Dépenses diverses payées</span>
+                          <span>Dépenses diverses payées</span>
                         </span>
-                        <span className="font-black text-rose-950 text-sm font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
+                        <span className="font-semibold text-rose-700 text-sm font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
                       </div>
 
-                      {/* Achats Stock Cash */}
                       {stockCashTotal > 0 && (
-                        <div className="flex justify-between items-center bg-emerald-100/70 p-2 rounded-xl border border-emerald-300/80">
-                          <span className="text-emerald-950 font-bold flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
-                            <span>(-) Achats marchandises / stock (cash décaissé)</span>
+                        <div className="flex justify-between items-center bg-[#faf5e8] px-3 py-2 rounded-lg border border-stone-200">
+                          <span className="text-stone-700 font-medium flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-stone-500 inline-block" />
+                            <span>Achats stock (cash décaissé)</span>
                           </span>
-                          <span className="font-black text-emerald-950 text-sm font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
+                          <span className="font-semibold text-stone-900 text-sm font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
                         </div>
                       )}
 
-                      {/* Règlements fournisseurs */}
                       {supplierPaymentsTotal > 0 && (
-                        <div className="flex justify-between items-center bg-rose-100/70 p-2 rounded-xl border border-rose-300/80">
-                          <span className="text-rose-950 font-bold flex items-center gap-1.5">
+                        <div className="flex justify-between items-center bg-[#faf5e8] px-3 py-2 rounded-lg border border-stone-200">
+                          <span className="text-stone-700 font-medium flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
-                            <span>(-) Dettes fournisseurs remboursées (cash sorti)</span>
+                            <span>Dettes fournisseurs remboursées</span>
                           </span>
-                          <span className="font-black text-rose-950 text-sm font-mono tabular-nums">-{formatPrice(supplierPaymentsTotal)}</span>
+                          <span className="font-semibold text-rose-700 text-sm font-mono tabular-nums">-{formatPrice(supplierPaymentsTotal)}</span>
                         </div>
                       )}
 
-                      {/* Ligne Maîtresse : Solde Net de Caisse */}
-                      <div className={`mt-2 pt-2.5 pb-2.5 px-3 border-2 flex items-center justify-between font-black text-sm sm:text-base rounded-xl shadow-xs ${
+                      <div className={`mt-2 px-3.5 py-2.5 border flex items-center justify-between font-semibold text-sm rounded-xl ${
                         dayNet >= 0
-                          ? 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-300/60'
-                          : 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-300/60'
+                          ? 'bg-emerald-700 text-white border-emerald-800'
+                          : 'bg-rose-700 text-white border-rose-800'
                       }`}>
-                        <span className="flex items-center gap-2 font-handwritten text-base sm:text-lg">
-                          <Coins className="w-5 h-5 text-white" />
-                          <span>SOLDE NET DE CAISSE DU JOUR</span>
+                        <span className="flex items-center gap-2">
+                          <Coins className="w-4 h-4 text-white/90" strokeWidth={1.5} />
+                          <span>Solde net de caisse du jour</span>
                         </span>
-                        <span className="font-mono font-black text-base sm:text-lg tabular-nums">
+                        <span className="font-mono font-semibold text-base tabular-nums">
                           {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
                         </span>
                       </div>
 
-                      {/* Crédits et Dettes contractés aujourd'hui */}
                       {(creditsGivenTotal > 0 || supplierDebtsContracted > 0) && (
-                        <div className="pt-2 border-t border-dashed border-amber-300 flex items-center justify-between text-[11px] font-bold text-gray-700 flex-wrap gap-2">
+                        <div className="pt-2 border-t border-stone-200 flex items-center justify-between text-xs text-stone-600 flex-wrap gap-2">
                           {creditsGivenTotal > 0 && (
-                            <span className="text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 font-mono tabular-nums">
-                              <Clock className="w-3.5 h-3.5 text-amber-700" />
-                              <span>Crédits accordés aux clients : {formatPrice(creditsGivenTotal)}</span>
+                            <span className="text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1.5 font-mono tabular-nums">
+                              <Clock className="w-3.5 h-3.5 text-amber-700" strokeWidth={1.5} />
+                              <span>Crédits clients : {formatPrice(creditsGivenTotal)}</span>
                             </span>
                           )}
                           {supplierDebtsContracted > 0 && (
-                            <span className="text-fuchsia-900 bg-fuchsia-100 px-2.5 py-1 rounded-lg border border-fuchsia-300 flex items-center gap-1 font-mono tabular-nums">
-                              <Clock className="w-3.5 h-3.5 text-fuchsia-700" />
-                              <span>Dettes contractées (fournisseurs) : {formatPrice(supplierDebtsContracted)}</span>
+                            <span className="text-stone-700 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200 flex items-center gap-1.5 font-mono tabular-nums">
+                              <Clock className="w-3.5 h-3.5 text-stone-500" strokeWidth={1.5} />
+                              <span>Dettes fournisseurs : {formatPrice(supplierDebtsContracted)}</span>
                             </span>
                           )}
                         </div>

@@ -54,7 +54,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
           const qty = Number(art.quantity || 1)
           const rev = unitPrice * qty
           const nameLower = (art.name || '').toLowerCase()
-          const isProduit = nameLower.includes('huile') || nameLower.includes('tissu') || nameLower.includes('pièce') || nameLower.includes('produit') || nameLower.includes('savon') || nameLower.includes('crème')
+          const isProduit = nameLower.includes('huile') || nameLower.includes('tissu') || nameLower.includes('piÃ¨ce') || nameLower.includes('produit') || nameLower.includes('savon') || nameLower.includes('crÃ¨me')
 
           if (isProduit) {
             totalProduits += rev
@@ -99,7 +99,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
 
   return (
     <div className="space-y-6">
-      {/* En-tête Services */}
+      {/* En-tÃªte Services */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-blue-200 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 flex-shrink-0">
@@ -116,7 +116,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Boutons Période */}
+          {/* Boutons PÃ©riode */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border border-gray-200">
             {[
               { id: 'all', label: 'Tout' },
@@ -127,7 +127,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
               <button
                 key={p.id}
                 onClick={() => onPeriodChange(p.id as any)}
-                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer active:scale-[0.97] ${
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-normal rounded-xl transition-colors cursor-pointer active:scale-[0.97] ${
                   period === p.id 
                     ? 'bg-gray-900 text-white shadow-sm' 
                     : 'text-gray-600 hover:bg-gray-200'
@@ -142,7 +142,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
             href={generateWhatsAppPerformanceReport(sales, period === 'all' ? 'Tout' : period === 'month' ? 'Ce Mois' : period === '7days' ? '7 Jours' : 'Aujourd\'hui', shopName)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm active:scale-[0.97] cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-colors shadow-sm active:scale-[0.97] cursor-pointer"
           >
             <Share2 className="w-3 h-3" />
             <span>Rapport Atelier WhatsApp</span>
@@ -150,7 +150,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
         </div>
       </div>
 
-      {/* 4 KPIs Clés Services */}
+      {/* 4 KPIs ClÃ©s Services */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-[24px] p-4 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
@@ -163,7 +163,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
         </div>
 
         <div className="bg-white border border-gray-200 rounded-[24px] p-4 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+          <div className="p-3 bg-stone-100 text-stone-700 rounded-2xl">
             <Users className="w-5 h-5" />
           </div>
           <div>
@@ -177,7 +177,7 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
             <Scissors className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Main d'Œuvre Pur</span>
+            <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">Main d'Å’uvre Pur</span>
             <span className="text-lg font-bold font-mono tabular-nums text-gray-800">{formatPrice(serviceStats.totalServices)}</span>
           </div>
         </div>
@@ -193,36 +193,36 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
         </div>
       </div>
 
-      {/* Dualité Main d'Œuvre vs Fournitures */}
+      {/* DualitÃ© Main d'Å’uvre vs Fournitures */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
-          <Scissors className="w-5 h-5 text-purple-600" />
-          <span>Répartition Main d'Œuvre vs Ventes Produits</span>
+          <Scissors className="w-5 h-5 text-stone-700" />
+          <span>RÃ©partition Main d'Å’uvre vs Ventes Produits</span>
         </h3>
 
         <div className="space-y-3">
           <div className="h-6 w-full bg-gray-100 rounded-2xl overflow-hidden flex shadow-inner border border-gray-200">
             <div
-              className="bg-purple-700 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all overflow-hidden"
+              className="bg-stone-800 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-colors overflow-hidden"
               style={{ width: `${serviceStats.ratioServices}%` }}
             >
               {serviceStats.ratioServices >= 12 ? `Services ${serviceStats.ratioServices}%` : ''}
             </div>
             <div
-              className="bg-emerald-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all overflow-hidden"
+              className="bg-emerald-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-colors overflow-hidden"
               style={{ width: `${serviceStats.ratioProduits}%` }}
             >
-              {serviceStats.ratioProduits >= 12 ? `Matériel ${serviceStats.ratioProduits}%` : ''}
+              {serviceStats.ratioProduits >= 12 ? `MatÃ©riel ${serviceStats.ratioProduits}%` : ''}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-            <div className="bg-purple-50 border border-purple-200 p-3 rounded-2xl flex justify-between items-center">
-              <span className="font-bold text-purple-900 flex items-center gap-1.5">
-                <Scissors className="w-4 h-4 text-purple-600" />
-                <span>Main d'Œuvre & Prestations</span>
+            <div className="bg-stone-100 border border-stone-200 p-3 rounded-2xl flex justify-between items-center">
+              <span className="font-bold text-stone-700 flex items-center gap-1.5">
+                <Scissors className="w-4 h-4 text-stone-700" />
+                <span>Main d'Å’uvre & Prestations</span>
               </span>
-              <strong className="text-purple-950 tabular-nums">{formatPrice(serviceStats.totalServices)}</strong>
+              <strong className="text-stone-700 tabular-nums">{formatPrice(serviceStats.totalServices)}</strong>
             </div>
             <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl flex justify-between items-center">
               <span className="font-bold text-emerald-900 flex items-center gap-1.5">
@@ -239,24 +239,24 @@ export function ServicesAnalyticsWidget({ sales, period, onPeriodChange, shopNam
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-amber-500" />
-          <span>Top Prestations & Services Réalisés ({serviceStats.topServices.length})</span>
+          <span>Top Prestations & Services RÃ©alisÃ©s ({serviceStats.topServices.length})</span>
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {serviceStats.topServices.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between bg-[#fdfaf2] border border-gray-200 p-3 rounded-2xl">
+            <div key={idx} className="flex items-center justify-between bg-[#faf5e8] border border-gray-200 p-3 rounded-2xl">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-purple-900 text-white font-mono text-[10px] font-bold flex items-center justify-center">
                   #{idx + 1}
                 </span>
                 <span className="font-bold text-xs text-gray-900 flex items-center gap-1.5">
-                  <Scissors className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                  <Scissors className="w-3.5 h-3.5 text-stone-700 flex-shrink-0" />
                   <span>{item.name}</span>
                 </span>
               </div>
               <div className="text-right font-mono">
-                <span className="text-xs font-bold text-purple-900 block tabular-nums">{formatPrice(item.revenue)}</span>
-                <span className="text-[9px] text-gray-500 tabular-nums">{item.qty} réalisé(s)</span>
+                <span className="text-xs font-bold text-stone-700 block tabular-nums">{formatPrice(item.revenue)}</span>
+                <span className="text-[9px] text-gray-500 tabular-nums">{item.qty} rÃ©alisÃ©(s)</span>
               </div>
             </div>
           ))}

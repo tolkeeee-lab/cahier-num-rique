@@ -1,16 +1,5 @@
 'use client'
 
-/**
- * /auth/callback — Page cliente de callback Supabase
- *
- * Supabase redirige ici après qu'un employé clique sur son lien d'invitation.
- * Le token peut arriver :
- *   - Dans le fragment de l'URL : #access_token=...&refresh_token=...&type=invite
- *   - Ou en query param : ?code=... (PKCE flow)
- *
- * Le client Supabase (avec detectSessionInUrl: true) gère les deux automatiquement.
- */
-
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseClient } from '@/lib/supabaseClient'
@@ -32,7 +21,7 @@ export default function AuthCallbackPage() {
         const search = window.location.search
 
         if (!hash && !search) {
-          throw new Error('Aucun paramètre d\'authentification trouvé dans l\'URL.')
+          throw new Error("Aucun paramètre d'authentification trouvé dans l'URL.")
         }
 
         const { data, error } = await supabaseClient.auth.getSession()
@@ -81,32 +70,32 @@ export default function AuthCallbackPage() {
   }, [router])
 
   return (
-    <div className="min-h-screen bg-[#141210] flex items-center justify-center px-4">
-      <div className="bg-[#1c1a17] border border-gray-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+    <div className="min-h-screen bg-[#f5efe0] flex items-center justify-center px-4">
+      <div className="bg-[#faf5e8] border border-[#e2d6be] rounded-2xl p-8 max-w-sm w-full text-center shadow-sm">
         {status === 'loading' && (
           <>
-            <Loader2 className="w-10 h-10 text-amber-500 animate-spin mx-auto mb-4" />
-            <p className="text-amber-400 font-bold text-sm uppercase tracking-widest">Connexion en cours...</p>
-            <p className="text-gray-500 text-xs mt-2 font-mono">Vérification de votre invitation</p>
+            <Loader2 className="w-8 h-8 text-emerald-700 animate-spin mx-auto mb-4" strokeWidth={1.5} />
+            <p className="text-stone-900 font-semibold text-sm">Connexion en cours</p>
+            <p className="text-stone-500 text-xs mt-1.5">Vérification de votre invitation</p>
           </>
         )}
         {status === 'success' && (
           <>
-            <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-400">
-              <CheckCircle2 className="w-6 h-6" />
+            <div className="w-11 h-11 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-center mx-auto mb-4 text-emerald-700">
+              <CheckCircle2 className="w-5 h-5" strokeWidth={1.5} />
             </div>
-            <p className="text-emerald-400 font-bold text-sm uppercase tracking-widest">Connexion réussie !</p>
-            <p className="text-gray-400 text-xs mt-2">Redirection vers votre cahier...</p>
+            <p className="text-stone-900 font-semibold text-sm">Connexion réussie</p>
+            <p className="text-stone-500 text-xs mt-1.5">Redirection vers votre cahier</p>
           </>
         )}
         {status === 'error' && (
           <>
-            <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-400">
-              <AlertTriangle className="w-6 h-6" />
+            <div className="w-11 h-11 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-center mx-auto mb-4 text-rose-700">
+              <AlertTriangle className="w-5 h-5" strokeWidth={1.5} />
             </div>
-            <p className="text-rose-400 font-bold text-sm uppercase tracking-widest">Lien invalide ou expiré</p>
-            <p className="text-gray-400 text-xs mt-2">{message}</p>
-            <p className="text-gray-500 text-[10px] mt-3 font-mono">Demandez à votre gérant de vous renvoyer une invitation.</p>
+            <p className="text-stone-900 font-semibold text-sm">Lien invalide ou expiré</p>
+            <p className="text-stone-600 text-xs mt-1.5">{message}</p>
+            <p className="text-stone-500 text-[11px] mt-3">Demandez à votre gérant de vous renvoyer une invitation.</p>
           </>
         )}
       </div>

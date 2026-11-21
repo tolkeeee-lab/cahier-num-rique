@@ -252,48 +252,46 @@ export function ShoppingListManager({
         onConvertToStockPurchase={onConvertToStockPurchase ? () => onConvertToStockPurchase(items.map(it => it.unitCost > 0 ? `${it.quantity} ${it.name} à ${it.unitCost}` : `${it.quantity} ${it.name}`).join(', ')) : undefined}
       />
 
-      {/* Formulaire rapide d'ajout */}
-      <form onSubmit={handleAddItem} className="bg-white/90 p-4 rounded-2xl border border-amber-300/80 space-y-3 shadow-sm">
+      <form onSubmit={handleAddItem} className="bg-[#faf5e8] p-4 rounded-2xl border border-[#e2d6be] space-y-3">
         <div className="flex items-center gap-2">
-          <ShoppingBag className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-          <h4 className="text-sm font-extrabold text-gray-900">Ajouter un produit au Bon de Commande</h4>
+          <ShoppingBag className="w-4 h-4 text-emerald-700" strokeWidth={1.5} />
+          <h4 className="text-sm font-semibold text-stone-900">Ajouter un produit au bon de commande</h4>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
           <input
             type="text"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
-            placeholder="Nom du produit (ex: Sac de riz 50kg, Carton Beaufort...)"
-            className="sm:col-span-6 px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-bold"
+            placeholder="Nom du produit (ex : Sac de riz 50 kg)"
+            className="sm:col-span-6 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
           <input
             type="number"
             value={qtyInput}
             onChange={(e) => setQtyInput(e.target.value)}
             placeholder="Qté"
-            className="sm:col-span-2 px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-extrabold focus:outline-none font-mono tabular-nums text-center"
+            className="sm:col-span-2 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 font-semibold focus:outline-none focus:border-emerald-700 font-mono tabular-nums text-center"
           />
           <input
             type="number"
             value={costInput}
             onChange={(e) => setCostInput(e.target.value)}
             placeholder="Coût unitaire (F)"
-            className="sm:col-span-2 px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-extrabold focus:outline-none font-mono tabular-nums text-right"
+            className="sm:col-span-2 px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 font-semibold focus:outline-none focus:border-emerald-700 font-mono tabular-nums text-right"
           />
           <button
             type="submit"
             disabled={!nameInput.trim()}
-            className="sm:col-span-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-[0.97] text-white text-xs font-extrabold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+            className="sm:col-span-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.97] text-white text-xs font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer"
           >
-            <Plus className="w-4 h-4" strokeWidth={1.75} />
+            <Plus className="w-4 h-4" strokeWidth={1.5} />
             <span>Ajouter</span>
           </button>
         </div>
       </form>
 
-      {/* Liste des articles du Bon de Commande */}
       {filteredItems.length === 0 ? (
-        <div className="p-12 text-center text-gray-500 bg-white/80 rounded-2xl border border-amber-300/80 font-mono text-xs shadow-sm">
+        <div className="p-12 text-center text-stone-500 bg-[#faf5e8] rounded-2xl border border-[#e2d6be] text-xs">
           Votre bon de commande est actuellement vide.
         </div>
       ) : (
@@ -309,11 +307,10 @@ export function ShoppingListManager({
         </div>
       )}
 
-      {/* Bilan du bon de commande */}
       {items.length > 0 && (
-        <div className="bg-amber-100/90 p-4 rounded-2xl border border-amber-300 flex justify-between items-center font-mono shadow-sm">
-          <span className="text-xs text-amber-950 font-bold">Total estimé de la commande :</span>
-          <span className="text-lg font-black text-amber-950 tabular-nums tracking-tight">
+        <div className="bg-[#faf5e8] p-4 rounded-2xl border border-[#e2d6be] flex justify-between items-center">
+          <span className="text-xs text-stone-700 font-medium">Total estimé de la commande</span>
+          <span className="text-lg font-semibold text-stone-900 font-mono tabular-nums">
             {formatPrice(totalEstimated)}
           </span>
         </div>

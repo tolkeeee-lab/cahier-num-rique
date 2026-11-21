@@ -32,73 +32,69 @@ export const AuthLoginForm: React.FC<AuthLoginFormProps> = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
+    <form onSubmit={handleSubmit} className="space-y-4 text-xs">
       {error && (
-        <div className="p-3 rounded-xl bg-red-950/40 border border-red-800/60 text-red-400 text-xs">
+        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
           {error}
         </div>
       )}
 
-      {/* Champ E-mail */}
       <div>
-        <label className="block text-gray-300 font-bold uppercase mb-1">
-          Adresse e-mail :
+        <label className="block text-stone-700 font-medium mb-1.5">
+          Adresse e-mail
         </label>
         <div className="relative">
-          <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" strokeWidth={1.5} />
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="votre.email@exemple.com"
             required
-            className="w-full pl-9 pr-3 py-2.5 bg-[#141210] border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+            className="w-full pl-9 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
         </div>
       </div>
 
-      {/* Champ Mot de passe (si non Magic Link) */}
       {!useMagicLink && (
         <div>
-          <label className="block text-gray-300 font-bold uppercase mb-1">
-            Mot de passe :
+          <label className="block text-stone-700 font-medium mb-1.5">
+            Mot de passe
           </label>
           <div className="relative">
-            <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" strokeWidth={1.5} />
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="w-full pl-9 pr-3 py-2.5 bg-[#141210] border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+              className="w-full pl-9 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
             />
           </div>
         </div>
       )}
 
-      {/* Option Magic Link */}
       {onMagicLink && (
-        <div className="flex items-center justify-between text-[11px] pt-1">
+        <div className="flex items-center justify-between text-xs pt-0.5">
           <button
             type="button"
             onClick={() => setUseMagicLink(!useMagicLink)}
-            className="text-amber-400 hover:underline flex items-center gap-1"
+            className="text-emerald-700 hover:underline flex items-center gap-1.5 cursor-pointer"
           >
-            <Wand2 className="w-3.5 h-3.5" />
-            <span>{useMagicLink ? 'Utiliser mot de passe' : 'Connexion sans mot de passe (Magic Link)'}</span>
+            <Wand2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <span>{useMagicLink ? 'Utiliser un mot de passe' : 'Connexion sans mot de passe'}</span>
           </button>
         </div>
       )}
 
-      {/* Bouton de validation */}
       <button
         type="submit"
         disabled={loading || !email.trim()}
-        className="w-full py-3 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+        className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-xl active:scale-[0.98] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
       >
-        <span>{loading ? 'Connexion...' : useMagicLink ? 'Envoyer le lien de connexion' : 'Se Connecter'}</span>
-        <ArrowRight className="w-4 h-4" />
+        <span>{loading ? 'Connexion...' : useMagicLink ? 'Envoyer le lien de connexion' : 'Se connecter'}</span>
+        <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
       </button>
     </form>
   )

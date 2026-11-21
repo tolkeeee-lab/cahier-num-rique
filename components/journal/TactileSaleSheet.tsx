@@ -43,13 +43,13 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
   const [showVisualCarton, setShowVisualCarton] = useState<boolean>(false)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
-  // Reset des valeurs à l'ouverture pour un nouveau produit
+  // Reset des valeurs Ã  l'ouverture pour un nouveau produit
   useEffect(() => {
     if (product) {
       setQuantity(Math.max(1, initialQty))
       setDiscountAmount(0)
       setCustomPrice(null)
-      // Si le produit a un gros conditionnement (ex: carton), démarrer en détail ou carton selon la quantité initiale
+      // Si le produit a un gros conditionnement (ex: carton), dÃ©marrer en dÃ©tail ou carton selon la quantitÃ© initiale
       if (product.multiplier && product.multiplier > 1 && initialQty >= product.multiplier) {
         setSelectedTier('carton')
       } else {
@@ -82,10 +82,10 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
   const lotBasePrice = product.lot_price || 0
   const hasLot = lotQty > 1 && lotBasePrice > 0
 
-  // Détermination du prix unitaire du palier et du total de pièces
+  // DÃ©termination du prix unitaire du palier et du total de piÃ¨ces
   let unitTierPrice = product.price
   let piecesPerTier = 1
-  let tierLabel = 'Détail'
+  let tierLabel = 'DÃ©tail'
   let nlpToken = ''
 
   if (selectedTier === 'carton') {
@@ -109,10 +109,10 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
     tierLabel = `Lot de ${lotQty} ${unit}`
     nlpToken = `${quantity > 1 ? `${quantity} ` : ''}lot de ${lotQty} de ${product.name}`
   } else {
-    // Détail
+    // DÃ©tail
     unitTierPrice = product.price
     piecesPerTier = 1
-    tierLabel = `Détail (1 ${unit})`
+    tierLabel = `DÃ©tail (1 ${unit})`
     nlpToken = `${quantity} ${product.name}`
   }
 
@@ -150,9 +150,9 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
       let text = nlpToken
 
       // Ajout du prix
-      text += ` à ${finalTotal}`
+      text += ` Ã  ${finalTotal}`
 
-      // Ajout du client si spécifié
+      // Ajout du client si spÃ©cifiÃ©
       if (clientName.trim()) {
         text += ` ${clientName.trim()}`
       }
@@ -166,7 +166,7 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-      {/* Backdrop sombre flouté */}
+      {/* Backdrop sombre floutÃ© */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
         onClick={onClose}
@@ -174,18 +174,18 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
 
       {/* Feuille de Vente Tactile */}
       <div className="relative w-full max-w-lg bg-[#fffdfa] rounded-t-3xl sm:rounded-3xl border border-amber-300 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.9)] max-h-[92vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 duration-200">
-        {/* Poignée tactile mobile */}
+        {/* PoignÃ©e tactile mobile */}
         <div className="w-12 h-1.5 bg-amber-300 rounded-full mx-auto mt-2.5 mb-1 sm:hidden flex-shrink-0" />
 
-        {/* En-tête de la feuille */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-amber-200/80 bg-gradient-to-r from-amber-50 to-amber-100/60 flex-shrink-0">
+        {/* En-tÃªte de la feuille */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-amber-200/80 bg-emerald-700 flex-shrink-0">
           <div className="min-w-0 pr-2">
             <div className="flex items-center gap-2">
-              <span className="font-handwritten text-xl sm:text-2xl font-black text-[#1d4ed8] truncate">
+              <span className="font-handwritten text-xl sm:text-2xl font-semibold text-[#1d4ed8] truncate">
                 {product.name}
               </span>
               {product.category && (
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-amber-200/80 text-amber-950 rounded-md flex-shrink-0">
+                <span className="text-[10px] font-bold uppercase tracking-normal px-2 py-0.5 bg-amber-200/80 text-amber-950 rounded-md flex-shrink-0">
                   {product.category}
                 </span>
               )}
@@ -211,28 +211,28 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
           </button>
         </div>
 
-        {/* Corps défilable */}
+        {/* Corps dÃ©filable */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-grow scrollbar-none">
-          {/* 1. Sélection Tactile du Palier de Conditionnement */}
+          {/* 1. SÃ©lection Tactile du Palier de Conditionnement */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-black uppercase tracking-wider text-amber-950 flex items-center gap-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-normal text-amber-950 flex items-center gap-1.5">
               <Package className="w-3.5 h-3.5 text-amber-700" />
               <span>Format & Conditionnement</span>
             </label>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {/* Option Détail */}
+              {/* Option DÃ©tail */}
               <button
                 type="button"
                 onClick={() => handleSelectTier('detail')}
-                className={`p-2.5 rounded-2xl border text-left transition-all duration-100 ease-out active:scale-[0.97] cursor-pointer ${
+                className={`p-2.5 rounded-2xl border text-left transition-colors duration-100 ease-out active:scale-[0.97] cursor-pointer ${
                   selectedTier === 'detail'
                     ? 'bg-amber-950 text-white border-amber-950 shadow-md ring-2 ring-amber-400/50'
                     : 'bg-white hover:bg-amber-50 text-amber-950 border-amber-300 shadow-2xs'
                 }`}
               >
-                <div className="text-xs font-bold">Détail</div>
-                <div className="font-mono text-xs font-black mt-1 tabular-nums">
+                <div className="text-xs font-bold">DÃ©tail</div>
+                <div className="font-mono text-xs font-semibold mt-1 tabular-nums">
                   {formatPrice(product.price)}
                 </div>
                 <div className="text-[10px] opacity-70 mt-0.5">1 {unit}</div>
@@ -243,14 +243,14 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSelectTier('quarter')}
-                  className={`p-2.5 rounded-2xl border text-left transition-all duration-100 ease-out active:scale-[0.97] cursor-pointer ${
+                  className={`p-2.5 rounded-2xl border text-left transition-colors duration-100 ease-out active:scale-[0.97] cursor-pointer ${
                     selectedTier === 'quarter'
                       ? 'bg-amber-950 text-white border-amber-950 shadow-md ring-2 ring-amber-400/50'
                       : 'bg-white hover:bg-amber-50 text-amber-950 border-amber-300 shadow-2xs'
                   }`}
                 >
                   <div className="text-xs font-bold">1/4 {pkgName}</div>
-                  <div className="font-mono text-xs font-black mt-1 tabular-nums">
+                  <div className="font-mono text-xs font-semibold mt-1 tabular-nums">
                     {formatPrice(quarterBasePrice)}
                   </div>
                   <div className="text-[10px] opacity-70 mt-0.5">
@@ -264,14 +264,14 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSelectTier('half')}
-                  className={`p-2.5 rounded-2xl border text-left transition-all duration-100 ease-out active:scale-[0.97] cursor-pointer ${
+                  className={`p-2.5 rounded-2xl border text-left transition-colors duration-100 ease-out active:scale-[0.97] cursor-pointer ${
                     selectedTier === 'half'
                       ? 'bg-amber-950 text-white border-amber-950 shadow-md ring-2 ring-amber-400/50'
                       : 'bg-white hover:bg-amber-50 text-amber-950 border-amber-300 shadow-2xs'
                   }`}
                 >
                   <div className="text-xs font-bold">1/2 {pkgName}</div>
-                  <div className="font-mono text-xs font-black mt-1 tabular-nums">
+                  <div className="font-mono text-xs font-semibold mt-1 tabular-nums">
                     {formatPrice(halfBasePrice)}
                   </div>
                   <div className="text-[10px] opacity-70 mt-0.5">
@@ -285,14 +285,14 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSelectTier('carton')}
-                  className={`p-2.5 rounded-2xl border text-left transition-all duration-100 ease-out active:scale-[0.97] cursor-pointer ${
+                  className={`p-2.5 rounded-2xl border text-left transition-colors duration-100 ease-out active:scale-[0.97] cursor-pointer ${
                     selectedTier === 'carton'
                       ? 'bg-amber-950 text-white border-amber-950 shadow-md ring-2 ring-amber-400/50'
                       : 'bg-white hover:bg-amber-50 text-amber-950 border-amber-300 shadow-2xs'
                   }`}
                 >
                   <div className="text-xs font-bold">{pkgName} Entier</div>
-                  <div className="font-mono text-xs font-black mt-1 tabular-nums">
+                  <div className="font-mono text-xs font-semibold mt-1 tabular-nums">
                     {formatPrice(cartonBasePrice)}
                   </div>
                   <div className="text-[10px] opacity-70 mt-0.5">
@@ -301,12 +301,12 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
                 </button>
               )}
 
-              {/* Option Lot Dégressif */}
+              {/* Option Lot DÃ©gressif */}
               {hasLot && (
                 <button
                   type="button"
                   onClick={() => handleSelectTier('lot')}
-                  className={`p-2.5 rounded-2xl border text-left transition-all duration-100 ease-out active:scale-[0.97] cursor-pointer ${
+                  className={`p-2.5 rounded-2xl border text-left transition-colors duration-100 ease-out active:scale-[0.97] cursor-pointer ${
                     selectedTier === 'lot'
                       ? 'bg-amber-950 text-white border-amber-950 shadow-md ring-2 ring-amber-400/50'
                       : 'bg-white hover:bg-amber-50 text-amber-950 border-amber-300 shadow-2xs'
@@ -316,7 +316,7 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
                     <Tag className="w-3 h-3 text-amber-700" />
                     <span>Lot {lotQty}</span>
                   </div>
-                  <div className="font-mono text-xs font-black mt-1 tabular-nums">
+                  <div className="font-mono text-xs font-semibold mt-1 tabular-nums">
                     {formatPrice(lotBasePrice)}
                   </div>
                   <div className="text-[10px] opacity-70 mt-0.5">
@@ -327,11 +327,11 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
             </div>
           </div>
 
-          {/* 2. Stepper de Quantité Tactile */}
+          {/* 2. Stepper de QuantitÃ© Tactile */}
           <div className="p-3 bg-amber-50/70 border border-amber-200/90 rounded-2xl flex items-center justify-between gap-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.8)]">
             <div>
-              <div className="text-xs font-black text-amber-950 uppercase tracking-tight">
-                Quantité : {quantity} {selectedTier === 'detail' ? unit : pkgName}
+              <div className="text-xs font-semibold text-amber-950 uppercase tracking-tight">
+                QuantitÃ© : {quantity} {selectedTier === 'detail' ? unit : pkgName}
                 {quantity > 1 ? 's' : ''}
               </div>
               <div className="font-mono text-[11px] text-amber-800/80 tabular-nums">
@@ -349,7 +349,7 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
                 <Minus className="w-4 h-4" />
               </button>
 
-              <div className="w-12 text-center font-mono text-lg font-black text-amber-950 tabular-nums">
+              <div className="w-12 text-center font-mono text-lg font-semibold text-amber-950 tabular-nums">
                 {quantity}
               </div>
 
@@ -363,7 +363,7 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
             </div>
           </div>
 
-          {/* Raccourcis rapides de quantité */}
+          {/* Raccourcis rapides de quantitÃ© */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             <span className="text-[10px] font-bold text-amber-900/70 uppercase flex-shrink-0">
               Raccourcis :
@@ -376,7 +376,7 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
                   audioFeedback.playTick()
                   setQuantity(n)
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-colors ${
                   quantity === n
                     ? 'bg-amber-950 text-white shadow-2xs'
                     : 'bg-white hover:bg-amber-100 border border-amber-300/80 text-amber-950'
@@ -387,7 +387,7 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
             ))}
           </div>
 
-          {/* 3. Accordéon : Vue Visuelle du Carton Ouvert */}
+          {/* 3. AccordÃ©on : Vue Visuelle du Carton Ouvert */}
           {hasPackaging && (
             <div className="border border-amber-200/80 rounded-2xl overflow-hidden bg-white">
               <button
@@ -431,7 +431,7 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
           {/* 4. Raccourcis "Prix d'ami" / Remise Rapide */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1">
+              <span className="font-bold text-amber-950 uppercase tracking-normal flex items-center gap-1">
                 <Percent className="w-3 h-3 text-amber-700" />
                 <span>Prix d'Ami / Remise Client</span>
               </span>
@@ -481,12 +481,12 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
         </div>
 
         {/* Pied de page : Total & Bouton de Validation Tactile */}
-        <div className="p-4 sm:p-5 border-t border-amber-200/80 bg-gradient-to-b from-amber-50 to-amber-100/60 flex items-center justify-between gap-3 flex-shrink-0 shadow-[0_-8px_16px_-4px_rgba(0,0,0,0.04)]">
+        <div className="p-4 sm:p-5 border-t border-amber-200/80 bg-emerald-700 flex items-center justify-between gap-3 flex-shrink-0 shadow-[0_-8px_16px_-4px_rgba(0,0,0,0.04)]">
           <div>
             <div className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">
-              Total à Encaisser
+              Total Ã  Encaisser
             </div>
-            <div className="font-mono text-2xl font-black text-amber-950 tabular-nums">
+            <div className="font-mono text-2xl font-semibold text-amber-950 tabular-nums">
               {formatPrice(finalTotal)}
             </div>
             <div className="text-[10px] font-sans text-amber-700">
@@ -498,7 +498,7 @@ export const TactileSaleSheet: React.FC<TactileSaleSheetProps> = ({
             type="button"
             disabled={isSubmitting}
             onClick={handleConfirm}
-            className="px-5 sm:px-6 py-3.5 bg-gradient-to-r from-amber-900 via-amber-950 to-amber-900 hover:from-black hover:to-black text-white font-extrabold rounded-2xl text-sm transition-all duration-100 ease-out active:scale-[0.97] shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="px-5 sm:px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-2xl text-sm transition-colors duration-100 ease-out active:scale-[0.97] shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <Check className="w-4 h-4 stroke-[3]" />
             <span>Tamponner la Vente</span>

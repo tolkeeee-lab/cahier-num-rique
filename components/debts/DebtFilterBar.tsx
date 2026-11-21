@@ -43,8 +43,8 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
             onKeyDown={(e) => {
               if (e.key === 'Escape') onSearchChange('')
             }}
-            placeholder="Rechercher un client ou un numéro..."
-            className="w-full pl-9 pr-8 py-2 bg-[#fdfaf2] border border-stone-900/15 rounded-lg text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
+            placeholder="Rechercher un client ou un numÃ©ro..."
+            className="w-full pl-9 pr-8 py-2 bg-[#faf5e8] border border-stone-900/15 rounded-lg text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
           {searchQuery && (
             <button
@@ -70,10 +70,10 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
         )}
       </div>
 
-      {/* Ligne 2 : Onglets segmentés Type + Statut + Tri */}
+      {/* Ligne 2 : Onglets segmentÃ©s Type + Statut + Tri */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Type (masqué pour employé qui ne voit que les clients) */}
+          {/* Type (masquÃ© pour employÃ© qui ne voit que les clients) */}
           {!isEmployee && (
             <div className="inline-flex bg-[#f3ecda] p-0.5 rounded-lg border border-stone-900/10 text-[11px]">
               {(
@@ -89,7 +89,7 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
                   onClick={() => onDebtTypeFilterChange(opt.id)}
                   className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                     debtTypeFilter === opt.id
-                      ? 'bg-[#fdfaf2] text-stone-950 shadow-2xs'
+                      ? 'bg-[#faf5e8] text-stone-950 shadow-2xs'
                       : 'text-stone-600 hover:text-stone-900'
                   }`}
                 >
@@ -104,7 +104,7 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
             {(
               [
                 { id: 'pending', label: 'En cours' },
-                { id: 'settled', label: 'Soldés' },
+                { id: 'settled', label: 'SoldÃ©s' },
                 { id: 'all', label: 'Tout' },
               ] as const
             ).map((opt) => (
@@ -114,7 +114,7 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
                 onClick={() => onStatusFilterChange(opt.id)}
                 className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                   statusFilter === opt.id
-                    ? 'bg-[#fdfaf2] text-stone-950 shadow-2xs'
+                    ? 'bg-[#faf5e8] text-stone-950 shadow-2xs'
                     : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
@@ -131,11 +131,11 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
             <select
               value={sortBy}
               onChange={(e) => onSortChange(e.target.value as DebtSortOption)}
-              className="bg-[#fdfaf2] border border-stone-900/15 rounded-lg px-2 py-1 text-[11px] font-medium text-stone-800 focus:outline-none focus:border-emerald-700 cursor-pointer"
+              className="bg-[#faf5e8] border border-stone-900/15 rounded-lg px-2 py-1 text-[11px] font-medium text-stone-800 focus:outline-none focus:border-emerald-700 cursor-pointer"
             >
               <option value="amount_desc">Plus gros solde</option>
-              <option value="recent">Plus récent</option>
-              <option value="name_asc">Nom A–Z</option>
+              <option value="recent">Plus rÃ©cent</option>
+              <option value="name_asc">Nom Aâ€“Z</option>
             </select>
           </div>
         )}

@@ -16,17 +16,17 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#141210] text-[#fefdfa] font-sans antialiased overflow-x-hidden relative">
       
-      {/* Bandeau d'erreur d'invitation — visible si ?auth_error= est présent dans l'URL */}
+      {/* Bandeau d'erreur d'invitation â€” visible si ?auth_error= est prÃ©sent dans l'URL */}
       {authError && (
         <div className="relative z-20 bg-red-950/90 border-b border-red-800/60 px-6 py-4">
           <div className="max-w-3xl mx-auto flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
             <div>
-              <p className="text-sm font-semibold text-red-200">Lien d&apos;invitation invalide ou expiré</p>
+              <p className="text-sm font-semibold text-red-200">Lien d&apos;invitation invalide ou expirÃ©</p>
               <p className="text-xs text-red-300 mt-1">
                 {authError.includes('expired') || authError.includes('invalid')
-                  ? 'Ce lien d\'invitation a expiré ou est invalide. Demandez à votre gérant de vous en renvoyer un nouveau depuis les Paramètres de la boutique.'
-                  : `Détail : ${authError}. Contactez votre gérant pour un nouveau lien.`}
+                  ? 'Ce lien d\'invitation a expirÃ© ou est invalide. Demandez Ã  votre gÃ©rant de vous en renvoyer un nouveau depuis les ParamÃ¨tres de la boutique.'
+                  : `DÃ©tail : ${authError}. Contactez votre gÃ©rant pour un nouveau lien.`}
               </p>
             </div>
           </div>
@@ -38,7 +38,7 @@ export default function LandingPage() {
         <div className="flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-[#f59e0b]" strokeWidth={1.75} />
           <span className="font-semibold text-sm tracking-tight text-stone-100">
-            Cahier Numérique
+            Cahier NumÃ©rique
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -47,7 +47,7 @@ export default function LandingPage() {
             className="text-xs font-medium text-stone-400 hover:text-stone-100 transition-colors flex items-center gap-1.5"
           >
             <Play className="w-3.5 h-3.5" strokeWidth={1.75} />
-            <span>Démo</span>
+            <span>DÃ©mo</span>
           </Link>
           <Link 
             href="/journal"
@@ -64,15 +64,15 @@ export default function LandingPage() {
         {/* Hero Left Text */}
         <div className="lg:col-span-6 space-y-6">
           <p className="text-xs font-medium text-amber-400/90">
-            Cahier de caisse Seyes hors-ligne · Afrique de l'Ouest
+            Cahier de caisse Seyes hors-ligne Â· Afrique de l'Ouest
           </p>
 
           <h1 className="text-4xl md:text-5xl font-semibold tracking-[-0.025em] leading-[1.1] text-stone-50">
-            Gérez votre caisse et vos dettes <span className="text-[#f59e0b]">à la main</span>, sans calculette
+            GÃ©rez votre caisse et vos dettes <span className="text-[#f59e0b]">Ã  la main</span>, sans calculette
           </h1>
 
           <p className="text-stone-400 text-sm md:text-base leading-relaxed">
-            Conçu pour les boutiquiers, commerçants de proximité et grossistes en Afrique de l'Ouest. Écrivez vos ventes comme sur un vrai cahier Seyes avec vos stylos Bic de couleur ; l'application calcule les totaux et sécurise votre tiroir-caisse.
+            ConÃ§u pour les boutiquiers, commerÃ§ants de proximitÃ© et grossistes en Afrique de l'Ouest. Ã‰crivez vos ventes comme sur un vrai cahier Seyes avec vos stylos Bic de couleur ; l'application calcule les totaux et sÃ©curise votre tiroir-caisse.
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row gap-3">
@@ -89,7 +89,7 @@ export default function LandingPage() {
               className="px-5 py-3.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-stone-200 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
             >
               <Play className="w-4 h-4 text-[#f59e0b]" strokeWidth={1.75} />
-              <span>Voir la démo</span>
+              <span>Voir la dÃ©mo</span>
             </Link>
           </div>
 
@@ -112,7 +112,7 @@ export default function LandingPage() {
         {/* Hero Right Visual (Miniature Pure CSS open notebook) */}
         <div className="lg:col-span-6 relative flex justify-center">
           
-          <div className="w-full max-w-lg bg-[#fdfaf2] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-stone-300/80 overflow-hidden flex relative aspect-[16/10]">
+          <div className="w-full max-w-lg bg-[#faf5e8] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-stone-300/80 overflow-hidden flex relative aspect-[16/10]">
             
             {/* Left Cover Spine */}
             <div className="w-8 bg-gradient-to-b from-[#064e3b] to-[#012b1c] flex flex-col justify-around py-4 z-10 flex-shrink-0">
@@ -142,19 +142,19 @@ export default function LandingPage() {
                   Jeudi 2 juillet 2026
                 </div>
                 <div className="text-[#1d4ed8] text-base leading-none">
-                  Vente 3 sacs de riz à 12000 F <span className="text-[8px] bg-blue-100 text-blue-800 border px-1 rounded font-sans">VENTE</span>
+                  Vente 3 sacs de riz Ã  12000 F <span className="text-[8px] bg-blue-100 text-blue-800 border px-1 rounded font-sans">VENTE</span>
                 </div>
                 <div className="text-gray-500 text-[10px] -mt-1 ml-4 flex items-center gap-1">
                   <Package className="w-3 h-3 text-gray-400" />
-                  <span>3x riz à 12000 F (Total 36 000 F)</span>
+                  <span>3x riz Ã  12000 F (Total 36 000 F)</span>
                 </div>
 
                 <div className="text-[#e11d48] text-base leading-none pt-2">
-                  achat emballages boutique 2500 <span className="text-[8px] bg-rose-100 text-rose-800 border px-1 rounded font-sans">DÉPENSE</span>
+                  achat emballages boutique 2500 <span className="text-[8px] bg-rose-100 text-rose-800 border px-1 rounded font-sans">DÃ‰PENSE</span>
                 </div>
 
                 <div className="text-[#701a75] text-base leading-none pt-2">
-                  Grossiste Chantal carton peak credit 35000 <span className="text-[8px] bg-fuchsia-100 text-fuchsia-800 border px-1 rounded font-sans">STOCK CRÉDIT</span>
+                  Grossiste Chantal carton peak credit 35000 <span className="text-[8px] bg-stone-100 text-stone-700 border px-1 rounded font-sans">STOCK CRÃ‰DIT</span>
                 </div>
               </div>
 
@@ -166,7 +166,7 @@ export default function LandingPage() {
                     <span>22:51</span>
                   </span>
                   <span className="text-gray-300">|</span>
-                  <span className="font-handwritten text-xs text-[#1d4ed8]">Ex: 3 litres d'huiles à 6000...</span>
+                  <span className="font-handwritten text-xs text-[#1d4ed8]">Ex: 3 litres d'huiles Ã  6000...</span>
                 </div>
                 <div className="w-5 h-5 rounded-full bg-gray-900 text-white flex items-center justify-center">
                   <ArrowRight className="w-2.5 h-2.5" />
@@ -185,46 +185,46 @@ export default function LandingPage() {
       <section id="features" className="bg-[#1b1816] py-20 border-t border-gray-800/40 relative z-10">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto space-y-4">
-            <h3 className="text-3xl font-extrabold tracking-tight text-white">
-              Une Métaphore Physique pour la Trésorerie
+            <h3 className="text-3xl font-semibold tracking-tight text-white">
+              Une MÃ©taphore Physique pour la TrÃ©sorerie
             </h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Ne changez rien à vos habitudes. Nous avons numérisé le geste d'écrire sur votre carnet d'école tout en effectuant les calculs de caisse en temps réel.
+              Ne changez rien Ã  vos habitudes. Nous avons numÃ©risÃ© le geste d'Ã©crire sur votre carnet d'Ã©cole tout en effectuant les calculs de caisse en temps rÃ©el.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
             
             {/* feature 1 */}
-            <div className="bg-[#24201d] p-8 rounded-2xl border border-gray-800/60 space-y-4 transition-all hover:scale-[1.02]">
+            <div className="bg-[#24201d] p-8 rounded-2xl border border-gray-800/60 space-y-4 transition-colors hover:scale-[1.02]">
               <div className="w-12 h-12 rounded-xl bg-[#064e3b]/30 flex items-center justify-center border border-[#047857]/20">
                 <BookOpen className="w-6 h-6 text-[#f59e0b]" />
               </div>
               <h4 className="text-lg font-bold text-white">Le Stylo Bic 4-Couleurs</h4>
               <p className="text-gray-400 text-xs leading-relaxed">
-                Utilisez l'encre bleue pour les ventes, le rouge pour les charges, le vert pour les stocks payés cash, le violet pour vos dettes grossistes et le jaune pour vos crédits clients. Classez visuellement vos flux.
+                Utilisez l'encre bleue pour les ventes, le rouge pour les charges, le vert pour les stocks payÃ©s cash, le violet pour vos dettes grossistes et le jaune pour vos crÃ©dits clients. Classez visuellement vos flux.
               </p>
             </div>
 
             {/* feature 2 */}
-            <div className="bg-[#24201d] p-8 rounded-2xl border border-gray-800/60 space-y-4 transition-all hover:scale-[1.02]">
+            <div className="bg-[#24201d] p-8 rounded-2xl border border-gray-800/60 space-y-4 transition-colors hover:scale-[1.02]">
               <div className="w-12 h-12 rounded-xl bg-[#064e3b]/30 flex items-center justify-center border border-[#047857]/20">
                 <Calculator className="w-6 h-6 text-[#f59e0b]" />
               </div>
-              <h4 className="text-lg font-bold text-white">Zéro Calculette (Aide au Calcul)</h4>
+              <h4 className="text-lg font-bold text-white">ZÃ©ro Calculette (Aide au Calcul)</h4>
               <p className="text-gray-400 text-xs leading-relaxed">
-                Tapez <span className="italic text-[#f59e0b]">"3 litres d'huiles à 6000"</span>. Le cahier s'ouvre pour vous demander s'il s'agit du prix unitaire ou global, réalise la division/multiplication, et remplit la fiche à votre place.
+                Tapez <span className="italic text-[#f59e0b]">"3 litres d'huiles Ã  6000"</span>. Le cahier s'ouvre pour vous demander s'il s'agit du prix unitaire ou global, rÃ©alise la division/multiplication, et remplit la fiche Ã  votre place.
               </p>
             </div>
 
             {/* feature 3 */}
-            <div className="bg-[#24201d] p-8 rounded-2xl border border-gray-800/60 space-y-4 transition-all hover:scale-[1.02]">
+            <div className="bg-[#24201d] p-8 rounded-2xl border border-gray-800/60 space-y-4 transition-colors hover:scale-[1.02]">
               <div className="w-12 h-12 rounded-xl bg-[#064e3b]/30 flex items-center justify-center border border-[#047857]/20">
                 <ShieldCheck className="w-6 h-6 text-[#f59e0b]" />
               </div>
-              <h4 className="text-lg font-bold text-white">Protection contre le Solde Négatif</h4>
+              <h4 className="text-lg font-bold text-white">Protection contre le Solde NÃ©gatif</h4>
               <p className="text-gray-400 text-xs leading-relaxed">
-                Règle de caisse stricte : l'application bloque automatiquement l'achat de stock ou la rature d'une vente si cela fait passer votre caisse sous la barre des 0 FCFA. Votre argent est en sécurité.
+                RÃ¨gle de caisse stricte : l'application bloque automatiquement l'achat de stock ou la rature d'une vente si cela fait passer votre caisse sous la barre des 0 FCFA. Votre argent est en sÃ©curitÃ©.
               </p>
             </div>
 
@@ -234,16 +234,16 @@ export default function LandingPage() {
 
       {/* CTA section */}
       <section className="max-w-4xl mx-auto px-6 py-20 text-center space-y-8 relative z-10">
-        <h3 className="text-3xl md:text-4xl font-extrabold text-white">
-          Prêt à abandonner vos fiches volantes ?
+        <h3 className="text-3xl md:text-4xl font-semibold text-white">
+          PrÃªt Ã  abandonner vos fiches volantes ?
         </h3>
         <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto leading-relaxed">
-          Rejoignez les commerçants de proximité qui font confiance au Cahier de Caisse Intelligent pour suivre chaque franc.
+          Rejoignez les commerÃ§ants de proximitÃ© qui font confiance au Cahier de Caisse Intelligent pour suivre chaque franc.
         </p>
         <div className="pt-2">
           <Link
             href="/journal"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#fbbf24] hover:to-[#f59e0b] text-[#141210] text-sm font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-xl hover:scale-[1.02]"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#fbbf24] hover:to-[#f59e0b] text-[#141210] text-sm font-semibold uppercase tracking-normal rounded-xl transition-colors shadow-xl hover:scale-[1.02]"
           >
             <span>Ouvrir mon Cahier de Caisse</span>
             <ArrowRight className="w-4 h-4" />
@@ -253,7 +253,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-800/30 py-8 text-center text-xs text-gray-500 font-mono relative z-10 select-none">
-        © {new Date().getFullYear()} CAHIER NUMÉRIQUE INC. • TOUS DROITS RÉSERVÉS.
+        Â© {new Date().getFullYear()} CAHIER NUMÃ‰RIQUE INC. â€¢ TOUS DROITS RÃ‰SERVÃ‰S.
       </footer>
 
     </div>

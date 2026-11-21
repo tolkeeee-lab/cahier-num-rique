@@ -31,11 +31,11 @@ export const StockAlertBanner: React.FC<StockAlertBannerProps> = ({
           <AlertTriangle className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
         </div>
         <div>
-          <p className="text-xs font-black text-amber-950 tracking-tight">Ruptures & alertes de stock</p>
+          <p className="text-xs font-semibold text-amber-950 tracking-tight">Ruptures & alertes de stock</p>
           <p className="text-[11px] text-amber-900 font-mono">
             {outOfStockCount > 0 && (
-              <span className="text-rose-700 font-extrabold">
-                <span className="tabular-nums">{outOfStockCount}</span> épuisé(s).{' '}
+              <span className="text-rose-700 font-semibold">
+                <span className="tabular-nums">{outOfStockCount}</span> Ã©puisÃ©(s).{' '}
               </span>
             )}
             {lowStockCount > 0 && (
@@ -52,9 +52,9 @@ export const StockAlertBanner: React.FC<StockAlertBannerProps> = ({
           <button
             type="button"
             onClick={onFilterLowStock}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.97] ${
+            className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer active:scale-[0.97] ${
               isFiltered
-                ? 'bg-amber-900 text-white border-amber-950 font-black shadow-2xs'
+                ? 'bg-amber-900 text-white border-amber-950 font-semibold shadow-2xs'
                 : 'bg-white/90 border-amber-300 text-amber-950 hover:bg-amber-100 shadow-2xs'
             }`}
           >
@@ -68,13 +68,13 @@ export const StockAlertBanner: React.FC<StockAlertBannerProps> = ({
             type="button"
             onClick={onAddOutOfStockToShoppingList}
             disabled={isAddingToShoppingList}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white text-xs font-mono font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-[0.97] disabled:opacity-50"
-            title="Ajouter automatiquement les produits en alerte à la liste de courses"
+            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-[0.97] disabled:opacity-50"
+            title="Ajouter automatiquement les produits en alerte Ã  la liste de courses"
           >
             {addedCount ? (
               <>
                 <Check className="w-3.5 h-3.5 text-white" strokeWidth={2} />
-                <span>{addedCount} ajouté(s) aux courses !</span>
+                <span>{addedCount} ajoutÃ©(s) aux courses !</span>
               </>
             ) : (
               <>

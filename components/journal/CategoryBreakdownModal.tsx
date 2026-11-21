@@ -52,7 +52,7 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
 
   const validSales = sales.filter(s => s.status !== 'crossed_out')
 
-  // Calculs détaillés
+  // Calculs dÃ©taillÃ©s
   const blueSales = validSales.filter(s => s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale' || s.type === 'sale_cash' || s.type === 'payment_client')
   const redSales = validSales.filter(s => s.pen_color === 'red' || s.type === 'cash_out' || s.type === 'payment_supplier' || s.type === 'stock_damage')
   const greenSales = validSales.filter(s => s.pen_color === 'green' || s.type === 'purchase_cash' || s.type === 'stock_cash')
@@ -67,33 +67,33 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
 
   const netCash = blueTotal - redTotal - greenTotal
 
-  let title = 'Détails & Calculs de la Caisse'
+  let title = 'DÃ©tails & Calculs de la Caisse'
   let icon = <Calculator className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
   let targetSales: SaleItem[] = validSales
   let totalAmount = netCash
 
   if (categoryType === 'blue') {
-    title = 'Chiffre d\'Affaires (Entrées Cash & Ventes)'
+    title = 'Chiffre d\'Affaires (EntrÃ©es Cash & Ventes)'
     icon = <TrendingUp className="w-5 h-5 text-blue-600" strokeWidth={1.75} />
     targetSales = blueSales
     totalAmount = blueTotal
   } else if (categoryType === 'red') {
-    title = 'Dépenses & Frais Généraux'
+    title = 'DÃ©penses & Frais GÃ©nÃ©raux'
     icon = <TrendingDown className="w-5 h-5 text-rose-600" strokeWidth={1.75} />
     targetSales = redSales
     totalAmount = redTotal
   } else if (categoryType === 'green') {
-    title = 'Achats de Stock (Payés Cash)'
+    title = 'Achats de Stock (PayÃ©s Cash)'
     icon = <ShoppingBag className="w-5 h-5 text-emerald-600" strokeWidth={1.75} />
     targetSales = greenSales
     totalAmount = greenTotal
   } else if (categoryType === 'purple') {
-    title = 'Achats de Stock à Crédit (Fournisseurs)'
-    icon = <CreditCard className="w-5 h-5 text-fuchsia-600" strokeWidth={1.75} />
+    title = 'Achats de Stock Ã  CrÃ©dit (Fournisseurs)'
+    icon = <CreditCard className="w-5 h-5 text-stone-700" strokeWidth={1.75} />
     targetSales = purpleSales
     totalAmount = purpleTotal
   } else if (categoryType === 'yellow') {
-    title = 'Ventes à Crédit (Dettes Clients)'
+    title = 'Ventes Ã  CrÃ©dit (Dettes Clients)'
     icon = <CreditCard className="w-5 h-5 text-amber-600" strokeWidth={1.75} />
     targetSales = yellowSales
     totalAmount = yellowDebtTotal
@@ -108,17 +108,17 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
     >
       <div className="w-full max-w-lg bg-[#fffdf2] border-2 border-amber-400 rounded-2xl shadow-2xl overflow-hidden font-mono flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="p-3.5 bg-gradient-to-r from-amber-100 to-amber-200/90 border-b border-amber-300 flex items-center justify-between">
+        <div className="p-3.5 bg-emerald-700 border-b border-amber-300 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-white/90 rounded-xl shadow-xs border border-amber-300">
               {icon}
             </div>
             <div>
-              <h3 className="text-xs sm:text-sm font-black text-amber-950 uppercase tracking-tight">
+              <h3 className="text-xs sm:text-sm font-semibold text-amber-950 uppercase tracking-tight">
                 {title}
               </h3>
               <p className="text-[10px] text-amber-800 font-bold">
-                {targetSales.length} opération(s) • Total : <span className="font-mono font-black text-amber-950 tabular-nums">{categoryType === 'red' && totalAmount > 0 ? `-${formatPrice(totalAmount)}` : formatPrice(totalAmount)}</span>
+                {targetSales.length} opÃ©ration(s) â€¢ Total : <span className="font-mono font-semibold text-amber-950 tabular-nums">{categoryType === 'red' && totalAmount > 0 ? `-${formatPrice(totalAmount)}` : formatPrice(totalAmount)}</span>
               </p>
             </div>
           </div>
@@ -133,46 +133,46 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
 
         {/* Formule de Calcul en Page */}
         <div className="p-3 bg-amber-50/80 border-b border-amber-200 space-y-2">
-          <div className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+          <div className="text-[11px] font-bold text-amber-900 uppercase tracking-normal flex items-center gap-1.5">
             <Calculator className="w-3.5 h-3.5 text-amber-800" strokeWidth={1.75} />
-            <span>Formule de Calcul du Solde Réel :</span>
+            <span>Formule de Calcul du Solde RÃ©el :</span>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs font-mono">
             <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-950">
-              <div className="text-[10px] text-blue-700 font-black">ENTRÉES / CA (+)</div>
-              <div className="text-xs font-black tabular-nums">+{formatPrice(blueTotal)}</div>
+              <div className="text-[10px] text-blue-700 font-semibold">ENTRÃ‰ES / CA (+)</div>
+              <div className="text-xs font-semibold tabular-nums">+{formatPrice(blueTotal)}</div>
             </div>
             <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-950">
-              <div className="text-[10px] text-rose-700 font-black">DÉPENSES (-)</div>
-              <div className="text-xs font-black tabular-nums">-{formatPrice(redTotal)}</div>
+              <div className="text-[10px] text-rose-700 font-semibold">DÃ‰PENSES (-)</div>
+              <div className="text-xs font-semibold tabular-nums">-{formatPrice(redTotal)}</div>
             </div>
             <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950">
-              <div className="text-[10px] text-emerald-700 font-black">ACHATS STOCK (-)</div>
-              <div className="text-xs font-black tabular-nums">-{formatPrice(greenTotal)}</div>
+              <div className="text-[10px] text-emerald-700 font-semibold">ACHATS STOCK (-)</div>
+              <div className="text-xs font-semibold tabular-nums">-{formatPrice(greenTotal)}</div>
             </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-100 to-amber-200 border-2 border-amber-400 flex items-center justify-between font-mono">
-            <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+          <div className="p-2.5 rounded-xl bg-emerald-700 border-2 border-amber-400 flex items-center justify-between font-mono">
+            <span className="text-xs font-semibold text-amber-950 flex items-center gap-1.5">
               <Coins className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
-              <span>BÉNÉFICE / SOLDE NET :</span>
+              <span>BÃ‰NÃ‰FICE / SOLDE NET :</span>
             </span>
-            <span className={`text-sm font-black tabular-nums ${netCash >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
+            <span className={`text-sm font-semibold tabular-nums ${netCash >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
               {netCash >= 0 ? `+${formatPrice(netCash)}` : `-${formatPrice(Math.abs(netCash))}`}
             </span>
           </div>
         </div>
 
-        {/* Liste détaillée des transactions */}
+        {/* Liste dÃ©taillÃ©e des transactions */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
-          <div className="text-[11px] font-black text-gray-800 uppercase tracking-wider mb-1">
-            Détail des lignes :
+          <div className="text-[11px] font-semibold text-gray-800 uppercase tracking-normal mb-1">
+            DÃ©tail des lignes :
           </div>
 
           {targetSales.length === 0 ? (
             <div className="py-6 text-center text-gray-500 italic text-xs">
-              Aucune écriture dans cette catégorie pour le moment.
+              Aucune Ã©criture dans cette catÃ©gorie pour le moment.
             </div>
           ) : (
             targetSales.map((sale) => (
@@ -187,12 +187,12 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
                   <div className="text-[10px] text-gray-500 truncate">
                     {sale.articles && sale.articles.length > 0
                       ? sale.articles.map(a => `${a.quantity}x ${a.name}`).join(', ')
-                      : sale.notes || 'Sans détail'}
+                      : sale.notes || 'Sans dÃ©tail'}
                   </div>
                 </div>
 
                 <div className="flex flex-col items-end flex-shrink-0 font-mono">
-                  <span className={`font-black text-xs px-2 py-0.5 rounded-md ${
+                  <span className={`font-semibold text-xs px-2 py-0.5 rounded-md ${
                     sale.pen_color === 'red'
                       ? 'bg-rose-50 text-rose-700 border border-rose-200'
                       : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
@@ -211,7 +211,7 @@ export const CategoryBreakdownModal: React.FC<CategoryBreakdownModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-amber-950 hover:bg-amber-900 active:scale-[0.97] text-white font-bold text-xs shadow-xs cursor-pointer transition-all"
+            className="px-4 py-1.5 rounded-xl bg-amber-950 hover:bg-amber-900 active:scale-[0.97] text-white font-bold text-xs shadow-xs cursor-pointer transition-colors"
           >
             Fermer
           </button>

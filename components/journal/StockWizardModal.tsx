@@ -3,23 +3,23 @@
 /**
  * StockWizardModal.tsx
  *
- * Wizard multi-étapes pour ajouter un produit au stock.
- * Étapes : Nom → Conditionnement → Prix achat/vente → Seuil alerte
+ * Wizard multi-Ã©tapes pour ajouter un produit au stock.
+ * Ã‰tapes : Nom â†’ Conditionnement â†’ Prix achat/vente â†’ Seuil alerte
  *
- * 100% UI — expose onComplete(product) pour laisser le parent gérer la sauvegarde.
+ * 100% UI â€” expose onComplete(product) pour laisser le parent gÃ©rer la sauvegarde.
  */
 
 import React, { useState, useEffect } from 'react'
 import { X, ChevronRight, ChevronLeft, Check, Package } from 'lucide-react'
 
-// ─── Types ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface WizardProduct {
   name: string
   category: string
-  packaging: string       // 'unité' | 'carton' | 'sac' | 'boite' | 'paquet'
+  packaging: string       // 'unitÃ©' | 'carton' | 'sac' | 'boite' | 'paquet'
   multiplier: number      // Ex: 1 carton = 24 bouteilles
-  unit: string            // Ex: 'bouteille', 'pièce', 'kg'
+  unit: string            // Ex: 'bouteille', 'piÃ¨ce', 'kg'
   alertThreshold: number
   purchasePrice: number
   salePrice: number
@@ -35,19 +35,19 @@ interface StockWizardModalProps {
   onComplete: (product: WizardProduct) => Promise<void>
 }
 
-// ─── Données par défaut ─────────────────────────────────────────────────────
+// â”€â”€â”€ DonnÃ©es par dÃ©faut â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const PACKAGINGS = ['unité', 'carton', 'sac', 'boite', 'paquet', 'casier']
-const UNITS = ['pièce', 'bouteille', 'kg', 'litre', 'sachet', 'bloc']
+const PACKAGINGS = ['unitÃ©', 'carton', 'sac', 'boite', 'paquet', 'casier']
+const UNITS = ['piÃ¨ce', 'bouteille', 'kg', 'litre', 'sachet', 'bloc']
 
 const CATEGORIES_BY_ACTIVITY: Record<string, string[]> = {
-  boutique: ['Alimentation', 'Boissons', 'Fournitures', 'Hygiène', 'Divers'],
-  resto:    ['Cuisine', 'Cafétéria', 'Boissons', 'Ingrédients', 'Divers'],
-  prestations: ['Services', 'Produits capillaires', 'Matériel', 'Divers'],
-  particulier: ['Foyer', 'Alimentation', 'École', 'Divers'],
+  boutique: ['Alimentation', 'Boissons', 'Fournitures', 'HygiÃ¨ne', 'Divers'],
+  resto:    ['Cuisine', 'CafÃ©tÃ©ria', 'Boissons', 'IngrÃ©dients', 'Divers'],
+  prestations: ['Services', 'Produits capillaires', 'MatÃ©riel', 'Divers'],
+  particulier: ['Foyer', 'Alimentation', 'Ã‰cole', 'Divers'],
 }
 
-// ─── Composant ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Composant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function StockWizardModal({
   isOpen,
@@ -63,24 +63,24 @@ export function StockWizardModal({
   // Champs
   const [name, setName] = useState(prefillName)
   const [category, setCategory] = useState('')
-  const [packaging, setPackaging] = useState('unité')
+  const [packaging, setPackaging] = useState('unitÃ©')
   const [multiplier, setMultiplier] = useState('')
-  const [unit, setUnit] = useState('pièce')
+  const [unit, setUnit] = useState('piÃ¨ce')
   const [purchasePrice, setPurchasePrice] = useState('')
   const [salePrice, setSalePrice] = useState(prefillPrice > 0 ? String(prefillPrice) : '')
   const [initialStock, setInitialStock] = useState('0')
   const [alertThreshold, setAlertThreshold] = useState('5')
 
   const categories = CATEGORIES_BY_ACTIVITY[shopActivity] || CATEGORIES_BY_ACTIVITY.boutique
-  const hasMultiplier = packaging !== 'unité'
+  const hasMultiplier = packaging !== 'unitÃ©'
 
   const reset = () => {
     setStep(1)
     setName(prefillName)
     setCategory('')
-    setPackaging('unité')
+    setPackaging('unitÃ©')
     setMultiplier('')
-    setUnit('pièce')
+    setUnit('piÃ¨ce')
     setPurchasePrice('')
     setSalePrice(prefillPrice > 0 ? String(prefillPrice) : '')
     setInitialStock('0')
@@ -138,7 +138,7 @@ export function StockWizardModal({
     >
       <div className="bg-[#fffdf2] border border-amber-300 rounded-[28px] p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
 
-        {/* En-tête */}
+        {/* En-tÃªte */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-emerald-600" strokeWidth={1.75} />
@@ -153,7 +153,7 @@ export function StockWizardModal({
           </button>
         </div>
 
-        {/* Indicateur d'étapes */}
+        {/* Indicateur d'Ã©tapes */}
         <div className="flex items-center gap-2">
           {STEP_LABELS.map((label, idx) => (
             <React.Fragment key={label}>
@@ -176,7 +176,7 @@ export function StockWizardModal({
           ))}
         </div>
 
-        {/* ── Étape 1 : Nom & Catégorie ── */}
+        {/* â”€â”€ Ã‰tape 1 : Nom & CatÃ©gorie â”€â”€ */}
         {step === 1 && (
           <div className="space-y-4">
             <div>
@@ -191,14 +191,14 @@ export function StockWizardModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Catégorie</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">CatÃ©gorie</label>
               <div className="flex flex-wrap gap-2">
                 {categories.map(cat => (
                   <button
                     key={cat}
                     type="button"
                     onClick={() => setCategory(cat)}
-                    className={`px-3 py-1.5 text-xs rounded-lg border font-medium transition-all cursor-pointer active:scale-[0.97] ${
+                    className={`px-3 py-1.5 text-xs rounded-lg border font-medium transition-colors cursor-pointer active:scale-[0.97] ${
                       category === cat
                         ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
                         : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'
@@ -212,7 +212,7 @@ export function StockWizardModal({
           </div>
         )}
 
-        {/* ── Étape 2 : Conditionnement ── */}
+        {/* â”€â”€ Ã‰tape 2 : Conditionnement â”€â”€ */}
         {step === 2 && (
           <div className="space-y-4">
             <div>
@@ -223,7 +223,7 @@ export function StockWizardModal({
                     key={p}
                     type="button"
                     onClick={() => setPackaging(p)}
-                    className={`px-3 py-1.5 text-xs rounded-lg border font-medium capitalize transition-all cursor-pointer active:scale-[0.97] ${
+                    className={`px-3 py-1.5 text-xs rounded-lg border font-medium capitalize transition-colors cursor-pointer active:scale-[0.97] ${
                       packaging === p
                         ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
                         : 'bg-white text-gray-700 border-gray-300 hover:border-amber-400'
@@ -238,7 +238,7 @@ export function StockWizardModal({
             {hasMultiplier && (
               <div className="bg-amber-50 rounded-xl p-3 space-y-3">
                 <p className="text-xs text-amber-800 font-semibold">
-                  1 {packaging} = combien d'unités individuelles ?
+                  1 {packaging} = combien d'unitÃ©s individuelles ?
                 </p>
                 <div className="flex items-center gap-3">
                   <input
@@ -254,7 +254,7 @@ export function StockWizardModal({
                         key={u}
                         type="button"
                         onClick={() => setUnit(u)}
-                        className={`px-2.5 py-1 text-[11px] rounded-lg border font-medium transition-all cursor-pointer active:scale-[0.97] ${
+                        className={`px-2.5 py-1 text-[11px] rounded-lg border font-medium transition-colors cursor-pointer active:scale-[0.97] ${
                           unit === u
                             ? 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
                             : 'bg-white text-gray-600 border-gray-300'
@@ -276,7 +276,7 @@ export function StockWizardModal({
           </div>
         )}
 
-        {/* ── Étape 3 : Prix & Stock ── */}
+        {/* â”€â”€ Ã‰tape 3 : Prix & Stock â”€â”€ */}
         {step === 3 && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -329,7 +329,7 @@ export function StockWizardModal({
             {parseInt(purchasePrice) > 0 && parseInt(salePrice) > 0 && (
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-xs text-emerald-800 font-mono">
                 <span className="font-bold">Marge unitaire : </span>
-                <span className="tabular-nums tracking-tight font-black">
+                <span className="tabular-nums tracking-tight font-semibold">
                   {(parseInt(salePrice) - parseInt(purchasePrice)).toLocaleString('fr-FR')} F
                 </span>{' '}
                 <span className="tabular-nums">
@@ -345,7 +345,7 @@ export function StockWizardModal({
           <button
             type="button"
             onClick={step === 1 ? handleClose : () => setStep(s => s - 1)}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 active:scale-[0.97] transition-all cursor-pointer"
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 active:scale-[0.97] transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" strokeWidth={1.75} />
             <span>{step === 1 ? 'Annuler' : 'Retour'}</span>
@@ -356,7 +356,7 @@ export function StockWizardModal({
               type="button"
               onClick={() => setStep(s => s + 1)}
               disabled={step === 1 && !name.trim()}
-              className="flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-emerald-700 active:scale-[0.97] disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-emerald-700 active:scale-[0.97] disabled:opacity-50 transition-colors cursor-pointer shadow-xs"
             >
               <span>Suivant</span>
               <ChevronRight className="w-4 h-4" strokeWidth={1.75} />
@@ -366,7 +366,7 @@ export function StockWizardModal({
               type="button"
               onClick={handleComplete}
               disabled={!name.trim() || !salePrice || isSaving}
-              className="flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-5 py-2 rounded-xl hover:bg-amber-600 active:scale-[0.97] disabled:opacity-50 transition-all shadow-md cursor-pointer"
+              className="flex items-center gap-1.5 bg-amber-500 text-white text-sm font-bold px-5 py-2 rounded-xl hover:bg-amber-600 active:scale-[0.97] disabled:opacity-50 transition-colors shadow-md cursor-pointer"
             >
               {isSaving ? 'Enregistrement...' : (
                 <>

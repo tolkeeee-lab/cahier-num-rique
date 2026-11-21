@@ -43,15 +43,15 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-md bg-[#fdfaf2] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+      <div className="w-full max-w-md bg-[#faf5e8] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Entête Modale */}
+        {/* EntÃªte Modale */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-800">
               <Store className="w-4 h-4" strokeWidth={1.75} />
             </div>
-            <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">Nouveau Point de Vente</h3>
+            <h3 className="text-base font-semibold text-gray-900 font-handwritten tracking-wide">Nouveau Point de Vente</h3>
           </div>
           <button
             type="button"
@@ -65,7 +65,7 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
         {/* Formulaire */}
         <div className="space-y-4 font-mono text-xs">
           <div>
-            <label className="block text-xs font-mono font-extrabold text-amber-950 uppercase mb-1.5">
+            <label className="block text-xs font-mono font-semibold text-amber-950 uppercase mb-1.5">
               Nom du Point de Vente :
             </label>
             <input
@@ -73,21 +73,21 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
               value={newShopName}
               onChange={(e) => onNameChange(e.target.value)}
               placeholder="ex: Annexe Akpakpa, Boutique 2..."
-              className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-gray-900 font-extrabold placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner"
+              className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-gray-900 font-semibold placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-mono font-extrabold text-amber-950 uppercase mb-1.5">
-              Type d'Activité :
+            <label className="block text-xs font-mono font-semibold text-amber-950 uppercase mb-1.5">
+              Type d'ActivitÃ© :
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => onActivityChange('boutique')}
-                className={`p-3 rounded-xl border text-center transition-all cursor-pointer active:scale-[0.97] ${
+                className={`p-3 rounded-xl border text-center transition-colors cursor-pointer active:scale-[0.97] ${
                   newShopActivity === 'boutique'
-                    ? 'bg-amber-800 text-white border-amber-900 font-extrabold shadow-md'
+                    ? 'bg-amber-800 text-white border-amber-900 font-semibold shadow-md'
                     : 'bg-white text-gray-700 border-amber-300 hover:bg-amber-50'
                 }`}
               >
@@ -98,9 +98,9 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
               <button
                 type="button"
                 onClick={() => onActivityChange('resto')}
-                className={`p-3 rounded-xl border text-center transition-all cursor-pointer active:scale-[0.97] ${
+                className={`p-3 rounded-xl border text-center transition-colors cursor-pointer active:scale-[0.97] ${
                   newShopActivity === 'resto'
-                    ? 'bg-amber-800 text-white border-amber-900 font-extrabold shadow-md'
+                    ? 'bg-amber-800 text-white border-amber-900 font-semibold shadow-md'
                     : 'bg-white text-gray-700 border-amber-300 hover:bg-amber-50'
                 }`}
               >
@@ -111,9 +111,9 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
               <button
                 type="button"
                 onClick={() => onActivityChange('prestations')}
-                className={`p-3 rounded-xl border text-center transition-all cursor-pointer active:scale-[0.97] ${
+                className={`p-3 rounded-xl border text-center transition-colors cursor-pointer active:scale-[0.97] ${
                   newShopActivity === 'prestations'
-                    ? 'bg-amber-800 text-white border-amber-900 font-extrabold shadow-md'
+                    ? 'bg-amber-800 text-white border-amber-900 font-semibold shadow-md'
                     : 'bg-white text-gray-700 border-amber-300 hover:bg-amber-50'
                 }`}
               >
@@ -129,7 +129,7 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 active:scale-[0.97] transition-all cursor-pointer"
+            className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 active:scale-[0.97] transition-colors cursor-pointer"
           >
             Annuler
           </button>
@@ -137,9 +137,9 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
             type="button"
             onClick={onCreate}
             disabled={!newShopName.trim()}
-            className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md cursor-pointer"
+            className="px-5 py-2 bg-emerald-700 text-white text-xs font-semibold rounded-xl hover:bg-emerald-800 active:scale-[0.97] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md cursor-pointer"
           >
-            Créer la Boutique
+            CrÃ©er la Boutique
           </button>
         </div>
       </div>

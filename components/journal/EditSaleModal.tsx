@@ -3,9 +3,9 @@
 /**
  * EditSaleModal.tsx
  *
- * Modale de modification complète d'une vente :
+ * Modale de modification complÃ¨te d'une vente :
  * - Modification du nom du client
- * - Ajout, modification de la quantité/prix, ou suppression d'un article
+ * - Ajout, modification de la quantitÃ©/prix, ou suppression d'un article
  * - Calcul automatique du nouveau total
  * - Option de suppression / raturage direct
  */
@@ -125,15 +125,15 @@ export function EditSaleModal({
     >
       <div className="bg-[#fffdf2] border border-amber-300 rounded-[24px] p-5 max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* En-tête */}
+        {/* En-tÃªte */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center border border-amber-300 flex-shrink-0">
               <Edit3 className="w-4 h-4 text-amber-800" strokeWidth={1.75} />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-base">Modifier l'Écriture de Vente</h3>
-              <p className="text-xs text-gray-500 font-mono">ID: {sale.id?.slice(0, 8)}... • {sale.time}</p>
+              <h3 className="font-bold text-gray-900 text-base">Modifier l'Ã‰criture de Vente</h3>
+              <p className="text-xs text-gray-500 font-mono">ID: {sale.id?.slice(0, 8)}... â€¢ {sale.time}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 cursor-pointer active:scale-[0.97]">
@@ -144,7 +144,7 @@ export function EditSaleModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nom du Client */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-1">
+            <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-normal mb-1">
               Nom du Client / Note
             </label>
             <input
@@ -156,9 +156,9 @@ export function EditSaleModal({
             />
           </div>
 
-          {/* Liste des articles à modifier */}
+          {/* Liste des articles Ã  modifier */}
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wider">
+            <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-normal">
               Articles vendus ({articles.length})
             </label>
 
@@ -173,7 +173,7 @@ export function EditSaleModal({
                 />
 
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <span className="text-gray-400 text-[10px]">Qté:</span>
+                  <span className="text-gray-400 text-[10px]">QtÃ©:</span>
                   <input
                     type="number"
                     min={1}
@@ -213,10 +213,10 @@ export function EditSaleModal({
             )}
           </div>
 
-          {/* Formulaire ajout rapide d'un article à la liste */}
+          {/* Formulaire ajout rapide d'un article Ã  la liste */}
           <div className="bg-amber-100/60 border border-amber-300/80 p-2.5 rounded-xl space-y-2">
             <span className="text-[10px] font-bold text-amber-900 uppercase">
-              + Ajouter un article à cette vente
+              + Ajouter un article Ã  cette vente
             </span>
             <div className="flex items-center gap-1.5 flex-wrap">
               <input
@@ -231,7 +231,7 @@ export function EditSaleModal({
                 min={1}
                 value={newArtQty}
                 onChange={(e) => setNewArtQty(e.target.value)}
-                placeholder="Qté"
+                placeholder="QtÃ©"
                 className="w-12 text-xs text-center font-mono font-bold px-1 py-1.5 bg-white border border-amber-300 rounded-lg outline-none"
               />
               <input
@@ -246,7 +246,7 @@ export function EditSaleModal({
                 type="button"
                 onClick={handleAddNewArticle}
                 disabled={!newArtName.trim()}
-                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-[0.97] text-white rounded-lg text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-[0.97] text-white rounded-lg text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer"
               >
                 + Ajouter
               </button>
@@ -255,8 +255,8 @@ export function EditSaleModal({
 
           {/* Nouveau Total */}
           <div className="pt-2 border-t border-dashed border-amber-300 flex items-center justify-between font-mono">
-            <span className="text-xs text-gray-600 font-bold">Nouveau Total Calculé :</span>
-            <span className="text-base font-extrabold text-amber-900 tabular-nums">{formatPrice(totalCalculated)}</span>
+            <span className="text-xs text-gray-600 font-bold">Nouveau Total CalculÃ© :</span>
+            <span className="text-base font-semibold text-amber-900 tabular-nums">{formatPrice(totalCalculated)}</span>
           </div>
 
           {/* Boutons validation & suppression */}
@@ -270,7 +270,7 @@ export function EditSaleModal({
                     onClose()
                   }
                 }}
-                className="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold rounded-xl border border-rose-300 transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
+                className="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold rounded-xl border border-rose-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
               >
                 <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
                 <span>Raturer la Vente</span>
@@ -281,14 +281,14 @@ export function EditSaleModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition-all cursor-pointer active:scale-[0.97]"
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer active:scale-[0.97]"
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-[0.97]"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer active:scale-[0.97]"
               >
                 {isSubmitting ? (
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

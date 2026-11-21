@@ -41,7 +41,7 @@ export function ProductMergeModal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="bg-[#fbf9f4] border-2 border-amber-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-[#faf5e8] border-2 border-amber-300 rounded-[28px] max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="px-5 py-4 border-b border-amber-200 bg-amber-100 flex items-center justify-between">
           <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
             <GitMerge className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
@@ -57,7 +57,7 @@ export function ProductMergeModal({
 
         <div className="p-5 space-y-4 text-xs text-gray-700">
           <p className="text-gray-600">
-            Ces deux articles semblent identiques. Choisissez le nom canonique à conserver :
+            Ces deux articles semblent identiques. Choisissez le nom canonique Ã  conserver :
           </p>
 
           <div className="grid grid-cols-2 gap-3">
@@ -68,11 +68,11 @@ export function ProductMergeModal({
                 currentPair.item1.id
               )}
               disabled={merging}
-              className="p-3.5 bg-white border border-amber-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-2xl text-left transition-all group flex flex-col justify-between cursor-pointer active:scale-[0.97]"
+              className="p-3.5 bg-white border border-amber-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-2xl text-left transition-colors group flex flex-col justify-between cursor-pointer active:scale-[0.97]"
             >
               <div>
                 <div className="font-bold text-sm text-gray-900 group-hover:text-amber-900">
-                  « {currentPair.item1.name} »
+                  Â« {currentPair.item1.name} Â»
                 </div>
                 <span className="text-[10px] text-gray-400 block mt-1">Conserver ce nom</span>
               </div>
@@ -88,11 +88,11 @@ export function ProductMergeModal({
                 currentPair.item2.id
               )}
               disabled={merging}
-              className="p-3.5 bg-white border border-amber-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-2xl text-left transition-all group flex flex-col justify-between cursor-pointer active:scale-[0.97]"
+              className="p-3.5 bg-white border border-amber-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-2xl text-left transition-colors group flex flex-col justify-between cursor-pointer active:scale-[0.97]"
             >
               <div>
                 <div className="font-bold text-sm text-gray-900 group-hover:text-amber-900">
-                  « {currentPair.item2.name} »
+                  Â« {currentPair.item2.name} Â»
                 </div>
                 <span className="text-[10px] text-gray-400 block mt-1">Conserver ce nom</span>
               </div>
@@ -104,14 +104,14 @@ export function ProductMergeModal({
 
           <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-[10px] text-amber-900 flex items-start gap-2">
             <Info className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
-            <span><strong>Remarque :</strong> La fusion transférera automatiquement l'historique complet des ventes et mouvements sous le nom sélectionné et supprimera l'autre version.</span>
+            <span><strong>Remarque :</strong> La fusion transfÃ©rera automatiquement l'historique complet des ventes et mouvements sous le nom sÃ©lectionnÃ© et supprimera l'autre version.</span>
           </div>
         </div>
 
         <div className="px-5 py-3 border-t border-amber-200 bg-amber-100/50 flex justify-between items-center">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs text-amber-900 hover:text-black font-semibold rounded-lg hover:bg-amber-200/40 cursor-pointer active:scale-[0.97] transition-all"
+            className="px-3 py-1.5 text-xs text-amber-900 hover:text-black font-semibold rounded-lg hover:bg-amber-200/40 cursor-pointer active:scale-[0.97] transition-colors"
           >
             Passer
           </button>

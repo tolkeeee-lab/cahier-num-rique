@@ -25,12 +25,10 @@ export const SalesFilterBar: React.FC<SalesFilterBarProps> = ({
   onExportPDF,
 }) => {
   return (
-    <div className="bg-white/90 p-3.5 rounded-2xl border border-amber-300/80 space-y-3 mb-4 shadow-sm">
+    <div className="bg-[#faf5e8] p-3.5 rounded-2xl border border-[#e2d6be] mb-4">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        
-        {/* Champ de Recherche */}
         <div className="relative flex-grow max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.75} />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" strokeWidth={1.5} />
           <input
             type="text"
             value={searchQuery}
@@ -40,42 +38,38 @@ export const SalesFilterBar: React.FC<SalesFilterBarProps> = ({
                 onSearchChange('')
               }
             }}
-            placeholder="Rechercher par client, article ou note..."
-            className="w-full pl-9 pr-8 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono shadow-inner font-bold"
+            placeholder="Rechercher par client, article ou note"
+            className="w-full pl-9 pr-8 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-600 rounded-md active:scale-[0.97] transition-all duration-100 ease-out"
-              title="Effacer la recherche (Échap)"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-700 rounded-md transition-colors cursor-pointer"
+              title="Effacer la recherche"
             >
-              <X className="w-3.5 h-3.5" strokeWidth={1.75} />
+              <X className="w-3.5 h-3.5" strokeWidth={1.5} />
             </button>
           )}
         </div>
 
-        {/* Filtres & Exportations */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          
-          {/* Filtre de Date */}
           <select
             value={dateFilter}
             onChange={(e) => onDateFilterChange(e.target.value)}
-            className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
+            className="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-800 font-medium focus:outline-none focus:border-emerald-700 cursor-pointer"
           >
-            <option value="today">Aujourd'hui</option>
+            <option value="today">Aujourd&apos;hui</option>
             <option value="yesterday">Hier</option>
             <option value="week">7 derniers jours</option>
             <option value="month">Ce mois-ci</option>
             <option value="all">Historique complet</option>
           </select>
 
-          {/* Filtre de Statut */}
           <select
             value={statusFilter}
             onChange={(e) => onStatusFilterChange(e.target.value)}
-            className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
+            className="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs text-stone-800 font-medium focus:outline-none focus:border-emerald-700 cursor-pointer"
           >
             <option value="all">Tous les statuts</option>
             <option value="paid">Encaissés</option>
@@ -83,15 +77,14 @@ export const SalesFilterBar: React.FC<SalesFilterBarProps> = ({
             <option value="crossed_out">Rayés</option>
           </select>
 
-          {/* Boutons d'export */}
           {onExportCSV && (
             <button
               type="button"
               onClick={onExportCSV}
-              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
+              className="p-2 rounded-xl bg-white hover:bg-stone-50 active:scale-[0.97] text-stone-700 border border-stone-200 transition-colors cursor-pointer"
               title="Exporter en CSV / Excel"
             >
-              <Download className="w-4 h-4" strokeWidth={1.75} />
+              <Download className="w-4 h-4" strokeWidth={1.5} />
             </button>
           )}
 
@@ -99,10 +92,10 @@ export const SalesFilterBar: React.FC<SalesFilterBarProps> = ({
             <button
               type="button"
               onClick={onExportPDF}
-              className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
+              className="p-2 rounded-xl bg-white hover:bg-stone-50 active:scale-[0.97] text-stone-700 border border-stone-200 transition-colors cursor-pointer"
               title="Générer rapport PDF"
             >
-              <Share2 className="w-4 h-4" strokeWidth={1.75} />
+              <Share2 className="w-4 h-4" strokeWidth={1.5} />
             </button>
           )}
         </div>

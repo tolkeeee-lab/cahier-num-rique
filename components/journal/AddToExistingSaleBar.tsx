@@ -4,12 +4,12 @@
  * AddToExistingSaleBar.tsx
  *
  * Barre de saisie qui remplace la barre WhatsApp quand l'utilisateur
- * veut ajouter un article à une vente déjà enregistrée.
+ * veut ajouter un article Ã  une vente dÃ©jÃ  enregistrÃ©e.
  *
- * Affiche le mode "Ajout à vente" avec le nom du client cible.
- * Bouton Annuler pour revenir à la saisie normale.
+ * Affiche le mode "Ajout Ã  vente" avec le nom du client cible.
+ * Bouton Annuler pour revenir Ã  la saisie normale.
  *
- * 100% UI — pas de logique métier.
+ * 100% UI â€” pas de logique mÃ©tier.
  */
 
 import React from 'react'
@@ -32,20 +32,20 @@ export function AddToExistingSaleBar({
   onSubmit,
   onCancel,
   isSubmitting,
-  placeholder = 'ex: 2 Sardines à 500',
+  placeholder = 'ex: 2 Sardines Ã  500',
 }: AddToExistingSaleBarProps) {
   return (
     <div className="flex-shrink-0 border-t-2 border-dashed border-blue-300 bg-blue-50/60 rounded-xl px-3 py-2 space-y-2">
-      {/* En-tête */}
+      {/* En-tÃªte */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
           <Plus className="w-3.5 h-3.5 text-blue-700" />
-          <span>Ajouter à la vente de <span className="text-blue-900 font-extrabold">{clientName}</span></span>
+          <span>Ajouter Ã  la vente de <span className="text-blue-900 font-semibold">{clientName}</span></span>
         </span>
         <button
           type="button"
           onClick={onCancel}
-          className="text-xs text-gray-500 hover:text-red-500 flex items-center gap-1 active:scale-[0.97] transition-all cursor-pointer font-bold"
+          className="text-xs text-gray-500 hover:text-red-500 flex items-center gap-1 active:scale-[0.97] transition-colors cursor-pointer font-bold"
         >
           <X className="w-3 h-3" />
           <span>Annuler</span>
@@ -65,7 +65,7 @@ export function AddToExistingSaleBar({
         <button
           type="submit"
           disabled={!value.trim() || isSubmitting}
-          className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 disabled:opacity-50 active:scale-95 transition-all flex-shrink-0 shadow-md"
+          className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 disabled:opacity-50 active:scale-95 transition-colors flex-shrink-0 shadow-md"
         >
           {isSubmitting ? (
             <Loader className="w-4 h-4 animate-spin" />

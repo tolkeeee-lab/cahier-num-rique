@@ -4,16 +4,16 @@ import React from 'react'
 
 export const AuthHeader: React.FC = () => {
   return (
-    <div className="text-center space-y-3 mb-6">
-      <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-[#1e1a18] border border-amber-900/30 shadow-xl">
-        <img src="/logo/logo-symbole.svg" alt="Cahier Numérique" className="w-10 h-12 object-contain" />
+    <div className="text-center space-y-2.5">
+      <div className="inline-flex items-center justify-center p-2.5 rounded-xl bg-white border border-stone-200">
+        <img src="/logo/logo-symbole.svg" alt="Cahier Numérique" className="w-9 h-10 object-contain" />
       </div>
 
-      <h1 className="text-xl font-extrabold text-white tracking-wide">
+      <h1 className="text-xl font-semibold text-stone-900 tracking-tight">
         Le Cahier Numérique
       </h1>
-      <p className="text-xs text-gray-400 font-mono">
-        Gestion simple, rapide et sécurisée pour boutiquiers & commerçants
+      <p className="text-xs text-stone-600">
+        Gestion simple, rapide et hors-ligne pour boutiquiers et commerçants
       </p>
     </div>
   )

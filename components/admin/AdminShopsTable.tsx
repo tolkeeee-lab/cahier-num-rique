@@ -36,9 +36,8 @@ export const AdminShopsTable: React.FC<AdminShopsTableProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Barre de Recherche */}
       <div className="relative max-w-md">
-        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" strokeWidth={1.75} />
+        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" strokeWidth={1.5} />
         <input
           type="text"
           value={searchQuery}
@@ -49,71 +48,70 @@ export const AdminShopsTable: React.FC<AdminShopsTableProps> = ({
               onSearchChange('')
             }
           }}
-          placeholder="Rechercher par nom de boutique, e-mail gérant ou ID..."
-          className="w-full pl-9 pr-9 py-2 bg-[#141210] border border-gray-800 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 font-mono"
+          placeholder="Rechercher par boutique, e-mail ou ID"
+          className="w-full pl-9 pr-9 py-2 bg-[#faf5e8] border border-[#e2d6be] rounded-xl text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => onSearchChange('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-300 transition-colors active:scale-[0.97] cursor-pointer"
-            title="Effacer la recherche (Échap)"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+            title="Effacer la recherche"
           >
-            <X className="w-3.5 h-3.5" strokeWidth={1.75} />
+            <X className="w-3.5 h-3.5" strokeWidth={1.5} />
           </button>
         )}
       </div>
 
-      {/* Tableau des Boutiques */}
-      <div className="bg-[#1e1a18] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+      <div className="bg-[#faf5e8] rounded-2xl border border-[#e2d6be] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#141210] border-b border-gray-800 text-[11px] font-mono text-gray-400 uppercase">
-                <th className="p-4">Boutique / Gérant</th>
-                <th className="p-4 text-center">Transactions</th>
-                <th className="p-4 text-right">Ventes Cumulées</th>
-                <th className="p-4 text-right">Tiroir Cash</th>
-                <th className="p-4 text-center">Équipe</th>
-                <th className="p-4 text-right">Inspecter</th>
+              <tr className="bg-[#f5efe0] border-b border-[#e2d6be] text-xs font-medium text-stone-600">
+                <th className="px-4 py-3">Boutique / Gérant</th>
+                <th className="px-4 py-3 text-center">Transactions</th>
+                <th className="px-4 py-3 text-right">Ventes cumulées</th>
+                <th className="px-4 py-3 text-right">Tiroir caisse</th>
+                <th className="px-4 py-3 text-center">Équipe</th>
+                <th className="px-4 py-3 text-right">Inspecter</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800/60 text-xs font-mono">
+            <tbody className="divide-y divide-[#e2d6be]/60 text-xs">
               {filteredShops.map((shop) => (
-                <tr key={shop.shop_id} className="hover:bg-[#25201d] transition-colors">
-                  <td className="p-4">
-                    <p className="font-bold text-white text-sm">{shop.name}</p>
-                    <p className="text-[11px] text-gray-400">{shop.owner_email || 'Boutique sans e-mail'}</p>
+                <tr key={shop.shop_id} className="hover:bg-white/60 transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="font-semibold text-stone-900 text-sm">{shop.name}</p>
+                    <p className="text-[11px] text-stone-500">{shop.owner_email || 'Boutique sans e-mail'}</p>
                   </td>
 
-                  <td className="p-4 text-center text-gray-300">
-                    <span className="px-2 py-0.5 rounded-lg bg-[#141210] border border-gray-800 tabular-nums">
+                  <td className="px-4 py-3 text-center text-stone-700">
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-stone-200 font-mono tabular-nums">
                       {shop.transactions_count}
                     </span>
                   </td>
 
-                  <td className="p-4 text-right font-black text-amber-400 tabular-nums tracking-tight">
+                  <td className="px-4 py-3 text-right font-semibold text-stone-900 font-mono tabular-nums">
                     {formatPrice(shop.total_sales)}
                   </td>
 
-                  <td className="p-4 text-right text-emerald-400 font-black tabular-nums tracking-tight">
+                  <td className="px-4 py-3 text-right text-emerald-700 font-semibold font-mono tabular-nums">
                     {formatPrice(shop.cash_balance)}
                   </td>
 
-                  <td className="p-4 text-center text-gray-400">
-                    <span className="flex items-center justify-center gap-1">
-                      <Users className="w-3.5 h-3.5 text-gray-500" strokeWidth={1.75} />
-                      <span className="tabular-nums">{shop.employees_count}</span>
+                  <td className="px-4 py-3 text-center text-stone-600">
+                    <span className="inline-flex items-center justify-center gap-1 font-mono tabular-nums">
+                      <Users className="w-3.5 h-3.5 text-stone-400" strokeWidth={1.5} />
+                      <span>{shop.employees_count}</span>
                     </span>
                   </td>
 
-                  <td className="p-4 text-right">
+                  <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => onInspectShop(shop.shop_id, shop.name)}
-                      className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 active:scale-[0.97] transition-all font-mono font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      className="px-3 py-1.5 rounded-lg bg-white text-stone-800 border border-stone-200 hover:bg-stone-50 active:scale-[0.97] transition-colors font-medium text-xs inline-flex items-center gap-1.5 cursor-pointer"
                     >
-                      <Eye className="w-3.5 h-3.5" strokeWidth={1.75} />
-                      <span>Voir Cahier</span>
+                      <Eye className="w-3.5 h-3.5 text-stone-500" strokeWidth={1.5} />
+                      <span>Voir cahier</span>
                     </button>
                   </td>
                 </tr>

@@ -37,7 +37,7 @@ interface AuditLogsViewerModalProps {
 
 const ACTION_CONFIG: Record<string, { label: string; icon: any; color: string; badge: string }> = {
   sale_crossed_out: {
-    label: 'Vente biffée',
+    label: 'Vente biffÃ©e',
     icon: RotateCcw,
     color: 'text-amber-600 bg-amber-50 border-amber-200',
     badge: 'bg-amber-100 text-amber-900 border-amber-200',
@@ -49,16 +49,16 @@ const ACTION_CONFIG: Record<string, { label: string; icon: any; color: string; b
     badge: 'bg-rose-100 text-rose-900 border-rose-200',
   },
   sale_deleted: {
-    label: 'Vente supprimée',
+    label: 'Vente supprimÃ©e',
     icon: Trash2,
     color: 'text-red-600 bg-red-50 border-red-200',
     badge: 'bg-red-100 text-red-900 border-red-200',
   },
   cash_closing: {
-    label: 'Clôture Z',
+    label: 'ClÃ´ture Z',
     icon: Coins,
-    color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
-    badge: 'bg-indigo-100 text-indigo-900 border-indigo-200',
+    color: 'text-stone-700 bg-stone-100 border-stone-200',
+    badge: 'bg-stone-100 text-stone-700 border-stone-200',
   },
   stock_adjusted: {
     label: 'Ajustement stock',
@@ -162,7 +162,7 @@ export function AuditLogsViewerModal({
                 Journal d'Audit Anti-Fraude
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                Traçabilité des actions sensibles et conformité pour {shopName}
+                TraÃ§abilitÃ© des actions sensibles et conformitÃ© pour {shopName}
               </p>
             </div>
           </div>
@@ -171,8 +171,8 @@ export function AuditLogsViewerModal({
             <button
               onClick={fetchLogs}
               disabled={loading}
-              title="Rafraîchir les logs"
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 active:scale-[0.97] transition-all"
+              title="RafraÃ®chir les logs"
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 active:scale-[0.97] transition-colors"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -193,7 +193,7 @@ export function AuditLogsViewerModal({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher par employé, article, action..."
+              placeholder="Rechercher par employÃ©, article, action..."
               className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900"
             />
           </div>
@@ -202,7 +202,7 @@ export function AuditLogsViewerModal({
             <button
               type="button"
               onClick={() => setFilterAction('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-[0.97] ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors active:scale-[0.97] ${
                 filterAction === 'all'
                   ? 'bg-slate-900 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -213,7 +213,7 @@ export function AuditLogsViewerModal({
             <button
               type="button"
               onClick={() => setFilterAction('sale_crossed_out')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-[0.97] ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors active:scale-[0.97] ${
                 filterAction === 'sale_crossed_out'
                   ? 'bg-amber-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -224,7 +224,7 @@ export function AuditLogsViewerModal({
             <button
               type="button"
               onClick={() => setFilterAction('sale_returned')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-[0.97] ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors active:scale-[0.97] ${
                 filterAction === 'sale_returned'
                   ? 'bg-rose-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -235,13 +235,13 @@ export function AuditLogsViewerModal({
             <button
               type="button"
               onClick={() => setFilterAction('cash_closing')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-[0.97] ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors active:scale-[0.97] ${
                 filterAction === 'cash_closing'
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-stone-800 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Clôtures Z
+              ClÃ´tures Z
             </button>
           </div>
         </div>
@@ -255,7 +255,7 @@ export function AuditLogsViewerModal({
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-xs">
-              Aucune action enregistrée pour ces critères.
+              Aucune action enregistrÃ©e pour ces critÃ¨res.
             </div>
           ) : (
             filteredLogs.map((log) => {
@@ -271,7 +271,7 @@ export function AuditLogsViewerModal({
               return (
                 <div
                   key={log.id}
-                  className="p-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 transition-all space-y-2"
+                  className="p-3.5 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 transition-colors space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
@@ -303,13 +303,13 @@ export function AuditLogsViewerModal({
                     </button>
                   </div>
 
-                  {/* Résumé textuel concis */}
+                  {/* RÃ©sumÃ© textuel concis */}
                   {log.details && (
                     <div className="text-xs text-slate-700 bg-white p-2.5 rounded-xl border border-slate-150">
                       {log.action === 'sale_returned' && (
                         <div className="space-y-1">
                           <div className="font-semibold text-rose-700">
-                            Montant remboursé : {formatPrice(log.details.totalRefundAmount || 0)} ({log.details.refundMode === 'cash' ? 'Espèces' : 'Avoir'})
+                            Montant remboursÃ© : {formatPrice(log.details.totalRefundAmount || 0)} ({log.details.refundMode === 'cash' ? 'EspÃ¨ces' : 'Avoir'})
                           </div>
                           {log.details.reason && (
                             <div className="text-slate-500">Motif : {log.details.reason}</div>
@@ -318,19 +318,19 @@ export function AuditLogsViewerModal({
                       )}
                       {log.action === 'sale_crossed_out' && (
                         <div className="font-semibold text-amber-800">
-                          Vente n° {log.target_id?.slice(0, 8)} annulée/biffée
+                          Vente nÂ° {log.target_id?.slice(0, 8)} annulÃ©e/biffÃ©e
                         </div>
                       )}
                       {log.action === 'cash_closing' && (
                         <div className="space-y-0.5">
-                          <div>Caisse réelle : <span className="font-mono font-bold">{formatPrice(log.details.actual_cash || 0)}</span></div>
+                          <div>Caisse rÃ©elle : <span className="font-mono font-bold">{formatPrice(log.details.actual_cash || 0)}</span></div>
                           <div className={log.details.difference < 0 ? 'text-rose-600 font-bold' : 'text-emerald-600'}>
-                            Écart constaté : {formatPrice(log.details.difference || 0)}
+                            Ã‰cart constatÃ© : {formatPrice(log.details.difference || 0)}
                           </div>
                         </div>
                       )}
 
-                      {/* Vue détaillée JSON si dépliée */}
+                      {/* Vue dÃ©taillÃ©e JSON si dÃ©pliÃ©e */}
                       {isExpanded && (
                         <pre className="mt-2 pt-2 border-t border-slate-100 text-[11px] font-mono text-slate-600 overflow-x-auto whitespace-pre-wrap">
                           {JSON.stringify(log.details, null, 2)}

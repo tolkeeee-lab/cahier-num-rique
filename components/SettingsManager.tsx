@@ -36,7 +36,7 @@ export interface SettingsManagerProps {
 export function SettingsManager({
   shopId = '',
   shopName = 'Ma Boutique',
-  activity = 'Commerce général',
+  activity = 'Commerce gÃ©nÃ©ral',
   phone = '',
   address = '',
   country = 'BJ',
@@ -56,22 +56,22 @@ export function SettingsManager({
 
   return (
     <div className="space-y-6">
-      {/* Mode Super Admin (Caché pour les autres) */}
+      {/* Mode Super Admin (CachÃ© pour les autres) */}
       {isAdminUser && (
-        <div className="bg-purple-50 p-6 rounded-2xl border border-purple-200 shadow-sm">
+        <div className="bg-stone-100 p-6 rounded-2xl border border-stone-200 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h2 className="text-lg font-bold text-purple-900 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-purple-700" strokeWidth={1.75} />
+              <h2 className="text-lg font-bold text-stone-700 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-stone-700" strokeWidth={1.75} />
                 <span>Mode Super Admin</span>
               </h2>
-              <p className="text-sm text-purple-700">
-                Vous avez des privilèges globaux. Accédez au tableau de bord administrateur.
+              <p className="text-sm text-stone-700">
+                Vous avez des privilÃ¨ges globaux. AccÃ©dez au tableau de bord administrateur.
               </p>
             </div>
             <a 
               href="/admin" 
-              className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2 whitespace-nowrap active:scale-[0.97] cursor-pointer"
+              className="bg-stone-800 hover:bg-stone-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm flex items-center gap-2 whitespace-nowrap active:scale-[0.97] cursor-pointer"
             >
               Ouvrir le Panel
             </a>
@@ -91,7 +91,7 @@ export function SettingsManager({
         onSaveProfile={onSaveProfile}
       />
 
-      {/* Sécurité & Journal d'Audit Anti-Fraude (Réservé Propriétaire / Admin) */}
+      {/* SÃ©curitÃ© & Journal d'Audit Anti-Fraude (RÃ©servÃ© PropriÃ©taire / Admin) */}
       {!isEmployee && (
         <div className="bg-amber-50/70 p-6 rounded-2xl border border-amber-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -103,14 +103,14 @@ export function SettingsManager({
                 Journal d'Audit Anti-Fraude
               </h3>
               <p className="text-xs text-amber-800 mt-0.5 max-w-md">
-                Consultez l'historique immuable de toutes les actions sensibles : ventes biffées, retours marchandises, écarts de caisse Z et suppressions.
+                Consultez l'historique immuable de toutes les actions sensibles : ventes biffÃ©es, retours marchandises, Ã©carts de caisse Z et suppressions.
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setShowAuditLogs(true)}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs font-bold transition-all shadow-sm active:scale-[0.97] flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs font-bold transition-colors shadow-sm active:scale-[0.97] flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
           >
             <ShieldAlert className="w-4 h-4 text-amber-300" />
             <span>Consulter les Logs</span>
@@ -118,7 +118,7 @@ export function SettingsManager({
         </div>
       )}
 
-      {/* Gestion de l'équipe d'employés */}
+      {/* Gestion de l'Ã©quipe d'employÃ©s */}
       <EmployeeRoleManager
         employees={employees}
         shopId={shopId}
@@ -127,7 +127,7 @@ export function SettingsManager({
         onRemoveEmployee={onRemoveEmployee}
       />
 
-      {/* Sauvegarde & Nettoyage Sélectif */}
+      {/* Sauvegarde & Nettoyage SÃ©lectif */}
       <DataExportBackupSettings
         shopId={shopId}
         onExportBackup={onExportBackup}

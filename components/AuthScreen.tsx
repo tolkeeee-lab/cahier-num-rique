@@ -25,35 +25,31 @@ export function AuthScreen({
   const [mode, setMode] = useState<'login' | 'signup'>('login')
 
   return (
-    <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#1e1a18] border border-[#2a2421] rounded-3xl p-6 shadow-2xl space-y-6">
-        
-        {/* En-tête de marque */}
+    <div className="min-h-screen bg-[#f5efe0] flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-[#faf5e8] border border-[#e2d6be] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
         <AuthHeader />
 
-        {/* Sélecteur Mode Connexion / Inscription */}
-        <div className="flex items-center gap-1 bg-[#141210] p-1 rounded-2xl border border-gray-800 font-mono text-xs">
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-stone-200 text-xs">
           <button
             type="button"
             onClick={() => setMode('login')}
-            className={`flex-1 py-2 rounded-xl font-bold transition-all ${
-              mode === 'login' ? 'bg-[#2a2421] text-amber-400 shadow-md' : 'text-gray-400 hover:text-white'
+            className={`flex-1 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+              mode === 'login' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:text-stone-900'
             }`}
           >
-            Se Connecter
+            Se connecter
           </button>
           <button
             type="button"
             onClick={() => setMode('signup')}
-            className={`flex-1 py-2 rounded-xl font-bold transition-all ${
-              mode === 'signup' ? 'bg-[#2a2421] text-amber-400 shadow-md' : 'text-gray-400 hover:text-white'
+            className={`flex-1 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+              mode === 'signup' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:text-stone-900'
             }`}
           >
-            Créer un Compte
+            Créer un compte
           </button>
         </div>
 
-        {/* Formulaire sélectionné */}
         {mode === 'login' ? (
           <AuthLoginForm
             onLogin={onLogin}

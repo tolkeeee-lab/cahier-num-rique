@@ -23,8 +23,8 @@ const CATEGORY_OPTIONS: Record<string, { id: string; label: string }[]> = {
     { id: 'Divers', label: 'Divers' },
   ],
   resto: [
-    { id: 'Cuisine', label: 'Plats cuisinés' },
-    { id: 'Cafétéria', label: 'Cafétéria' },
+    { id: 'Cuisine', label: 'Plats cuisinÃ©s' },
+    { id: 'CafÃ©tÃ©ria', label: 'CafÃ©tÃ©ria' },
     { id: 'Boissons', label: 'Boissons' },
   ],
   prestations: [
@@ -34,7 +34,7 @@ const CATEGORY_OPTIONS: Record<string, { id: string; label: string }[]> = {
   ],
   particulier: [
     { id: 'Foyer', label: 'Maison & Charges' },
-    { id: 'Alimentation', label: 'Marché & Nourriture' },
+    { id: 'Alimentation', label: 'MarchÃ© & Nourriture' },
     { id: 'Divers', label: 'Divers' },
   ],
 }
@@ -101,20 +101,20 @@ export function TactileMenuModal({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end pb-16 sm:pb-20 bg-black/25 backdrop-blur-2xs animate-in fade-in duration-150 pointer-events-none">
-      {/* Arrière-plan cliquable pour fermer */}
+      {/* ArriÃ¨re-plan cliquable pour fermer */}
       <div className="flex-1 pointer-events-auto" onClick={onClose} />
 
-      {/* Ruban horizontal compact et défilable positionné juste au-dessus de la barre WhatsApp */}
+      {/* Ruban horizontal compact et dÃ©filable positionnÃ© juste au-dessus de la barre WhatsApp */}
       <div className="w-full max-w-4xl mx-auto bg-[#fffdf2] border-2 border-amber-400 rounded-3xl p-3 shadow-2xl space-y-2 animate-in slide-in-from-bottom duration-200 pointer-events-auto">
         
-        {/* En-tête ultra fin du ruban */}
+        {/* En-tÃªte ultra fin du ruban */}
         <div className="flex items-center justify-between gap-2 border-b border-amber-200 pb-1.5 flex-wrap">
           <div className="flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded-lg bg-amber-400 text-amber-950 flex items-center justify-center font-black shadow-xs">
+            <div className="w-6 h-6 rounded-lg bg-amber-400 text-amber-950 flex items-center justify-center font-semibold shadow-xs">
               <Zap className="w-3.5 h-3.5 fill-amber-950" strokeWidth={1.75} />
             </div>
-            <span className="font-extrabold text-amber-950 text-xs font-mono">
-              Raccourcis 1-Tap (Défilement Horizontal)
+            <span className="font-semibold text-amber-950 text-xs font-mono">
+              Raccourcis 1-Tap (DÃ©filement Horizontal)
             </span>
           </div>
 
@@ -135,7 +135,7 @@ export function TactileMenuModal({
             <button
               type="button"
               onClick={() => setShowAddForm((v) => !v)}
-              className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.97] text-white rounded-full text-xs font-bold transition-all shadow-xs flex-shrink-0 cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.97] text-white rounded-full text-xs font-bold transition-colors shadow-xs flex-shrink-0 cursor-pointer"
             >
               <Plus className="w-3 h-3" strokeWidth={1.75} />
               <span>Nouveau</span>
@@ -145,7 +145,7 @@ export function TactileMenuModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-1 bg-amber-200/80 hover:bg-amber-300 active:scale-[0.97] text-amber-950 rounded-full transition-all cursor-pointer"
+              className="p-1 bg-amber-200/80 hover:bg-amber-300 active:scale-[0.97] text-amber-950 rounded-full transition-colors cursor-pointer"
               title="Fermer les raccourcis"
             >
               <X className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -177,14 +177,14 @@ export function TactileMenuModal({
             <button
               type="submit"
               disabled={!newName.trim() || isSavingNew}
-              className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-xl hover:bg-emerald-700 active:scale-[0.97] font-bold disabled:opacity-50 transition-all flex-shrink-0 cursor-pointer"
+              className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-xl hover:bg-emerald-700 active:scale-[0.97] font-bold disabled:opacity-50 transition-colors flex-shrink-0 cursor-pointer"
             >
               {isSavingNew ? <Loader className="w-3 h-3 animate-spin" strokeWidth={1.75} /> : 'Enregistrer'}
             </button>
           </form>
         )}
 
-        {/* ── Ruban Défilable Horizontalement (Single / Double Line Scroll) ── */}
+        {/* â”€â”€ Ruban DÃ©filable Horizontalement (Single / Double Line Scroll) â”€â”€ */}
         {isLoading ? (
           <div className="flex items-center justify-center py-3 text-amber-700 text-xs gap-1.5 font-mono">
             <Loader className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} />
@@ -200,7 +200,7 @@ export function TactileMenuModal({
                   <button
                     type="button"
                     onClick={() => handleTap(item)}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-extrabold transition-all shadow-xs cursor-pointer active:scale-[0.97] whitespace-nowrap select-none ${
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-semibold transition-colors shadow-xs cursor-pointer active:scale-[0.97] whitespace-nowrap select-none ${
                       isTapped
                         ? 'bg-emerald-600 text-white border-emerald-700 scale-105 ring-2 ring-emerald-400'
                         : 'bg-white hover:bg-amber-100 border-amber-300 hover:border-amber-500 text-gray-900 shadow-2xs'
@@ -213,7 +213,7 @@ export function TactileMenuModal({
                        <Check className="w-3.5 h-3.5 text-white flex-shrink-0 animate-in zoom-in-50" strokeWidth={1.75} />
                     ) : (
                       item.price > 0 && (
-                        <span className="text-amber-900 font-mono font-black text-[11px] bg-amber-100/90 border border-amber-300/80 px-1.5 py-0.5 tabular-nums rounded-lg flex-shrink-0">
+                        <span className="text-amber-900 font-mono font-semibold text-[11px] bg-amber-100/90 border border-amber-300/80 px-1.5 py-0.5 tabular-nums rounded-lg flex-shrink-0">
                           {item.price} F
                         </span>
                       )
@@ -227,7 +227,7 @@ export function TactileMenuModal({
                       e.stopPropagation()
                       onDeleteItem(item.id, item.name)
                     }}
-                    className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-700 active:scale-[0.97] transition-all shadow-xs z-10"
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-700 active:scale-[0.97] transition-colors shadow-xs z-10"
                     title={`Supprimer "${item.name}"`}
                   >
                     <X className="w-2.5 h-2.5" strokeWidth={1.75} />
@@ -238,7 +238,7 @@ export function TactileMenuModal({
           </div>
         ) : (
           <div className="py-2.5 text-center text-gray-400 text-xs italic font-mono bg-amber-50/50 rounded-xl border border-dashed border-amber-200">
-            Aucun raccourci. Cliquez sur "+ Nouveau" pour créer vos boutons 1-tap.
+            Aucun raccourci. Cliquez sur "+ Nouveau" pour crÃ©er vos boutons 1-tap.
           </div>
         )}
       </div>

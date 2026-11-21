@@ -52,7 +52,7 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
     setSavedMessage(null)
     try {
       await onSaveProfile({ shopName: name, activity, phone, address, country, city })
-      setSavedMessage('Profil et localisation enregistrés avec succès !')
+      setSavedMessage('Profil et localisation enregistrÃ©s avec succÃ¨s !')
       setTimeout(() => setSavedMessage(null), 3500)
     } catch (err) {
       console.error('Erreur sauvegarde profil boutique:', err)
@@ -74,21 +74,21 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
 
         <div className="flex items-center gap-2">
           <Store className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-          <h4 className="text-sm font-extrabold text-gray-900">Profil & Localisation du Point de Vente</h4>
+          <h4 className="text-sm font-semibold text-gray-900">Profil & Localisation du Point de Vente</h4>
         </div>
 
-        {/* Badge Code Boutique pour le propriétaire */}
+        {/* Badge Code Boutique pour le propriÃ©taire */}
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-300/80 px-3 py-1.5 rounded-xl text-xs font-mono">
           <Key className="w-4 h-4 text-amber-600" strokeWidth={1.75} />
-          <span className="text-gray-600 font-medium">Code Équipe :</span>
-          <span className="font-extrabold text-amber-900 tracking-wider bg-amber-200/80 px-2 py-0.5 rounded-md">{shortCode}</span>
+          <span className="text-gray-600 font-medium">Code Ã‰quipe :</span>
+          <span className="font-semibold text-amber-900 tracking-normal bg-amber-200/80 px-2 py-0.5 rounded-md">{shortCode}</span>
           <button
             type="button"
             onClick={handleCopyCode}
-            className="ml-1 text-amber-800 hover:text-amber-950 active:scale-[0.97] font-bold flex items-center gap-1 bg-amber-200/60 hover:bg-amber-300/80 px-2 py-0.5 rounded-lg transition-all duration-100 ease-out cursor-pointer"
+            className="ml-1 text-amber-800 hover:text-amber-950 active:scale-[0.97] font-bold flex items-center gap-1 bg-amber-200/60 hover:bg-amber-300/80 px-2 py-0.5 rounded-lg transition-colors duration-100 ease-out cursor-pointer"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-green-700" strokeWidth={1.75} /> : <Copy className="w-3.5 h-3.5" strokeWidth={1.75} />}
-            <span>{copied ? 'Copié !' : 'Copier'}</span>
+            <span>{copied ? 'CopiÃ© !' : 'Copier'}</span>
           </button>
         </div>
       </div>
@@ -111,16 +111,16 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
             onChange={(e) => setCountry(e.target.value)}
             className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner cursor-pointer"
           >
-            <option value="BJ">🇧🇯 Bénin (BJ)</option>
-            <option value="CI">🇨🇮 Côte d'Ivoire (CI)</option>
-            <option value="SN">🇸🇳 Sénégal (SN)</option>
-            <option value="TG">🇹🇬 Togo (TG)</option>
-            <option value="ML">🇲🇱 Mali (ML)</option>
-            <option value="BF">🇧🇫 Burkina Faso (BF)</option>
-            <option value="NE">🇳🇪 Niger (NE)</option>
-            <option value="CM">🇨🇲 Cameroun (CM)</option>
-            <option value="GN">🇬🇳 Guinée (GN)</option>
-            <option value="FR">🇫🇷 France (FR)</option>
+            <option value="BJ">ðŸ‡§ðŸ‡¯ BÃ©nin (BJ)</option>
+            <option value="CI">ðŸ‡¨ðŸ‡® CÃ´te d'Ivoire (CI)</option>
+            <option value="SN">ðŸ‡¸ðŸ‡³ SÃ©nÃ©gal (SN)</option>
+            <option value="TG">ðŸ‡¹ðŸ‡¬ Togo (TG)</option>
+            <option value="ML">ðŸ‡²ðŸ‡± Mali (ML)</option>
+            <option value="BF">ðŸ‡§ðŸ‡« Burkina Faso (BF)</option>
+            <option value="NE">ðŸ‡³ðŸ‡ª Niger (NE)</option>
+            <option value="CM">ðŸ‡¨ðŸ‡² Cameroun (CM)</option>
+            <option value="GN">ðŸ‡¬ðŸ‡³ GuinÃ©e (GN)</option>
+            <option value="FR">ðŸ‡«ðŸ‡· France (FR)</option>
             <option value="OTHER">Autre pays (International)</option>
           </select>
         </div>
@@ -137,21 +137,21 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
         </div>
 
         <div>
-          <label className="block text-amber-950 font-bold uppercase mb-1">Secteur d'activité :</label>
+          <label className="block text-amber-950 font-bold uppercase mb-1">Secteur d'activitÃ© :</label>
           <select
             value={activity}
             onChange={(e) => setActivity(e.target.value)}
             className="w-full px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-gray-900 font-bold focus:outline-none focus:border-amber-500 shadow-inner cursor-pointer"
           >
             <option value="boutique">Commerce / Boutique / Grossiste</option>
-            <option value="resto">Cafétéria / Restaurant / Bar / Maquis</option>
+            <option value="resto">CafÃ©tÃ©ria / Restaurant / Bar / Maquis</option>
             <option value="prestations">Salon de Coiffure / Atelier / Services</option>
             <option value="particulier">Particulier / Budget du Foyer</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-amber-950 font-bold uppercase mb-1">Numéro WhatsApp / Téléphone :</label>
+          <label className="block text-amber-950 font-bold uppercase mb-1">NumÃ©ro WhatsApp / TÃ©lÃ©phone :</label>
           <input
             type="text"
             value={phone}

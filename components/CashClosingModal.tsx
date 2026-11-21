@@ -53,7 +53,7 @@ export function CashClosingModal({
   isOpen,
   onClose,
   sales,
-  shopName = 'Cahier Numérique',
+  shopName = 'Cahier NumÃ©rique',
   shopId = '',
 }: CashClosingModalProps) {
   const [activeTab, setActiveTab] = useState<'closing' | 'history'>('closing')
@@ -75,13 +75,13 @@ export function CashClosingModal({
     50: 0,
   })
 
-  // Chargement de l'historique et des données existantes
+  // Chargement de l'historique et des donnÃ©es existantes
   useEffect(() => {
     if (!isOpen) return
     const closings = getOfflineCashClosings(shopId)
     setHistoryClosings(closings)
 
-    // Synchronisation en tâche de fond avec le serveur
+    // Synchronisation en tÃ¢che de fond avec le serveur
     if (typeof window !== 'undefined' && navigator.onLine && shopId) {
       fetch(`/api/cash-closings?shop_id=${encodeURIComponent(shopId)}`, {
         headers: { 'x-shop-id': shopId }
@@ -122,18 +122,18 @@ export function CashClosingModal({
   const activeSales = sales.filter(s => s.status !== 'crossed_out')
   const todaySales = activeSales.filter(s => s.date === todayIso)
 
-  // Recettes Espèces réelles du Jour (Flux entrants nets au tiroir : ventes cash, acomptes, remboursements fournisseurs, apports caisse)
+  // Recettes EspÃ¨ces rÃ©elles du Jour (Flux entrants nets au tiroir : ventes cash, acomptes, remboursements fournisseurs, apports caisse)
   const cashReceipts = todaySales.reduce((sum, s) => {
     const delta = getItemCashDelta(s)
     return delta > 0 ? sum + delta : sum
   }, 0)
 
-  // Ventes à Crédit accordées aux clients aujourd'hui (créances nées aujourd'hui)
+  // Ventes Ã  CrÃ©dit accordÃ©es aux clients aujourd'hui (crÃ©ances nÃ©es aujourd'hui)
   const creditSales = todaySales
     .filter(s => s.type === 'sale_credit' || (s.debt > 0 && s.type !== 'purchase_credit') || s.pen_color === 'yellow' || s.pen === 'yellow')
     .reduce((sum, s) => sum + (s.debt || 0), 0)
 
-  // Dépenses & Sorties Cash du Jour (Flux sortants nets du tiroir : achats comptant, dépenses, remboursements clients, retraits caisse)
+  // DÃ©penses & Sorties Cash du Jour (Flux sortants nets du tiroir : achats comptant, dÃ©penses, remboursements clients, retraits caisse)
   const totalExpenses = todaySales.reduce((sum, s) => {
     const delta = getItemCashDelta(s)
     return delta < 0 ? sum + Math.abs(delta) : sum
@@ -143,13 +143,13 @@ export function CashClosingModal({
   const rawOpening = parseFloat(openingCashInput.replace(/\s/g, '').replace(/,/g, '.'))
   const openingCash = Number.isFinite(rawOpening) ? Math.max(0, Math.round(rawOpening)) : 0
 
-  // Solde théorique total = ouverture + recettes jour - dépenses jour
-  // Si openingCash est renseigné, on l'ajoute au flux net de la journée
+  // Solde thÃ©orique total = ouverture + recettes jour - dÃ©penses jour
+  // Si openingCash est renseignÃ©, on l'ajoute au flux net de la journÃ©e
   const netDayCash = cashReceipts - totalExpenses
   const cumulatedSalesCash = calculateCash(activeSales)
   const theoreticalCash = openingCash > 0 ? Math.round(openingCash + netDayCash) : Math.round(cumulatedSalesCash)
 
-  // Parsing espèces réelles comptées
+  // Parsing espÃ¨ces rÃ©elles comptÃ©es
   const rawActual = parseFloat(actualCashInput.replace(/\s/g, '').replace(/,/g, '.'))
   const actualCash = actualCashInput !== ''
     ? (Number.isFinite(rawActual) ? Math.round(rawActual) : 0)
@@ -192,7 +192,7 @@ export function CashClosingModal({
       is_synced: false
     }
 
-    // 1. Sauvegarde locale instantanée (Offline-First)
+    // 1. Sauvegarde locale instantanÃ©e (Offline-First)
     saveOfflineCashClosing(shopId, closingRecord)
     setHistoryClosings(prev => {
       const filtered = prev.filter(c => c.date !== todayIso)
@@ -213,7 +213,7 @@ export function CashClosingModal({
       },
     })
 
-    // 2. Synchronisation serveur en tâche de fond si connecté
+    // 2. Synchronisation serveur en tÃ¢che de fond si connectÃ©
     if (typeof window !== 'undefined' && navigator.onLine && shopId) {
       try {
         const res = await fetch('/api/cash-closings', {
@@ -232,40 +232,40 @@ export function CashClosingModal({
           broadcastInstantSync(shopId, 'closings')
         }
       } catch (e) {
-        console.warn('[CashClosing] Sauvegarde réseau en attente de reconnexion')
+        console.warn('[CashClosing] Sauvegarde rÃ©seau en attente de reconnexion')
       }
     }
   }
 
   const generateWhatsAppReportUrl = () => {
-    let msg = `📊 *RAPPORT DE CLÔTURE DE CAISSE (Z)*\n`
-    msg += `🏪 *Commerce* : ${shopName}\n`
-    msg += `📅 *Date*     : ${todayStr} à ${currentTimeStr}\n`
-    msg += `═════════════════════════\n`
+    let msg = `ðŸ“Š *RAPPORT DE CLÃ”TURE DE CAISSE (Z)*\n`
+    msg += `ðŸª *Commerce* : ${shopName}\n`
+    msg += `ðŸ“… *Date*     : ${todayStr} Ã  ${currentTimeStr}\n`
+    msg += `â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n`
     if (openingCash > 0) {
-      msg += `🪙 *Fond d'Ouverture* : ${formatPrice(openingCash)}\n`
+      msg += `ðŸª™ *Fond d'Ouverture* : ${formatPrice(openingCash)}\n`
     }
-    msg += `💵 *Recettes Espèces* : ${formatPrice(cashReceipts)}\n`
-    msg += `💸 *Dépenses & Achats* : ${formatPrice(totalExpenses)}\n`
-    msg += `📝 *Ventes Crédit*    : ${formatPrice(creditSales)}\n`
-    msg += `═════════════════════════\n`
-    msg += `💰 *SOLDE THÉORIQUE*  : ${formatPrice(theoreticalCash)}\n`
-    msg += `📥 *ESPÈCES COMPTÉES*  : ${formatPrice(actualCash)}\n`
+    msg += `ðŸ’µ *Recettes EspÃ¨ces* : ${formatPrice(cashReceipts)}\n`
+    msg += `ðŸ’¸ *DÃ©penses & Achats* : ${formatPrice(totalExpenses)}\n`
+    msg += `ðŸ“ *Ventes CrÃ©dit*    : ${formatPrice(creditSales)}\n`
+    msg += `â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n`
+    msg += `ðŸ’° *SOLDE THÃ‰ORIQUE*  : ${formatPrice(theoreticalCash)}\n`
+    msg += `ðŸ“¥ *ESPÃˆCES COMPTÃ‰ES*  : ${formatPrice(actualCash)}\n`
     
     if (difference === 0) {
-      msg += `✅ *ÉCART CAISSE*       : PARFAIT (0 F)\n`
+      msg += `âœ… *Ã‰CART CAISSE*       : PARFAIT (0 F)\n`
     } else if (difference > 0) {
-      msg += `📈 *EXCÉDENT CAISSE*    : +${formatPrice(difference)}\n`
+      msg += `ðŸ“ˆ *EXCÃ‰DENT CAISSE*    : +${formatPrice(difference)}\n`
     } else {
-      msg += `⚠️ *MANQUANT CAISSE*   : ${formatPrice(difference)}\n`
+      msg += `âš ï¸ *MANQUANT CAISSE*   : ${formatPrice(difference)}\n`
     }
 
     if (notesInput.trim()) {
-      msg += `📝 *Observations*    : ${notesInput.trim()}\n`
+      msg += `ðŸ“ *Observations*    : ${notesInput.trim()}\n`
     }
     
-    msg += `═════════════════════════\n`
-    msg += `✨ _Généré via Cahier Numérique PWA_`
+    msg += `â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n`
+    msg += `âœ¨ _GÃ©nÃ©rÃ© via Cahier NumÃ©rique PWA_`
 
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`
   }
@@ -279,43 +279,43 @@ export function CashClosingModal({
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#fbf9f4] border border-amber-300 rounded-[28px] max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+        className="bg-[#faf5e8] border border-amber-300 rounded-[28px] max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
       >
         
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-stone-900/10 bg-[#faf5e8] flex items-center justify-between text-stone-900 flex-shrink-0">
           <div className="font-bold text-sm flex items-center gap-2">
             <Calculator className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-            <span className="font-mono tracking-tight font-extrabold">Clôture de Caisse (Z)</span>
+            <span className="font-mono tracking-tight font-semibold">ClÃ´ture de Caisse (Z)</span>
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 rounded-full hover:bg-amber-200/60 cursor-pointer text-amber-800 active:scale-[0.97] transition-all"
+            className="p-1.5 rounded-full hover:bg-amber-200/60 cursor-pointer text-amber-800 active:scale-[0.97] transition-colors"
             aria-label="Fermer"
           >
             <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
-        {/* Onglets Clôture vs Historique */}
+        {/* Onglets ClÃ´ture vs Historique */}
         <div className="flex border-b border-amber-200 bg-amber-50/50 p-1 gap-1 text-xs font-mono">
           <button
             type="button"
             onClick={() => setActiveTab('closing')}
-            className={`flex-1 py-1.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.97] ${
+            className={`flex-1 py-1.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors active:scale-[0.97] ${
               activeTab === 'closing'
                 ? 'bg-white text-amber-950 shadow-xs border border-amber-300/60'
                 : 'text-amber-800/70 hover:text-amber-900 hover:bg-amber-100/50'
             }`}
           >
             <Calculator className="w-3.5 h-3.5" strokeWidth={1.75} />
-            <span>Clôture du Jour</span>
+            <span>ClÃ´ture du Jour</span>
           </button>
           <button
             type="button"
             data-testid="closing-history-tab"
             onClick={() => setActiveTab('history')}
-            className={`flex-1 py-1.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.97] ${
+            className={`flex-1 py-1.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors active:scale-[0.97] ${
               activeTab === 'history'
                 ? 'bg-white text-amber-950 shadow-xs border border-amber-300/60'
                 : 'text-amber-800/70 hover:text-amber-900 hover:bg-amber-100/50'
@@ -332,7 +332,7 @@ export function CashClosingModal({
             {/* Saisie Fond d'Ouverture */}
             <div className="bg-white p-3 border border-amber-200/80 rounded-2xl space-y-1.5 shadow-2xs">
               <div className="flex justify-between items-center">
-                <label className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">
+                <label className="text-[10px] text-stone-500 font-bold uppercase tracking-normal">
                   Fond de caisse d&apos;ouverture (Matin)
                 </label>
                 <span className="text-[10px] text-amber-800 font-semibold">Monnaie initiale</span>
@@ -340,51 +340,51 @@ export function CashClosingModal({
               <input
                 type="text"
                 inputMode="numeric"
-                placeholder="Ex: 20 000 F (ou 0 si déjà cumulé)"
+                placeholder="Ex: 20 000 F (ou 0 si dÃ©jÃ  cumulÃ©)"
                 value={openingCashInput}
                 onChange={e => setOpeningCashInput(e.target.value)}
                 className="w-full px-3 py-2 bg-amber-50/30 border border-amber-200 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-amber-500 font-mono"
               />
             </div>
 
-            {/* Synthèse des flux du jour */}
+            {/* SynthÃ¨se des flux du jour */}
             <div className="bg-white p-3.5 border border-amber-200/80 rounded-2xl space-y-2.5 shadow-2xs">
-              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Flux financiers du {todayStr}</div>
+              <div className="text-[10px] text-stone-400 font-bold uppercase tracking-normal">Flux financiers du {todayStr}</div>
               
               <div className="flex justify-between items-center py-1 border-b border-stone-100 text-emerald-800 font-bold">
                 <span className="flex items-center gap-1.5">
                   <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600" strokeWidth={1.75} />
-                  <span>Recettes Espèces (Encaissements)</span>
+                  <span>Recettes EspÃ¨ces (Encaissements)</span>
                 </span>
-                <span className="tabular-nums font-black">+{formatPrice(cashReceipts)}</span>
+                <span className="tabular-nums font-semibold">+{formatPrice(cashReceipts)}</span>
               </div>
 
               <div className="flex justify-between items-center py-1 border-b border-stone-100 text-rose-700 font-bold">
                 <span className="flex items-center gap-1.5">
                   <ArrowUpRight className="w-3.5 h-3.5 text-rose-600" strokeWidth={1.75} />
-                  <span>Dépenses & Achats Cash</span>
+                  <span>DÃ©penses & Achats Cash</span>
                 </span>
-                <span className="tabular-nums font-black">-{formatPrice(totalExpenses)}</span>
+                <span className="tabular-nums font-semibold">-{formatPrice(totalExpenses)}</span>
               </div>
 
               <div className="flex justify-between items-center py-1 text-amber-900 font-bold">
                 <span className="flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.75} />
-                  <span>Ventes Crédit Client (Non encaissées)</span>
+                  <span>Ventes CrÃ©dit Client (Non encaissÃ©es)</span>
                 </span>
-                <span className="tabular-nums font-black">{formatPrice(creditSales)}</span>
+                <span className="tabular-nums font-semibold">{formatPrice(creditSales)}</span>
               </div>
             </div>
 
-            {/* Solde Théorique */}
+            {/* Solde ThÃ©orique */}
             <div className="p-3.5 bg-amber-50/80 border border-amber-300/80 rounded-2xl flex justify-between items-center text-amber-950 shadow-2xs">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-800 flex-shrink-0">
                   <Wallet className="w-4 h-4" strokeWidth={1.75} />
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold uppercase text-amber-800">Espèces Théoriques Attendues</div>
-                  <div className="text-lg font-black tabular-nums tracking-tight">{formatPrice(theoreticalCash)}</div>
+                  <div className="text-[10px] font-bold uppercase text-amber-800">EspÃ¨ces ThÃ©oriques Attendues</div>
+                  <div className="text-lg font-semibold tabular-nums tracking-tight">{formatPrice(theoreticalCash)}</div>
                 </div>
               </div>
               <div className="text-right text-[10px] text-amber-700 font-semibold">
@@ -392,11 +392,11 @@ export function CashClosingModal({
               </div>
             </div>
 
-            {/* Saisie Espèces Réelles dans le Tiroir */}
+            {/* Saisie EspÃ¨ces RÃ©elles dans le Tiroir */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="block text-[10px] font-bold text-gray-600 uppercase">
-                  Espèces Réelles Comptées (FCFA)
+                  EspÃ¨ces RÃ©elles ComptÃ©es (FCFA)
                 </label>
                 <button
                   type="button"
@@ -411,16 +411,16 @@ export function CashClosingModal({
               <input
                 type="text"
                 inputMode="numeric"
-                placeholder={`Par défaut : ${theoreticalCash.toLocaleString('fr-FR')} F`}
+                placeholder={`Par dÃ©faut : ${theoreticalCash.toLocaleString('fr-FR')} F`}
                 value={actualCashInput}
                 onChange={e => setActualCashInput(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-black text-gray-900 outline-none focus:border-amber-500 font-mono shadow-inner"
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-base font-semibold text-gray-900 outline-none focus:border-amber-500 font-mono shadow-inner"
               />
 
               {/* Assistant Billetage en 1 clic */}
               {showBilletage && (
                 <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-2xl space-y-2 animate-in fade-in duration-150">
-                  <div className="text-[10px] font-extrabold text-amber-950 uppercase flex items-center gap-1.5">
+                  <div className="text-[10px] font-semibold text-amber-950 uppercase flex items-center gap-1.5">
                     <Coins className="w-3.5 h-3.5 text-amber-800" strokeWidth={1.75} />
                     <span>Assistant Billetage :</span>
                   </div>
@@ -437,7 +437,7 @@ export function CashClosingModal({
                             setBills(prev => ({ ...prev, [denom]: val }))
                           }}
                           placeholder="0"
-                          className="w-14 text-right px-1.5 py-0.5 bg-amber-50/50 border border-amber-300 rounded font-black text-xs tabular-nums"
+                          className="w-14 text-right px-1.5 py-0.5 bg-amber-50/50 border border-amber-300 rounded font-semibold text-xs tabular-nums"
                         />
                       </div>
                     ))}
@@ -457,7 +457,7 @@ export function CashClosingModal({
               )}
             </div>
 
-            {/* Analyse de l'Écart */}
+            {/* Analyse de l'Ã‰cart */}
             <div className={`p-3.5 rounded-2xl border flex items-center justify-between font-bold ${
               difference === 0 
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
@@ -473,10 +473,10 @@ export function CashClosingModal({
                 )}
                 <div>
                   <div className="text-[10px] uppercase">
-                    {difference === 0 ? 'Caisse Parfaite' : difference > 0 ? 'Excédent de Caisse' : 'Manquant de Caisse'}
+                    {difference === 0 ? 'Caisse Parfaite' : difference > 0 ? 'ExcÃ©dent de Caisse' : 'Manquant de Caisse'}
                   </div>
-                  <div className="text-sm font-black tabular-nums tracking-tight">
-                    {difference === 0 ? 'Écart : 0 F' : `${difference > 0 ? '+' : ''}${formatPrice(difference)}`}
+                  <div className="text-sm font-semibold tabular-nums tracking-tight">
+                    {difference === 0 ? 'Ã‰cart : 0 F' : `${difference > 0 ? '+' : ''}${formatPrice(difference)}`}
                   </div>
                 </div>
               </div>
@@ -485,22 +485,22 @@ export function CashClosingModal({
             {/* Note / Justification */}
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
-                Observations / Justification d&apos;écart (facultatif)
+                Observations / Justification d&apos;Ã©cart (facultatif)
               </label>
               <input
                 type="text"
-                placeholder="Ex: Monnaie gardée pour demain, pourboire..."
+                placeholder="Ex: Monnaie gardÃ©e pour demain, pourboire..."
                 value={notesInput}
                 onChange={e => setNotesInput(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-xs text-gray-900 outline-none focus:border-amber-500 font-mono"
               />
             </div>
 
-            {/* Bouton de Persistance Clôture Z */}
+            {/* Bouton de Persistance ClÃ´ture Z */}
             <button
               type="button"
               onClick={handleSaveClosing}
-              className={`w-full py-2.5 rounded-2xl font-bold flex items-center justify-center gap-2 text-white shadow-sm cursor-pointer active:scale-[0.97] transition-all ${
+              className={`w-full py-2.5 rounded-2xl font-bold flex items-center justify-center gap-2 text-white shadow-sm cursor-pointer active:scale-[0.97] transition-colors ${
                 isSaved 
                   ? 'bg-emerald-600 hover:bg-emerald-700' 
                   : 'bg-amber-800 hover:bg-amber-900'
@@ -509,12 +509,12 @@ export function CashClosingModal({
               {isSaved ? (
                 <>
                   <Check className="w-4 h-4" strokeWidth={2} />
-                  <span>Clôture Z enregistrée avec succès !</span>
+                  <span>ClÃ´ture Z enregistrÃ©e avec succÃ¨s !</span>
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" strokeWidth={1.75} />
-                  <span>Valider & Enregistrer la Clôture Z</span>
+                  <span>Valider & Enregistrer la ClÃ´ture Z</span>
                 </>
               )}
             </button>
@@ -524,7 +524,7 @@ export function CashClosingModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-2.5 border border-amber-200/90 bg-white/80 rounded-full font-bold text-amber-950 hover:bg-amber-50 active:scale-[0.97] transition-all cursor-pointer shadow-2xs"
+                className="flex-1 py-2.5 border border-amber-200/90 bg-white/80 rounded-full font-bold text-amber-950 hover:bg-amber-50 active:scale-[0.97] transition-colors cursor-pointer shadow-2xs"
               >
                 Fermer
               </button>
@@ -541,18 +541,18 @@ export function CashClosingModal({
 
           </div>
         ) : (
-          /* Onglet Historique des Clôtures */
+          /* Onglet Historique des ClÃ´tures */
           <div className="p-5 space-y-3 text-xs font-mono overflow-y-auto max-h-[70vh]">
             <div className="flex items-center justify-between text-stone-500 font-bold uppercase text-[10px] pb-1 border-b border-amber-200">
               <span>Date & Heure</span>
-              <span>Solde Réel / Écart</span>
+              <span>Solde RÃ©el / Ã‰cart</span>
             </div>
 
             {historyClosings.length === 0 ? (
               <div className="py-12 text-center text-stone-400 space-y-2">
                 <History className="w-8 h-8 mx-auto text-amber-300" strokeWidth={1.5} />
-                <p>Aucune clôture enregistrée pour l&apos;instant.</p>
-                <p className="text-[10px]">Validez votre première clôture Z pour constituer l&apos;historique.</p>
+                <p>Aucune clÃ´ture enregistrÃ©e pour l&apos;instant.</p>
+                <p className="text-[10px]">Validez votre premiÃ¨re clÃ´ture Z pour constituer l&apos;historique.</p>
               </div>
             ) : (
               historyClosings.map((closing) => {
@@ -580,7 +580,7 @@ export function CashClosingModal({
                           ? 'bg-blue-100 text-blue-800' 
                           : 'bg-rose-100 text-rose-800'
                       }`}>
-                        {diff === 0 ? 'Écart 0 F' : `${diff > 0 ? '+' : ''}${formatPrice(diff)}`}
+                        {diff === 0 ? 'Ã‰cart 0 F' : `${diff > 0 ? '+' : ''}${formatPrice(diff)}`}
                       </span>
                     </div>
 
@@ -590,16 +590,16 @@ export function CashClosingModal({
                         <span className="font-bold text-emerald-700 tabular-nums">+{formatPrice(closing.cash_receipts)}</span>
                       </div>
                       <div>
-                        <span className="text-stone-400">Dépenses : </span>
+                        <span className="text-stone-400">DÃ©penses : </span>
                         <span className="font-bold text-rose-700 tabular-nums">-{formatPrice(closing.expenses)}</span>
                       </div>
                       <div>
-                        <span className="text-stone-400">Théorique : </span>
+                        <span className="text-stone-400">ThÃ©orique : </span>
                         <span className="font-bold text-stone-700 tabular-nums">{formatPrice(closing.theoretical_cash)}</span>
                       </div>
                       <div>
-                        <span className="text-stone-400">Compté : </span>
-                        <span className="font-black text-amber-950 tabular-nums">{formatPrice(closing.actual_cash)}</span>
+                        <span className="text-stone-400">ComptÃ© : </span>
+                        <span className="font-semibold text-amber-950 tabular-nums">{formatPrice(closing.actual_cash)}</span>
                       </div>
                     </div>
 
@@ -616,9 +616,9 @@ export function CashClosingModal({
             <button
               type="button"
               onClick={() => setActiveTab('closing')}
-              className="w-full mt-2 py-2 border border-amber-300 bg-amber-50 rounded-xl font-bold text-amber-950 hover:bg-amber-100 active:scale-[0.97] transition-all cursor-pointer"
+              className="w-full mt-2 py-2 border border-amber-300 bg-amber-50 rounded-xl font-bold text-amber-950 hover:bg-amber-100 active:scale-[0.97] transition-colors cursor-pointer"
             >
-              Retour à la clôture du jour
+              Retour Ã  la clÃ´ture du jour
             </button>
           </div>
         )}

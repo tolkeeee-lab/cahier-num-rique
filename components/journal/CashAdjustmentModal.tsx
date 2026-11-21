@@ -70,13 +70,13 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-md bg-[#fdfaf2] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+      <div className="w-full max-w-md bg-[#faf5e8] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Entête */}
+        {/* EntÃªte */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
             <Calculator className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-            <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">Ajustement du Tiroir-Caisse</h3>
+            <h3 className="text-base font-semibold text-gray-900 font-handwritten tracking-wide">Ajustement du Tiroir-Caisse</h3>
           </div>
           <button
             type="button"
@@ -92,9 +92,9 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
           <button
             type="button"
             onClick={() => setMode('flow')}
-            className={`py-2 text-xs font-bold rounded-lg transition-all active:scale-[0.97] cursor-pointer ${
+            className={`py-2 text-xs font-bold rounded-lg transition-colors active:scale-[0.97] cursor-pointer ${
               mode === 'flow'
-                ? 'bg-amber-800 text-white font-extrabold shadow-xs'
+                ? 'bg-amber-800 text-white font-semibold shadow-xs'
                 : 'text-amber-900 hover:text-black font-bold'
             }`}
           >
@@ -103,9 +103,9 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
           <button
             type="button"
             onClick={() => setMode('count')}
-            className={`py-2 text-xs font-bold rounded-lg transition-all active:scale-[0.97] cursor-pointer ${
+            className={`py-2 text-xs font-bold rounded-lg transition-colors active:scale-[0.97] cursor-pointer ${
               mode === 'count'
-                ? 'bg-amber-800 text-white font-extrabold shadow-xs'
+                ? 'bg-amber-800 text-white font-semibold shadow-xs'
                 : 'text-amber-900 hover:text-black font-bold'
             }`}
           >
@@ -115,8 +115,8 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
 
         {/* Solde Actuel */}
         <div className="bg-amber-100/90 p-3 rounded-xl border border-amber-300 flex justify-between items-center font-mono">
-          <span className="text-xs text-amber-950 font-bold">Solde actuel théorique :</span>
-          <span className="text-sm font-black text-emerald-800 font-mono tabular-nums">
+          <span className="text-xs text-amber-950 font-bold">Solde actuel thÃ©orique :</span>
+          <span className="text-sm font-semibold text-emerald-800 font-mono tabular-nums">
             {formatPrice(currentCash)}
           </span>
         </div>
@@ -129,9 +129,9 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setFlowDirection('in')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] cursor-pointer ${
+                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-colors active:scale-[0.97] cursor-pointer ${
                     flowDirection === 'in'
-                      ? 'bg-emerald-100 border-emerald-300 text-emerald-900 font-black shadow-xs'
+                      ? 'bg-emerald-100 border-emerald-300 text-emerald-900 font-semibold shadow-xs'
                       : 'bg-white border-amber-300 text-gray-700'
                   }`}
                 >
@@ -141,9 +141,9 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setFlowDirection('out')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] cursor-pointer ${
+                  className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-colors active:scale-[0.97] cursor-pointer ${
                     flowDirection === 'out'
-                      ? 'bg-rose-100 border-rose-300 text-rose-900 font-black shadow-xs'
+                      ? 'bg-rose-100 border-rose-300 text-rose-900 font-semibold shadow-xs'
                       : 'bg-white border-amber-300 text-gray-700'
                   }`}
                 >
@@ -153,7 +153,7 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-mono font-extrabold text-amber-950 uppercase mb-1">
+                <label className="block text-xs font-mono font-semibold text-amber-950 uppercase mb-1">
                   Montant (FCFA) :
                 </label>
                 <input
@@ -162,14 +162,14 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
                   value={amountInput}
                   onChange={(e) => setAmountInput(e.target.value)}
                   placeholder="ex: 10000"
-                  className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner font-mono tabular-nums"
+                  className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-gray-900 font-semibold focus:outline-none focus:border-amber-500 shadow-inner font-mono tabular-nums"
                 />
               </div>
             </>
           ) : (
             <div>
-              <label className="block text-xs font-mono font-extrabold text-amber-950 uppercase mb-1">
-                Cash réellement compté en caisse (FCFA) :
+              <label className="block text-xs font-mono font-semibold text-amber-950 uppercase mb-1">
+                Cash rÃ©ellement comptÃ© en caisse (FCFA) :
               </label>
               <input
                 type="text"
@@ -177,13 +177,13 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
                 value={amountInput}
                 onChange={(e) => setAmountInput(e.target.value)}
                 placeholder="ex: 45000"
-                className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-gray-900 font-extrabold focus:outline-none focus:border-amber-500 shadow-inner font-mono tabular-nums"
+                className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm text-gray-900 font-semibold focus:outline-none focus:border-amber-500 shadow-inner font-mono tabular-nums"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-mono font-extrabold text-amber-950 uppercase mb-1">
+            <label className="block text-xs font-mono font-semibold text-amber-950 uppercase mb-1">
               Motif / Note :
             </label>
             <input
@@ -201,7 +201,7 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 active:scale-[0.97] transition-all cursor-pointer"
+            className="px-4 py-2 bg-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-300 active:scale-[0.97] transition-colors cursor-pointer"
           >
             Annuler
           </button>
@@ -209,7 +209,7 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
             type="button"
             onClick={handleConfirm}
             disabled={!amountInput || parseFloat(amountInput.replace(/\s+/g, '').replace(',', '.')) <= 0}
-            className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 cursor-pointer shadow-md font-mono"
+            className="px-5 py-2 bg-emerald-700 text-white text-xs font-semibold rounded-xl hover:bg-emerald-800 active:scale-[0.97] transition-colors disabled:opacity-50 cursor-pointer shadow-md font-mono"
           >
             Enregistrer l'Ajustement
           </button>

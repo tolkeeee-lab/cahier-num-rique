@@ -4,10 +4,10 @@ import { formatPrice } from '@/lib/productUtils'
 /**
  * StockConfirmationModal.tsx
  *
- * Modale de confirmation rapide pour un réapprovisionnement de produit connu.
- * Affiche les tarifs mémorisés (coût d'achat + prix de vente) et demande confirmation.
+ * Modale de confirmation rapide pour un rÃ©approvisionnement de produit connu.
+ * Affiche les tarifs mÃ©morisÃ©s (coÃ»t d'achat + prix de vente) et demande confirmation.
  *
- * Déclenché quand : "stock 2 Flag" → Flag est déjà dans le catalogue avec un unit_cost > 0
+ * DÃ©clenchÃ© quand : "stock 2 Flag" â†’ Flag est dÃ©jÃ  dans le catalogue avec un unit_cost > 0
  */
 
 import React from 'react'
@@ -61,7 +61,7 @@ export function StockConfirmationModal({
 
   if (!isOpen) return null
 
-  const isUnit = packaging === 'unité' || !packaging
+  const isUnit = packaging === 'unitÃ©' || !packaging
   const lotPrice = product.unit_cost * multiplier
   const totalLotPrice = lotPrice * quantity
   const totalUnits = quantity * multiplier
@@ -84,11 +84,11 @@ export function StockConfirmationModal({
     >
       <div className="bg-[#fffdf2] border border-emerald-300 rounded-[24px] p-5 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
 
-        {/* En-tête */}
+        {/* En-tÃªte */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-emerald-600" strokeWidth={1.75} />
-            <h3 className="font-bold text-gray-900">Réapprovisionnement</h3>
+            <h3 className="font-bold text-gray-900">RÃ©approvisionnement</h3>
           </div>
           <button
             type="button"
@@ -105,7 +105,7 @@ export function StockConfirmationModal({
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">Quantité</p>
+              <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">QuantitÃ©</p>
               <p className="font-mono font-bold text-gray-900 tabular-nums">
                 {quantity} {isUnit ? `${unit}(s)` : `${packaging}(s)`}
               </p>
@@ -118,7 +118,7 @@ export function StockConfirmationModal({
             )}
             <div>
               <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">
-                Coût {isUnit ? 'unitaire' : `/ ${packaging}`}
+                CoÃ»t {isUnit ? 'unitaire' : `/ ${packaging}`}
               </p>
               <p className="font-mono font-bold text-emerald-700 tabular-nums">{formatPrice(lotPrice)}</p>
             </div>
@@ -129,7 +129,7 @@ export function StockConfirmationModal({
           </div>
         </div>
 
-        {/* Total calculé */}
+        {/* Total calculÃ© */}
         <div className="border-t border-dashed border-emerald-200 pt-3">
           <div className="flex justify-between items-center">
             <div>
@@ -147,7 +147,7 @@ export function StockConfirmationModal({
           <button
             type="button"
             onClick={onModify}
-            className="flex-1 flex items-center justify-center gap-1.5 border border-amber-400 text-amber-800 bg-amber-50 hover:bg-amber-100 text-xs font-semibold py-2.5 rounded-xl transition-all active:scale-[0.97] cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-1.5 border border-amber-400 text-amber-800 bg-amber-50 hover:bg-amber-100 text-xs font-semibold py-2.5 rounded-xl transition-colors active:scale-[0.97] cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
             <span>Modifier les infos</span>
@@ -156,7 +156,7 @@ export function StockConfirmationModal({
             type="button"
             onClick={handleConfirm}
             disabled={isLoading}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-sm active:scale-[0.97] cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm active:scale-[0.97] cursor-pointer"
           >
             {isLoading ? (
               <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

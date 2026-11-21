@@ -43,16 +43,16 @@ export default function BoutiqueAssistantModal({
     const q = (textToAsk || query).trim()
     if (!q) return
 
-    // 1. Calcul local instantané (0 latence)
+    // 1. Calcul local instantanÃ© (0 latence)
     const localResult = answerBoutiqueQuestion(q, sales, products)
     setCurrentAnswer(localResult)
 
-    // 2. Si l'intention locale est générique ou non reconnue précisément, interroger l'IA en renfort
+    // 2. Si l'intention locale est gÃ©nÃ©rique ou non reconnue prÃ©cisÃ©ment, interroger l'IA en renfort
     if (localResult.type === 'general' && typeof window !== 'undefined' && navigator.onLine) {
       setIsAiLoading(true)
 
       try {
-        // Préparer un résumé compact des métriques clés de la boutique
+        // PrÃ©parer un rÃ©sumÃ© compact des mÃ©triques clÃ©s de la boutique
         const todayIso = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
         const activeSales = sales.filter(s => s.status !== 'crossed_out')
         const todaySales = activeSales.filter(s => s.date === todayIso)
@@ -66,12 +66,12 @@ export default function BoutiqueAssistantModal({
 
         const lowStockCount = products.filter(p => (p.current_stock ?? p.initial_stock ?? 0) <= (p.alert_threshold ?? 5)).length
 
-        const contextSummary = `Boutique: ${shopName}. Recettes espèces aujourd'hui: ${todayRevenue.toLocaleString('fr-FR')} FCFA (${todaySales.length} opérations). Total dettes clients à recouvrer: ${totalDebtsOut.toLocaleString('fr-FR')} FCFA. Catalogue: ${products.length} produits, dont ${lowStockCount} en stock critique.`
+        const contextSummary = `Boutique: ${shopName}. Recettes espÃ¨ces aujourd'hui: ${todayRevenue.toLocaleString('fr-FR')} FCFA (${todaySales.length} opÃ©rations). Total dettes clients Ã  recouvrer: ${totalDebtsOut.toLocaleString('fr-FR')} FCFA. Catalogue: ${products.length} produits, dont ${lowStockCount} en stock critique.`
 
         const messages = [
           {
             role: 'system',
-            content: `Tu es le conseiller commercial et expert de gestion pour le commerçant gérant "${shopName}". Réponds à sa question en français simple, précis et encourageant. Utilise au maximum 3 phrases. Mets les chiffres et noms clés en gras avec **...**. Pas d'émojis superflus. Données actuelles de la boutique: ${contextSummary}`
+            content: `Tu es le conseiller commercial et expert de gestion pour le commerÃ§ant gÃ©rant "${shopName}". RÃ©ponds Ã  sa question en franÃ§ais simple, prÃ©cis et encourageant. Utilise au maximum 3 phrases. Mets les chiffres et noms clÃ©s en gras avec **...**. Pas d'Ã©mojis superflus. DonnÃ©es actuelles de la boutique: ${contextSummary}`
           },
           {
             role: 'user',
@@ -94,13 +94,13 @@ export default function BoutiqueAssistantModal({
               answer: aiText.trim(),
               type: 'general',
               details: [
-                `Analyse intelligente générée à partir des données réelles de votre boutique.`
+                `Analyse intelligente gÃ©nÃ©rÃ©e Ã  partir des donnÃ©es rÃ©elles de votre boutique.`
               ]
             })
           }
         }
       } catch (err) {
-        console.warn('[BoutiqueAssistant] Fallback IA non disponible, conservation de la réponse locale:', err)
+        console.warn('[BoutiqueAssistant] Fallback IA non disponible, conservation de la rÃ©ponse locale:', err)
       } finally {
         setIsAiLoading(false)
       }
@@ -111,7 +111,7 @@ export default function BoutiqueAssistantModal({
     if (typeof window === 'undefined') return
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
-      alert("La reconnaissance vocale n'est pas supportée sur ce navigateur.")
+      alert("La reconnaissance vocale n'est pas supportÃ©e sur ce navigateur.")
       return
     }
 
@@ -143,9 +143,9 @@ export default function BoutiqueAssistantModal({
   }
 
   const quickQuestions = [
-    { label: "Combien j'ai gagné aujourd'hui ?", q: "Combien j'ai gagné aujourd'hui ?", icon: TrendingUp },
-    { label: "Ventes du mois passé", q: "Combien j'ai vendu le mois passé ?", icon: Calendar },
-    { label: "Quantité de riz vendue", q: "Quelle est la quantité de riz vendue ?", icon: Wheat },
+    { label: "Combien j'ai gagnÃ© aujourd'hui ?", q: "Combien j'ai gagnÃ© aujourd'hui ?", icon: TrendingUp },
+    { label: "Ventes du mois passÃ©", q: "Combien j'ai vendu le mois passÃ© ?", icon: Calendar },
+    { label: "QuantitÃ© de riz vendue", q: "Quelle est la quantitÃ© de riz vendue ?", icon: Wheat },
     { label: "Dettes des clients", q: "Combien les clients me doivent ?", icon: CreditCard },
     { label: "Produits en rupture", q: "Quels sont les produits en rupture ?", icon: AlertTriangle }
   ]
@@ -155,14 +155,14 @@ export default function BoutiqueAssistantModal({
       <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-amber-200 flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 p-4 text-white flex items-center justify-between shadow-md">
+        <div className="bg-emerald-700 p-4 text-white flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-white/20 rounded-2xl flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-amber-100" strokeWidth={1.75} />
             </div>
             <div>
               <h3 className="font-bold text-sm leading-tight">Assistant Bilan & Intelligence Boutique</h3>
-              <p className="text-[10px] text-amber-100 font-mono">Posez vos questions en vocal ou écrit • Analyse instantanée</p>
+              <p className="text-[10px] text-amber-100 font-mono">Posez vos questions en vocal ou Ã©crit â€¢ Analyse instantanÃ©e</p>
             </div>
           </div>
           <button
@@ -187,7 +187,7 @@ export default function BoutiqueAssistantModal({
           >
             <input
               type="text"
-              placeholder="Ex: Combien j'ai gagné aujourd'hui ?"
+              placeholder="Ex: Combien j'ai gagnÃ© aujourd'hui ?"
               value={query}
               onChange={e => setQuery(e.target.value)}
               className="flex-1 px-3 py-2 text-xs font-mono text-gray-800 bg-transparent outline-none"
@@ -197,7 +197,7 @@ export default function BoutiqueAssistantModal({
             <button
               type="button"
               onClick={handleVoiceInput}
-              title="Parler à l'assistant"
+              title="Parler Ã  l'assistant"
               className={`p-2 rounded-xl text-xs font-bold flex items-center gap-1 active:scale-[0.97] transition-transform duration-100 ease-out cursor-pointer ${
                 isListening
                   ? 'bg-rose-500 text-white animate-pulse'
@@ -207,7 +207,7 @@ export default function BoutiqueAssistantModal({
               {isListening ? (
                 <>
                   <MicOff className="w-4 h-4" strokeWidth={1.75} />
-                  <span className="text-[10px]">Écoute...</span>
+                  <span className="text-[10px]">Ã‰coute...</span>
                 </>
               ) : (
                 <Mic className="w-4 h-4" strokeWidth={1.75} />
@@ -226,8 +226,8 @@ export default function BoutiqueAssistantModal({
 
           {/* Quick Suggestions Chips */}
           <div className="space-y-1.5">
-            <p className="text-[10px] uppercase font-bold text-gray-400 font-mono tracking-wider">
-              Exemples de questions fréquentes :
+            <p className="text-[10px] uppercase font-bold text-gray-400 font-mono tracking-normal">
+              Exemples de questions frÃ©quentes :
             </p>
             <div className="flex flex-wrap gap-1.5">
               {quickQuestions.map((item, idx) => {
@@ -251,11 +251,11 @@ export default function BoutiqueAssistantModal({
 
           {/* Display Answer Card */}
           {currentAnswer ? (
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300 rounded-2xl p-4 space-y-2 shadow-xs animate-in fade-in duration-200">
+            <div className="bg-emerald-700 border border-amber-300 rounded-2xl p-4 space-y-2 shadow-xs animate-in fade-in duration-200">
               <div className="flex items-center justify-between text-amber-900 font-bold text-xs">
                 <div className="flex items-center gap-2">
                   <Lightbulb className="w-4 h-4 text-amber-700" strokeWidth={1.75} />
-                  <span>Réponse :</span>
+                  <span>RÃ©ponse :</span>
                 </div>
                 {isAiLoading && (
                   <span className="flex items-center gap-1 text-[10px] text-amber-700 animate-pulse font-mono font-medium">
@@ -288,7 +288,7 @@ export default function BoutiqueAssistantModal({
           ) : (
             <div className="text-center py-6 text-gray-400 font-mono text-xs border border-dashed border-amber-200 rounded-2xl bg-amber-50/50 flex flex-col items-center justify-center gap-1.5">
               <MessageSquare className="w-7 h-7 text-amber-400/80 mb-1" />
-              <p>Cliquez sur un exemple ci-dessus ou posez une question par texte ou à la voix !</p>
+              <p>Cliquez sur un exemple ci-dessus ou posez une question par texte ou Ã  la voix !</p>
             </div>
           )}
 

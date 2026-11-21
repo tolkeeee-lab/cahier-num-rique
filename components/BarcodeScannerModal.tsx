@@ -77,7 +77,7 @@ export function BarcodeScannerModal({
   const [selectedExistingId, setSelectedExistingId] = useState('')
   const [isLookingUpGlobal, setIsLookingUpGlobal] = useState(false)
 
-  // Anti-rebond par code pour éviter de biper 10 fois par seconde le même code
+  // Anti-rebond par code pour Ã©viter de biper 10 fois par seconde le mÃªme code
   const lastScannedTimeRef = useRef<{ [code: string]: number }>({})
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -105,7 +105,7 @@ export function BarcodeScannerModal({
     setTorchSupported(false)
   }, [])
 
-  // Ajout / Incrémentation d'un article dans le panier scanné
+  // Ajout / IncrÃ©mentation d'un article dans le panier scannÃ©
   const addItemToCart = useCallback((item: { id: string; name: string; unit_price: number; barcode?: string }) => {
     setLastBippedName(`${item.name} (${formatPrice(item.unit_price)})`)
     setTimeout(() => {
@@ -128,10 +128,10 @@ export function BarcodeScannerModal({
     const code = decodedText.trim()
     if (!code || code.length < 4) return
 
-    // Si on est déjà en train de saisir un code inconnu, ignorer les nouveaux scans
+    // Si on est dÃ©jÃ  en train de saisir un code inconnu, ignorer les nouveaux scans
     if (!isScanningRef.current) return
 
-    // Debounce : 1.2 seconde d'écart minimum pour le même code
+    // Debounce : 1.2 seconde d'Ã©cart minimum pour le mÃªme code
     const now = Date.now()
     const lastTime = lastScannedTimeRef.current[code] || 0
     if (now - lastTime < 1200) {
@@ -159,7 +159,7 @@ export function BarcodeScannerModal({
         barcode: matched.barcode || code,
       })
     } else {
-      // Code inconnu : PAUSER immédiatement le scanner pour stabiliser l'écran
+      // Code inconnu : PAUSER immÃ©diatement le scanner pour stabiliser l'Ã©cran
       isScanningRef.current = false
       setUnknownBarcode(code)
       setNewProductName('')
@@ -167,7 +167,7 @@ export function BarcodeScannerModal({
       setSelectedExistingId('')
       setIsLookingUpGlobal(true)
 
-      // Recherche automatique en arrière-plan dans la base mondiale Open Food Facts
+      // Recherche automatique en arriÃ¨re-plan dans la base mondiale Open Food Facts
       fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`)
         .then(r => r.json())
         .then(data => {
@@ -206,7 +206,7 @@ export function BarcodeScannerModal({
     setIsStarting(true)
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError("Votre navigateur ne supporte pas l'accès direct à la caméra.")
+      setCameraError("Votre navigateur ne supporte pas l'accÃ¨s direct Ã  la camÃ©ra.")
       setIsStarting(false)
       return
     }
@@ -242,7 +242,7 @@ export function BarcodeScannerModal({
           audio: false,
         })
       } catch {
-        // Repli universel sans contraintes idéales (webcam basique PC ou ancien mobile)
+        // Repli universel sans contraintes idÃ©ales (webcam basique PC ou ancien mobile)
         stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false,
@@ -268,7 +268,7 @@ export function BarcodeScannerModal({
       setCameraActive(true)
       isScanningRef.current = true
 
-      // Moteur 1 : BarcodeDetector Natif Matériel (iOS / Android)
+      // Moteur 1 : BarcodeDetector Natif MatÃ©riel (iOS / Android)
       if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
         try {
           const nativeDetector = new (window as any).BarcodeDetector({
@@ -304,11 +304,11 @@ export function BarcodeScannerModal({
       }
 
     } catch (err: any) {
-      console.warn('[BarcodeScanner] Erreur démarrage:', err)
+      console.warn('[BarcodeScanner] Erreur dÃ©marrage:', err)
       setCameraError(
         err?.name === 'NotAllowedError' || err?.message?.includes('Permission')
-          ? "Permission caméra refusée. Autorisez l'accès à l'appareil photo dans Safari/Chrome."
-          : "Impossible de lancer la caméra. Vous pouvez saisir le code manuellement ci-dessous."
+          ? "Permission camÃ©ra refusÃ©e. Autorisez l'accÃ¨s Ã  l'appareil photo dans Safari/Chrome."
+          : "Impossible de lancer la camÃ©ra. Vous pouvez saisir le code manuellement ci-dessous."
       )
       setCameraActive(false)
     } finally {
@@ -349,7 +349,7 @@ export function BarcodeScannerModal({
 
   if (!isOpen) return null
 
-  // Ajuster la quantité dans le panier
+  // Ajuster la quantitÃ© dans le panier
   const updateQty = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
@@ -364,13 +364,13 @@ export function BarcodeScannerModal({
     setCart(prev => prev.filter(item => item.id !== id))
   }
 
-  // Valider et insérer tout le panier dans le cahier
+  // Valider et insÃ©rer tout le panier dans le cahier
   const handleValidateSale = () => {
     if (cart.length === 0) return
 
-    // Formater l'écriture propre pour le cahier
-    // ex: "2 Lait Peak à 550, 1 Savon Fanico à 500"
-    const entries = cart.map(item => `${item.quantity} ${item.name} à ${item.unit_price}`)
+    // Formater l'Ã©criture propre pour le cahier
+    // ex: "2 Lait Peak Ã  550, 1 Savon Fanico Ã  500"
+    const entries = cart.map(item => `${item.quantity} ${item.name} Ã  ${item.unit_price}`)
     const formattedText = entries.join(', ')
 
     stopScanner()
@@ -378,13 +378,13 @@ export function BarcodeScannerModal({
     onClose()
   }
 
-  // Sauvegarder un nouveau produit scanné
+  // Sauvegarder un nouveau produit scannÃ©
   const handleSaveUnknown = (e: React.FormEvent) => {
     e.preventDefault()
     if (!unknownBarcode) return
 
     if (selectedExistingId) {
-      // Lier à un produit existant
+      // Lier Ã  un produit existant
       if (onAssociateBarcode) {
         onAssociateBarcode(selectedExistingId, unknownBarcode)
       }
@@ -398,7 +398,7 @@ export function BarcodeScannerModal({
         })
       }
     } else if (newProductName.trim()) {
-      // Créer un nouveau produit
+      // CrÃ©er un nouveau produit
       const price = parseFloat(newProductPrice) || 0
       const newId = `prod_${Date.now()}`
       if (onSaveNewProduct) {
@@ -444,7 +444,7 @@ export function BarcodeScannerModal({
         }
       }}
     >
-      <div className="bg-[#fbf9f4] border-2 border-amber-300 rounded-[28px] max-w-lg w-full max-h-[95vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-[#faf5e8] border-2 border-amber-300 rounded-[28px] max-w-lg w-full max-h-[95vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
         <div className="px-4 sm:px-5 py-3 border-b border-amber-200 bg-amber-100 flex items-center justify-between text-amber-950 flex-shrink-0">
@@ -458,7 +458,7 @@ export function BarcodeScannerModal({
               <button
                 type="button"
                 onClick={toggleTorch}
-                className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-[0.97] ${torchOn ? 'bg-amber-400 text-amber-950' : 'bg-amber-200/80 text-amber-800 hover:bg-amber-300'}`}
+                className={`p-1.5 rounded-full transition-colors cursor-pointer active:scale-[0.97] ${torchOn ? 'bg-amber-400 text-amber-950' : 'bg-amber-200/80 text-amber-800 hover:bg-amber-300'}`}
                 title="Allumer la lampe torche"
               >
                 {torchOn ? <Zap className="w-4 h-4 fill-amber-950" strokeWidth={1.75} /> : <ZapOff className="w-4 h-4" strokeWidth={1.75} />}
@@ -468,7 +468,7 @@ export function BarcodeScannerModal({
             <button
               type="button"
               onClick={() => { stopScanner(); onClose(); }}
-              className="p-1 rounded-full hover:bg-amber-200/60 transition-all cursor-pointer text-gray-600 active:scale-[0.97]"
+              className="p-1 rounded-full hover:bg-amber-200/60 transition-colors cursor-pointer text-gray-600 active:scale-[0.97]"
             >
               <X className="w-5 h-5" strokeWidth={1.75} />
             </button>
@@ -478,14 +478,14 @@ export function BarcodeScannerModal({
         {/* Corps de la modale */}
         <div className="p-3 sm:p-4 space-y-3 overflow-y-auto flex-1 font-mono text-xs">
           
-          {/* BANNIÈRE DE BIP SUCCÈS TEMPORAIRE */}
+          {/* BANNIÃˆRE DE BIP SUCCÃˆS TEMPORAIRE */}
           {lastBippedName && (
             <div className="p-2.5 bg-emerald-600 text-white rounded-xl flex items-center justify-between shadow-md animate-in slide-in-from-top-2 duration-150">
               <div className="flex items-center gap-2 font-bold text-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-200 flex-shrink-0" />
-                <span className="truncate">Ajouté : <strong>{lastBippedName}</strong></span>
+                <span className="truncate">AjoutÃ© : <strong>{lastBippedName}</strong></span>
               </div>
-              <span className="text-[10px] bg-emerald-800 px-1.5 py-0.5 rounded font-black">+1</span>
+              <span className="text-[10px] bg-emerald-800 px-1.5 py-0.5 rounded font-semibold">+1</span>
             </div>
           )}
 
@@ -493,7 +493,7 @@ export function BarcodeScannerModal({
           {unknownBarcode && (
             <div className="p-3.5 bg-amber-50 border-2 border-amber-400 rounded-2xl space-y-2.5 shadow-md animate-in fade-in zoom-in-95">
               <div className="flex items-center justify-between border-b border-amber-200 pb-1.5">
-                <div className="flex items-center gap-1.5 text-amber-900 font-extrabold text-xs">
+                <div className="flex items-center gap-1.5 text-amber-900 font-semibold text-xs">
                   <Sparkles className="w-4 h-4 text-amber-600" />
                   <span>Nouveau Code : <strong className="font-mono text-amber-950">{unknownBarcode}</strong></span>
                 </div>
@@ -515,15 +515,15 @@ export function BarcodeScannerModal({
               )}
 
               <form onSubmit={handleSaveUnknown} className="space-y-2">
-                {/* Option 1 : Créer Nouveau Produit */}
+                {/* Option 1 : CrÃ©er Nouveau Produit */}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-extrabold text-amber-950 uppercase mb-0.5">
+                    <label className="block text-[10px] font-semibold text-amber-950 uppercase mb-0.5">
                       Nom de l'article :
                     </label>
                     <input
                       type="text"
-                      placeholder="Ex: Lait Concentré"
+                      placeholder="Ex: Lait ConcentrÃ©"
                       value={newProductName}
                       onChange={e => setNewProductName(e.target.value)}
                       autoFocus
@@ -531,7 +531,7 @@ export function BarcodeScannerModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-extrabold text-amber-950 uppercase mb-0.5">
+                    <label className="block text-[10px] font-semibold text-amber-950 uppercase mb-0.5">
                       Prix de Vente (F) :
                     </label>
                     <input
@@ -544,11 +544,11 @@ export function BarcodeScannerModal({
                   </div>
                 </div>
 
-                {/* Option 2 : Ou Lier à un produit déjà en stock */}
+                {/* Option 2 : Ou Lier Ã  un produit dÃ©jÃ  en stock */}
                 {products.length > 0 && (
                   <div>
                     <label className="block text-[10px] font-bold text-gray-600 uppercase mb-0.5">
-                      Ou lier à un article existant :
+                      Ou lier Ã  un article existant :
                     </label>
                     <select
                       value={selectedExistingId}
@@ -568,7 +568,7 @@ export function BarcodeScannerModal({
                 <button
                   type="submit"
                   disabled={!newProductName.trim() && !selectedExistingId}
-                  className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs transition-all disabled:opacity-40 flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                  className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-xl text-xs transition-colors disabled:opacity-40 flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Enregistrer & Ajouter au Panier</span>
@@ -577,7 +577,7 @@ export function BarcodeScannerModal({
             </div>
           )}
 
-          {/* Viseur Caméra */}
+          {/* Viseur CamÃ©ra */}
           <div className="relative bg-black rounded-2xl overflow-hidden h-[180px] sm:h-[200px] flex items-center justify-center border-2 border-amber-300 shadow-inner">
             <video
               ref={videoRef}
@@ -586,14 +586,14 @@ export function BarcodeScannerModal({
               muted
             />
 
-            {/* Viseur laser animé */}
+            {/* Viseur laser animÃ© */}
             {cameraActive && (
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-2">
                 <div className="w-56 h-28 border-2 border-amber-400 rounded-2xl bg-amber-400/10 relative flex items-center justify-center shadow-lg overflow-hidden">
-                  <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_8px_rgba(239,68,68,1)] animate-pulse" />
+                  <div className="w-full h-0.5 bg-emerald-700 shadow-[0_0_8px_rgba(239,68,68,1)] animate-pulse" />
                 </div>
                 <p className="mt-1.5 text-[10px] font-bold text-amber-200 bg-black/60 px-2 py-0.5 rounded-full font-mono">
-                  {unknownBarcode ? 'Caméra en pause (Complétez la fiche)' : 'Bipez vos articles l\'un après l\'autre'}
+                  {unknownBarcode ? 'CamÃ©ra en pause (ComplÃ©tez la fiche)' : 'Bipez vos articles l\'un aprÃ¨s l\'autre'}
                 </p>
               </div>
             )}
@@ -603,18 +603,18 @@ export function BarcodeScannerModal({
                 {isStarting ? (
                   <>
                     <RefreshCw className="w-7 h-7 text-amber-400 animate-spin" />
-                    <p className="font-bold text-xs text-amber-200">Activation de la caméra...</p>
+                    <p className="font-bold text-xs text-amber-200">Activation de la camÃ©ra...</p>
                   </>
                 ) : (
                   <>
                     <Camera className="w-8 h-8 text-amber-500 opacity-80" />
-                    <p className="text-xs text-gray-300 max-w-xs">{cameraError || "Caméra en attente"}</p>
+                    <p className="text-xs text-gray-300 max-w-xs">{cameraError || "CamÃ©ra en attente"}</p>
                     <button
                       type="button"
                       onClick={startScanner}
-                      className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                      className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm cursor-pointer"
                     >
-                      Démarrer la caméra
+                      DÃ©marrer la camÃ©ra
                     </button>
                   </>
                 )}
@@ -634,7 +634,7 @@ export function BarcodeScannerModal({
             <button
               type="submit"
               disabled={!manualCode.trim()}
-              className="px-3 py-1.5 bg-amber-950 hover:bg-black text-white font-extrabold rounded-xl text-xs active:scale-[0.97] transition-transform duration-100 ease-out disabled:opacity-40 cursor-pointer"
+              className="px-3 py-1.5 bg-amber-950 hover:bg-black text-white font-semibold rounded-xl text-xs active:scale-[0.97] transition-transform duration-100 ease-out disabled:opacity-40 cursor-pointer"
             >
               + Biper
             </button>
@@ -643,18 +643,18 @@ export function BarcodeScannerModal({
           {/* PANIER DE SCAN EN DIRECT */}
           <div className="bg-white border-2 border-amber-300 rounded-2xl p-3 space-y-2 shadow-xs">
             <div className="flex items-center justify-between border-b border-amber-100 pb-1.5 text-gray-700">
-              <div className="flex items-center gap-1.5 font-extrabold text-xs text-amber-950">
+              <div className="flex items-center gap-1.5 font-semibold text-xs text-amber-950">
                 <ShoppingCart className="w-4 h-4 text-amber-700" />
                 <span>Panier (<span className="tabular-nums">{totalItemsCount}</span> article{totalItemsCount > 1 ? 's' : ''})</span>
               </div>
-              <span className="font-mono font-black text-xs text-emerald-800 tabular-nums tracking-tight">
+              <span className="font-mono font-semibold text-xs text-emerald-800 tabular-nums tracking-tight">
                 {formatPrice(totalCartAmount)}
               </span>
             </div>
 
             {cart.length === 0 ? (
               <div className="py-4 text-center text-gray-400 text-[11px] font-sans">
-                Aucun article scanné. Présentez un code-barres devant la caméra pour commencer la vente.
+                Aucun article scannÃ©. PrÃ©sentez un code-barres devant la camÃ©ra pour commencer la vente.
               </div>
             ) : (
               <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
@@ -664,13 +664,13 @@ export function BarcodeScannerModal({
                     className="flex items-center justify-between bg-amber-50/70 p-1.5 sm:p-2 rounded-xl border border-amber-200/80"
                   >
                     <div className="flex-1 min-w-0 pr-2">
-                      <p className="font-extrabold text-gray-900 text-xs truncate">{item.name}</p>
+                      <p className="font-semibold text-gray-900 text-xs truncate">{item.name}</p>
                       <p className="text-[10px] text-gray-500 font-mono">
-                        <span className="tabular-nums">{formatPrice(item.unit_price)}</span> × <span className="tabular-nums">{item.quantity}</span> = <strong className="text-emerald-900 tabular-nums">{formatPrice(item.unit_price * item.quantity)}</strong>
+                        <span className="tabular-nums">{formatPrice(item.unit_price)}</span> Ã— <span className="tabular-nums">{item.quantity}</span> = <strong className="text-emerald-900 tabular-nums">{formatPrice(item.unit_price * item.quantity)}</strong>
                       </p>
                     </div>
 
-                    {/* Contrôles de Quantité */}
+                    {/* ContrÃ´les de QuantitÃ© */}
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         type="button"
@@ -681,7 +681,7 @@ export function BarcodeScannerModal({
                         <Minus className="w-3 h-3" />
                       </button>
 
-                      <span className="w-6 text-center font-black font-mono text-xs text-amber-950 tabular-nums">
+                      <span className="w-6 text-center font-semibold font-mono text-xs text-amber-950 tabular-nums">
                         {item.quantity}
                       </span>
 
@@ -713,15 +713,15 @@ export function BarcodeScannerModal({
         {/* Footer : Bouton de Validation Globale de la Vente */}
         <div className="p-3 sm:p-4 bg-amber-100 border-t border-amber-200 flex-shrink-0 flex items-center justify-between gap-3">
           <div className="text-amber-950 font-mono">
-            <p className="text-[10px] font-bold uppercase text-amber-800">Total à encaisser :</p>
-            <p className="text-sm font-black text-emerald-950 tabular-nums tracking-tight">{formatPrice(totalCartAmount)}</p>
+            <p className="text-[10px] font-bold uppercase text-amber-800">Total Ã  encaisser :</p>
+            <p className="text-sm font-semibold text-emerald-950 tabular-nums tracking-tight">{formatPrice(totalCartAmount)}</p>
           </div>
 
           <button
             type="button"
             disabled={cart.length === 0}
             onClick={handleValidateSale}
-            className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 active:scale-[0.97] transition-transform duration-100 ease-out disabled:opacity-40 cursor-pointer shadow-md font-mono"
+            className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white font-semibold rounded-2xl text-xs flex items-center justify-center gap-2 active:scale-[0.97] transition-transform duration-100 ease-out disabled:opacity-40 cursor-pointer shadow-md font-mono"
           >
             <span>Valider la Vente (<span className="tabular-nums">{totalItemsCount}</span>)</span>
             <ArrowRight className="w-4 h-4" />

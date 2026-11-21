@@ -60,11 +60,11 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
       }
 
       if (data?.inviteSent) {
-        setFeedback({ type: 'success', msg: `Employé ajouté & e-mail d'invitation envoyé à ${email} (Vérifiez les Spams / Indésirables)` })
+        setFeedback({ type: 'success', msg: `EmployÃ© ajoutÃ© & e-mail d'invitation envoyÃ© Ã  ${email} (VÃ©rifiez les Spams / IndÃ©sirables)` })
       } else if (data?.inviteError) {
-        setFeedback({ type: 'success', msg: `Employé ajouté au système (${data.inviteError})` })
+        setFeedback({ type: 'success', msg: `EmployÃ© ajoutÃ© au systÃ¨me (${data.inviteError})` })
       } else {
-        setFeedback({ type: 'success', msg: `Employé ajouté pour ${email} (Vérifiez les Spams / Indésirables)` })
+        setFeedback({ type: 'success', msg: `EmployÃ© ajoutÃ© pour ${email} (VÃ©rifiez les Spams / IndÃ©sirables)` })
       }
 
       setNameInput('')
@@ -81,7 +81,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
     <div className="bg-white/90 p-5 rounded-2xl border border-amber-300/80 space-y-4 shadow-sm">
       <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
         <Users className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-        <h4 className="text-sm font-extrabold text-gray-900">Gestion des Employés & Droits</h4>
+        <h4 className="text-sm font-semibold text-gray-900">Gestion des EmployÃ©s & Droits</h4>
       </div>
 
       {/* Formulaire d'invitation */}
@@ -91,7 +91,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
             type="text"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
-            placeholder="Prénom et nom de l'employé (optionnel)..."
+            placeholder="PrÃ©nom et nom de l'employÃ© (optionnel)..."
             className="flex-grow px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-bold placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner"
           />
         </div>
@@ -100,7 +100,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
             type="email"
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}
-            placeholder="Adresse e-mail de l'employé (obligatoire)..."
+            placeholder="Adresse e-mail de l'employÃ© (obligatoire)..."
             required
             className="flex-grow px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-bold placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner"
           />
@@ -109,8 +109,8 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
             onChange={(e) => setRoleInput(e.target.value as 'admin' | 'employee')}
             className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
           >
-            <option value="employee">Vendeur / Employé</option>
-            <option value="admin">Gérant / Admin</option>
+            <option value="employee">Vendeur / EmployÃ©</option>
+            <option value="admin">GÃ©rant / Admin</option>
           </select>
           <button
             type="submit"
@@ -130,7 +130,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
         )}
       </form>
 
-      {/* Liste de l'équipe */}
+      {/* Liste de l'Ã©quipe */}
       <div className="space-y-2 pt-2">
         {employees.map((emp) => (
           <div
@@ -140,21 +140,21 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4 text-amber-700" strokeWidth={1.75} />
               <div>
-                <p className="font-extrabold text-gray-900">{emp.name}</p>
+                <p className="font-semibold text-gray-900">{emp.name}</p>
                 <p className="text-[11px] text-gray-600 font-sans">{emp.email}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-semibold bg-amber-100 text-amber-900 border border-amber-300">
                 {emp.role}
               </span>
               {onRemoveEmployee && (
                 <button
                   type="button"
                   onClick={() => onRemoveEmployee(emp.id)}
-                  className="p-1 text-rose-600 hover:text-rose-800 active:scale-[0.97] transition-all duration-100 ease-out cursor-pointer"
-                  title="Retirer l'employé"
+                  className="p-1 text-rose-600 hover:text-rose-800 active:scale-[0.97] transition-colors duration-100 ease-out cursor-pointer"
+                  title="Retirer l'employÃ©"
                 >
                   <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                 </button>

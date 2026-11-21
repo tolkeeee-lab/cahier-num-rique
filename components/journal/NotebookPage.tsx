@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useMemo } from 'react'
 import { formatPrice } from '@/lib/penUtils'
 import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical, Share2, Coins, Lightbulb, Calendar, TrendingUp, ArrowDownRight, Package, Clock, CreditCard, Ruler } from 'lucide-react'
 
-// ─── Types ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface SaleItem {
   id: string
@@ -38,7 +38,7 @@ interface NotebookPageProps {
   activeFilter?: string
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatLongDateFr(dateStr?: string): string {
   if (!dateStr) {
@@ -75,7 +75,7 @@ function getPenInkClass(penId: string) {
 }
 
 function getBadgeClass(penId: string, type?: string) {
-  if (type === 'client_request') return 'bg-amber-100/95 text-amber-950 border-amber-300 shadow-2xs font-black'
+  if (type === 'client_request') return 'bg-amber-100/95 text-amber-950 border-amber-300 shadow-2xs font-semibold'
   switch (penId) {
     case 'red':    return 'bg-rose-100/90 text-rose-800 border-rose-300'
     case 'green':  return 'bg-emerald-100/90 text-emerald-800 border-emerald-300'
@@ -87,18 +87,18 @@ function getBadgeClass(penId: string, type?: string) {
 
 function getPenLabel(penId: string, type?: string) {
   if (type === 'client_request') return 'DEMANDE'
-  if (type === 'payment_client') return 'RÈGLEMENT REÇU'
-  if (type === 'payment_supplier') return 'RÈGLEMENT PAYÉ'
+  if (type === 'payment_client') return 'RÃˆGLEMENT REÃ‡U'
+  if (type === 'payment_supplier') return 'RÃˆGLEMENT PAYÃ‰'
   switch (penId) {
-    case 'red':    return 'DÉPENSE'
+    case 'red':    return 'DÃ‰PENSE'
     case 'green':  return 'ACHAT STOCK'
-    case 'purple': return 'ACHAT CRÉDIT'
-    case 'yellow': return 'VENTE CRÉDIT'
+    case 'purple': return 'ACHAT CRÃ‰DIT'
+    case 'yellow': return 'VENTE CRÃ‰DIT'
     default:       return 'VENTE CASH'
   }
 }
 
-// ─── Composant ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Composant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const NotebookPage: React.FC<NotebookPageProps> = ({
   sales,
@@ -125,10 +125,10 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
     }
   }, [sales.length])
 
-  // Filtrage combiné (Recherche + Filtre par catégorie de stylo)
+  // Filtrage combinÃ© (Recherche + Filtre par catÃ©gorie de stylo)
   const filteredSales = useMemo(() => {
     return sales.filter((s) => {
-      // Filtre par catégorie de stylo cliqué
+      // Filtre par catÃ©gorie de stylo cliquÃ©
       if (activeFilter === 'blue' && !(s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale' || s.type === 'sale_cash' || s.type === 'payment_client')) return false
       if (activeFilter === 'red' && !(s.pen_color === 'red' || s.type === 'cash_out' || s.type === 'payment_supplier' || s.type === 'stock_damage')) return false
       if (activeFilter === 'green' && !(s.pen_color === 'green' || s.type === 'purchase_cash' || s.type === 'stock_cash')) return false
@@ -161,10 +161,10 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   }, [filteredSales, currentDateStr])
 
   return (
-    <div className="lined-paper relative pl-5 sm:pl-9 pr-1.5 sm:pr-3.5 py-1 sm:py-2 flex-1 min-h-0 flex flex-col rounded-xl sm:rounded-2xl border border-amber-300/40 shadow-xs overflow-hidden bg-[#fdfaf2]">
+    <div className="lined-paper relative pl-5 sm:pl-9 pr-1.5 sm:pr-3.5 py-1 sm:py-2 flex-1 min-h-0 flex flex-col rounded-xl sm:rounded-2xl border border-amber-300/40 shadow-xs overflow-hidden bg-[#faf5e8]">
       <div className="relative z-10 flex flex-col h-full space-y-1 sm:space-y-1.5">
 
-        {/* Liste des écritures avec Bannière Dynamique de Catégorie sur chaque journée */}
+        {/* Liste des Ã©critures avec BanniÃ¨re Dynamique de CatÃ©gorie sur chaque journÃ©e */}
         <div
           ref={listRef}
           className="flex-1 min-h-0 overflow-y-auto space-y-2 sm:space-y-3 lined-text-container pr-1 scrollbar-none pb-2"
@@ -201,14 +201,14 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
 
             return (
               <div key={dateKey} className="space-y-1.5">
-                {/* ── BANNIÈRE DYNAMIQUE DE CATÉGORIE DU CAHIER ── */}
+                {/* â”€â”€ BANNIÃˆRE DYNAMIQUE DE CATÃ‰GORIE DU CAHIER â”€â”€ */}
                 {activeFilter === 'blue' ? (
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border border-blue-300 font-mono text-xs text-blue-950 font-bold bg-blue-50/90 rounded-xl shadow-2xs">
                     <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-blue-900 font-bold">
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-blue-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full font-semibold text-xs bg-blue-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
                       <TrendingUp className="w-3.5 h-3.5" />
                       <span>Ventes (CA) : +{formatPrice(salesTotal)}</span>
                     </span>
@@ -219,9 +219,9 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-rose-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full font-semibold text-xs bg-rose-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
                       <ArrowDownRight className="w-3.5 h-3.5" />
-                      <span>Dépenses : -{formatPrice(expensesTotal)}</span>
+                      <span>DÃ©penses : -{formatPrice(expensesTotal)}</span>
                     </span>
                   </div>
                 ) : activeFilter === 'green' ? (
@@ -230,7 +230,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-emerald-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full font-semibold text-xs bg-emerald-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
                       <Package className="w-3.5 h-3.5" />
                       <span>Achats Stock : -{formatPrice(stockCashTotal)}</span>
                     </span>
@@ -241,7 +241,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-fuchsia-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full font-semibold text-xs bg-fuchsia-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
                       <CreditCard className="w-3.5 h-3.5" />
                       <span>Dettes Fournisseurs : -{formatPrice(purpleCreditTotal)}</span>
                     </span>
@@ -252,43 +252,43 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                       <span>{formatLongDateFr(dateKey)}</span>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full font-black text-xs bg-amber-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full font-semibold text-xs bg-amber-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>Crédits Clients : +{formatPrice(yellowCreditTotal)}</span>
+                      <span>CrÃ©dits Clients : +{formatPrice(yellowCreditTotal)}</span>
                     </span>
                   </div>
                 ) : activeFilter === 'total' ? null : (
-                  /* ── BANNIÈRE TOUS ── */
+                  /* â”€â”€ BANNIÃˆRE TOUS â”€â”€ */
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border-b border-dashed border-amber-300/80 font-handwritten text-xs sm:text-sm text-amber-900 select-none font-bold bg-amber-50/60 rounded-xl">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span className="font-extrabold text-amber-950">{formatLongDateFr(dateKey)}</span>
+                      <span className="font-semibold text-amber-950">{formatLongDateFr(dateKey)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 font-mono text-[10px] sm:text-xs">
-                      <span className="px-2 py-0.5 rounded-full font-extrabold bg-blue-50 text-blue-900 border border-blue-200 tabular-nums">
+                      <span className="px-2 py-0.5 rounded-full font-semibold bg-blue-50 text-blue-900 border border-blue-200 tabular-nums">
                         CA : +{formatPrice(salesTotal)}
                       </span>
-                      <span className="px-2 py-0.5 rounded-full font-black bg-amber-200/90 text-amber-950 border border-amber-300 tabular-nums">
-                        {allDayOperations.length} écriture(s)
+                      <span className="px-2 py-0.5 rounded-full font-semibold bg-amber-200/90 text-amber-950 border border-amber-300 tabular-nums">
+                        {allDayOperations.length} Ã©criture(s)
                       </span>
                     </div>
                   </div>
                 )}
 
-                {/* ── MODE SOLDE EXCLUSIF : Affiche UNIQUEMENT le Bilan de Caisse ── */}
+                {/* â”€â”€ MODE SOLDE EXCLUSIF : Affiche UNIQUEMENT le Bilan de Caisse â”€â”€ */}
                 {activeFilter === 'total' ? (
                   <div className="py-3 px-3.5 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/85 border-2 border-emerald-400/90 rounded-2xl font-mono text-xs shadow-md space-y-3 select-none">
-                    <div className="flex items-center justify-between border-b-2 border-dashed border-amber-300 pb-2 font-handwritten font-black text-amber-950 text-sm sm:text-base">
+                    <div className="flex items-center justify-between border-b-2 border-dashed border-amber-300 pb-2 font-handwritten font-semibold text-amber-950 text-sm sm:text-base">
                       <div className="flex items-center gap-2">
                         <Calculator className="w-4 h-4 text-emerald-800" />
                         <span className="tracking-wide uppercase">Bilan & Solde de Caisse</span>
                       </div>
-                      <span className="font-mono text-xs text-emerald-950 bg-emerald-100 px-2.5 py-0.5 rounded-full font-extrabold border border-emerald-300">
+                      <span className="font-mono text-xs text-emerald-950 bg-emerald-100 px-2.5 py-0.5 rounded-full font-semibold border border-emerald-300">
                         {formatLongDateFr(dateKey)}
                       </span>
                     </div>
 
-                    {/* Lignes de décomposition arithmétique */}
+                    {/* Lignes de dÃ©composition arithmÃ©tique */}
                     <div className="space-y-1.5 pt-1">
                       {/* Ventes Cash */}
                       <div className="flex justify-between items-center bg-blue-100/70 p-2 rounded-xl border border-blue-300/80">
@@ -296,16 +296,16 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
                           <span>Encaissements Ventes</span>
                         </span>
-                        <span className="font-black text-blue-950 text-sm font-mono tabular-nums">+{formatPrice(salesCashTotal)}</span>
+                        <span className="font-semibold text-blue-950 text-sm font-mono tabular-nums">+{formatPrice(salesCashTotal)}</span>
                       </div>
 
-                      {/* Dépenses */}
+                      {/* DÃ©penses */}
                       <div className="flex justify-between items-center bg-rose-100/70 p-2 rounded-xl border border-rose-300/80">
                         <span className="text-rose-950 font-bold flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
-                          <span>Dépenses Diverses</span>
+                          <span>DÃ©penses Diverses</span>
                         </span>
-                        <span className="font-black text-rose-950 text-sm font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
+                        <span className="font-semibold text-rose-950 text-sm font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
                       </div>
 
                       {/* Achats Stock */}
@@ -314,11 +314,11 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
                           <span>Achats Marchandises (Cash)</span>
                         </span>
-                        <span className="font-black text-emerald-950 text-sm font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
+                        <span className="font-semibold text-emerald-950 text-sm font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
                       </div>
 
-                      {/* Ligne Maîtresse : Solde Net */}
-                      <div className={`mt-3 pt-3 pb-3 px-3 border-2 flex items-center justify-between font-black text-sm sm:text-base rounded-xl shadow-xs ${
+                      {/* Ligne MaÃ®tresse : Solde Net */}
+                      <div className={`mt-3 pt-3 pb-3 px-3 border-2 flex items-center justify-between font-semibold text-sm sm:text-base rounded-xl shadow-xs ${
                         dayNet >= 0
                           ? 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-300/60'
                           : 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-300/60'
@@ -327,18 +327,18 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           <Coins className="w-5 h-5 text-white" />
                           <span>SOLDE NET DU JOUR</span>
                         </span>
-                        <span className="font-mono font-black text-base sm:text-lg tabular-nums">
+                        <span className="font-mono font-semibold text-base sm:text-lg tabular-nums">
                           {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
                         </span>
                       </div>
 
-                      {/* Crédits et Dettes */}
+                      {/* CrÃ©dits et Dettes */}
                       {(yellowCreditTotal > 0 || purpleCreditTotal > 0) && (
                         <div className="pt-2 border-t border-dashed border-amber-300 flex items-center justify-between text-[11px] font-bold text-gray-700 flex-wrap gap-2">
                           {yellowCreditTotal > 0 && (
                             <span className="text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 font-mono tabular-nums">
                               <Clock className="w-3.5 h-3.5 text-amber-700" />
-                              <span>Crédits clients en cours : +{formatPrice(yellowCreditTotal)}</span>
+                              <span>CrÃ©dits clients en cours : +{formatPrice(yellowCreditTotal)}</span>
                             </span>
                           )}
                           {purpleCreditTotal > 0 && (
@@ -356,7 +356,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     {/* Ventes du jour */}
                     {dateSales.length === 0 ? (
                       <div className="py-4 text-center text-gray-400 handwritten text-sm flex flex-col items-center justify-center">
-                        Aucune écriture enregistrée pour cette journée.
+                        Aucune Ã©criture enregistrÃ©e pour cette journÃ©e.
                       </div>
                     ) : (
                       dateSales.map((sale) => {
@@ -370,7 +370,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     return (
                       <div
                         key={sale.id}
-                        className={`relative group p-2 sm:p-2.5 rounded-xl transition-all border ${
+                        className={`relative group p-2 sm:p-2.5 rounded-xl transition-colors border ${
                           isCrossedOut
                             ? 'opacity-40 bg-gray-200/40 border-gray-300 line-through'
                             : 'bg-white/90 hover:bg-white border-blue-200/70 shadow-2xs hover:shadow-xs'
@@ -380,8 +380,8 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           {/* Contenu principal */}
                           <div className="flex-grow space-y-0.5 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {/* 1. Type d'écriture tout devant */}
-                              <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-black border flex-shrink-0 shadow-2xs ${getBadgeClass(sale.pen_color, sale.type)}`}>
+                              {/* 1. Type d'Ã©criture tout devant */}
+                              <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-semibold border flex-shrink-0 shadow-2xs ${getBadgeClass(sale.pen_color, sale.type)}`}>
                                 {getPenLabel(sale.pen_color, sale.type)}
                               </span>
 
@@ -392,22 +392,22 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                 </span>
                               )}
 
-                              {/* 3. Texte manuscrit de l'écriture */}
+                              {/* 3. Texte manuscrit de l'Ã©criture */}
                               <span className={`text-xs sm:text-sm font-bold break-words whitespace-normal leading-snug ${inkClass}`}>
                                 {sale.notes || sale.client}
                               </span>
                             </div>
 
-                            {/* Reste dû ou dette soldée */}
+                            {/* Reste dÃ» ou dette soldÃ©e */}
                             {!isCrossedOut && (
                               sale.debt > 0 ? (
                                 <div className="pl-4 text-[11px] text-amber-800 font-bold flex items-center gap-1 font-mono">
                                   <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                  <span>Dû : {formatPrice(sale.debt)} — {sale.client}</span>
+                                  <span>DÃ» : {formatPrice(sale.debt)} â€” {sale.client}</span>
                                 </div>
                               ) : (sale.type === 'sale_credit' || sale.type === 'purchase_credit' || sale.pen_color === 'yellow' || sale.pen_color === 'purple') ? (
                                 <div className="pl-4 text-[11px] text-emerald-800 font-bold flex items-center gap-1 font-mono">
-                                  <span>✓ Crédit soldé ({sale.client})</span>
+                                  <span>âœ“ CrÃ©dit soldÃ© ({sale.client})</span>
                                 </div>
                               ) : null
                             )}
@@ -416,7 +416,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           {/* Montant + Actions */}
                           <div className="flex flex-col items-end gap-1 flex-shrink-0">
                             {sale.type === 'client_request' ? (
-                              <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-lg font-mono bg-amber-100/90 text-amber-950 border border-amber-300 shadow-2xs flex items-center gap-1">
+                              <span className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-lg font-mono bg-amber-100/90 text-amber-950 border border-amber-300 shadow-2xs flex items-center gap-1">
                                 <Lightbulb className="w-3 h-3 text-amber-800" />
                                 <span>Demande</span>
                               </span>
@@ -426,15 +426,15 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                 let prefix = ''
                                 
                                 if (sale.pen_color === 'blue' || sale.type === 'sale' || sale.type === 'cash_in' || sale.type === 'payment_client') {
-                                  // Rentrée d'argent (Vente cash) - Couleur Bleue, avec +
+                                  // RentrÃ©e d'argent (Vente cash) - Couleur Bleue, avec +
                                   badgeClass = 'bg-blue-50 text-blue-800 border-blue-200'
                                   prefix = '+'
                                 } else if (sale.pen_color === 'yellow' || sale.type === 'sale_credit') {
-                                  // Vente à crédit - Couleur Jaune/Ambre, SANS SIGNE
+                                  // Vente Ã  crÃ©dit - Couleur Jaune/Ambre, SANS SIGNE
                                   badgeClass = 'bg-amber-50 text-amber-800 border-amber-200'
                                   prefix = ''
                                 } else if (sale.pen_color === 'red' || sale.type === 'cash_out' || sale.type === 'payment_supplier' || (sale.type === 'cash_adjustment' && ((sale.notes || '').toLowerCase().includes('retrait') || sale.pen_color === 'red'))) {
-                                  // Sortie d'argent (Dépense) - Couleur Rouge, avec -
+                                  // Sortie d'argent (DÃ©pense) - Couleur Rouge, avec -
                                   badgeClass = 'bg-rose-50 text-rose-800 border-rose-200'
                                   prefix = '-'
                                 } else if (sale.pen_color === 'green' || sale.type === 'purchase_cash') {
@@ -442,13 +442,13 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                   badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                   prefix = '-'
                                 } else if (sale.pen_color === 'purple' || sale.type === 'purchase_credit') {
-                                  // Achat Crédit - Couleur Violette, SANS SIGNE
+                                  // Achat CrÃ©dit - Couleur Violette, SANS SIGNE
                                   badgeClass = 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
                                   prefix = ''
                                 }
 
                                 return (
-                                  <span className={`text-xs sm:text-sm font-extrabold px-2 py-0.5 rounded-lg font-mono tabular-nums border ${badgeClass}`}>
+                                  <span className={`text-xs sm:text-sm font-semibold px-2 py-0.5 rounded-lg font-mono tabular-nums border ${badgeClass}`}>
                                     {prefix}{formatPrice(sale.total)}
                                   </span>
                                 )
@@ -457,13 +457,13 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
 
                             {!isCrossedOut && (
                               <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity relative">
-                                {/* Bouton Reçu WhatsApp Direct 1-Clic */}
+                                {/* Bouton ReÃ§u WhatsApp Direct 1-Clic */}
                                 {onShareWhatsAppReceipt && sale.total > 0 && (sale.pen_color === 'blue' || sale.pen_color === 'yellow' || sale.type === 'cash_in' || sale.type === 'sale' || sale.type === 'sale_cash' || sale.type === 'sale_credit') && (
                                   <button
                                     type="button"
                                     onClick={() => onShareWhatsAppReceipt(sale)}
-                                    className="p-1 rounded-lg text-emerald-800 hover:bg-emerald-200/90 bg-emerald-100/90 border border-emerald-300 shadow-2xs transition-all active:scale-[0.97] cursor-pointer"
-                                    title="Reçu WhatsApp direct (1-Clic)"
+                                    className="p-1 rounded-lg text-emerald-800 hover:bg-emerald-200/90 bg-emerald-100/90 border border-emerald-300 shadow-2xs transition-colors active:scale-[0.97] cursor-pointer"
+                                    title="ReÃ§u WhatsApp direct (1-Clic)"
                                   >
                                     <Share2 className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
                                   </button>
@@ -475,12 +475,12 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                     type="button"
                                     onClick={() => setActiveActionMenuSaleId(activeActionMenuSaleId === sale.id ? null : sale.id)}
                                     className="p-1 rounded-lg text-amber-950 hover:bg-amber-200/90 bg-amber-100/90 border border-amber-300 shadow-2xs transition-colors cursor-pointer"
-                                    title="Actions sur cette écriture"
+                                    title="Actions sur cette Ã©criture"
                                   >
                                     <MoreVertical className="w-3.5 h-3.5" />
                                   </button>
 
-                                  {/* Menu Popup d'actions pour cette écriture */}
+                                  {/* Menu Popup d'actions pour cette Ã©criture */}
                                   {activeActionMenuSaleId === sale.id && (
                                     <>
                                       <div
@@ -526,7 +526,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                             className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-emerald-50 text-emerald-900 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                                           >
                                             <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-                                            <span>Reçu WhatsApp (1-Clic)</span>
+                                            <span>ReÃ§u WhatsApp (1-Clic)</span>
                                           </button>
                                         )}
 
@@ -540,7 +540,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                             className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                                           >
                                             <Printer className="w-3.5 h-3.5 text-blue-700" />
-                                            <span>Imprimer le reçu</span>
+                                            <span>Imprimer le reÃ§u</span>
                                           </button>
                                         )}
 
@@ -582,7 +582,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         {/* Calculateur de monnaie en ligne */}
                         {isChangeActive && !isCrossedOut && (
                           <div className="mt-1.5 pt-1.5 border-t border-amber-200/80 flex flex-wrap items-center gap-1.5 text-xs font-mono bg-amber-50/70 p-1.5 rounded-lg">
-                            <span className="text-amber-900 font-bold text-[10px]">Reçu :</span>
+                            <span className="text-amber-900 font-bold text-[10px]">ReÃ§u :</span>
                             <input
                               type="number"
                               placeholder="5000"
@@ -628,35 +628,35 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                   })
                 )}
 
-                {/* ── BILAN MANUSCRIT AU BAS DES ÉCRITURES (Mode TOUS uniquement) ── */}
+                {/* â”€â”€ BILAN MANUSCRIT AU BAS DES Ã‰CRITURES (Mode TOUS uniquement) â”€â”€ */}
                 {activeFilter === 'all' && (
                   <div className="mt-3 pt-2.5 pb-2 px-3 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/80 border-2 border-dashed border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs space-y-2 select-none">
-                  <div className="flex items-center justify-between border-b border-amber-300/80 pb-1 font-handwritten font-black text-amber-950 text-xs sm:text-sm">
+                  <div className="flex items-center justify-between border-b border-amber-300/80 pb-1 font-handwritten font-semibold text-amber-950 text-xs sm:text-sm">
                     <div className="flex items-center gap-1.5">
                       <Ruler className="w-4 h-4 text-amber-900" />
                       <span className="tracking-wide uppercase">Bilan de Caisse du Jour</span>
                     </div>
                     <span className="font-mono text-[11px] text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full font-bold">
-                      {allDaySales.length} opération(s)
+                      {allDaySales.length} opÃ©ration(s)
                     </span>
                   </div>
 
-                  {/* Lignes de décomposition du calcul */}
+                  {/* Lignes de dÃ©composition du calcul */}
                   <div className="space-y-1.5 text-[11px] sm:text-xs">
                     <div className="flex items-center justify-between text-blue-900 font-bold">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
-                        <span>(+) Ventes encaissées (CA)</span>
+                        <span>(+) Ventes encaissÃ©es (CA)</span>
                       </span>
-                      <span className="font-extrabold text-blue-950 font-mono tabular-nums">+{formatPrice(salesTotal)}</span>
+                      <span className="font-semibold text-blue-950 font-mono tabular-nums">+{formatPrice(salesTotal)}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-rose-900 font-bold">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
-                        <span>(-) Dépenses réglées</span>
+                        <span>(-) DÃ©penses rÃ©glÃ©es</span>
                       </span>
-                      <span className="font-extrabold text-rose-950 font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
+                      <span className="font-semibold text-rose-950 font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-emerald-900 font-bold">
@@ -664,11 +664,11 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
                         <span>(-) Achats stock au comptant</span>
                       </span>
-                      <span className="font-extrabold text-emerald-950 font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
+                      <span className="font-semibold text-emerald-950 font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
                     </div>
 
                     {/* Ligne de Solde Net */}
-                    <div className={`mt-2 pt-2 border-t-2 border-amber-300 flex items-center justify-between font-black text-xs sm:text-sm p-2 rounded-xl ${
+                    <div className={`mt-2 pt-2 border-t-2 border-amber-300 flex items-center justify-between font-semibold text-xs sm:text-sm p-2 rounded-xl ${
                       dayNet >= 0
                         ? 'bg-emerald-100/90 text-emerald-950 border border-emerald-300'
                         : 'bg-rose-100/90 text-rose-950 border border-rose-300'
@@ -677,18 +677,18 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         <Coins className="w-4 h-4 text-emerald-800 flex-shrink-0" />
                         <span>SOLDE NET DU JOUR</span>
                       </span>
-                      <span className="font-mono font-black text-sm sm:text-base tabular-nums">
+                      <span className="font-mono font-semibold text-sm sm:text-base tabular-nums">
                         {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
                       </span>
                     </div>
 
-                    {/* Dettes et Crédits à suivre si présents */}
+                    {/* Dettes et CrÃ©dits Ã  suivre si prÃ©sents */}
                     {(yellowCreditTotal > 0 || purpleCreditTotal > 0) && (
                       <div className="pt-1.5 border-t border-dashed border-amber-300/60 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-gray-700 flex-wrap gap-2">
                         {yellowCreditTotal > 0 && (
                           <span className="text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-lg border border-amber-300 flex items-center gap-1 font-mono tabular-nums">
                             <Clock className="w-3.5 h-3.5 text-amber-800" />
-                            <span>Crédits clients : +{formatPrice(yellowCreditTotal)}</span>
+                            <span>CrÃ©dits clients : +{formatPrice(yellowCreditTotal)}</span>
                           </span>
                         )}
                         {purpleCreditTotal > 0 && (

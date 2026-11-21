@@ -41,7 +41,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
 }) => {
   const [breakdownType, setBreakdownType] = useState<'all' | 'blue' | 'red' | 'green' | 'purple' | 'yellow' | 'total' | null>(null)
 
-  // Calcul des totaux par stylo / catégorie (Ignore les demandes clients à 0 FCFA)
+  // Calcul des totaux par stylo / catÃ©gorie (Ignore les demandes clients Ã  0 FCFA)
   const validSales = sales.filter(s => s.status !== 'crossed_out' && s.type !== 'client_request')
 
   const getPenAmount = (penId: string) => {
@@ -79,30 +79,30 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
   return (
     <>
       <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none w-full select-none text-xs font-mono">
-        {/* ── AU DÉBUT : TOUS ── */}
+        {/* â”€â”€ AU DÃ‰BUT : TOUS â”€â”€ */}
         <button
           type="button"
           onClick={() => {
             if (onSelectFilter) onSelectFilter('all')
             onSelectPen('blue')
           }}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-black transition-all duration-150 flex-shrink-0 border cursor-pointer active:scale-[0.97] ${
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold transition-colors duration-150 flex-shrink-0 border cursor-pointer active:scale-[0.97] ${
             activeFilter === 'all'
               ? 'bg-amber-950 text-amber-100 border-amber-950 shadow-xs scale-102 ring-2 ring-amber-400/80'
               : 'bg-white/90 text-gray-800 border-amber-300/80 hover:bg-amber-100 shadow-2xs'
           }`}
-          title="Afficher toutes les écritures"
+          title="Afficher toutes les Ã©critures"
         >
           <ClipboardList className="w-3.5 h-3.5" />
           <span>TOUS</span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black font-mono tabular-nums ${
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold font-mono tabular-nums ${
             activeFilter === 'all' ? 'bg-amber-800 text-white' : 'bg-amber-200/80 text-amber-950'
           }`}>
             {validSales.length}
           </span>
         </button>
 
-        {/* ── AU MILIEU : Les 5 Stylos ── */}
+        {/* â”€â”€ AU MILIEU : Les 5 Stylos â”€â”€ */}
         {pens.map((pen) => {
           const isSelected = selectedPen === pen.id
 
@@ -114,7 +114,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
                 onSelectPen(pen.id)
                 if (onSelectFilter) onSelectFilter(pen.id)
               }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-extrabold transition-all duration-150 flex-shrink-0 border cursor-pointer active:scale-[0.97] ${
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold transition-colors duration-150 flex-shrink-0 border cursor-pointer active:scale-[0.97] ${
                 isSelected
                   ? 'text-white shadow-xs scale-102 ring-2 ring-amber-400/80 border-white/60'
                   : 'bg-white/90 text-gray-800 border-amber-300/80 hover:bg-amber-50 shadow-2xs'
@@ -139,12 +139,12 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
                   />
                 )}
               </span>
-              <span className="text-[11px] sm:text-xs font-extrabold tracking-wide">{pen.name}</span>
+              <span className="text-[11px] sm:text-xs font-semibold tracking-wide">{pen.name}</span>
             </button>
           )
         })}
 
-        {/* ── À LA FIN : BOUTON TOTAL / SOLDE NET (Active le Calcul en Page) ── */}
+        {/* â”€â”€ Ã€ LA FIN : BOUTON TOTAL / SOLDE NET (Active le Calcul en Page) â”€â”€ */}
         <button
           type="button"
           onClick={() => {
@@ -152,7 +152,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
               onSelectFilter(activeFilter === 'total' ? 'all' : 'total')
             }
           }}
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-xs font-black shadow-xs flex-shrink-0 ml-auto transition-all cursor-pointer active:scale-[0.97] border ${
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-xs font-semibold shadow-xs flex-shrink-0 ml-auto transition-colors cursor-pointer active:scale-[0.97] border ${
             activeFilter === 'total'
               ? 'bg-emerald-700 text-white border-emerald-800 ring-2 ring-emerald-400 scale-102'
               : 'bg-emerald-50 text-emerald-900 border-emerald-900/15 hover:bg-emerald-100'
@@ -161,13 +161,13 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
         >
           <Calculator className={`w-3.5 h-3.5 ${activeFilter === 'total' ? 'text-white' : 'text-emerald-800'}`} />
           <span>SOLDE :</span>
-          <span className={`font-extrabold ${activeFilter === 'total' ? 'text-white' : 'text-emerald-900'}`}>
+          <span className={`font-semibold ${activeFilter === 'total' ? 'text-white' : 'text-emerald-900'}`}>
             {netTotal >= 0 ? `+${formatPrice(netTotal)}` : `-${formatPrice(Math.abs(netTotal))}`}
           </span>
         </button>
       </div>
 
-      {/* Cadre Modal des Calculs et Détails */}
+      {/* Cadre Modal des Calculs et DÃ©tails */}
       {breakdownType && (
         <CategoryBreakdownModal
           isOpen={!!breakdownType}

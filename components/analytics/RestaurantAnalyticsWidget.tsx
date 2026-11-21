@@ -56,7 +56,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
           const unitPrice = Number(art.unit_price || 0)
           const qty = Number(art.quantity || 1)
           const rev = unitPrice * qty
-          const isBar = nameLower.includes('bière') || nameLower.includes('coca') || nameLower.includes('fanta') || nameLower.includes('sprite') || nameLower.includes('jus') || nameLower.includes('eau') || nameLower.includes('boisson') || nameLower.includes('vin') || nameLower.includes('bouteille') || art.category === 'Boissons'
+          const isBar = nameLower.includes('biÃ¨re') || nameLower.includes('coca') || nameLower.includes('fanta') || nameLower.includes('sprite') || nameLower.includes('jus') || nameLower.includes('eau') || nameLower.includes('boisson') || nameLower.includes('vin') || nameLower.includes('bouteille') || art.category === 'Boissons'
 
           if (isBar) {
             totalBar += rev
@@ -103,7 +103,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
 
   return (
     <div className="space-y-6">
-      {/* En-tête Resto */}
+      {/* En-tÃªte Resto */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-amber-200 shadow-sm">
         <div className="flex items-center gap-2.5">
           <div className="p-2.5 bg-amber-100/80 rounded-2xl text-amber-800 flex items-center justify-center">
@@ -120,7 +120,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Boutons Période */}
+          {/* Boutons PÃ©riode */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border border-gray-200">
             {[
               { id: 'all', label: 'Tout' },
@@ -131,7 +131,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
               <button
                 key={p.id}
                 onClick={() => onPeriodChange(p.id as any)}
-                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all active:scale-[0.97] cursor-pointer ${
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-normal rounded-xl transition-colors active:scale-[0.97] cursor-pointer ${
                   period === p.id 
                     ? 'bg-gray-900 text-white shadow-sm' 
                     : 'text-gray-600 hover:bg-gray-200'
@@ -146,7 +146,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
             href={generateWhatsAppPerformanceReport(sales, period === 'all' ? 'Tout' : period === 'month' ? 'Ce Mois' : period === '7days' ? '7 Jours' : 'Aujourd\'hui', shopName)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-all shadow-sm active:scale-[0.97] cursor-pointer"
+            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-wide transition-colors shadow-sm active:scale-[0.97] cursor-pointer"
           >
             <Share2 className="w-3 h-3" />
             <span>Rapport Resto WhatsApp</span>
@@ -154,7 +154,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
         </div>
       </div>
 
-      {/* 4 KPIs Clés Cuisine & Bar */}
+      {/* 4 KPIs ClÃ©s Cuisine & Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-[24px] p-4 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
@@ -187,7 +187,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
         </div>
 
         <div className="bg-white border border-gray-200 rounded-[24px] p-4 shadow-sm flex items-center gap-3">
-          <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+          <div className="p-3 bg-stone-100 text-stone-700 rounded-2xl">
             <DollarSign className="w-5 h-5" />
           </div>
           <div>
@@ -197,24 +197,24 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
         </div>
       </div>
 
-      {/* Dualité Cuisine vs Bar (Graphique Comparatif) */}
+      {/* DualitÃ© Cuisine vs Bar (Graphique Comparatif) */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
           <Scale className="w-5 h-5 text-amber-700" />
-          <span>Équilibre Recettes Cuisine vs Bar</span>
+          <span>Ã‰quilibre Recettes Cuisine vs Bar</span>
         </h3>
 
         <div className="space-y-3">
-          {/* Barre de répartition */}
+          {/* Barre de rÃ©partition */}
           <div className="h-6 w-full bg-gray-100 rounded-2xl overflow-hidden flex shadow-inner border border-gray-200">
             <div
-              className="bg-amber-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all overflow-hidden"
+              className="bg-amber-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-colors overflow-hidden"
               style={{ width: `${restoStats.ratioCuisine}%` }}
             >
               {restoStats.ratioCuisine >= 12 ? `Cuisine ${restoStats.ratioCuisine}%` : ''}
             </div>
             <div
-              className="bg-sky-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-all overflow-hidden"
+              className="bg-sky-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-colors overflow-hidden"
               style={{ width: `${restoStats.ratioBar}%` }}
             >
               {restoStats.ratioBar >= 12 ? `Bar ${restoStats.ratioBar}%` : ''}
@@ -240,7 +240,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
         </div>
       </div>
 
-      {/* Palmarès de la Carte (Top Plats & Boissons) */}
+      {/* PalmarÃ¨s de la Carte (Top Plats & Boissons) */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-amber-600" />
@@ -249,7 +249,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {restoStats.topItems.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between bg-[#fdfaf2] border border-gray-200 p-3 rounded-2xl">
+            <div key={idx} className="flex items-center justify-between bg-[#faf5e8] border border-gray-200 p-3 rounded-2xl">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-amber-900 text-white font-mono text-[10px] font-bold flex items-center justify-center">
                   #{idx + 1}

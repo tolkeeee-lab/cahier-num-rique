@@ -123,13 +123,13 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
   }
 
   return (
-    <div className="px-2.5 sm:px-3 pt-[max(env(safe-area-inset-top),0.375rem)] pb-1.5 border-b border-dashed border-amber-300/60 select-none bg-[#fdfaf2] relative">
-      {/* Rangée 1 : App Bar Ultra-Compacte */}
+    <div className="px-2.5 sm:px-3 pt-[max(env(safe-area-inset-top),0.375rem)] pb-1.5 border-b border-dashed border-amber-300/60 select-none bg-[#faf5e8] relative">
+      {/* RangÃ©e 1 : App Bar Ultra-Compacte */}
       <div className="flex items-center justify-between gap-1.5 h-8 sm:h-9">
-        {/* Titre & Sélecteur Boutique */}
+        {/* Titre & SÃ©lecteur Boutique */}
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white border border-amber-300/80 flex items-center justify-center shadow-xs flex-shrink-0 p-0.5">
-            <img src="/logo/logo-symbole.svg" alt="Cahier Numérique" className="w-full h-full object-contain" />
+            <img src="/logo/logo-symbole.svg" alt="Cahier NumÃ©rique" className="w-full h-full object-contain" />
           </div>
           <div className="relative inline-flex items-center bg-amber-100/90 border border-amber-300 rounded-xl px-2 py-0.5 text-xs font-bold text-amber-950 max-w-[170px] sm:max-w-[260px] shadow-2xs">
             <select
@@ -145,7 +145,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             >
               {shops.map((s) => (
                 <option key={s.id} value={s.id} className="bg-white text-gray-900 font-sans">
-                  {s.name} · {getActivityBadge(s.activity)}
+                  {s.name} Â· {getActivityBadge(s.activity)}
                 </option>
               ))}
               {!isEmployeeRole(userRole) && (
@@ -158,9 +158,9 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
           </div>
         </div>
 
-        {/* Actions & Statut Réseau */}
+        {/* Actions & Statut RÃ©seau */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-          {/* Badge Statut Réseau */}
+          {/* Badge Statut RÃ©seau */}
           <button
             type="button"
             onClick={onSyncClick}
@@ -192,7 +192,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             <button
               type="button"
               onClick={handleInstallClick}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#0E8F6E]/15 hover:bg-[#0E8F6E]/25 text-[#0E8F6E] text-xs font-bold border border-[#0E8F6E]/30 transition-all shadow-2xs cursor-pointer active:scale-[0.97]"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#0E8F6E]/15 hover:bg-[#0E8F6E]/25 text-[#0E8F6E] text-xs font-bold border border-[#0E8F6E]/30 transition-colors shadow-2xs cursor-pointer active:scale-[0.97]"
               title="Installer l'application sur cet appareil"
             >
               <Download className="w-3 h-3" />
@@ -203,10 +203,10 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenCashClosing}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100/90 hover:bg-amber-200 text-amber-900 text-xs font-bold border border-amber-300 transition-all shadow-2xs cursor-pointer active:scale-[0.97]"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100/90 hover:bg-amber-200 text-amber-900 text-xs font-bold border border-amber-300 transition-colors shadow-2xs cursor-pointer active:scale-[0.97]"
               >
                 <Calculator className="w-3 h-3 text-amber-700" />
-                <span>Clôture</span>
+                <span>ClÃ´ture</span>
               </button>
             )}
 
@@ -237,20 +237,20 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                 type="button"
                 onClick={onOpenSyscohada}
                 className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 transition-colors shadow-2xs"
-                title="Comptabilité SYSCOHADA"
+                title="ComptabilitÃ© SYSCOHADA"
               >
                 <BookText className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Paramètres & Menu Mobile */}
+          {/* ParamÃ¨tres & Menu Mobile */}
           {canAccessAdminSettings(userRole) && (
             <button
               type="button"
               onClick={onOpenSettings}
               className="p-1 sm:p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 transition-colors shadow-2xs"
-              title="Paramètres"
+              title="ParamÃ¨tres"
             >
               <Settings className="w-3.5 h-3.5" />
             </button>
@@ -270,7 +270,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
 
             {showMobileMenu && (
               <>
-                {/* Backdrop plein écran pour fermer en cliquant à l'extérieur */}
+                {/* Backdrop plein Ã©cran pour fermer en cliquant Ã  l'extÃ©rieur */}
                 <div
                   className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[90] pointer-events-auto"
                   onClick={() => setShowMobileMenu(false)}
@@ -278,14 +278,14 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
 
                 {/* Tiroir Popup Net, 100% Opaque et au premier plan */}
                 <div className="fixed right-3 top-12 w-64 bg-[#fffdf2] border-2 border-amber-500 rounded-2xl shadow-2xl z-[100] p-2.5 space-y-1 font-mono text-xs animate-in fade-in zoom-in-95 pointer-events-auto">
-                  <div className="px-2.5 py-1 text-[10px] text-amber-900 font-black uppercase border-b border-amber-200 mb-1 tracking-wider">
+                  <div className="px-2.5 py-1 text-[10px] text-amber-900 font-semibold uppercase border-b border-amber-200 mb-1 tracking-normal">
                     Menu & Outils
                   </div>
                   {deferredPrompt && !isStandalone && (
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); handleInstallClick(); }}
-                      className="w-full text-left px-3 py-2 rounded-xl bg-[#0E8F6E]/10 hover:bg-[#0E8F6E]/20 active:scale-[0.97] text-[#0E8F6E] font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap border border-[#0E8F6E]/30"
+                      className="w-full text-left px-3 py-2 rounded-xl bg-[#0E8F6E]/10 hover:bg-[#0E8F6E]/20 active:scale-[0.97] text-[#0E8F6E] font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap border border-[#0E8F6E]/30"
                     >
                       <div className="w-6 h-6 rounded-lg bg-[#0E8F6E]/20 flex items-center justify-center flex-shrink-0 text-[#0E8F6E]">
                         <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -298,12 +298,12 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenCashClosing() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0 text-amber-900">
                         <Calculator className="w-3.5 h-3.5" strokeWidth={1.75} />
                       </div>
-                      <span>Clôture de Caisse (Z)</span>
+                      <span>ClÃ´ture de Caisse (Z)</span>
                     </button>
                   )}
 
@@ -311,7 +311,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenBoutiqueAssistant() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0 text-amber-900">
                         <Sparkles className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -324,7 +324,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenBarcodeScanner() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0 text-gray-800">
                         <ScanLine className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -337,7 +337,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onOpenSyscohada() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-all cursor-pointer whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-amber-100 active:scale-[0.97] text-gray-950 font-bold flex items-center gap-2.5 transition-colors cursor-pointer whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-amber-200/80 flex items-center justify-center flex-shrink-0 text-amber-900">
                         <BookText className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -350,12 +350,12 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => { setShowMobileMenu(false); onLogout() }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-100 active:scale-[0.97] text-rose-700 font-black flex items-center gap-2.5 transition-all cursor-pointer border-t border-amber-200 mt-1 pt-1.5 whitespace-nowrap"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-100 active:scale-[0.97] text-rose-700 font-semibold flex items-center gap-2.5 transition-colors cursor-pointer border-t border-amber-200 mt-1 pt-1.5 whitespace-nowrap"
                     >
                       <div className="w-6 h-6 rounded-lg bg-rose-200/80 flex items-center justify-center flex-shrink-0 text-rose-700">
                         <LogOut className="w-3.5 h-3.5" strokeWidth={1.75} />
                       </div>
-                      <span>Déconnexion</span>
+                      <span>DÃ©connexion</span>
                     </button>
                   )}
                 </div>
@@ -369,7 +369,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
               type="button"
               onClick={onLogout}
               className="hidden md:flex px-2 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-bold border border-rose-300 transition-colors shadow-2xs items-center gap-1"
-              title="Se déconnecter"
+              title="Se dÃ©connecter"
             >
               <LogOut className="w-3 h-3" />
               <span>Quitter</span>
@@ -378,7 +378,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
         </div>
       </div>
 
-      {/* Rangée 2 : Tiroirs KPI Défilables Horizontalement sur Mobile (et Grille 3 colonnes sur Écran Large) */}
+      {/* RangÃ©e 2 : Tiroirs KPI DÃ©filables Horizontalement sur Mobile (et Grille 3 colonnes sur Ã‰cran Large) */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 font-mono sm:grid sm:grid-cols-3 w-full">
         {/* Tiroir Cash */}
         <div className="flex-shrink-0 min-w-[140px] sm:min-w-0 sm:flex-1 bg-[#faf5e8] border border-stone-900/10 rounded-xl px-3 py-1.5 relative flex flex-col justify-center">
@@ -388,7 +388,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenCashAdjustment}
-                className="text-[7.5px] sm:text-[8px] underline text-amber-800 font-black cursor-pointer flex-shrink-0"
+                className="text-[7.5px] sm:text-[8px] underline text-amber-800 font-semibold cursor-pointer flex-shrink-0"
               >
                 Ajuster
               </button>
@@ -399,7 +399,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
           </div>
         </div>
 
-        {/* Crédits Dehors */}
+        {/* CrÃ©dits Dehors */}
         <div className="flex-shrink-0 min-w-[140px] sm:min-w-0 sm:flex-1 bg-[#faf5e8] border border-stone-900/10 rounded-xl px-3 py-1.5 flex flex-col justify-center">
           <div className="flex items-center gap-1.5 text-[11px] text-stone-600 font-medium whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-600 flex-shrink-0" /><span>{labels.creditsDehors}</span>
@@ -412,7 +412,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
         {/* Nos Dettes */}
         <div className="flex-shrink-0 min-w-[140px] sm:min-w-0 sm:flex-1 bg-[#faf5e8] border border-stone-900/10 rounded-xl px-3 py-1.5 flex flex-col justify-center">
           <div className="flex items-center gap-1.5 text-[11px] text-stone-600 font-medium whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-600 flex-shrink-0" /><span>{labels.nosDettes}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-stone-800 flex-shrink-0" /><span>{labels.nosDettes}</span>
           </div>
           <div className="text-xs sm:text-sm font-mono font-semibold tabular-nums tracking-tight text-stone-900 whitespace-nowrap mt-0.5">
             {formatPrice(nosDettes)}

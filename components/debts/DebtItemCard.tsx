@@ -76,7 +76,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
   const handleSendWhatsAppReminder = (e: React.MouseEvent) => {
     e.stopPropagation()
     const storeLabel = shopName ? `*${shopName}*` : 'notre boutique'
-    const message = `Bonjour ${debt.client_name},\n\nNous vous rappelons amicalement qu'il reste un solde impayé de *${formatPrice(debt.amount_owed)}* sur votre compte chez ${storeLabel}.\n\nMerci de bien vouloir passer à la boutique pour régulariser votre situation.\nExcellente journée !`
+    const message = `Bonjour ${debt.client_name},\n\nNous vous rappelons amicalement qu'il reste un solde impayÃ© de *${formatPrice(debt.amount_owed)}* sur votre compte chez ${storeLabel}.\n\nMerci de bien vouloir passer Ã  la boutique pour rÃ©gulariser votre situation.\nExcellente journÃ©e !`
 
     const url = targetPhone
       ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`
@@ -90,12 +90,12 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
         isSettled
           ? 'bg-stone-50/80 border-stone-900/10 opacity-75'
           : isOverdue
-          ? 'bg-[#fdfaf2] border-rose-300'
-          : 'bg-[#fdfaf2] border-stone-900/10 hover:border-stone-900/20'
+          ? 'bg-[#faf5e8] border-rose-300'
+          : 'bg-[#faf5e8] border-stone-900/10 hover:border-stone-900/20'
       }`}
     >
       <div className="p-3.5 space-y-3">
-        {/* En-tête : Avatar + Identité + Montant */}
+        {/* En-tÃªte : Avatar + IdentitÃ© + Montant */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5 min-w-0">
             <div
@@ -103,7 +103,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                 isSettled
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-900/15'
                   : isSupplier
-                  ? 'bg-violet-50 text-violet-900 border-violet-900/15'
+                  ? 'bg-stone-100 text-stone-700 border-violet-900/15'
                   : 'bg-[#faf5e8] text-stone-800 border-stone-900/10'
               }`}
             >
@@ -118,7 +118,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${
                     isSupplier
-                      ? 'bg-violet-50 text-violet-800 border-violet-900/15'
+                      ? 'bg-stone-100 text-stone-700 border-violet-900/15'
                       : 'bg-[#faf5e8] text-stone-700 border-stone-900/10'
                   }`}
                 >
@@ -139,7 +139,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                 {isDueToday && (
                   <span className="inline-flex items-center gap-1 text-amber-800 font-medium">
                     <Calendar className="w-3 h-3" strokeWidth={1.75} />
-                    <span>Échéance aujourd&apos;hui</span>
+                    <span>Ã‰chÃ©ance aujourd&apos;hui</span>
                   </span>
                 )}
                 {!isOverdue && !isDueToday && debt.due_date && (
@@ -170,16 +170,16 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
               {formatPrice(debt.amount_owed)}
             </div>
             <div className="text-[10px] text-stone-500">
-              {isSettled ? 'Soldé' : 'Reste à payer'}
+              {isSettled ? 'SoldÃ©' : 'Reste Ã  payer'}
             </div>
           </div>
         </div>
 
-        {/* Barre de progression si des acomptes ont déjà été versés */}
+        {/* Barre de progression si des acomptes ont dÃ©jÃ  Ã©tÃ© versÃ©s */}
         {paidAmount > 0 && (
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[11px] text-stone-500 font-mono tabular-nums">
-              <span>Déjà réglé : {formatPrice(paidAmount)}</span>
+              <span>DÃ©jÃ  rÃ©glÃ© : {formatPrice(paidAmount)}</span>
               <span>{paidPercent}%</span>
             </div>
             <div className="h-1.5 w-full bg-stone-900/10 rounded-full overflow-hidden">
@@ -193,7 +193,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
 
         {/* Barre d'actions */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-900/10">
-          {/* Bouton Détails / Historique */}
+          {/* Bouton DÃ©tails / Historique */}
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
@@ -250,12 +250,12 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
         </div>
       </div>
 
-      {/* Historique dépliable des crédits & acomptes de ce client */}
+      {/* Historique dÃ©pliable des crÃ©dits & acomptes de ce client */}
       {expanded && (
         <div className="px-3.5 pb-3.5 pt-2 border-t border-stone-900/10 bg-[#faf5e8]/60 rounded-b-xl space-y-1.5">
           {history.length === 0 ? (
             <p className="text-[11px] text-stone-500">
-              Aucun détail d&apos;opération locale disponible pour ce compte.
+              Aucun dÃ©tail d&apos;opÃ©ration locale disponible pour ce compte.
             </p>
           ) : (
             history.slice(0, 8).map((entry) => {
@@ -263,7 +263,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
               const articleSummary =
                 entry.articles && entry.articles.length > 0
                   ? entry.articles.map((a) => `${a.quantity || 1}x ${a.name || 'Article'}`).join(', ')
-                  : entry.notes || (isPayment ? 'Remboursement' : 'Crédit')
+                  : entry.notes || (isPayment ? 'Remboursement' : 'CrÃ©dit')
 
               return (
                 <div

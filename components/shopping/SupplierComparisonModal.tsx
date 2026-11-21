@@ -49,11 +49,11 @@ export const SupplierComparisonModal: React.FC<SupplierComparisonModalProps> = (
     >
       <div className="w-full max-w-md bg-[#1e1a18] border border-[#2a2421] rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Entête */}
+        {/* EntÃªte */}
         <div className="flex items-center justify-between border-b border-gray-800 pb-3">
           <div className="flex items-center gap-2">
             <Store className="w-5 h-5 text-amber-400" strokeWidth={1.75} />
-            <h3 className="text-base font-extrabold text-white">Comparatif Grossistes</h3>
+            <h3 className="text-base font-semibold text-white">Comparatif Grossistes</h3>
           </div>
           <button
             type="button"
@@ -65,7 +65,7 @@ export const SupplierComparisonModal: React.FC<SupplierComparisonModalProps> = (
         </div>
 
         <p className="text-xs text-gray-400 font-mono">
-          Tarifs recensés pour <span className="text-white font-bold">{productName}</span> :
+          Tarifs recensÃ©s pour <span className="text-white font-bold">{productName}</span> :
         </p>
 
         {/* Liste des tarifs fournisseurs */}
@@ -81,7 +81,7 @@ export const SupplierComparisonModal: React.FC<SupplierComparisonModalProps> = (
                   <p className="text-[11px] text-gray-400 font-mono">{sup.unit}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono font-extrabold text-amber-400 tabular-nums">
+                  <span className="text-xs font-mono font-semibold text-amber-400 tabular-nums">
                     {formatPrice(sup.price)}
                   </span>
                   {onSelectSupplier && (
@@ -102,7 +102,7 @@ export const SupplierComparisonModal: React.FC<SupplierComparisonModalProps> = (
             ))
           ) : (
             <p className="text-xs text-gray-400 italic text-center py-4">
-              Aucun fournisseur répertorié pour ce produit.
+              Aucun fournisseur rÃ©pertoriÃ© pour ce produit.
             </p>
           )}
         </div>
@@ -112,7 +112,7 @@ export const SupplierComparisonModal: React.FC<SupplierComparisonModalProps> = (
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-800 text-gray-300 text-xs font-bold rounded-xl hover:bg-gray-700 active:scale-[0.97] transition-all cursor-pointer"
+            className="px-4 py-2 bg-gray-800 text-gray-300 text-xs font-bold rounded-xl hover:bg-gray-700 active:scale-[0.97] transition-colors cursor-pointer"
           >
             Fermer
           </button>

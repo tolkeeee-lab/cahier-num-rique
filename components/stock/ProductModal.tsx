@@ -60,16 +60,16 @@ export function ProductModal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="w-full max-w-lg bg-[#fdfaf2] border-2 border-amber-300 rounded-3xl p-4 sm:p-5 shadow-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="w-full max-w-lg bg-[#faf5e8] border-2 border-amber-300 rounded-3xl p-4 sm:p-5 shadow-2xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Entête fixe */}
+        {/* EntÃªte fixe */}
         <div className="flex-shrink-0 flex items-center justify-between border-b border-amber-200 pb-3 mb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-amber-200/80 rounded-xl border border-amber-300">
               <Edit3 className="w-4 h-4 text-amber-900" strokeWidth={2} />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-gray-900 font-handwritten tracking-wide">
+              <h3 className="text-base font-semibold text-gray-900 font-handwritten tracking-wide">
                 {editingItem ? `Modifier : ${editingItem.name}` : 'Fiche Produit'}
               </h3>
               <p className="text-[11px] text-amber-900/70 font-mono">
@@ -81,20 +81,20 @@ export function ProductModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 bg-amber-100/80 hover:bg-amber-200 text-gray-700 hover:text-gray-950 rounded-xl transition-all active:scale-[0.97] cursor-pointer border border-amber-300"
-            title="Fermer la fenêtre (Échap)"
+            className="p-1.5 bg-amber-100/80 hover:bg-amber-200 text-gray-700 hover:text-gray-950 rounded-xl transition-colors active:scale-[0.97] cursor-pointer border border-amber-300"
+            title="Fermer la fenÃªtre (Ã‰chap)"
           >
             <X className="w-5 h-5" strokeWidth={1.75} />
           </button>
         </div>
 
-        {/* Formulaire Unique et Épuré */}
+        {/* Formulaire Unique et Ã‰purÃ© */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto pr-1 sm:pr-1.5 space-y-3.5 scrollbar-thin font-mono text-xs">
             
             {/* 1. Nom du produit */}
             <div className="p-3 bg-white rounded-2xl border border-amber-300/80 space-y-1">
-              <label className="text-[10px] text-amber-900 font-extrabold uppercase flex items-center gap-1">
+              <label className="text-[10px] text-amber-900 font-semibold uppercase flex items-center gap-1">
                 <Tag className="w-3 h-3 text-amber-700" />
                 <span>Nom du produit</span>
               </label>
@@ -108,11 +108,11 @@ export function ProductModal({
               />
             </div>
 
-            {/* 2. Catégorie & Unité */}
+            {/* 2. CatÃ©gorie & UnitÃ© */}
             <div className="grid grid-cols-2 gap-2">
               <div className="p-3 bg-white rounded-2xl border border-amber-300/80 space-y-1">
-                <label className="text-[10px] text-amber-900 font-extrabold uppercase">
-                  Catégorie
+                <label className="text-[10px] text-amber-900 font-semibold uppercase">
+                  CatÃ©gorie
                 </label>
                 <select
                   value={formData.category}
@@ -128,8 +128,8 @@ export function ProductModal({
               </div>
 
               <div className="p-3 bg-white rounded-2xl border border-amber-300/80 space-y-1">
-                <label className="text-[10px] text-amber-900 font-extrabold uppercase">
-                  Unité de vente
+                <label className="text-[10px] text-amber-900 font-semibold uppercase">
+                  UnitÃ© de vente
                 </label>
                 <select
                   value={formData.unit}
@@ -148,7 +148,7 @@ export function ProductModal({
             {/* 3. Stock actuel & Seuil d'alerte */}
             <div className="grid grid-cols-2 gap-2">
               <div className="p-3 bg-blue-50/50 rounded-2xl border border-blue-200 space-y-1">
-                <label className="text-[10px] text-blue-900 font-extrabold uppercase flex items-center gap-1">
+                <label className="text-[10px] text-blue-900 font-semibold uppercase flex items-center gap-1">
                   <Package className="w-3 h-3 text-blue-700" />
                   <span>Stock en Rayon</span>
                 </label>
@@ -157,14 +157,14 @@ export function ProductModal({
                     type="number"
                     value={formData.initial_stock || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, initial_stock: parseInt(e.target.value) || 0 }))}
-                    className="w-full font-black text-sm text-blue-950 bg-white border border-blue-300 rounded-xl px-2.5 py-2 outline-none tabular-nums"
+                    className="w-full font-semibold text-sm text-blue-950 bg-white border border-blue-300 rounded-xl px-2.5 py-2 outline-none tabular-nums"
                   />
                   <span className="text-xs font-bold text-blue-900 pr-1">pcs</span>
                 </div>
               </div>
 
               <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-300/80 space-y-1">
-                <label className="text-[10px] text-amber-900 font-extrabold uppercase flex items-center gap-1">
+                <label className="text-[10px] text-amber-900 font-semibold uppercase flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3 text-amber-700" />
                   <span>Seuil Alerte Faible</span>
                 </label>
@@ -173,19 +173,19 @@ export function ProductModal({
                     type="number"
                     value={formData.alert_threshold || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, alert_threshold: parseInt(e.target.value) || 0 }))}
-                    className="w-full font-black text-sm text-amber-950 bg-white border border-amber-300 rounded-xl px-2.5 py-2 outline-none tabular-nums"
+                    className="w-full font-semibold text-sm text-amber-950 bg-white border border-amber-300 rounded-xl px-2.5 py-2 outline-none tabular-nums"
                   />
                   <span className="text-xs font-bold text-amber-900 pr-1">pcs</span>
                 </div>
               </div>
             </div>
 
-            {/* 4. Tarification : Coût d'achat & Prix de vente */}
+            {/* 4. Tarification : CoÃ»t d'achat & Prix de vente */}
             <div className="grid grid-cols-2 gap-2">
               <div className="p-3 bg-rose-50/50 rounded-2xl border border-rose-200 space-y-1">
-                <label className="text-[10px] text-rose-900 font-extrabold uppercase flex items-center gap-1">
+                <label className="text-[10px] text-rose-900 font-semibold uppercase flex items-center gap-1">
                   <Coins className="w-3 h-3 text-rose-700" />
-                  <span>Coût d'Achat (PA)</span>
+                  <span>CoÃ»t d'Achat (PA)</span>
                 </label>
                 <div className="flex items-center gap-1">
                   <input
@@ -193,14 +193,14 @@ export function ProductModal({
                     value={formData.unit_cost || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, unit_cost: parseFloat(e.target.value) || 0 }))}
                     placeholder="0"
-                    className="w-full font-black text-sm text-rose-950 bg-white border border-rose-300 rounded-xl px-2.5 py-2 outline-none tabular-nums"
+                    className="w-full font-semibold text-sm text-rose-950 bg-white border border-rose-300 rounded-xl px-2.5 py-2 outline-none tabular-nums"
                   />
-                  <span className="text-xs font-black text-rose-900 pr-1">F</span>
+                  <span className="text-xs font-semibold text-rose-900 pr-1">F</span>
                 </div>
               </div>
 
               <div className="p-3 bg-emerald-50/50 rounded-2xl border border-emerald-200 space-y-1">
-                <label className="text-[10px] text-emerald-900 font-extrabold uppercase flex items-center gap-1">
+                <label className="text-[10px] text-emerald-900 font-semibold uppercase flex items-center gap-1">
                   <TrendingUp className="w-3 h-3 text-emerald-700" />
                   <span>Prix de Vente (PV)</span>
                 </label>
@@ -211,18 +211,18 @@ export function ProductModal({
                     onChange={(e) => setFormData((prev) => ({ ...prev, unit_price: parseFloat(e.target.value) || 0 }))}
                     placeholder="0"
                     required
-                    className="w-full font-black text-sm text-emerald-950 bg-white border border-emerald-300 rounded-xl px-2.5 py-2 outline-none tabular-nums"
+                    className="w-full font-semibold text-sm text-emerald-950 bg-white border border-emerald-300 rounded-xl px-2.5 py-2 outline-none tabular-nums"
                   />
-                  <span className="text-xs font-black text-emerald-900 pr-1">F</span>
+                  <span className="text-xs font-semibold text-emerald-900 pr-1">F</span>
                 </div>
               </div>
             </div>
 
-            {/* Marge calculée */}
+            {/* Marge calculÃ©e */}
             {formData.unit_price > 0 && formData.unit_cost > 0 && (
               <div className="p-2.5 bg-emerald-100/70 border border-emerald-300 rounded-xl flex items-center justify-between text-xs">
-                <span className="font-bold text-emerald-950">Marge brute par pièce :</span>
-                <span className="font-black text-emerald-800 tabular-nums">
+                <span className="font-bold text-emerald-950">Marge brute par piÃ¨ce :</span>
+                <span className="font-semibold text-emerald-800 tabular-nums">
                   +{formatPrice(formData.unit_price - formData.unit_cost)} (+{Math.round(((formData.unit_price - formData.unit_cost) / formData.unit_cost) * 100)}%)
                 </span>
               </div>
@@ -231,18 +231,18 @@ export function ProductModal({
             {/* 5. Conditionnement Carton / Multiplicateur */}
             <div className="p-3 bg-white rounded-2xl border border-amber-300/80 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] text-amber-900 font-extrabold uppercase flex items-center gap-1">
+                <label className="text-[10px] text-amber-900 font-semibold uppercase flex items-center gap-1">
                   <Layers className="w-3 h-3 text-amber-700" />
                   <span>Vente par Carton / Gros</span>
                 </label>
                 <span className="text-[10px] text-gray-500">
-                  {isCarton ? `1 carton = ${formData.multiplier} pcs` : 'Non activé'}
+                  {isCarton ? `1 carton = ${formData.multiplier} pcs` : 'Non activÃ©'}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <span className="text-[10px] text-gray-600 block">Pièces par carton :</span>
+                  <span className="text-[10px] text-gray-600 block">PiÃ¨ces par carton :</span>
                   <input
                     type="number"
                     value={formData.multiplier || 1}
@@ -265,7 +265,7 @@ export function ProductModal({
 
             {/* 6. Code-barres */}
             <div className="p-3 bg-white rounded-2xl border border-amber-300/80 space-y-1">
-              <label className="text-[10px] text-amber-900 font-extrabold uppercase flex items-center gap-1">
+              <label className="text-[10px] text-amber-900 font-semibold uppercase flex items-center gap-1">
                 <Barcode className="w-3 h-3 text-amber-700" />
                 <span>Code-barres (optionnel)</span>
               </label>
@@ -279,7 +279,7 @@ export function ProductModal({
             </div>
           </div>
 
-          {/* Déduction ventes passées orphelines */}
+          {/* DÃ©duction ventes passÃ©es orphelines */}
           {orphanPastSales > 0 && setDeductPastSales && (
             <div className="p-2.5 bg-amber-100/70 border border-amber-300 rounded-xl flex items-center justify-between text-xs font-mono">
               <label className="flex items-center gap-2 cursor-pointer text-amber-950 font-bold">
@@ -289,17 +289,17 @@ export function ProductModal({
                   onChange={(e) => setDeductPastSales(e.target.checked)}
                   className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
                 />
-                <span>Déduire les {orphanPastSales} ventes passées du stock actuel</span>
+                <span>DÃ©duire les {orphanPastSales} ventes passÃ©es du stock actuel</span>
               </label>
             </div>
           )}
 
           {/* Boutons d'Action Fixes en Bas */}
-          <div className="flex-shrink-0 flex items-center justify-end gap-2.5 pt-3 mt-2 border-t border-amber-200 bg-[#fdfaf2]">
+          <div className="flex-shrink-0 flex items-center justify-end gap-2.5 pt-3 mt-2 border-t border-amber-200 bg-[#faf5e8]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 active:scale-[0.97] text-gray-800 text-xs font-black rounded-xl transition-all cursor-pointer font-mono flex items-center gap-1.5"
+              className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 active:scale-[0.97] text-gray-800 text-xs font-semibold rounded-xl transition-colors cursor-pointer font-mono flex items-center gap-1.5"
             >
               <X className="w-3.5 h-3.5" strokeWidth={1.75} />
               <span>Annuler</span>

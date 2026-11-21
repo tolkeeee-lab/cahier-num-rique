@@ -14,22 +14,24 @@ export const CarnetBoutiquierWidget: React.FC<CarnetBoutiquierWidgetProps> = ({
   debtsCount,
 }) => {
   return (
-    <div className="bg-fuchsia-50/90 p-4 rounded-2xl border border-fuchsia-200 space-y-3 mb-4 shadow-sm">
+    <div className="bg-[#faf5e8] p-4 rounded-2xl border border-[#e2d6be] space-y-3 mb-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Store className="w-5 h-5 text-fuchsia-700" strokeWidth={1.75} />
-          <h4 className="text-sm font-extrabold text-fuchsia-950">Carnet Boutiquier (Crédits Foyer)</h4>
+          <Store className="w-4 h-4 text-stone-700" strokeWidth={1.5} />
+          <h4 className="text-sm font-semibold text-stone-900">Carnet boutiquier (crédits foyer)</h4>
         </div>
-        <span className="text-sm font-mono tabular-nums tracking-tight font-black text-fuchsia-950">
+        <span className="text-sm font-mono tabular-nums font-semibold text-stone-900">
           {formatPrice(totalCreditBoutiquier)}
         </span>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-fuchsia-900 font-medium">
-        <span>Achats pris à crédit : <strong className="font-mono tabular-nums">{debtsCount}</strong> opération(s)</span>
+      <div className="flex items-center justify-between text-xs text-stone-600">
+        <span>
+          Achats à crédit : <strong className="font-mono tabular-nums text-stone-900">{debtsCount}</strong> opération{debtsCount > 1 ? 's' : ''}
+        </span>
         {totalCreditBoutiquier > 0 && (
-          <span className="text-amber-900 font-extrabold flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.75} /> À régler à la paie
+          <span className="text-amber-800 font-medium flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.5} /> À régler à la paie
           </span>
         )}
       </div>

@@ -81,7 +81,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
     },
     {
       id: 'analytics' as JournalTab,
-      label: 'Comptabilité & Bilan',
+      label: 'ComptabilitÃ© & Bilan',
       icon: BarChart3,
       show: !isEmployee && features.enableAnalytics && canViewExecutiveDashboard(userRole),
     },
@@ -93,7 +93,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
     },
     {
       id: 'settings' as JournalTab,
-      label: 'Réglages',
+      label: 'RÃ©glages',
       icon: Settings,
       show: !isEmployee && canAccessAdminSettings(userRole),
     },
@@ -114,7 +114,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
             className={`notebook-tab flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium whitespace-nowrap border-t border-x cursor-pointer active:scale-[0.98] ${
               isActive
                 ? 'bg-[#064e3b] text-[#f59e0b] border-[#047857] -mb-[1px]'
-                : 'bg-[#fdfaf2]/70 text-stone-700 border-stone-900/10 hover:bg-[#fdfaf2] hover:text-stone-950'
+                : 'bg-[#faf5e8]/70 text-stone-700 border-stone-900/10 hover:bg-[#faf5e8] hover:text-stone-950'
             }`}
           >
             <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-400' : 'text-stone-500'}`} strokeWidth={1.75} />

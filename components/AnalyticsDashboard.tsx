@@ -56,7 +56,7 @@ export function AnalyticsDashboard({
   const shopName = currentShopObj?.name || userShops[0]?.name || 'Cahier'
   const activeShopId = shopId || currentShopObj?.id || ''
 
-  // Widgets actifs personnalisables par boutique + rôle
+  // Widgets actifs personnalisables par boutique + rÃ´le
   const widgetsStorageKey = `cahier_dashboard_widgets_${activeShopId}_${userRole}`
   const [activeWidgets, setActiveWidgets] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
@@ -67,7 +67,7 @@ export function AnalyticsDashboard({
           if (Array.isArray(parsed) && parsed.length > 0) return parsed
         }
       } catch (e) {
-        console.warn('Erreur lecture widgets personnalisés:', e)
+        console.warn('Erreur lecture widgets personnalisÃ©s:', e)
       }
     }
     return getDefaultDashboardWidgets(userRole, activeActivity)
@@ -79,7 +79,7 @@ export function AnalyticsDashboard({
     }
   }, [activeWidgets, widgetsStorageKey])
 
-  // Filtrer les ventes selon la période choisie
+  // Filtrer les ventes selon la pÃ©riode choisie
   const filteredSales = useMemo(() => {
     const validSales = sales.filter(s => s.status !== 'crossed_out')
     if (period === 'all') return validSales
@@ -108,7 +108,7 @@ export function AnalyticsDashboard({
 
   const isExecutive = canViewExecutiveDashboard(userRole)
 
-  // Statistiques caisse du jour pour l'employé
+  // Statistiques caisse du jour pour l'employÃ©
   const todayStats = useMemo(() => {
     const now = new Date()
     const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Africa/Porto-Novo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
@@ -127,13 +127,13 @@ export function AnalyticsDashboard({
   const [viewMode, setViewMode] = useState<'accounting' | 'products'>('accounting')
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#fbf9f4] font-sans p-3 sm:p-5 md:p-6 space-y-4">
-      {/* Barre supérieure d'actions et de personnalisation */}
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#faf5e8] font-sans p-3 sm:p-5 md:p-6 space-y-4">
+      {/* Barre supÃ©rieure d'actions et de personnalisation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-stone-200 rounded-2xl p-4 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-stone-900">{shopName}</h2>
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-normal ${
               isExecutive ? 'bg-amber-100 text-amber-900' : 'bg-blue-100 text-blue-900'
             }`}>
               {isExecutive ? 'Vue Patron' : 'Vue Caissier'}
@@ -141,8 +141,8 @@ export function AnalyticsDashboard({
           </div>
           <p className="text-xs text-stone-500 mt-0.5">
             {isExecutive
-              ? 'Comptabilité certifiée, chiffre d\'affaires à vie et bilan financier'
-              : 'Espace de caisse opérationnel de l\'équipe'}
+              ? 'ComptabilitÃ© certifiÃ©e, chiffre d\'affaires Ã  vie et bilan financier'
+              : 'Espace de caisse opÃ©rationnel de l\'Ã©quipe'}
           </p>
         </div>
 
@@ -152,17 +152,17 @@ export function AnalyticsDashboard({
             <button
               type="button"
               onClick={() => setViewMode('accounting')}
-              className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.97] ${
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1.5 active:scale-[0.97] ${
                 viewMode === 'accounting' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
               }`}
             >
               <Receipt className="w-3.5 h-3.5" />
-              <span>Bilan & Comptabilité</span>
+              <span>Bilan & ComptabilitÃ©</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('products')}
-              className={`px-3 py-1.5 rounded-lg font-extrabold transition-all cursor-pointer flex items-center gap-1.5 active:scale-[0.97] ${
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-1.5 active:scale-[0.97] ${
                 viewMode === 'products' ? 'bg-amber-900 text-white shadow-xs' : 'text-amber-950 hover:bg-amber-200/70'
               }`}
             >
@@ -174,8 +174,8 @@ export function AnalyticsDashboard({
           {isExecutive && (
             <button
               onClick={() => setShowSyscohada(true)}
-              className="px-3 py-2 bg-amber-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
-              title="Bilan conforme référentiel SYSCOHADA"
+              className="px-3 py-2 bg-amber-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer active:scale-[0.97]"
+              title="Bilan conforme rÃ©fÃ©rentiel SYSCOHADA"
             >
               <Landmark className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">SYSCOHADA</span>
@@ -184,7 +184,7 @@ export function AnalyticsDashboard({
         </div>
       </div>
 
-      {/* Vue Épurée pour Employé / Caissier */}
+      {/* Vue Ã‰purÃ©e pour EmployÃ© / Caissier */}
       {!isExecutive && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
@@ -192,8 +192,8 @@ export function AnalyticsDashboard({
               <Coins className="w-5 h-5 text-emerald-700" />
             </div>
             <div>
-              <span className="text-[11px] text-stone-500 font-bold uppercase tracking-wider font-mono">Caisse Encaissée Aujourd'hui</span>
-              <div className="text-xl font-black text-emerald-700 font-mono tabular-nums">
+              <span className="text-[11px] text-stone-500 font-bold uppercase tracking-normal font-mono">Caisse EncaissÃ©e Aujourd'hui</span>
+              <div className="text-xl font-semibold text-emerald-700 font-mono tabular-nums">
                 {todayStats.totalCash.toLocaleString('fr-FR')} <span className="text-xs font-normal">FCFA</span>
               </div>
             </div>
@@ -204,16 +204,16 @@ export function AnalyticsDashboard({
               <Package className="w-5 h-5 text-blue-700" />
             </div>
             <div>
-              <span className="text-[11px] text-stone-500 font-bold uppercase tracking-wider font-mono">Ventes du jour</span>
-              <div className="text-xl font-black text-blue-900 font-mono tabular-nums">
-                {todayStats.count} <span className="text-xs font-normal">opérations</span>
+              <span className="text-[11px] text-stone-500 font-bold uppercase tracking-normal font-mono">Ventes du jour</span>
+              <div className="text-xl font-semibold text-blue-900 font-mono tabular-nums">
+                {todayStats.count} <span className="text-xs font-normal">opÃ©rations</span>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── 1. Vue Comptabilité Complète (Par défaut) ── */}
+      {/* â”€â”€ 1. Vue ComptabilitÃ© ComplÃ¨te (Par dÃ©faut) â”€â”€ */}
       {viewMode === 'accounting' && (
         <ShopAccountingReport
           sales={sales}
@@ -223,7 +223,7 @@ export function AnalyticsDashboard({
         />
       )}
 
-      {/* ── 2. Vue Analyse Produits & Rayons ── */}
+      {/* â”€â”€ 2. Vue Analyse Produits & Rayons â”€â”€ */}
       {viewMode === 'products' && (
         <div className="space-y-4">
           {activeActivity === 'particulier' && (

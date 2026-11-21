@@ -34,37 +34,35 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
 
   return (
     <div
-      className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+      className={`flex items-center justify-between p-3.5 rounded-xl border transition-colors ${
         item.isChecked
-          ? 'bg-gray-200/50 border-gray-300 opacity-50 line-through'
-          : 'bg-white hover:bg-amber-50/50 border-amber-300/80 shadow-sm'
+          ? 'bg-stone-100 border-stone-200 opacity-55 line-through'
+          : 'bg-[#faf5e8] hover:bg-white border-[#e2d6be]'
       }`}
     >
-      <div className="flex items-center gap-3">
-        {/* Bouton Coche */}
+      <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
           onClick={() => onToggleCheck(item.id)}
-          className="text-amber-700 hover:text-amber-900 transition-colors cursor-pointer active:scale-[0.97]"
+          className="text-stone-500 hover:text-stone-900 transition-colors cursor-pointer active:scale-[0.97] shrink-0"
         >
           {item.isChecked ? (
-            <CheckSquare className="w-5 h-5 text-emerald-600" strokeWidth={1.75} />
+            <CheckSquare className="w-5 h-5 text-emerald-700" strokeWidth={1.5} />
           ) : (
-            <Square className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
+            <Square className="w-5 h-5 text-stone-400" strokeWidth={1.5} />
           )}
         </button>
 
-        {/* Détails Article */}
-        <div>
-          <p className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
-            {item.name}
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-stone-900 flex items-center gap-2 truncate">
+            <span>{item.name}</span>
             {item.isAutoSuggested && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-mono font-bold">
-                Alerte Stock
+              <span className="text-[11px] px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-medium">
+                Alerte stock
               </span>
             )}
           </p>
-          <p className="text-xs text-gray-600 font-mono font-bold">
+          <p className="text-xs text-stone-500 font-mono">
             {item.isWholesale ? (
               <>
                 <span className="tabular-nums">{item.wholesaleQty}</span> carton(s) × <span className="tabular-nums">{formatPrice(item.wholesalePrice || 0)}</span> (<span className="tabular-nums">{item.itemsPerWholesale}</span> un./carton)
@@ -78,18 +76,17 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
         </div>
       </div>
 
-      {/* Montant Total Estimé & Bouton Supprimer */}
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-black text-amber-950 font-mono tabular-nums tracking-tight">
+      <div className="flex items-center gap-3 shrink-0">
+        <span className="text-sm font-semibold text-stone-900 font-mono tabular-nums">
           {formatPrice(itemTotal)}
         </span>
         <button
           type="button"
           onClick={() => onRemove(item.id)}
-          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 transition-all border border-rose-300 cursor-pointer active:scale-[0.97]"
+          className="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-stone-500 hover:text-rose-700 transition-colors border border-stone-200 cursor-pointer active:scale-[0.97]"
           title="Supprimer de la liste"
         >
-          <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+          <Trash2 className="w-4 h-4" strokeWidth={1.5} />
         </button>
       </div>
     </div>

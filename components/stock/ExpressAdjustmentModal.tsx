@@ -83,21 +83,21 @@ export function ExpressAdjustmentModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-      <div className="bg-[#fbf9f4] border border-gray-200 rounded-[28px] max-w-sm w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-[#faf5e8] border border-gray-200 rounded-[28px] max-w-sm w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className={`px-5 py-4 border-b flex items-center justify-between ${
           expressType === 'in' ? 'bg-emerald-100 border-emerald-200 text-emerald-900' : 'bg-rose-100 border-rose-200 text-rose-900'
         }`}>
           <div className="font-bold text-sm flex items-center gap-2">
-            <span>{expressType === 'in' ? 'Entrée de Stock (+)' : 'Sortie de Stock (-)'}</span>
+            <span>{expressType === 'in' ? 'EntrÃ©e de Stock (+)' : 'Sortie de Stock (-)'}</span>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-black/10 cursor-pointer active:scale-[0.97] transition-all">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-black/10 cursor-pointer active:scale-[0.97] transition-colors">
             <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
         <form onSubmit={onSubmit} className="p-5 space-y-4 text-xs">
           <div className="bg-white p-3 rounded-xl border border-gray-200">
-            <div className="text-[10px] text-gray-400 font-mono uppercase">Produit sélectionné</div>
+            <div className="text-[10px] text-gray-400 font-mono uppercase">Produit sÃ©lectionnÃ©</div>
             <div className="font-handwritten text-lg font-bold text-gray-800">{expressItem.name}</div>
             <div className="text-[11px] text-gray-500 font-mono">
               Stock actuel : <span className="font-bold tabular-nums">{expressItem.current_stock}</span> {expressItem.unit}
@@ -105,7 +105,7 @@ export function ExpressAdjustmentModal({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Quantité à {expressType === 'in' ? 'ajouter' : 'retirer'}</label>
+            <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">QuantitÃ© Ã  {expressType === 'in' ? 'ajouter' : 'retirer'}</label>
             <input
               type="number"
               step="any"
@@ -119,7 +119,7 @@ export function ExpressAdjustmentModal({
             />
             {expressType === 'out' && expressQty > (expressItem.current_stock ?? 0) && (
               <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 p-1.5 rounded-lg font-mono mt-1.5">
-                Attention : la quantité dépasse le stock disponible ({expressItem.current_stock ?? 0} {expressItem.unit}).
+                Attention : la quantitÃ© dÃ©passe le stock disponible ({expressItem.current_stock ?? 0} {expressItem.unit}).
               </p>
             )}
           </div>
@@ -138,8 +138,8 @@ export function ExpressAdjustmentModal({
                 </>
               ) : (
                 <>
-                  <option value="damage">Casse / Perte / Produit périmé</option>
-                  <option value="personal_use">Consommation personnelle / Équipe</option>
+                  <option value="damage">Casse / Perte / Produit pÃ©rimÃ©</option>
+                  <option value="personal_use">Consommation personnelle / Ã‰quipe</option>
                   <option value="inventory_correction">Ajustement d'inventaire (-)</option>
                 </>
               )}
@@ -196,7 +196,7 @@ export function ExpressAdjustmentModal({
 
               <div className="pt-1">
                 <label className="block text-[10px] font-bold text-amber-900 uppercase mb-1">
-                  Coût d'Achat unitaire retenu (FCFA) <span className="text-red-500">*</span>
+                  CoÃ»t d'Achat unitaire retenu (FCFA) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -208,7 +208,7 @@ export function ExpressAdjustmentModal({
                   className="w-full px-3 py-1.5 border border-amber-400 rounded-xl font-mono text-xs font-bold text-amber-950 outline-none focus:border-amber-600 bg-white"
                 />
                 <p className="text-[9px] font-mono text-amber-800 mt-0.5">
-                  Prix exact payé au grossiste pour 1 unité.
+                  Prix exact payÃ© au grossiste pour 1 unitÃ©.
                 </p>
               </div>
             </div>
@@ -219,7 +219,7 @@ export function ExpressAdjustmentModal({
             <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Notes optionnelles</label>
             <input
               type="text"
-              placeholder="ex: Carton cassé lors du déchargement"
+              placeholder="ex: Carton cassÃ© lors du dÃ©chargement"
               value={expressNotes}
               onChange={e => setExpressNotes(e.target.value)}
               className="w-full px-3 py-1.5 border border-gray-200 rounded-xl font-mono text-xs outline-none focus:border-gray-400"

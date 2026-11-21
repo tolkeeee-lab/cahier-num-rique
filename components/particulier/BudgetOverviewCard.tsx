@@ -2,7 +2,6 @@
 
 import React from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { TrendingUp, TrendingDown, PiggyBank, Wallet } from 'lucide-react'
 
 interface BudgetOverviewCardProps {
   income: number
@@ -19,46 +18,42 @@ export const BudgetOverviewCard: React.FC<BudgetOverviewCardProps> = ({
 }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-      {/* Entrées Cash / Revenus */}
-      <div className="bg-blue-50/90 p-4 rounded-2xl border border-blue-200 space-y-1 shadow-sm">
-        <div className="flex items-center gap-1.5 text-xs text-blue-800 font-mono font-extrabold">
-          <TrendingUp className="w-3.5 h-3.5 text-blue-600" strokeWidth={1.75} />
+      <div className="bg-[#faf5e8] p-4 rounded-xl border border-[#e2d6be] space-y-1">
+        <div className="flex items-center gap-1.5 text-xs text-stone-600 font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-600" />
           <span>Revenus / Entrées</span>
         </div>
-        <p className="text-base font-black text-blue-950 font-mono tabular-nums tracking-tight">
+        <p className="text-lg font-semibold text-stone-900 font-mono tabular-nums">
           {formatPrice(income)}
         </p>
       </div>
 
-      {/* Dépenses Cash Foyer */}
-      <div className="bg-rose-50/90 p-4 rounded-2xl border border-rose-200 space-y-1 shadow-sm">
-        <div className="flex items-center gap-1.5 text-xs text-rose-800 font-mono font-extrabold">
-          <TrendingDown className="w-3.5 h-3.5 text-rose-600" strokeWidth={1.75} />
-          <span>Dépenses Foyer</span>
+      <div className="bg-[#faf5e8] p-4 rounded-xl border border-[#e2d6be] space-y-1">
+        <div className="flex items-center gap-1.5 text-xs text-stone-600 font-medium">
+          <span className="w-2 h-2 rounded-full bg-rose-600" />
+          <span>Dépenses foyer</span>
         </div>
-        <p className="text-base font-black text-rose-950 font-mono tabular-nums tracking-tight">
+        <p className="text-lg font-semibold text-rose-700 font-mono tabular-nums">
           {formatPrice(expenses)}
         </p>
       </div>
 
-      {/* Stock Réserve */}
-      <div className="bg-emerald-50/90 p-4 rounded-2xl border border-emerald-200 space-y-1 shadow-sm">
-        <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-mono font-extrabold">
-          <PiggyBank className="w-3.5 h-3.5 text-emerald-600" strokeWidth={1.75} />
-          <span>Réserve Stock</span>
+      <div className="bg-[#faf5e8] p-4 rounded-xl border border-[#e2d6be] space-y-1">
+        <div className="flex items-center gap-1.5 text-xs text-stone-600 font-medium">
+          <span className="w-2 h-2 rounded-full bg-amber-600" />
+          <span>Réserve stock</span>
         </div>
-        <p className="text-base font-black text-emerald-950 font-mono tabular-nums tracking-tight">
+        <p className="text-lg font-semibold text-stone-900 font-mono tabular-nums">
           {formatPrice(reserveStock)}
         </p>
       </div>
 
-      {/* Solde Net Disponible */}
-      <div className="bg-amber-100/90 p-4 rounded-2xl border border-amber-300 space-y-1 shadow-sm">
-        <div className="flex items-center gap-1.5 text-xs text-amber-950 font-mono font-extrabold">
-          <Wallet className="w-3.5 h-3.5 text-amber-700" strokeWidth={1.75} />
-          <span>Solde Net</span>
+      <div className="bg-[#faf5e8] p-4 rounded-xl border border-[#e2d6be] space-y-1">
+        <div className="flex items-center gap-1.5 text-xs text-stone-600 font-medium">
+          <span className="w-2 h-2 rounded-full bg-stone-800" />
+          <span>Solde net</span>
         </div>
-        <p className="text-base font-black text-amber-950 font-mono tabular-nums tracking-tight">
+        <p className="text-lg font-semibold text-emerald-800 font-mono tabular-nums">
           {formatPrice(netBalance)}
         </p>
       </div>

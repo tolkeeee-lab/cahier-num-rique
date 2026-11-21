@@ -43,7 +43,7 @@ export const StockTable: React.FC<StockTableProps> = ({
   if (products.length === 0) {
     return (
       <div className="p-12 text-center text-gray-500 bg-white/80 rounded-2xl border border-amber-300/80 font-mono text-xs shadow-sm">
-        Aucun produit trouvé dans votre inventaire.
+        Aucun produit trouvÃ© dans votre inventaire.
       </div>
     )
   }
@@ -53,9 +53,9 @@ export const StockTable: React.FC<StockTableProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-amber-100/80 border-b border-amber-200 text-[11px] font-mono font-bold text-amber-950 uppercase tracking-wider">
+            <tr className="bg-amber-100/80 border-b border-amber-200 text-[11px] font-mono font-bold text-amber-950 uppercase tracking-normal">
               <th className="p-3.5">Produit</th>
-              <th className="p-3.5">Catégorie</th>
+              <th className="p-3.5">CatÃ©gorie</th>
               <th className="p-3.5 text-center">Stock</th>
               {!isEmployee && <th className="p-3.5 text-right">Prix d'Achat</th>}
               <th className="p-3.5 text-right">Prix de Vente</th>
@@ -72,18 +72,18 @@ export const StockTable: React.FC<StockTableProps> = ({
                 <tr key={prod.id} className="hover:bg-amber-50/80 transition-colors">
                   {/* Nom du produit */}
                   <td className="p-3.5">
-                    <p className="font-extrabold text-gray-900 text-sm">{prod.name}</p>
+                    <p className="font-semibold text-gray-900 text-sm">{prod.name}</p>
                     {prod.unit && <p className="text-[11px] text-gray-500 font-sans font-medium">{prod.unit}</p>}
                   </td>
 
-                  {/* Catégorie */}
+                  {/* CatÃ©gorie */}
                   <td className="p-3.5">
                     <span className="px-2.5 py-1 rounded-lg bg-amber-100/90 border border-amber-300 text-amber-950 font-bold text-[11px]">
                       {prod.category || 'Divers'}
                     </span>
                   </td>
 
-                  {/* Quantité en Stock + Contrôles d'ajustement */}
+                  {/* QuantitÃ© en Stock + ContrÃ´les d'ajustement */}
                   <td className="p-3.5">
                     <div className="flex items-center justify-center gap-1.5">
                       {!isEmployee && (
@@ -92,8 +92,8 @@ export const StockTable: React.FC<StockTableProps> = ({
                             <button
                               type="button"
                               onClick={() => onOpenExpressAdjustment(prod, 'out')}
-                              className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-[0.97] text-rose-800 border border-rose-200 transition-all duration-100 ease-out cursor-pointer"
-                              title="Déclarer Casse, Perte ou Conso Personnelle"
+                              className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-[0.97] text-rose-800 border border-rose-200 transition-colors duration-100 ease-out cursor-pointer"
+                              title="DÃ©clarer Casse, Perte ou Conso Personnelle"
                             >
                               <PackageMinus className="w-3.5 h-3.5" strokeWidth={1.75} />
                             </button>
@@ -101,15 +101,15 @@ export const StockTable: React.FC<StockTableProps> = ({
                           <button
                             type="button"
                             onClick={() => onAdjustStock(prod.id, -1)}
-                            className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
-                            title="Retirer 1 unité"
+                            className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-colors duration-100 ease-out cursor-pointer"
+                            title="Retirer 1 unitÃ©"
                           >
                             <Minus className="w-3.5 h-3.5" strokeWidth={1.75} />
                           </button>
                         </div>
                       )}
 
-                      <span className={`px-3 py-1 rounded-xl font-black text-sm font-mono tabular-nums tracking-tight border shadow-xs ${
+                      <span className={`px-3 py-1 rounded-xl font-semibold text-sm font-mono tabular-nums tracking-tight border shadow-xs ${
                         isOutOfStock
                           ? 'bg-rose-100 text-rose-900 border-rose-300'
                           : isLow
@@ -124,8 +124,8 @@ export const StockTable: React.FC<StockTableProps> = ({
                           <button
                             type="button"
                             onClick={() => onAdjustStock(prod.id, 1)}
-                            className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out cursor-pointer"
-                            title="Ajouter 1 unité"
+                            className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-colors duration-100 ease-out cursor-pointer"
+                            title="Ajouter 1 unitÃ©"
                           >
                             <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
                           </button>
@@ -133,8 +133,8 @@ export const StockTable: React.FC<StockTableProps> = ({
                             <button
                               type="button"
                               onClick={() => onOpenExpressAdjustment(prod, 'in')}
-                              className="p-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:scale-[0.97] text-emerald-800 border border-emerald-200 transition-all duration-100 ease-out cursor-pointer"
-                              title="Entrée Express / Achat Carton"
+                              className="p-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:scale-[0.97] text-emerald-800 border border-emerald-200 transition-colors duration-100 ease-out cursor-pointer"
+                              title="EntrÃ©e Express / Achat Carton"
                             >
                               <PackagePlus className="w-3.5 h-3.5" strokeWidth={1.75} />
                             </button>
@@ -144,7 +144,7 @@ export const StockTable: React.FC<StockTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Prix d'Achat (Masqué aux employés) */}
+                  {/* Prix d'Achat (MasquÃ© aux employÃ©s) */}
                   {!isEmployee && (
                     <td className="p-3.5 text-right text-gray-700 font-bold tabular-nums tracking-tight">
                       {formatPrice(prod.unit_cost || 0)}
@@ -152,11 +152,11 @@ export const StockTable: React.FC<StockTableProps> = ({
                   )}
 
                   {/* Prix de Vente */}
-                  <td className="p-3.5 text-right font-extrabold text-amber-900 tabular-nums tracking-tight">
+                  <td className="p-3.5 text-right font-semibold text-amber-900 tabular-nums tracking-tight">
                     {formatPrice(prod.unit_price || 0)}
                   </td>
 
-                  {/* Actions (Édition & Suppression) */}
+                  {/* Actions (Ã‰dition & Suppression) */}
                   <td className="p-3.5 text-right">
                     <div className="flex items-center justify-end gap-1">
                       {onOpenCalculator && (
@@ -164,7 +164,7 @@ export const StockTable: React.FC<StockTableProps> = ({
                           type="button"
                           onClick={() => onOpenCalculator(prod)}
                           className="px-2 py-1.5 rounded-lg bg-[#faf5e8] hover:bg-amber-100 active:scale-[0.97] text-stone-900 transition-colors border border-stone-900/15 cursor-pointer flex items-center gap-1 font-medium text-[11px]"
-                          title="Calculateur de Valeur Réelle & Tarification Paliers"
+                          title="Calculateur de Valeur RÃ©elle & Tarification Paliers"
                         >
                           <Sparkles className="w-3 h-3 text-amber-950" strokeWidth={2} />
                           <span className="hidden sm:inline">Valeur & Paliers</span>
@@ -174,7 +174,7 @@ export const StockTable: React.FC<StockTableProps> = ({
                       <button
                         type="button"
                         onClick={() => onEditProduct(prod)}
-                        className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 transition-all duration-100 ease-out border border-amber-300 cursor-pointer"
+                        className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 transition-colors duration-100 ease-out border border-amber-300 cursor-pointer"
                         title="Modifier le produit"
                       >
                         <Edit3 className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -184,7 +184,7 @@ export const StockTable: React.FC<StockTableProps> = ({
                         <button
                           type="button"
                           onClick={() => onDeleteProduct(prod.id)}
-                          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 active:scale-[0.97] text-rose-800 transition-all duration-100 ease-out border border-rose-300 cursor-pointer"
+                          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 active:scale-[0.97] text-rose-800 transition-colors duration-100 ease-out border border-rose-300 cursor-pointer"
                           title="Supprimer le produit"
                         >
                           <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />

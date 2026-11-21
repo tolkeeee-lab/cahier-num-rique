@@ -33,160 +33,149 @@ export const AuthSignupForm: React.FC<AuthSignupFormProps> = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
+    <form onSubmit={handleSubmit} className="space-y-4 text-xs">
       {error && (
-        <div className="p-3 rounded-xl bg-red-950/40 border border-red-800/60 text-red-400 text-xs">
+        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
           {error}
         </div>
       )}
 
-      {/* Sélecteur de rôle : Propriétaire ou Employé */}
       <div className="space-y-1.5">
-        <label className="block text-gray-300 font-bold uppercase text-[11px]">
-          Je crée un compte en tant que :
+        <label className="block text-stone-700 font-medium">
+          Je crée un compte en tant que
         </label>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => setRole('owner')}
-            className={`py-3 px-3 rounded-2xl border flex flex-col items-center justify-center gap-1 font-extrabold transition-all cursor-pointer ${
+            className={`py-3 px-3 rounded-xl border flex flex-col items-center justify-center gap-1 font-medium transition-colors cursor-pointer ${
               role === 'owner'
-                ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-lg ring-2 ring-amber-500/40 scale-[1.02]'
-                : 'bg-[#141210] border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-700'
+                ? 'bg-emerald-50 border-emerald-700 text-emerald-900'
+                : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300'
             }`}
           >
-            <ShieldCheck className="w-5 h-5 text-amber-400" />
+            <ShieldCheck className="w-4 h-4 text-emerald-700" strokeWidth={1.5} />
             <span>Propriétaire</span>
-            <span className="text-[9px] font-normal text-gray-400">Créer mon commerce</span>
+            <span className="text-[11px] font-normal text-stone-500">Créer mon commerce</span>
           </button>
           <button
             type="button"
             onClick={() => setRole('employee')}
-            className={`py-3 px-3 rounded-2xl border flex flex-col items-center justify-center gap-1 font-extrabold transition-all cursor-pointer ${
+            className={`py-3 px-3 rounded-xl border flex flex-col items-center justify-center gap-1 font-medium transition-colors cursor-pointer ${
               role === 'employee'
-                ? 'bg-amber-500/25 border-amber-500 text-amber-300 shadow-lg ring-2 ring-amber-500/50 scale-[1.02]'
-                : 'bg-[#141210] border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-700'
+                ? 'bg-emerald-50 border-emerald-700 text-emerald-900'
+                : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300'
             }`}
           >
-            <Users className="w-5 h-5 text-amber-400" />
+            <Users className="w-4 h-4 text-emerald-700" strokeWidth={1.5} />
             <span>Employé / Vendeur</span>
-            <span className="text-[9px] font-normal text-gray-400">J'ai un Code Boutique</span>
+            <span className="text-[11px] font-normal text-stone-500">J&apos;ai un code boutique</span>
           </button>
         </div>
       </div>
 
-      {/* Nom complet */}
       <div>
-        <label className="block text-gray-300 font-bold uppercase mb-1">
-          Votre Nom Complet :
+        <label className="block text-stone-700 font-medium mb-1.5">
+          Nom complet
         </label>
         <div className="relative">
-          <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" strokeWidth={1.5} />
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="ex: Koffi Kouassi"
+            placeholder="ex : Koffi Kouassi"
             required
-            className="w-full pl-9 pr-3 py-2.5 bg-[#141210] border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+            className="w-full pl-9 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
         </div>
       </div>
 
-      {/* Adresse e-mail */}
       <div>
-        <label className="block text-gray-300 font-bold uppercase mb-1">
-          Adresse e-mail :
+        <label className="block text-stone-700 font-medium mb-1.5">
+          Adresse e-mail
         </label>
         <div className="relative">
-          <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" strokeWidth={1.5} />
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="votre.email@exemple.com"
             required
-            className="w-full pl-9 pr-3 py-2.5 bg-[#141210] border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+            className="w-full pl-9 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
         </div>
       </div>
 
-      {/* Mot de passe */}
       <div>
-        <label className="block text-gray-300 font-bold uppercase mb-1">
-          Mot de passe :
+        <label className="block text-stone-700 font-medium mb-1.5">
+          Mot de passe
         </label>
         <div className="relative">
-          <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" strokeWidth={1.5} />
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
-            className="w-full pl-9 pr-3 py-2.5 bg-[#141210] border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+            className="w-full pl-9 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
         </div>
       </div>
 
-      {/* Si Propriétaire : Nom du commerce */}
       {role === 'owner' ? (
         <div>
-          <label className="block text-gray-300 font-bold uppercase mb-1">
-            Nom de votre commerce / boutique :
+          <label className="block text-stone-700 font-medium mb-1.5">
+            Nom de votre commerce
           </label>
           <div className="relative">
-            <Store className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Store className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" strokeWidth={1.5} />
             <input
               type="text"
               value={shopName}
               onChange={(e) => setShopName(e.target.value)}
-              placeholder="ex: Boutique Espoir"
-              className="w-full pl-9 pr-3 py-2.5 bg-[#141210] border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+              placeholder="ex : Boutique Espoir"
+              className="w-full pl-9 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
             />
           </div>
         </div>
       ) : (
-        /* Si Employé : Code Boutique du Propriétaire */
-        <div className="p-3 bg-amber-500/10 border border-amber-500/40 rounded-2xl space-y-1.5">
-          <label className="block text-[#f59e0b] font-extrabold uppercase text-xs flex items-center gap-1.5">
-            <Key className="w-4 h-4 text-[#f59e0b]" />
-            <span>Code Boutique du Propriétaire :</span>
+        <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2">
+          <label className="text-amber-900 font-medium text-xs flex items-center gap-1.5">
+            <Key className="w-4 h-4 text-amber-700" strokeWidth={1.5} />
+            <span>Code boutique du propriétaire</span>
           </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={shopCode}
-              onChange={(e) => setShopCode(e.target.value.toUpperCase())}
-              placeholder="ex: BTQ-58C54"
-              required
-              className="w-full px-3 py-2.5 bg-[#141210] border border-[#f59e0b]/60 rounded-xl text-[#f59e0b] font-mono font-black text-sm tracking-wider placeholder-gray-600 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/30"
-            />
-          </div>
-          <p className="text-[10px] text-amber-300/80 font-mono flex items-center gap-1">
-            <Info className="w-3.5 h-3.5 inline-block -mt-0.5 mr-0.5 text-amber-400 shrink-0" />
-            Demandez ce code à votre patron/gérant (il le trouve dans ses Réglages).
+          <input
+            type="text"
+            value={shopCode}
+            onChange={(e) => setShopCode(e.target.value.toUpperCase())}
+            placeholder="ex : BTQ-58C54"
+            required
+            className="w-full px-3 py-2.5 bg-white border border-amber-300 rounded-xl text-stone-900 font-mono font-semibold text-sm placeholder-stone-400 focus:outline-none focus:border-emerald-700"
+          />
+          <p className="text-[11px] text-amber-800 flex items-start gap-1.5">
+            <Info className="w-3.5 h-3.5 mt-0.5 text-amber-700 shrink-0" strokeWidth={1.5} />
+            <span>Demandez ce code à votre gérant (visible dans ses Réglages).</span>
           </p>
         </div>
       )}
 
-
-      {/* Bouton de création */}
       <button
         type="submit"
         disabled={loading || !name.trim() || !email.trim() || (role === 'employee' && !shopCode.trim())}
-        className="w-full py-3 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#141210] font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+        className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-xl active:scale-[0.98] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
       >
         <span>
           {loading
             ? 'Création...'
             : role === 'owner'
-              ? 'Créer Mon Compte Propriétaire'
-              : 'Rejoindre la Boutique'}
+              ? 'Créer mon compte propriétaire'
+              : 'Rejoindre la boutique'}
         </span>
-        <ArrowRight className="w-4 h-4" />
+        <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
       </button>
     </form>
   )
 }
-
