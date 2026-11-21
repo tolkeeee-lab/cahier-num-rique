@@ -165,7 +165,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             type="button"
             onClick={onSyncClick}
             disabled={isSyncing}
-            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-xs font-mono font-bold border transition-all shadow-2xs cursor-pointer active:scale-[0.97] ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium border transition-colors cursor-pointer active:scale-[0.97] ${
               isOnline
                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                 : 'bg-amber-100 text-amber-800 border-amber-300'
@@ -178,7 +178,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
             ) : (
               <WifiOff className="w-3 h-3 text-amber-700" />
             )}
-            <span className="hidden sm:inline">{isOnline ? 'EN LIGNE' : 'OFFLINE'}</span>
+            <span className="hidden sm:inline">{isOnline ? 'En ligne' : 'Hors-ligne'}</span>
             {pendingSyncCount > 0 && (
               <span className="px-1.5 py-0.5 bg-amber-500 text-black text-[9px] font-bold font-mono tabular-nums rounded-full">
                 {pendingSyncCount}
@@ -372,7 +372,7 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
               title="Se déconnecter"
             >
               <LogOut className="w-3 h-3" />
-              <span>QUITTER</span>
+              <span>Quitter</span>
             </button>
           )}
         </div>
@@ -381,40 +381,40 @@ export const JournalHeader: React.FC<JournalHeaderProps> = ({
       {/* Rangée 2 : Tiroirs KPI Défilables Horizontalement sur Mobile (et Grille 3 colonnes sur Écran Large) */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 font-mono sm:grid sm:grid-cols-3 w-full">
         {/* Tiroir Cash */}
-        <div className="flex-shrink-0 min-w-[135px] sm:min-w-0 sm:flex-1 bg-amber-100/90 border border-amber-300/90 rounded-xl px-2.5 py-1 shadow-2xs relative flex flex-col justify-center">
-          <div className="flex items-center justify-between text-[8.5px] sm:text-[9px] text-amber-900 font-extrabold uppercase gap-1">
-            <span className="whitespace-nowrap">{labels.tiroirCash}</span>
+        <div className="flex-shrink-0 min-w-[140px] sm:min-w-0 sm:flex-1 bg-[#faf5e8] border border-stone-900/10 rounded-xl px-3 py-1.5 relative flex flex-col justify-center">
+          <div className="flex items-center justify-between text-[11px] text-stone-600 font-medium gap-1.5">
+            <span className="flex items-center gap-1.5 whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-emerald-600 flex-shrink-0" /><span>{labels.tiroirCash}</span></span>
             {onOpenCashAdjustment && (
               <button
                 type="button"
                 onClick={onOpenCashAdjustment}
                 className="text-[7.5px] sm:text-[8px] underline text-amber-800 font-black cursor-pointer flex-shrink-0"
               >
-                AJUST.
+                Ajuster
               </button>
             )}
           </div>
-          <div className="text-xs sm:text-sm font-black text-amber-950 whitespace-nowrap">
+          <div className="text-xs sm:text-sm font-mono font-semibold tabular-nums tracking-tight text-stone-950 whitespace-nowrap mt-0.5">
             {formatPrice(tiroirCaisse)}
           </div>
         </div>
 
         {/* Crédits Dehors */}
-        <div className="flex-shrink-0 min-w-[135px] sm:min-w-0 sm:flex-1 bg-rose-100/80 border border-rose-300/80 rounded-xl px-2.5 py-1 shadow-2xs flex flex-col justify-center">
-          <div className="text-[8.5px] sm:text-[9px] text-rose-800 font-extrabold uppercase whitespace-nowrap">
-            {labels.creditsDehors}
+        <div className="flex-shrink-0 min-w-[140px] sm:min-w-0 sm:flex-1 bg-[#faf5e8] border border-stone-900/10 rounded-xl px-3 py-1.5 flex flex-col justify-center">
+          <div className="flex items-center gap-1.5 text-[11px] text-stone-600 font-medium whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 flex-shrink-0" /><span>{labels.creditsDehors}</span>
           </div>
-          <div className="text-xs sm:text-sm font-black text-rose-950 whitespace-nowrap">
+          <div className="text-xs sm:text-sm font-mono font-semibold tabular-nums tracking-tight text-rose-900 whitespace-nowrap mt-0.5">
             {formatPrice(argentDehors)}
           </div>
         </div>
 
         {/* Nos Dettes */}
-        <div className="flex-shrink-0 min-w-[135px] sm:min-w-0 sm:flex-1 bg-fuchsia-100/80 border border-fuchsia-300/80 rounded-xl px-2.5 py-1 shadow-2xs flex flex-col justify-center">
-          <div className="text-[8.5px] sm:text-[9px] text-fuchsia-800 font-extrabold uppercase whitespace-nowrap">
-            {labels.nosDettes}
+        <div className="flex-shrink-0 min-w-[140px] sm:min-w-0 sm:flex-1 bg-[#faf5e8] border border-stone-900/10 rounded-xl px-3 py-1.5 flex flex-col justify-center">
+          <div className="flex items-center gap-1.5 text-[11px] text-stone-600 font-medium whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-600 flex-shrink-0" /><span>{labels.nosDettes}</span>
           </div>
-          <div className="text-xs sm:text-sm font-black text-fuchsia-950 whitespace-nowrap">
+          <div className="text-xs sm:text-sm font-mono font-semibold tabular-nums tracking-tight text-stone-900 whitespace-nowrap mt-0.5">
             {formatPrice(nosDettes)}
           </div>
         </div>

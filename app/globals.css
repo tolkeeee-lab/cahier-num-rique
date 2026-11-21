@@ -35,6 +35,9 @@ body {
   --margin-left: 80px;
   --line-height: 36px;
   --font-size-ink: 1.25rem;
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-press: cubic-bezier(0.2, 0, 0, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @media (max-width: 768px) {
@@ -188,16 +191,12 @@ textarea:focus {
   font-family: var(--font-mono), monospace;
 }
 
-/* Cartoony folder tabs */
+/* Clean folder tabs */
 .notebook-tab {
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  box-shadow: 0 -2px 5px rgba(0,0,0,0.08);
-  font-weight: 700;
-  transition: all 0.2s ease-in-out;
-}
-.notebook-tab:hover {
-  transform: translateY(-2px);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  font-weight: 600;
+  transition: background-color 150ms var(--ease-press), color 150ms var(--ease-press), border-color 150ms var(--ease-press);
 }
 
 /* Styles d'impression pour isoler le reçu thermique 80mm */

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Calculator, Sparkles, CheckCircle2, ShieldCheck, AlertTriangle, Package, Clock, Play } from 'lucide-react'
+import { ArrowRight, BookOpen, Calculator, CheckCircle2, ShieldCheck, AlertTriangle, Package, Clock, Play } from 'lucide-react'
 
 export default function LandingPage() {
   const [authError, setAuthError] = useState<string | null>(null)
@@ -16,16 +16,13 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#141210] text-[#fefdfa] font-sans antialiased overflow-x-hidden relative">
       
-      {/* Decorative desktop lamp highlight blur */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-amber-500 opacity-[0.03] rounded-full blur-[160px] pointer-events-none z-0"></div>
-
       {/* Bandeau d'erreur d'invitation — visible si ?auth_error= est présent dans l'URL */}
       {authError && (
-        <div className="relative z-20 bg-red-900/80 border-b border-red-700/60 px-6 py-4">
+        <div className="relative z-20 bg-red-950/90 border-b border-red-800/60 px-6 py-4">
           <div className="max-w-3xl mx-auto flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
             <div>
-              <p className="text-sm font-bold text-red-200">Lien d'invitation invalide ou expiré</p>
+              <p className="text-sm font-semibold text-red-200">Lien d&apos;invitation invalide ou expiré</p>
               <p className="text-xs text-red-300 mt-1">
                 {authError.includes('expired') || authError.includes('invalid')
                   ? 'Ce lien d\'invitation a expiré ou est invalide. Demandez à votre gérant de vous en renvoyer un nouveau depuis les Paramètres de la boutique.'
@@ -37,24 +34,24 @@ export default function LandingPage() {
       )}
 
       {/* Navigation */}
-      <nav className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between border-b border-gray-800/40 relative z-10">
+      <nav className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between border-b border-white/[0.08] relative z-10">
         <div className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-[#f59e0b]" />
-          <span className="font-extrabold text-base tracking-widest text-[#f59e0b] uppercase">
+          <BookOpen className="w-4 h-4 text-[#f59e0b]" strokeWidth={1.75} />
+          <span className="font-semibold text-sm tracking-tight text-stone-100">
             Cahier Numérique
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <Link
             href="/presentation"
-            className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-[#f59e0b] border border-amber-500/30 hover:border-amber-500/60 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-[0.97]"
+            className="text-xs font-medium text-stone-400 hover:text-stone-100 transition-colors flex items-center gap-1.5"
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Démo Motion</span>
+            <Play className="w-3.5 h-3.5" strokeWidth={1.75} />
+            <span>Démo</span>
           </Link>
           <Link 
             href="/journal"
-            className="px-5 py-2.5 bg-gradient-to-r from-[#064e3b] to-[#043c2d] hover:from-[#085a44] hover:to-[#054937] text-[#f59e0b] text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] border border-[#024c34]"
+            className="px-4 py-2 bg-[#064e3b] hover:bg-[#075e47] text-[#f59e0b] text-xs font-semibold rounded-lg transition-colors active:scale-[0.98] border border-emerald-500/20"
           >
             Ouvrir mon Cahier
           </Link>
@@ -66,57 +63,47 @@ export default function LandingPage() {
         
         {/* Hero Left Text */}
         <div className="lg:col-span-6 space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#064e3b]/30 border border-[#047857]/40 rounded-full">
-            <Sparkles className="w-3.5 h-3.5 text-[#f59e0b]" />
-            <span className="text-[10px] font-bold text-[#f59e0b] tracking-wider uppercase">
-              Le Cahier d'Écolier, version Augmentée
-            </span>
-          </div>
-
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.1] text-white">
-            Gérez votre caisse et vos dettes <span className="text-[#f59e0b] font-serif italic">à la main</span>, sans calculette.
-          </h2>
-
-          <p className="text-gray-400 text-sm md:text-base leading-relaxed">
-            Spécialement conçu pour les boutiquiers, commerçants de proximité et grossistes en Afrique de l'Ouest. Écrivez vos ventes comme sur un vrai cahier Seyes avec vos stylos Bic de couleur, l'application s'occupe de faire les calculs et de sécuriser votre tiroir-caisse.
+          <p className="text-xs font-medium text-amber-400/90">
+            Cahier de caisse Seyes hors-ligne · Afrique de l'Ouest
           </p>
 
-          <div className="pt-4 flex flex-col sm:flex-row gap-3">
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-[-0.025em] leading-[1.1] text-stone-50">
+            Gérez votre caisse et vos dettes <span className="text-[#f59e0b]">à la main</span>, sans calculette
+          </h1>
+
+          <p className="text-stone-400 text-sm md:text-base leading-relaxed">
+            Conçu pour les boutiquiers, commerçants de proximité et grossistes en Afrique de l'Ouest. Écrivez vos ventes comme sur un vrai cahier Seyes avec vos stylos Bic de couleur ; l'application calcule les totaux et sécurise votre tiroir-caisse.
+          </p>
+
+          <div className="pt-2 flex flex-col sm:flex-row gap-3">
             <Link
               href="/journal"
-              className="px-7 py-4 bg-gradient-to-r from-[#f59e0b] to-[#d97706] hover:from-[#fbbf24] hover:to-[#f59e0b] text-[#141210] text-sm font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 group"
+              className="px-6 py-3.5 bg-[#f59e0b] hover:bg-[#fbbf24] text-[#141210] text-sm font-semibold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center gap-2 group"
             >
-              <span>Accéder à l'application</span>
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              <span>Ouvrir mon Cahier</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
             </Link>
             
             <Link
               href="/presentation"
-              className="px-6 py-4 bg-[#1e1a18] hover:bg-[#2a2421] border border-[#f59e0b]/40 hover:border-[#f59e0b] text-[#f59e0b] text-sm font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+              className="px-5 py-3.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-stone-200 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
             >
-              <Play className="w-4 h-4 fill-current" />
-              <span>Voir le Motion Design</span>
+              <Play className="w-4 h-4 text-[#f59e0b]" strokeWidth={1.75} />
+              <span>Voir la démo</span>
             </Link>
-
-            <a
-              href="#features"
-              className="px-5 py-4 bg-transparent hover:bg-white/5 border border-gray-800 text-gray-400 hover:text-gray-200 text-sm font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center"
-            >
-              Fonctionnalités
-            </a>
           </div>
 
-          <div className="pt-6 flex items-center gap-6 text-xs text-gray-500 font-mono">
+          <div className="pt-4 flex flex-wrap items-center gap-5 text-xs text-stone-400 font-mono">
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={1.75} />
               <span>100% FCFA</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span>Aucune IA obligatoire</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={1.75} />
+              <span>Sans IA obligatoire</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={1.75} />
               <span>Fonctionne hors-ligne</span>
             </div>
           </div>
@@ -125,7 +112,7 @@ export default function LandingPage() {
         {/* Hero Right Visual (Miniature Pure CSS open notebook) */}
         <div className="lg:col-span-6 relative flex justify-center">
           
-          <div className="w-full max-w-lg bg-[#fdfaf2] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-gray-300 overflow-hidden flex relative transform lg:rotate-2 hover:rotate-0 transition-transform duration-500 aspect-[16/10]">
+          <div className="w-full max-w-lg bg-[#fdfaf2] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-stone-300/80 overflow-hidden flex relative aspect-[16/10]">
             
             {/* Left Cover Spine */}
             <div className="w-8 bg-gradient-to-b from-[#064e3b] to-[#012b1c] flex flex-col justify-around py-4 z-10 flex-shrink-0">

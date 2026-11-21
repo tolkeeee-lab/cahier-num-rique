@@ -101,7 +101,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
 
 
   return (
-    <nav className="bg-[#f5eea5]/20 border-b border-amber-300/60 px-2 sm:px-3 pt-1 flex items-center gap-1 overflow-x-auto scrollbar-none select-none">
+    <nav className="bg-[#f7f2e4] border-b border-stone-900/10 px-2 sm:px-3 pt-1.5 flex items-center gap-1 overflow-x-auto scrollbar-none select-none">
       {tabs.map(tab => {
         const Icon = tab.icon
         const isActive = activeTab === tab.id
@@ -111,16 +111,16 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
             key={tab.id}
             type="button"
             onClick={() => onTabChange(tab.id)}
-            className={`notebook-tab flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-extrabold transition-all whitespace-nowrap border-t border-x cursor-pointer active:scale-[0.97] ${
+            className={`notebook-tab flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium whitespace-nowrap border-t border-x cursor-pointer active:scale-[0.98] ${
               isActive
-                ? 'bg-gradient-to-b from-[#064e3b] to-[#022c1b] text-[#f59e0b] border-[#047857] shadow-md -mb-[1px] rounded-t-xl scale-[1.02] ring-1 ring-amber-400/40'
-                : 'bg-amber-100/70 text-amber-950 border-amber-300/60 hover:bg-amber-200/90 rounded-t-lg opacity-90 hover:opacity-100'
+                ? 'bg-[#064e3b] text-[#f59e0b] border-[#047857] -mb-[1px]'
+                : 'bg-[#fdfaf2]/70 text-stone-700 border-stone-900/10 hover:bg-[#fdfaf2] hover:text-stone-950'
             }`}
           >
-            <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-400 animate-pulse' : 'text-amber-800'}`} />
+            <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-400' : 'text-stone-500'}`} strokeWidth={1.75} />
             <span>{tab.label}</span>
             {tab.badge && (
-              <span className="px-1.5 py-0.5 bg-rose-600 text-white text-[10px] rounded-full font-bold font-mono tabular-nums shadow-xs">
+              <span className="px-1.5 py-0.5 bg-rose-600 text-white text-[10px] rounded-full font-semibold font-mono tabular-nums">
                 {tab.badge}
               </span>
             )}
