@@ -307,7 +307,7 @@ export function ProductModal({
             <button
               type="submit"
               disabled={!formData.name.trim() || saving}
-              className="px-5 py-2.5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-black rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-md font-mono"
+              className="px-5 py-2.5 bg-[#064e3b] hover:bg-[#075e47] text-[#f59e0b] text-xs font-semibold rounded-xl active:scale-[0.97] transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
             >
               <Save className="w-4 h-4" strokeWidth={1.75} />
               <span>{saving ? 'Enregistrement...' : 'Sauvegarder'}</span>

@@ -171,7 +171,7 @@ export function RealValueCalculatorModal({
         }}
       >
         {/* ── EN-TÊTE FIGMA-GRADE ────────────────────────────────────────────── */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-amber-200/80 bg-gradient-to-r from-amber-100/70 via-amber-50 to-white">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-stone-900/10 bg-[#faf5e8]">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-200/80 border border-amber-300 flex items-center justify-center text-amber-900 shadow-2xs">
               <Sparkles className="w-4 h-4 text-amber-800" strokeWidth={2} />
@@ -388,7 +388,7 @@ export function RealValueCalculatorModal({
                 audioFeedback.playTick()
                 setShowTiersAccordion(!showTiersAccordion)
               }}
-              className="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-amber-100/60 to-amber-50 text-left border-b border-amber-200/80 hover:bg-amber-100/80 transition-colors"
+              className="w-full flex items-center justify-between p-3.5 bg-[#faf5e8] text-left border-b border-stone-900/10 hover:bg-amber-100/50 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-amber-800" strokeWidth={2} />
@@ -484,7 +484,7 @@ export function RealValueCalculatorModal({
             type="button"
             onClick={handleSave}
             disabled={isSubmitting || unitSalePrice <= 0}
-            className="flex-1 max-w-xs flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-white rounded-xl text-xs sm:text-sm font-black shadow-md hover:shadow-lg transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 max-w-xs flex items-center justify-center gap-2 px-5 py-2.5 bg-[#064e3b] hover:bg-[#075e47] text-[#f59e0b] rounded-xl text-xs sm:text-sm font-semibold transition-colors active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.25), 0 4px 12px -2px rgba(180, 83, 9, 0.4)',
             }}

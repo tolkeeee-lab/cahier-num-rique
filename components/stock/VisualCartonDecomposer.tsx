@@ -93,7 +93,7 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
 
   return (
     <div
-      className={`bg-gradient-to-b from-amber-50/70 via-[#fffdfa] to-amber-100/30 border border-amber-200/90 rounded-2xl p-3 sm:p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.9),0_2px_8px_-2px_rgba(120,53,15,0.06)] space-y-3 select-none ${className}`}
+      className={`bg-[#faf5e8] border border-stone-900/10 rounded-2xl p-3 sm:p-4 space-y-3 select-none ${className}`}
     >
       {/* En-tête : Vue d'ensemble du stock physique */}
       <div className="flex items-center justify-between gap-2 border-b border-amber-200/70 pb-2">
@@ -195,7 +195,7 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
                   key={idx}
                   className={`relative aspect-square rounded-md flex items-center justify-center transition-all duration-150 ${
                     isSelected
-                      ? 'bg-gradient-to-br from-amber-500 to-amber-600 border-2 border-amber-700 text-white shadow-xs scale-95'
+                      ? 'bg-[#064e3b] border border-[#047857] text-[#f59e0b]'
                       : isAvailable
                       ? 'bg-amber-100 hover:bg-amber-200 border border-amber-300/90 text-amber-950'
                       : 'bg-amber-900/10 border border-dashed border-amber-300/40 opacity-40 text-amber-900/30'

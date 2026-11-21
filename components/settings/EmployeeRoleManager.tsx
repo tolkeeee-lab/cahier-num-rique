@@ -115,7 +115,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
           <button
             type="submit"
             disabled={!emailInput.trim() || isSubmitting}
-            className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 active:scale-[0.97] text-amber-950 text-xs font-extrabold rounded-xl transition-all duration-100 ease-out disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            className="px-4 py-2 bg-[#064e3b] hover:bg-[#075e47] active:scale-[0.97] text-[#f59e0b] text-xs font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <UserPlus className="w-4 h-4" strokeWidth={1.75} />
             <span>{isSubmitting ? 'Envoi...' : 'Inviter'}</span>

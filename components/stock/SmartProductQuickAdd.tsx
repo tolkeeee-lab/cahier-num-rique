@@ -552,7 +552,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
           {/* Bandeau d'état et raccourci mode complet */}
           <div className="bg-amber-100/50 px-3 py-1.5 border-b border-amber-200 flex items-center justify-between text-[11px] font-mono text-amber-950">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-emerald-600" />
               <span className="font-extrabold uppercase tracking-wide">
                 Table Dépliée • Renseignez ou ajustez les cases
               </span>
@@ -790,7 +790,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                   <span>4. Prix de Vente</span>
                 </span>
                 {activeData.unit_price === 0 && (
-                  <span className="text-[9px] text-emerald-800 font-bold bg-emerald-100 px-1 rounded animate-pulse">
+                  <span className="text-[10px] text-emerald-800 font-medium bg-emerald-50 border border-emerald-900/15 px-1.5 py-0.5 rounded">
                     Obligatoire
                   </span>
                 )}
@@ -1048,7 +1048,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               disabled={!activeData.name.trim() || isSubmitting || disabled}
               className={`py-2 px-5 rounded-xl text-white font-mono font-black text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-all duration-100 ease-out shadow-xs active:scale-[0.98] ${
                 isReadyToSave
-                  ? 'bg-gradient-to-r from-emerald-800 to-emerald-950 hover:from-emerald-900 hover:to-black shadow-emerald-900/20'
+                  ? 'bg-[#064e3b] hover:bg-[#075e47]'
                   : 'bg-amber-900 hover:bg-amber-950 opacity-90'
               }`}
             >

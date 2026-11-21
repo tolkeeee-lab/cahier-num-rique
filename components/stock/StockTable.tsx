@@ -163,7 +163,7 @@ export const StockTable: React.FC<StockTableProps> = ({
                         <button
                           type="button"
                           onClick={() => onOpenCalculator(prod)}
-                          className="px-2 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 active:scale-[0.97] text-amber-950 transition-all duration-100 ease-out border border-amber-500 shadow-2xs cursor-pointer flex items-center gap-1 font-bold text-[10px]"
+                          className="px-2 py-1.5 rounded-lg bg-[#faf5e8] hover:bg-amber-100 active:scale-[0.97] text-stone-900 transition-colors border border-stone-900/15 cursor-pointer flex items-center gap-1 font-medium text-[11px]"
                           title="Calculateur de Valeur Réelle & Tarification Paliers"
                         >
                           <Sparkles className="w-3 h-3 text-amber-950" strokeWidth={2} />

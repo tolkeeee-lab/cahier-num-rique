@@ -155,7 +155,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
           className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-xs font-black shadow-xs flex-shrink-0 ml-auto transition-all cursor-pointer active:scale-[0.97] border ${
             activeFilter === 'total'
               ? 'bg-emerald-700 text-white border-emerald-800 ring-2 ring-emerald-400 scale-102'
-              : 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-950 border-emerald-300 hover:bg-emerald-200'
+              : 'bg-emerald-50 text-emerald-900 border-emerald-900/15 hover:bg-emerald-100'
           }`}
           title="Afficher le calcul complet en page"
         >

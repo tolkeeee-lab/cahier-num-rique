@@ -115,7 +115,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
             <button
               type="button"
               onClick={onOpenMergeModal}
-              className="p-2 rounded-xl bg-purple-100 hover:bg-purple-200 active:scale-[0.97] text-purple-900 border border-purple-300 transition-all duration-100 ease-out shadow-xs cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold animate-pulse"
+              className="p-2 rounded-xl bg-[#faf5e8] hover:bg-amber-100/80 active:scale-[0.97] text-stone-800 border border-stone-900/15 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
               title={`${duplicateCount} doublon(s) potentiel(s) détecté(s)`}
             >
               <GitMerge className="w-4 h-4 text-purple-700" strokeWidth={1.75} />
@@ -152,7 +152,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
             <button
               type="button"
               onClick={onOpenCalculator}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-100 to-amber-200 hover:from-amber-200 hover:to-amber-300 text-amber-950 text-xs font-mono font-extrabold rounded-xl border border-amber-400 active:scale-[0.97] transition-all duration-100 ease-out whitespace-nowrap shadow-xs cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#faf5e8] hover:bg-amber-100/80 text-stone-900 text-xs font-semibold rounded-xl border border-stone-900/15 active:scale-[0.97] transition-colors whitespace-nowrap cursor-pointer"
               title="Calculateur de Valeur Réelle & Tarification Paliers"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-800" strokeWidth={2} />
@@ -165,7 +165,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
             <button
               type="button"
               onClick={onAddProduct}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all duration-100 ease-out whitespace-nowrap shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#064e3b] hover:bg-[#075e47] text-[#f59e0b] text-xs font-semibold rounded-xl active:scale-[0.97] transition-colors whitespace-nowrap cursor-pointer border border-emerald-900/20"
             >
               <Plus className="w-4 h-4" strokeWidth={1.75} />
               <span>Nouveau Produit</span>

@@ -283,7 +283,7 @@ export function CashClosingModal({
       >
         
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-amber-200/80 bg-gradient-to-r from-amber-100 to-amber-50 flex items-center justify-between text-amber-950 flex-shrink-0">
+        <div className="px-5 py-3.5 border-b border-stone-900/10 bg-[#faf5e8] flex items-center justify-between text-stone-900 flex-shrink-0">
           <div className="font-bold text-sm flex items-center gap-2">
             <Calculator className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
             <span className="font-mono tracking-tight font-extrabold">Clôture de Caisse (Z)</span>

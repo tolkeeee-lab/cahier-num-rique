@@ -126,7 +126,7 @@ export function HouseholdBudgetWidget({
 
             <div className="w-full bg-amber-100/80 h-3.5 rounded-full overflow-hidden border border-amber-200 shadow-inner">
               <div
-                className="bg-gradient-to-r from-amber-500 to-rose-500 h-full rounded-full transition-all duration-500 shadow-xs"
+                className="bg-amber-600 h-full rounded-full transition-[width] duration-300"
                 style={{ width: `${percentageUsed}%` }}
               />
             </div>

@@ -270,7 +270,7 @@ export function ShopAccountingReport({
       {/* ── 2. Les 4 Piliers Financiers Majeurs ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* CA Total */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200/80 rounded-2xl p-4 shadow-xs space-y-1.5">
+        <div className="bg-[#faf5e8] border border-stone-900/10 rounded-2xl p-4 space-y-1.5">
           <div className="flex items-center justify-between text-blue-900 font-mono text-xs font-black">
             <span>CHIFFRE D'AFFAIRES (CA)</span>
             <span className="p-1.5 bg-blue-200/80 text-blue-900 rounded-xl">
@@ -287,7 +287,7 @@ export function ShopAccountingReport({
         </div>
 
         {/* Dépenses Totales */}
-        <div className="bg-gradient-to-br from-rose-50 to-red-50 border-2 border-rose-200/80 rounded-2xl p-4 shadow-xs space-y-1.5">
+        <div className="bg-[#faf5e8] border border-stone-900/10 rounded-2xl p-4 space-y-1.5">
           <div className="flex items-center justify-between text-rose-900 font-mono text-xs font-black">
             <span>DÉPENSES & ACHATS</span>
             <span className="p-1.5 bg-rose-200/80 text-rose-900 rounded-xl">
@@ -303,7 +303,7 @@ export function ShopAccountingReport({
         </div>
 
         {/* Bénéfice Net Réalisé */}
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl p-4 shadow-xs space-y-1.5">
+        <div className="bg-[#faf5e8] border border-stone-900/10 rounded-2xl p-4 space-y-1.5">
           <div className="flex items-center justify-between text-emerald-900 font-mono text-xs font-black">
             <span>BÉNÉFICE NET RÉEL</span>
             <span className="p-1.5 bg-emerald-200 text-emerald-950 rounded-xl">
@@ -320,7 +320,7 @@ export function ShopAccountingReport({
         </div>
 
         {/* Valeur du Stock en Magasin */}
-        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-2xl p-4 shadow-xs space-y-1.5">
+        <div className="bg-[#faf5e8] border border-stone-900/10 rounded-2xl p-4 space-y-1.5">
           <div className="flex items-center justify-between text-amber-900 font-mono text-xs font-black">
             <span>VALEUR STOCK EN RAYON</span>
             <span className="p-1.5 bg-amber-200 text-amber-950 rounded-xl">
@@ -392,7 +392,7 @@ export function ShopAccountingReport({
                   </div>
                   <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-rose-400 to-red-500 h-full rounded-full transition-all"
+                      className="bg-rose-600 h-full rounded-full transition-[width] duration-300"
                       style={{ width: `${Math.min(100, item.percentage)}%` }}
                     />
                   </div>

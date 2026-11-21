@@ -176,7 +176,7 @@ export const ShopProfileSettings: React.FC<ShopProfileSettingsProps> = ({
         <button
           type="submit"
           disabled={isSaving}
-          className="px-5 py-2 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white text-xs font-extrabold rounded-xl hover:from-[#fbbf24] hover:to-[#f59e0b] active:scale-[0.97] transition-all duration-100 ease-out flex items-center gap-1.5 cursor-pointer shadow-sm"
+          className="px-5 py-2 bg-[#064e3b] hover:bg-[#075e47] text-[#f59e0b] text-xs font-semibold rounded-xl active:scale-[0.97] transition-colors flex items-center gap-1.5 cursor-pointer"
         >
           <Save className="w-4 h-4" strokeWidth={1.75} />
           <span>{isSaving ? 'Enregistrement...' : 'Sauvegarder les Modifications'}</span>
