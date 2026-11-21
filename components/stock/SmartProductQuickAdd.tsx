@@ -72,23 +72,23 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
   const [overrides, setOverrides] = useState<Partial<Omit<ParsedProductResult, "multiplier">> & { multiplier?: number | '' }>({})
   const [isPackagingCarton, setIsPackagingCarton] = useState(false)
 
-  // Options de trÃ©sorerie / dÃ©caissement liÃ© Ã  l'approvisionnement
+  // Options de trésorerie / décaissement lié à l'approvisionnement
   const [financialImpactType, setFinancialImpactType] = useState<'cash_expense' | 'supplier_credit' | 'none'>('cash_expense')
   const [supplierName, setSupplierName] = useState('')
 
-  // RÃ©fÃ©rences d'input pour le focus fluide au clavier
+  // Références d'input pour le focus fluide au clavier
   const inputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const qtyInputRef = useRef<HTMLInputElement>(null)
   const costInputRef = useRef<HTMLInputElement>(null)
   const priceInputRef = useRef<HTMLInputElement>(null)
 
-  // Analyse en temps rÃ©el dÃ¨s que l'utilisateur tape
+  // Analyse en temps réel dès que l'utilisateur tape
   const parsed: ParsedProductResult = useMemo(() => {
     return parseSmartProductText(inputText)
   }, [inputText])
 
-  // Recherche de produit existant pour suggestion & auto-complÃ©tion intelligente
+  // Recherche de produit existant pour suggestion & auto-complétion intelligente
   const matchingExistingProduct = useMemo(() => {
     const candidateName = (overrides.name ?? parsed.name ?? inputText).toLowerCase().trim()
     if (!candidateName || candidateName.length < 2) return null
@@ -99,7 +99,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     )
   }, [inputText, parsed.name, overrides.name, existingProducts])
 
-  // Suggestions rapides quand l'utilisateur commence Ã  taper un nom
+  // Suggestions rapides quand l'utilisateur commence à taper un nom
   const quickSuggestions = useMemo(() => {
     const q = inputText.toLowerCase().trim()
     if (!q || q.length < 2) return []
@@ -108,14 +108,14 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       .slice(0, 3)
   }, [inputText, existingProducts])
 
-  // Synchronisation automatique de l'Ã©tat carton si dÃ©tectÃ© par le parser
+  // Synchronisation automatique de l'état carton si détecté par le parser
   useEffect(() => {
     if ((typeof parsed.multiplier === 'number' && parsed.multiplier > 1) || parsed.packaging_name) {
       setIsPackagingCarton(true)
     }
   }, [parsed.multiplier, parsed.packaging_name])
 
-  // DonnÃ©es actives combinant le texte, le produit existant connu et les saisies du commerÃ§ant
+  // Données actives combinant le texte, le produit existant connu et les saisies du commerçant
   const activeData = useMemo(() => {
     // Multiplicateur / Contenance
     let mult: number | string = overrides.multiplier !== undefined ? overrides.multiplier : (parsed.multiplier ?? 1)
@@ -134,7 +134,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       parsed.packaging_name ??
       (numMult > 1 ? matchingExistingProduct?.packaging_name || 'carton' : '')
 
-    // QuantitÃ© & Colisage
+    // Quantité & Colisage
     let pkgCount = overrides.packages_count ?? parsed.packages_count ?? 0
     let totalPieces = overrides.initial_stock ?? parsed.initial_stock ?? 0
 
@@ -155,7 +155,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       }
     }
 
-    // CoÃ»t d'Achat
+    // Coût d'Achat
     let pkgCost = overrides.package_cost ?? parsed.package_cost ?? 0
     let uCost = overrides.unit_cost ?? parsed.unit_cost ?? 0
 
@@ -226,7 +226,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
       multiplier: mult,
       initial_stock: totalPieces,
       packaging_name: pkgName,
-      unit: overrides.unit ?? parsed.unit ?? (numMult > 1 ? 'carton' : 'unitÃ©'),
+      unit: overrides.unit ?? parsed.unit ?? (numMult > 1 ? 'carton' : 'unité'),
       package_cost: pkgCost,
       unit_cost: uCost,
       unit_price: uPrice,
@@ -245,7 +245,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         overrides.category ??
         parsed.category ??
         matchingExistingProduct?.category ??
-        'Ã‰picerie & Vivres',
+        'Épicerie & Vivres',
       trade_type:
         overrides.trade_type ??
         parsed.trade_type ??
@@ -253,7 +253,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     }
   }, [parsed, overrides, isPackagingCarton, matchingExistingProduct, inputText])
 
-  // CoÃ»t total de la commande / du lot achetÃ© pour dÃ©caissement caisse
+  // Coût total de la commande / du lot acheté pour décaissement caisse
   const totalBatchCost = useMemo(() => {
     if (isPackagingCarton && activeData.package_cost > 0) {
       return activeData.package_cost * (activeData.packages_count || 1)
@@ -261,10 +261,10 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     return (activeData.unit_cost || 0) * (activeData.initial_stock || 1)
   }, [isPackagingCarton, activeData.package_cost, activeData.packages_count, activeData.unit_cost, activeData.initial_stock])
 
-  // La table se dÃ©plie dÃ¨s qu'un nom commence Ã  Ãªtre saisi (>= 2 caractÃ¨res)
+  // La table se déplie dès qu'un nom commence à être saisi (>= 2 caractères)
   const isTableUnfolded = inputText.trim().length >= 2 || (activeData.name && activeData.name.trim().length >= 2)
 
-  // Calcul de marge unitaire et bÃ©nÃ©fice total attendu
+  // Calcul de marge unitaire et bénéfice total attendu
   const profitMetrics = useMemo(() => {
     if (activeData.unit_price > 0 && activeData.unit_cost > 0) {
       const marginUnit = activeData.unit_price - activeData.unit_cost
@@ -275,13 +275,13 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     return null
   }, [activeData.unit_price, activeData.unit_cost, activeData.initial_stock])
 
-  // VÃ©rification de validitÃ© minimale
+  // Vérification de validité minimale
   const isReadyToSave =
     Boolean(activeData.name.trim()) &&
     activeData.initial_stock > 0 &&
     activeData.unit_price > 0
 
-  // Notification temporaire de succÃ¨s
+  // Notification temporaire de succès
   useEffect(() => {
     if (justAddedName) {
       const timer = setTimeout(() => setJustAddedName(null), 3500)
@@ -289,7 +289,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     }
   }, [justAddedName])
 
-  // RÃ©initialiser les surcharges quand le texte est totalement vidÃ©
+  // Réinitialiser les surcharges quand le texte est totalement vidé
   useEffect(() => {
     if (!inputText.trim()) {
       setOverrides({})
@@ -298,7 +298,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
     }
   }, [inputText])
 
-  // Focus automatique sur la premiÃ¨re case manquante
+  // Focus automatique sur la première case manquante
   const focusFirstMissingField = () => {
     if (!activeData.name.trim()) {
       nameInputRef.current?.focus()
@@ -317,7 +317,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
   const handleConfirm = async () => {
     if (!activeData.name.trim() || isSubmitting || disabled) return
 
-    // Si le prix de vente manque encore, orienter immÃ©diatement le focus dessus
+    // Si le prix de vente manque encore, orienter immédiatement le focus dessus
     if (activeData.unit_price === 0) {
       priceInputRef.current?.focus()
       priceInputRef.current?.select()
@@ -407,7 +407,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
 
   return (
     <div className="bg-[#fdfbf7] border-2 border-amber-300/90 rounded-2xl p-3 sm:p-4 shadow-sm space-y-3 mb-4 transition-colors">
-      {/* â”€â”€ EN-TÃŠTE CHALEUREUX DU CAHIER â”€â”€ */}
+      {/* ── EN-TÊTE CHALEUREUX DU CAHIER ── */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-amber-200/90 text-amber-950 border border-amber-300 shadow-2xs">
@@ -418,7 +418,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               Ligne de Saisie Magique du Cahier
             </h4>
             <p className="text-[11px] text-amber-900/80 font-mono">
-              Tapez un nom, parlez au micro ou scannez un code : la table s'adapte instantanÃ©ment
+              Tapez un nom, parlez au micro ou scannez un code : la table s'adapte instantanément
             </p>
           </div>
         </div>
@@ -426,12 +426,12 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         {justAddedName && (
           <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 border border-emerald-300 rounded-xl text-emerald-950 text-xs font-mono font-bold animate-in fade-in slide-in-from-right-3 duration-200">
             <Check className="w-3.5 h-3.5 text-emerald-700" strokeWidth={2.5} />
-            <span>âœ“ Â« {justAddedName} Â» inscrit au stock !</span>
+            <span>✓ « {justAddedName} » inscrit au stock !</span>
           </div>
         )}
       </div>
 
-      {/* â”€â”€ BARRE DE SAISIE INITIALE MULTI-MODALE (TEXTE + VOCAL + SCANNER) â”€â”€ */}
+      {/* ── BARRE DE SAISIE INITIALE MULTI-MODALE (TEXTE + VOCAL + SCANNER) ── */}
       <div className="flex items-center gap-2">
         <div className="relative flex-grow">
           <input
@@ -460,7 +460,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                   setSupplierName('')
                 }}
                 className="p-1 text-gray-400 hover:text-gray-600 rounded-lg active:scale-95 transition-colors cursor-pointer"
-                title="Effacer (Ã‰chap)"
+                title="Effacer (Échap)"
               >
                 <X className="w-3.5 h-3.5" strokeWidth={2} />
               </button>
@@ -476,7 +476,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
           </div>
         </div>
 
-        {/* Bouton Scanner Code-barres CamÃ©ra */}
+        {/* Bouton Scanner Code-barres Caméra */}
         {onOpenBarcodeScanner && (
           <button
             type="button"
@@ -499,7 +499,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               ? 'bg-emerald-800 hover:bg-emerald-900'
               : 'bg-amber-900 hover:bg-amber-950'
           }`}
-          title="Valider ou aller au champ suivant (EntrÃ©e)"
+          title="Valider ou aller au champ suivant (Entrée)"
         >
           {isSubmitting ? (
             <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -517,12 +517,12 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         </button>
       </div>
 
-      {/* â”€â”€ SUGGESTIONS DE PRODUITS HABITUELS (AUTO-COMPLÃ‰TION DU BOUT DU DOIGT) â”€â”€ */}
+      {/* ── SUGGESTIONS DE PRODUITS HABITUELS (AUTO-COMPLÉTION DU BOUT DU DOIGT) ── */}
       {quickSuggestions.length > 0 && !matchingExistingProduct && (
         <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-mono">
           <span className="text-amber-900/70 font-semibold flex items-center gap-1">
             <History className="w-3 h-3" />
-            <span>DÃ©jÃ  en boutique :</span>
+            <span>Déjà en boutique :</span>
           </span>
           {quickSuggestions.map((prod) => (
             <button
@@ -544,27 +544,27 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
         </div>
       )}
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
-      {/* â”€â”€ LA TABLE DU GRAND LIVRE COMPTABLE QUI SE DÃ‰PLIE AUTOMATIQUEMENT â”€â”€ */}
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      {/* ── LA TABLE DU GRAND LIVRE COMPTABLE QUI SE DÉPLIE AUTOMATIQUEMENT ── */}
+      {/* ══════════════════════════════════════════════════════════════════ */}
       {isTableUnfolded && (
         <div className="bg-white border-2 border-amber-300/80 rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* Bandeau d'Ã©tat et raccourci mode complet */}
+          {/* Bandeau d'état et raccourci mode complet */}
           <div className="bg-amber-100/50 px-3 py-1.5 border-b border-amber-200 flex items-center justify-between text-[11px] font-mono text-amber-950">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-600" />
               <span className="font-semibold uppercase tracking-wide">
-                Table DÃ©pliÃ©e â€¢ Renseignez ou ajustez les cases
+                Table Dépliée • Renseignez ou ajustez les cases
               </span>
               {matchingExistingProduct && (
                 <span className="hidden sm:inline px-1.5 py-0.2 bg-emerald-200/70 text-emerald-950 rounded text-[10px] font-bold">
-                  Produit connu (prix habituels appliquÃ©s)
+                  Produit connu (prix habituels appliqués)
                 </span>
               )}
             </div>
           </div>
 
-          {/* TABLEAU RESPONSIVE (GRILLE SEYÃˆS DE HAUTE PRÃ‰CISION) */}
+          {/* TABLEAU RESPONSIVE (GRILLE SEYÈS DE HAUTE PRÉCISION) */}
           <div className="p-3 grid grid-cols-1 md:grid-cols-12 gap-3 text-xs font-mono">
             {/* 1. COLONNE : NOM DU PRODUIT */}
             <div className="md:col-span-3 p-2 bg-amber-50/40 border border-amber-200/80 rounded-xl space-y-1">
@@ -582,19 +582,19 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                 className="w-full font-bold text-xs text-amber-950 bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 focus:border-amber-600 focus:ring-1 focus:ring-amber-400 outline-none"
               />
               <div className="text-[10px] text-gray-500 truncate">
-                CatÃ©gorie : <span className="text-amber-900 font-semibold">{activeData.category}</span>
+                Catégorie : <span className="text-amber-900 font-semibold">{activeData.category}</span>
               </div>
             </div>
 
-            {/* 2. COLONNE : CONDITIONNEMENT & QUANTITÃ‰ */}
+            {/* 2. COLONNE : CONDITIONNEMENT & QUANTITÉ */}
             <div className="md:col-span-3 p-2 bg-blue-50/40 border border-blue-200/80 rounded-xl space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[10px] text-blue-900 font-semibold uppercase flex items-center gap-1">
                   <Package className="w-3 h-3 text-blue-700" />
-                  <span>2. Format & QtÃ©</span>
+                  <span>2. Format & Qté</span>
                 </label>
 
-                {/* SÃ©lecteur UnitÃ© vs Carton */}
+                {/* Sélecteur Unité vs Carton */}
                 <button
                   type="button"
                   onClick={() => {
@@ -609,7 +609,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                   }}
                   className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-950 font-bold cursor-pointer transition-colors"
                 >
-                  {isPackagingCarton ? 'Mode: Carton' : 'Mode: UnitÃ©'}
+                  {isPackagingCarton ? 'Mode: Carton' : 'Mode: Unité'}
                 </button>
               </div>
 
@@ -658,7 +658,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                     }
                   }}
                   onKeyDown={(e) => handleCellKeyDown(e, costInputRef)}
-                  placeholder="QtÃ©"
+                  placeholder="Qté"
                   className="w-14 text-center font-semibold text-xs text-blue-950 bg-white border border-blue-300 rounded-lg py-1.5 focus:border-blue-600 outline-none tabular-nums"
                 />
 
@@ -696,7 +696,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                 </div>
               </div>
 
-              {/* Si carton : rÃ©glage contenance en piÃ¨ces */}
+              {/* Si carton : réglage contenance en pièces */}
               {isPackagingCarton && (
                 <div className="flex items-center gap-1 text-[10px] text-blue-900/80">
                   <span>1 carton =</span>
@@ -714,12 +714,12 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                     }}
                     className="w-9 text-center font-bold bg-white border border-blue-300 rounded px-1 py-0.5 outline-none text-blue-950 tabular-nums"
                   />
-                  <span>piÃ¨ces</span>
+                  <span>pièces</span>
                 </div>
               )}
             </div>
 
-            {/* 3. COLONNE : COÃ›T D'ACHAT */}
+            {/* 3. COLONNE : COÛT D'ACHAT */}
             <div
               className={`md:col-span-3 p-2 rounded-xl space-y-1 transition-colors ${
                 activeData.unit_cost === 0
@@ -730,11 +730,11 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
               <label className="text-[10px] text-rose-900 font-semibold uppercase flex items-center justify-between">
                 <span className="flex items-center gap-1">
                   <Coins className="w-3 h-3 text-rose-700" />
-                  <span>3. CoÃ»t d'Achat</span>
+                  <span>3. Coût d'Achat</span>
                 </span>
                 {activeData.unit_cost === 0 && (
                   <span className="text-[9px] text-rose-700 font-bold bg-rose-100 px-1 rounded">
-                    Ã€ renseigner
+                    À renseigner
                   </span>
                 )}
               </label>
@@ -771,12 +771,12 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                 {isPackagingCarton ? (
                   <span>Soit {formatPrice(activeData.unit_cost)} / pc</span>
                 ) : (
-                  <span>Prix payÃ© au fournisseur</span>
+                  <span>Prix payé au fournisseur</span>
                 )}
               </div>
             </div>
 
-            {/* 4. COLONNE : PRIX DE VENTE DÃ‰TAIL */}
+            {/* 4. COLONNE : PRIX DE VENTE DÉTAIL */}
             <div
               className={`md:col-span-3 p-2 rounded-xl space-y-1 transition-colors ${
                 activeData.unit_price === 0
@@ -820,17 +820,17 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                       profitMetrics.marginUnit >= 0 ? 'text-emerald-700' : 'text-rose-600'
                     }
                   >
-                    BÃ©nÃ©fice : {profitMetrics.marginUnit >= 0 ? '+' : ''}
+                    Bénéfice : {profitMetrics.marginUnit >= 0 ? '+' : ''}
                     {formatPrice(profitMetrics.marginUnit)} ({profitMetrics.marginPercent}%)
                   </span>
                 ) : (
-                  <span className="text-gray-400">Prix client (1 piÃ¨ce)</span>
+                  <span className="text-gray-400">Prix client (1 pièce)</span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* â”€â”€ BARRE PALIERS GROS & LOTS DÃ‰GRESSIFS â”€â”€ */}
+          {/* ── BARRE PALIERS GROS & LOTS DÉGRESSIFS ── */}
           {(isPackagingCarton || activeData.lot_quantity > 0) && (
             <div className="bg-amber-50/50 border-t border-amber-200 px-3 py-2 flex items-center gap-2 flex-wrap text-xs font-mono">
               <span className="text-[10px] text-amber-900 font-semibold uppercase flex items-center gap-1">
@@ -850,7 +850,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                         setOverrides((prev) => ({
                           ...prev,
                           wholesale_price: val,
-                          // Recalcul automatique strict si on change le carton : on rÃ©initialise les overrides liÃ©s
+                          // Recalcul automatique strict si on change le carton : on réinitialise les overrides liés
                           // (S'il veut modifier le 1/2 ensuite manuellement il pourra)
                           half_package_price: Math.round(val / 2),
                           quarter_package_price: Math.round(val / 4),
@@ -912,7 +912,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                 </>
               )}
 
-              {/* Lot dÃ©gressif (ex: lot de 3 Ã  1400F) */}
+              {/* Lot dégressif (ex: lot de 3 à 1400F) */}
               <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-emerald-300">
                 <span className="text-[10px] text-emerald-800 font-bold flex items-center gap-0.5">
                   <span>Lot</span>
@@ -947,17 +947,17 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
             </div>
           )}
 
-          {/* â”€â”€ MODULE DE LIAISON TRÃ‰SORERIE & CAISSE (SI COÃ›T D'ACHAT DÃ‰TECTÃ‰) â”€â”€ */}
+          {/* ── MODULE DE LIAISON TRÉSORERIE & CAISSE (SI COÛT D'ACHAT DÉTECTÉ) ── */}
           {totalBatchCost > 0 && (
             <div className="bg-amber-100/50 border-t border-amber-200 p-2.5 space-y-1.5 font-mono text-xs">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[10px] text-amber-950 font-semibold uppercase flex items-center gap-1">
                   <Wallet className="w-3 h-3 text-amber-800" />
-                  <span>RÃ¨glement de l'approvisionnement ({formatPrice(totalBatchCost)}) :</span>
+                  <span>Règlement de l'approvisionnement ({formatPrice(totalBatchCost)}) :</span>
                 </span>
 
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Option 1: DÃ©biter la Caisse Cash */}
+                  {/* Option 1: Débiter la Caisse Cash */}
                   <button
                     type="button"
                     onClick={() => {
@@ -971,10 +971,10 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                     }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span>DÃ©biter Caisse (-{formatPrice(totalBatchCost)})</span>
+                    <span>Débiter Caisse (-{formatPrice(totalBatchCost)})</span>
                   </button>
 
-                  {/* Option 2: CrÃ©dit Fournisseur */}
+                  {/* Option 2: Crédit Fournisseur */}
                   <button
                     type="button"
                     onClick={() => {
@@ -1003,7 +1003,7 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                         ? 'bg-gray-700 text-white'
                         : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
                     }`}
-                    title="Simple ajustement d'inventaire sans toucher Ã  la caisse"
+                    title="Simple ajustement d'inventaire sans toucher à la caisse"
                   >
                     <span>Sans impact caisse</span>
                   </button>
@@ -1026,18 +1026,18 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
             </div>
           )}
 
-          {/* â”€â”€ BARRE INFÃ‰RIEURE : BÃ‰NÃ‰FICE TOTAL & BOUTON D'ENREGISTREMENT â”€â”€ */}
+          {/* ── BARRE INFÉRIEURE : BÉNÉFICE TOTAL & BOUTON D'ENREGISTREMENT ── */}
           <div className="bg-amber-50/70 border-t border-amber-200 p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 font-mono">
             <div className="text-[11px] text-amber-900 font-sans">
               {profitMetrics ? (
                 <span>
-                  BÃ©nÃ©fice total attendu sur ce lot :{' '}
+                  Bénéfice total attendu sur ce lot :{' '}
                   <strong className="text-emerald-800 font-mono font-semibold">
                     +{formatPrice(profitMetrics.totalExpectedProfit)}
                   </strong>
                 </span>
               ) : (
-                <span>PrÃªt Ã  Ãªtre inscrit sur les lignes de votre cahier</span>
+                <span>Prêt à être inscrit sur les lignes de votre cahier</span>
               )}
             </div>
 
@@ -1059,21 +1059,21 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                   <CheckCircle2 className="w-4 h-4 text-emerald-300" strokeWidth={2.5} />
                   <span>
                     {isReadyToSave
-                      ? `Inscrire Â« ${activeData.name} Â» (EntrÃ©e â†µ)`
-                      : `ComplÃ©ter Â« ${activeData.name || 'le produit'} Â»`}
+                      ? `Inscrire « ${activeData.name} » (Entrée ↵)`
+                      : `Compléter « ${activeData.name || 'le produit'} »`}
                   </span>
                 </>
               )}
             </button>
           </div>
 
-          {/* Alerte si le produit existe dÃ©jÃ  en stock (rÃ©approvisionnement) */}
+          {/* Alerte si le produit existe déjà en stock (réapprovisionnement) */}
           {matchingExistingProduct && (
             <div className="p-2.5 bg-amber-50 border-t border-amber-200 text-amber-950 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" strokeWidth={2} />
               <div className="space-y-0.5 font-sans">
                 <p className="font-semibold text-amber-950">
-                  Produit dÃ©jÃ  enregistrÃ© en boutique : Â« {matchingExistingProduct.name} Â»
+                  Produit déjà enregistré en boutique : « {matchingExistingProduct.name} »
                 </p>
                 <p className="text-[11px] text-amber-900">
                   Stock actuel :{' '}
@@ -1081,13 +1081,13 @@ export const SmartProductQuickAdd: React.FC<SmartProductQuickAddProps> = ({
                     {matchingExistingProduct.current_stock ?? matchingExistingProduct.initial_stock}{' '}
                     {activeData.unit}
                   </span>
-                  . En validant, le stock passera Ã {' '}
+                  . En validant, le stock passera à{' '}
                   <span className="font-mono font-semibold text-emerald-900">
                     {(matchingExistingProduct.current_stock ??
                       matchingExistingProduct.initial_stock) + activeData.initial_stock}{' '}
                     {activeData.unit}
                   </span>{' '}
-                  et le prix de vente sera mis Ã  jour.
+                  et le prix de vente sera mis à jour.
                 </p>
               </div>
             </div>

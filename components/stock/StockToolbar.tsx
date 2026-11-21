@@ -60,7 +60,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
               type="button"
               onClick={() => onSearchChange('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-600 rounded-md active:scale-[0.97] transition-colors duration-100 ease-out"
-              title="Effacer la recherche (Ã‰chap)"
+              title="Effacer la recherche (Échap)"
             >
               <X className="w-3.5 h-3.5" strokeWidth={1.75} />
             </button>
@@ -70,13 +70,13 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
         {/* Filtres & Boutons d'action */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           
-          {/* SÃ©lecteur de catÃ©gorie */}
+          {/* Sélecteur de catégorie */}
           <select
             value={categoryFilter}
             onChange={(e) => onCategoryFilterChange(e.target.value)}
             className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
           >
-            <option value="TOUT">Toutes les catÃ©gories</option>
+            <option value="TOUT">Toutes les catégories</option>
             {categories.map((cat, idx) => (
               <option key={idx} value={cat}>
                 {cat}
@@ -84,7 +84,7 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
             ))}
           </select>
 
-          {/* Scanner Code-barres CamÃ©ra */}
+          {/* Scanner Code-barres Caméra */}
           {onOpenBarcodeScanner && !isEmployee && (
             <button
               type="button"
@@ -97,26 +97,26 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
             </button>
           )}
 
-          {/* Conseil RÃ©assort Grossiste */}
+          {/* Conseil Réassort Grossiste */}
           {onOpenRestockAdvisor && (
             <button
               type="button"
               onClick={onOpenRestockAdvisor}
               className="p-2 rounded-xl bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 border border-amber-300 transition-colors duration-100 ease-out shadow-xs cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold"
-              title="Conseil RÃ©approvisionnement Grossiste"
+              title="Conseil Réapprovisionnement Grossiste"
             >
               <ShoppingBag className="w-4 h-4 text-amber-700" strokeWidth={1.75} />
-              <span className="hidden md:inline">Conseil RÃ©assort</span>
+              <span className="hidden md:inline">Conseil Réassort</span>
             </button>
           )}
 
-          {/* Fusionner les doublons dÃ©tectÃ©s */}
+          {/* Fusionner les doublons détectés */}
           {duplicateCount > 0 && onOpenMergeModal && !isEmployee && (
             <button
               type="button"
               onClick={onOpenMergeModal}
               className="p-2 rounded-xl bg-[#faf5e8] hover:bg-amber-100/80 active:scale-[0.97] text-stone-800 border border-stone-900/15 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
-              title={`${duplicateCount} doublon(s) potentiel(s) dÃ©tectÃ©(s)`}
+              title={`${duplicateCount} doublon(s) potentiel(s) détecté(s)`}
             >
               <GitMerge className="w-4 h-4 text-stone-700" strokeWidth={1.75} />
               <span className="hidden sm:inline"><span className="tabular-nums">{duplicateCount}</span> doublon{duplicateCount > 1 ? 's' : ''}</span>
@@ -140,20 +140,20 @@ export const StockToolbar: React.FC<StockToolbarProps> = ({
               type="button"
               onClick={onClearAllStock}
               className="p-2 rounded-xl bg-rose-100 hover:bg-rose-200 active:scale-[0.97] text-rose-800 border border-rose-300 transition-colors duration-100 ease-out shadow-xs cursor-pointer flex items-center gap-1 text-xs font-mono font-bold"
-              title="Vider et rÃ©initialiser tout le stock Ã  zÃ©ro"
+              title="Vider et réinitialiser tout le stock à zéro"
             >
               <Trash2 className="w-4 h-4 text-rose-600" strokeWidth={1.75} />
               <span className="hidden sm:inline">Vider le stock</span>
             </button>
           )}
 
-          {/* Bouton Calculateur de Valeur RÃ©elle & Paliers */}
+          {/* Bouton Calculateur de Valeur Réelle & Paliers */}
           {onOpenCalculator && !isEmployee && (
             <button
               type="button"
               onClick={onOpenCalculator}
               className="flex items-center gap-1.5 px-3 py-2 bg-[#faf5e8] hover:bg-amber-100/80 text-stone-900 text-xs font-semibold rounded-xl border border-stone-900/15 active:scale-[0.97] transition-colors whitespace-nowrap cursor-pointer"
-              title="Calculateur de Valeur RÃ©elle & Tarification Paliers"
+              title="Calculateur de Valeur Réelle & Tarification Paliers"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-800" strokeWidth={2} />
               <span>Valeur & Paliers</span>

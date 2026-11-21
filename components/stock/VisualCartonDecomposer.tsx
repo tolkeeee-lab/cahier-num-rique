@@ -28,7 +28,7 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
   const mult = Math.max(2, multiplier || 1)
   const stock = Math.max(0, currentStock || 0)
 
-  // Calcul des cartons pleins et du carton entamÃ©
+  // Calcul des cartons pleins et du carton entamé
   const { fullCartons, openCartonPieces, emptySlots, isFullyPacked } = useMemo(() => {
     const full = Math.floor(stock / mult)
     const rem = stock % mult
@@ -40,19 +40,19 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
     }
   }, [stock, mult])
 
-  // Normalisation du nombre de cases affichÃ©es pour la grille (max 48 pour rester lisible)
+  // Normalisation du nombre de cases affichées pour la grille (max 48 pour rester lisible)
   const displaySlotsCount = Math.min(mult, 48)
   const groupingRatio = mult > 48 ? Math.ceil(mult / 48) : 1
 
-  // Paliers interactifs prÃ©dÃ©finis
+  // Paliers interactifs prédéfinis
   const tiers = useMemo(() => {
     const list: Array<{ label: string; pieces: number; sub: string }> = []
 
-    // 1. DÃ©tail (1 pc)
+    // 1. Détail (1 pc)
     list.push({
-      label: '1 PiÃ¨ce',
+      label: '1 Pièce',
       pieces: 1,
-      sub: 'DÃ©tail',
+      sub: 'Détail',
     })
 
     // 2. Quart (si mult >= 4)
@@ -95,7 +95,7 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
     <div
       className={`bg-[#faf5e8] border border-stone-900/10 rounded-2xl p-3 sm:p-4 space-y-3 select-none ${className}`}
     >
-      {/* En-tÃªte : Vue d'ensemble du stock physique */}
+      {/* En-tête : Vue d'ensemble du stock physique */}
       <div className="flex items-center justify-between gap-2 border-b border-amber-200/70 pb-2">
         <div className="flex items-center gap-2">
           <div className="p-1.5 bg-amber-200/70 text-amber-900 border border-amber-300/80 rounded-lg shadow-2xs">
@@ -103,7 +103,7 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
           </div>
           <div>
             <div className="text-xs font-semibold text-amber-950 tracking-tight uppercase">
-              DÃ©composition Physique du {packagingName}
+              Décomposition Physique du {packagingName}
             </div>
             <div className="text-[10px] font-mono text-amber-800/80">
               1 {packagingName} = <span className="font-bold text-amber-950">{mult} {unit}</span>
@@ -111,7 +111,7 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
           </div>
         </div>
 
-        {/* Badge rÃ©capitulatif stock total */}
+        {/* Badge récapitulatif stock total */}
         <div className="text-right">
           <div className="font-mono text-xs font-semibold text-amber-950 tabular-nums">
             {stock} <span className="text-[10px] font-sans font-normal text-amber-800">{unit}</span>
@@ -123,14 +123,14 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
         </div>
       </div>
 
-      {/* Cartons intacts en rÃ©serve (s'il y en a) */}
+      {/* Cartons intacts en réserve (s'il y en a) */}
       {fullCartons > 0 && (
         <div className="flex items-center gap-2 p-2 bg-white/80 border border-amber-200/80 rounded-xl">
           <Box className="w-3.5 h-3.5 text-amber-800 flex-shrink-0" />
           <div className="text-[11px] text-amber-900 flex-grow">
-            <span className="font-bold">{fullCartons} {packagingName}{fullCartons > 1 ? 's' : ''} scellÃ©{fullCartons > 1 ? 's' : ''}</span>
+            <span className="font-bold">{fullCartons} {packagingName}{fullCartons > 1 ? 's' : ''} scellé{fullCartons > 1 ? 's' : ''}</span>
             <span className="font-mono text-[10px] text-amber-700/80 ml-1.5 tabular-nums">
-              ({fullCartons * mult} {unit} intactes en rÃ©serve)
+              ({fullCartons * mult} {unit} intactes en réserve)
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -138,7 +138,7 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
               <span
                 key={i}
                 className="w-2.5 h-3 bg-amber-700 border border-amber-800 rounded-xs inline-block shadow-2xs"
-                title="Carton scellÃ©"
+                title="Carton scellé"
               />
             ))}
             {fullCartons > 5 && (
@@ -154,17 +154,17 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
           <span className="font-bold text-amber-950 flex items-center gap-1">
             <ArrowDownRight className="w-3 h-3 text-amber-700" />
             {openCartonPieces > 0
-              ? `Carton entamÃ© en cours de vente (${openCartonPieces} restantes / ${mult})`
+              ? `Carton entamé en cours de vente (${openCartonPieces} restantes / ${mult})`
               : isFullyPacked && stock > 0
-              ? `Prochain ${packagingName} Ã  ouvrir (${mult} ${unit})`
+              ? `Prochain ${packagingName} à ouvrir (${mult} ${unit})`
               : `Carton vide (Rupture)`}
           </span>
           <span className="text-[10px] font-mono text-amber-800/80">
-            {emptySlots > 0 ? `${emptySlots} alvÃ©ole${emptySlots > 1 ? 's' : ''} vide${emptySlots > 1 ? 's' : ''}` : 'Plein'}
+            {emptySlots > 0 ? `${emptySlots} alvéole${emptySlots > 1 ? 's' : ''} vide${emptySlots > 1 ? 's' : ''}` : 'Plein'}
           </span>
         </div>
 
-        {/* Le caisson / La grille d'alvÃ©oles */}
+        {/* Le caisson / La grille d'alvéoles */}
         <div className="p-2.5 bg-amber-950/5 border border-amber-300/80 rounded-xl shadow-inner">
           <div
             className="grid gap-1 sm:gap-1.5"
@@ -181,13 +181,13 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
             }}
           >
             {Array.from({ length: displaySlotsCount }).map((_, idx) => {
-              // Si le carton est entamÃ©, les premiÃ¨res cases vides reprÃ©sentent ce qui est dÃ©jÃ  sorti
+              // Si le carton est entamé, les premières cases vides représentent ce qui est déjà sorti
               const slotIdx = idx * groupingRatio
               const isAvailable = openCartonPieces > 0
                 ? slotIdx < openCartonPieces
                 : isFullyPacked && stock > 0
 
-              // VÃ©rifie si cette alvÃ©ole fait partie de la sÃ©lection en cours
+              // Vérifie si cette alvéole fait partie de la sélection en cours
               const isSelected = selectedPieces > 0 && isAvailable && slotIdx < selectedPieces
 
               return (
@@ -202,10 +202,10 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
                   }`}
                   title={
                     isSelected
-                      ? `PrÃ©vu pour la vente (${groupingRatio} ${unit})`
+                      ? `Prévu pour la vente (${groupingRatio} ${unit})`
                       : isAvailable
                       ? `Disponible dans le carton (${groupingRatio} ${unit})`
-                      : `AlvÃ©ole dÃ©jÃ  vendue / vide`
+                      : `Alvéole déjà vendue / vide`
                   }
                 >
                   {isSelected ? (
@@ -220,7 +220,7 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
             })}
           </div>
 
-          {/* LÃ©gende rapide */}
+          {/* Légende rapide */}
           <div className="flex items-center justify-between pt-2 mt-2 border-t border-amber-200/60 text-[10px] text-amber-900/80">
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1">
@@ -245,12 +245,12 @@ export const VisualCartonDecomposer: React.FC<VisualCartonDecomposerProps> = ({
         </div>
       </div>
 
-      {/* Boutons d'action / SÃ©lection interactive des portions */}
+      {/* Boutons d'action / Sélection interactive des portions */}
       {!readOnly && onSelectPieces && (
         <div className="space-y-1.5 pt-1">
           <div className="text-[10px] font-bold text-amber-900 uppercase tracking-normal flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-amber-700" />
-            <span>SÃ©lection tactile par fraction de carton</span>
+            <span>Sélection tactile par fraction de carton</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">

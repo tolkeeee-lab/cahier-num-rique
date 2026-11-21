@@ -77,7 +77,7 @@ export function BarcodeScannerModal({
   const [selectedExistingId, setSelectedExistingId] = useState('')
   const [isLookingUpGlobal, setIsLookingUpGlobal] = useState(false)
 
-  // Anti-rebond par code pour Ã©viter de biper 10 fois par seconde le mÃªme code
+  // Anti-rebond par code pour éviter de biper 10 fois par seconde le même code
   const lastScannedTimeRef = useRef<{ [code: string]: number }>({})
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -105,7 +105,7 @@ export function BarcodeScannerModal({
     setTorchSupported(false)
   }, [])
 
-  // Ajout / IncrÃ©mentation d'un article dans le panier scannÃ©
+  // Ajout / Incrémentation d'un article dans le panier scanné
   const addItemToCart = useCallback((item: { id: string; name: string; unit_price: number; barcode?: string }) => {
     setLastBippedName(`${item.name} (${formatPrice(item.unit_price)})`)
     setTimeout(() => {
@@ -128,10 +128,10 @@ export function BarcodeScannerModal({
     const code = decodedText.trim()
     if (!code || code.length < 4) return
 
-    // Si on est dÃ©jÃ  en train de saisir un code inconnu, ignorer les nouveaux scans
+    // Si on est déjà en train de saisir un code inconnu, ignorer les nouveaux scans
     if (!isScanningRef.current) return
 
-    // Debounce : 1.2 seconde d'Ã©cart minimum pour le mÃªme code
+    // Debounce : 1.2 seconde d'écart minimum pour le même code
     const now = Date.now()
     const lastTime = lastScannedTimeRef.current[code] || 0
     if (now - lastTime < 1200) {
@@ -159,7 +159,7 @@ export function BarcodeScannerModal({
         barcode: matched.barcode || code,
       })
     } else {
-      // Code inconnu : PAUSER immÃ©diatement le scanner pour stabiliser l'Ã©cran
+      // Code inconnu : PAUSER immédiatement le scanner pour stabiliser l'écran
       isScanningRef.current = false
       setUnknownBarcode(code)
       setNewProductName('')
@@ -167,7 +167,7 @@ export function BarcodeScannerModal({
       setSelectedExistingId('')
       setIsLookingUpGlobal(true)
 
-      // Recherche automatique en arriÃ¨re-plan dans la base mondiale Open Food Facts
+      // Recherche automatique en arrière-plan dans la base mondiale Open Food Facts
       fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`)
         .then(r => r.json())
         .then(data => {
@@ -206,7 +206,7 @@ export function BarcodeScannerModal({
     setIsStarting(true)
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError("Votre navigateur ne supporte pas l'accÃ¨s direct Ã  la camÃ©ra.")
+      setCameraError("Votre navigateur ne supporte pas l'accès direct à la caméra.")
       setIsStarting(false)
       return
     }
@@ -242,7 +242,7 @@ export function BarcodeScannerModal({
           audio: false,
         })
       } catch {
-        // Repli universel sans contraintes idÃ©ales (webcam basique PC ou ancien mobile)
+        // Repli universel sans contraintes idéales (webcam basique PC ou ancien mobile)
         stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false,
@@ -268,7 +268,7 @@ export function BarcodeScannerModal({
       setCameraActive(true)
       isScanningRef.current = true
 
-      // Moteur 1 : BarcodeDetector Natif MatÃ©riel (iOS / Android)
+      // Moteur 1 : BarcodeDetector Natif Matériel (iOS / Android)
       if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
         try {
           const nativeDetector = new (window as any).BarcodeDetector({
@@ -304,11 +304,11 @@ export function BarcodeScannerModal({
       }
 
     } catch (err: any) {
-      console.warn('[BarcodeScanner] Erreur dÃ©marrage:', err)
+      console.warn('[BarcodeScanner] Erreur démarrage:', err)
       setCameraError(
         err?.name === 'NotAllowedError' || err?.message?.includes('Permission')
-          ? "Permission camÃ©ra refusÃ©e. Autorisez l'accÃ¨s Ã  l'appareil photo dans Safari/Chrome."
-          : "Impossible de lancer la camÃ©ra. Vous pouvez saisir le code manuellement ci-dessous."
+          ? "Permission caméra refusée. Autorisez l'accès à l'appareil photo dans Safari/Chrome."
+          : "Impossible de lancer la caméra. Vous pouvez saisir le code manuellement ci-dessous."
       )
       setCameraActive(false)
     } finally {
@@ -349,7 +349,7 @@ export function BarcodeScannerModal({
 
   if (!isOpen) return null
 
-  // Ajuster la quantitÃ© dans le panier
+  // Ajuster la quantité dans le panier
   const updateQty = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
@@ -364,13 +364,13 @@ export function BarcodeScannerModal({
     setCart(prev => prev.filter(item => item.id !== id))
   }
 
-  // Valider et insÃ©rer tout le panier dans le cahier
+  // Valider et insérer tout le panier dans le cahier
   const handleValidateSale = () => {
     if (cart.length === 0) return
 
-    // Formater l'Ã©criture propre pour le cahier
-    // ex: "2 Lait Peak Ã  550, 1 Savon Fanico Ã  500"
-    const entries = cart.map(item => `${item.quantity} ${item.name} Ã  ${item.unit_price}`)
+    // Formater l'écriture propre pour le cahier
+    // ex: "2 Lait Peak à 550, 1 Savon Fanico à 500"
+    const entries = cart.map(item => `${item.quantity} ${item.name} à ${item.unit_price}`)
     const formattedText = entries.join(', ')
 
     stopScanner()
@@ -378,13 +378,13 @@ export function BarcodeScannerModal({
     onClose()
   }
 
-  // Sauvegarder un nouveau produit scannÃ©
+  // Sauvegarder un nouveau produit scanné
   const handleSaveUnknown = (e: React.FormEvent) => {
     e.preventDefault()
     if (!unknownBarcode) return
 
     if (selectedExistingId) {
-      // Lier Ã  un produit existant
+      // Lier à un produit existant
       if (onAssociateBarcode) {
         onAssociateBarcode(selectedExistingId, unknownBarcode)
       }
@@ -398,7 +398,7 @@ export function BarcodeScannerModal({
         })
       }
     } else if (newProductName.trim()) {
-      // CrÃ©er un nouveau produit
+      // Créer un nouveau produit
       const price = parseFloat(newProductPrice) || 0
       const newId = `prod_${Date.now()}`
       if (onSaveNewProduct) {
@@ -478,12 +478,12 @@ export function BarcodeScannerModal({
         {/* Corps de la modale */}
         <div className="p-3 sm:p-4 space-y-3 overflow-y-auto flex-1 font-mono text-xs">
           
-          {/* BANNIÃˆRE DE BIP SUCCÃˆS TEMPORAIRE */}
+          {/* BANNIÈRE DE BIP SUCCÈS TEMPORAIRE */}
           {lastBippedName && (
             <div className="p-2.5 bg-emerald-600 text-white rounded-xl flex items-center justify-between shadow-md animate-in slide-in-from-top-2 duration-150">
               <div className="flex items-center gap-2 font-bold text-xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-200 flex-shrink-0" />
-                <span className="truncate">AjoutÃ© : <strong>{lastBippedName}</strong></span>
+                <span className="truncate">Ajouté : <strong>{lastBippedName}</strong></span>
               </div>
               <span className="text-[10px] bg-emerald-800 px-1.5 py-0.5 rounded font-semibold">+1</span>
             </div>
@@ -515,7 +515,7 @@ export function BarcodeScannerModal({
               )}
 
               <form onSubmit={handleSaveUnknown} className="space-y-2">
-                {/* Option 1 : CrÃ©er Nouveau Produit */}
+                {/* Option 1 : Créer Nouveau Produit */}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] font-semibold text-amber-950 uppercase mb-0.5">
@@ -523,7 +523,7 @@ export function BarcodeScannerModal({
                     </label>
                     <input
                       type="text"
-                      placeholder="Ex: Lait ConcentrÃ©"
+                      placeholder="Ex: Lait Concentré"
                       value={newProductName}
                       onChange={e => setNewProductName(e.target.value)}
                       autoFocus
@@ -544,11 +544,11 @@ export function BarcodeScannerModal({
                   </div>
                 </div>
 
-                {/* Option 2 : Ou Lier Ã  un produit dÃ©jÃ  en stock */}
+                {/* Option 2 : Ou Lier à un produit déjà en stock */}
                 {products.length > 0 && (
                   <div>
                     <label className="block text-[10px] font-bold text-gray-600 uppercase mb-0.5">
-                      Ou lier Ã  un article existant :
+                      Ou lier à un article existant :
                     </label>
                     <select
                       value={selectedExistingId}
@@ -577,7 +577,7 @@ export function BarcodeScannerModal({
             </div>
           )}
 
-          {/* Viseur CamÃ©ra */}
+          {/* Viseur Caméra */}
           <div className="relative bg-black rounded-2xl overflow-hidden h-[180px] sm:h-[200px] flex items-center justify-center border-2 border-amber-300 shadow-inner">
             <video
               ref={videoRef}
@@ -586,14 +586,14 @@ export function BarcodeScannerModal({
               muted
             />
 
-            {/* Viseur laser animÃ© */}
+            {/* Viseur laser animé */}
             {cameraActive && (
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-2">
                 <div className="w-56 h-28 border-2 border-amber-400 rounded-2xl bg-amber-400/10 relative flex items-center justify-center shadow-lg overflow-hidden">
-                  <div className="w-full h-0.5 bg-emerald-700 shadow-[0_0_8px_rgba(239,68,68,1)] animate-pulse" />
+                  <div className="w-full h-0.5 bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)] animate-pulse" />
                 </div>
                 <p className="mt-1.5 text-[10px] font-bold text-amber-200 bg-black/60 px-2 py-0.5 rounded-full font-mono">
-                  {unknownBarcode ? 'CamÃ©ra en pause (ComplÃ©tez la fiche)' : 'Bipez vos articles l\'un aprÃ¨s l\'autre'}
+                  {unknownBarcode ? 'Caméra en pause (Complétez la fiche)' : 'Bipez vos articles l\'un après l\'autre'}
                 </p>
               </div>
             )}
@@ -603,18 +603,18 @@ export function BarcodeScannerModal({
                 {isStarting ? (
                   <>
                     <RefreshCw className="w-7 h-7 text-amber-400 animate-spin" />
-                    <p className="font-bold text-xs text-amber-200">Activation de la camÃ©ra...</p>
+                    <p className="font-bold text-xs text-amber-200">Activation de la caméra...</p>
                   </>
                 ) : (
                   <>
                     <Camera className="w-8 h-8 text-amber-500 opacity-80" />
-                    <p className="text-xs text-gray-300 max-w-xs">{cameraError || "CamÃ©ra en attente"}</p>
+                    <p className="text-xs text-gray-300 max-w-xs">{cameraError || "Caméra en attente"}</p>
                     <button
                       type="button"
                       onClick={startScanner}
                       className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm cursor-pointer"
                     >
-                      DÃ©marrer la camÃ©ra
+                      Démarrer la caméra
                     </button>
                   </>
                 )}
@@ -654,7 +654,7 @@ export function BarcodeScannerModal({
 
             {cart.length === 0 ? (
               <div className="py-4 text-center text-gray-400 text-[11px] font-sans">
-                Aucun article scannÃ©. PrÃ©sentez un code-barres devant la camÃ©ra pour commencer la vente.
+                Aucun article scanné. Présentez un code-barres devant la caméra pour commencer la vente.
               </div>
             ) : (
               <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
@@ -666,11 +666,11 @@ export function BarcodeScannerModal({
                     <div className="flex-1 min-w-0 pr-2">
                       <p className="font-semibold text-gray-900 text-xs truncate">{item.name}</p>
                       <p className="text-[10px] text-gray-500 font-mono">
-                        <span className="tabular-nums">{formatPrice(item.unit_price)}</span> Ã— <span className="tabular-nums">{item.quantity}</span> = <strong className="text-emerald-900 tabular-nums">{formatPrice(item.unit_price * item.quantity)}</strong>
+                        <span className="tabular-nums">{formatPrice(item.unit_price)}</span> × <span className="tabular-nums">{item.quantity}</span> = <strong className="text-emerald-900 tabular-nums">{formatPrice(item.unit_price * item.quantity)}</strong>
                       </p>
                     </div>
 
-                    {/* ContrÃ´les de QuantitÃ© */}
+                    {/* Contrôles de Quantité */}
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         type="button"
@@ -713,7 +713,7 @@ export function BarcodeScannerModal({
         {/* Footer : Bouton de Validation Globale de la Vente */}
         <div className="p-3 sm:p-4 bg-amber-100 border-t border-amber-200 flex-shrink-0 flex items-center justify-between gap-3">
           <div className="text-amber-950 font-mono">
-            <p className="text-[10px] font-bold uppercase text-amber-800">Total Ã  encaisser :</p>
+            <p className="text-[10px] font-bold uppercase text-amber-800">Total à encaisser :</p>
             <p className="text-sm font-semibold text-emerald-950 tabular-nums tracking-tight">{formatPrice(totalCartAmount)}</p>
           </div>
 

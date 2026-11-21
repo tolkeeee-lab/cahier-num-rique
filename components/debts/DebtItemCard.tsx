@@ -76,7 +76,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
   const handleSendWhatsAppReminder = (e: React.MouseEvent) => {
     e.stopPropagation()
     const storeLabel = shopName ? `*${shopName}*` : 'notre boutique'
-    const message = `Bonjour ${debt.client_name},\n\nNous vous rappelons amicalement qu'il reste un solde impayÃ© de *${formatPrice(debt.amount_owed)}* sur votre compte chez ${storeLabel}.\n\nMerci de bien vouloir passer Ã  la boutique pour rÃ©gulariser votre situation.\nExcellente journÃ©e !`
+    const message = `Bonjour ${debt.client_name},\n\nNous vous rappelons amicalement qu'il reste un solde impayé de *${formatPrice(debt.amount_owed)}* sur votre compte chez ${storeLabel}.\n\nMerci de bien vouloir passer à la boutique pour régulariser votre situation.\nExcellente journée !`
 
     const url = targetPhone
       ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`
@@ -95,7 +95,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
       }`}
     >
       <div className="p-3.5 space-y-3">
-        {/* En-tÃªte : Avatar + IdentitÃ© + Montant */}
+        {/* En-tête : Avatar + Identité + Montant */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5 min-w-0">
             <div
@@ -139,7 +139,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                 {isDueToday && (
                   <span className="inline-flex items-center gap-1 text-amber-800 font-medium">
                     <Calendar className="w-3 h-3" strokeWidth={1.75} />
-                    <span>Ã‰chÃ©ance aujourd&apos;hui</span>
+                    <span>Échéance aujourd&apos;hui</span>
                   </span>
                 )}
                 {!isOverdue && !isDueToday && debt.due_date && (
@@ -170,16 +170,16 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
               {formatPrice(debt.amount_owed)}
             </div>
             <div className="text-[10px] text-stone-500">
-              {isSettled ? 'SoldÃ©' : 'Reste Ã  payer'}
+              {isSettled ? 'Soldé' : 'Reste à payer'}
             </div>
           </div>
         </div>
 
-        {/* Barre de progression si des acomptes ont dÃ©jÃ  Ã©tÃ© versÃ©s */}
+        {/* Barre de progression si des acomptes ont déjà été versés */}
         {paidAmount > 0 && (
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[11px] text-stone-500 font-mono tabular-nums">
-              <span>DÃ©jÃ  rÃ©glÃ© : {formatPrice(paidAmount)}</span>
+              <span>Déjà réglé : {formatPrice(paidAmount)}</span>
               <span>{paidPercent}%</span>
             </div>
             <div className="h-1.5 w-full bg-stone-900/10 rounded-full overflow-hidden">
@@ -193,7 +193,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
 
         {/* Barre d'actions */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-900/10">
-          {/* Bouton DÃ©tails / Historique */}
+          {/* Bouton Détails / Historique */}
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
@@ -250,12 +250,12 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
         </div>
       </div>
 
-      {/* Historique dÃ©pliable des crÃ©dits & acomptes de ce client */}
+      {/* Historique dépliable des crédits & acomptes de ce client */}
       {expanded && (
         <div className="px-3.5 pb-3.5 pt-2 border-t border-stone-900/10 bg-[#faf5e8]/60 rounded-b-xl space-y-1.5">
           {history.length === 0 ? (
             <p className="text-[11px] text-stone-500">
-              Aucun dÃ©tail d&apos;opÃ©ration locale disponible pour ce compte.
+              Aucun détail d&apos;opération locale disponible pour ce compte.
             </p>
           ) : (
             history.slice(0, 8).map((entry) => {
@@ -263,7 +263,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
               const articleSummary =
                 entry.articles && entry.articles.length > 0
                   ? entry.articles.map((a) => `${a.quantity || 1}x ${a.name || 'Article'}`).join(', ')
-                  : entry.notes || (isPayment ? 'Remboursement' : 'CrÃ©dit')
+                  : entry.notes || (isPayment ? 'Remboursement' : 'Crédit')
 
               return (
                 <div

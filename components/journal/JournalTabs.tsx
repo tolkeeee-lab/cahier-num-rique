@@ -81,7 +81,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
     },
     {
       id: 'analytics' as JournalTab,
-      label: 'ComptabilitÃ© & Bilan',
+      label: 'Comptabilité & Bilan',
       icon: BarChart3,
       show: !isEmployee && features.enableAnalytics && canViewExecutiveDashboard(userRole),
     },
@@ -93,7 +93,7 @@ export const JournalTabs: React.FC<JournalTabsProps> = ({
     },
     {
       id: 'settings' as JournalTab,
-      label: 'RÃ©glages',
+      label: 'Réglages',
       icon: Settings,
       show: !isEmployee && canAccessAdminSettings(userRole),
     },

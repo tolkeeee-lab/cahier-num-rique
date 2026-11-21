@@ -20,7 +20,7 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
   sale,
   onPrintReceipt,
   onReturnItems,
-  shopName = 'Cahier NumÃ©rique',
+  shopName = 'Cahier Numérique',
 }) => {
   const [showReturnModal, setShowReturnModal] = useState(false)
 
@@ -49,26 +49,26 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
     let articlesText = ''
     if (sale.articles && sale.articles.length > 0) {
       articlesText = sale.articles
-        .map((a: any) => `â€¢ ${a.quantity}x ${a.name} (${formatPrice(a.unit_price)}) : ${formatPrice((a.quantity || 1) * (a.unit_price || 0))}`)
+        .map((a: any) => `• ${a.quantity}x ${a.name} (${formatPrice(a.unit_price)}) : ${formatPrice((a.quantity || 1) * (a.unit_price || 0))}`)
         .join('\n')
     } else if (sale.notes) {
-      articlesText = `â€¢ ${sale.notes}`
+      articlesText = `• ${sale.notes}`
     } else {
-      articlesText = `â€¢ Achat comptant : ${formatPrice(total)}`
+      articlesText = `• Achat comptant : ${formatPrice(total)}`
     }
 
-    const receiptText = `ðŸ§¾ *REÃ‡U DE CAISSE* â€” ${shopName}
-ðŸ“… *Date :* ${dateStr}${timeStr ? ` Ã  ${timeStr}` : ''}
-ðŸ‘¤ *Client :* ${clientName}
+    const receiptText = `🧾 *REÇU DE CAISSE* — ${shopName}
+📅 *Date :* ${dateStr}${timeStr ? ` à ${timeStr}` : ''}
+👤 *Client :* ${clientName}
 
-ðŸ“¦ *Articles :*
+📦 *Articles :*
 ${articlesText}
 
 ----------------------------
-ðŸ’° *TOTAL :* ${formatPrice(total)}
-ðŸ’µ *PayÃ© :* ${formatPrice(paid)}
-${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice(debt)}\n` : ''}----------------------------
-ðŸ™ _Merci de votre fidÃ©litÃ© et Ã  bientÃ´t !_`
+💰 *TOTAL :* ${formatPrice(total)}
+💵 *Payé :* ${formatPrice(paid)}
+${debt > 0 ? `💳 *Reste à payer (Dette) :* ${formatPrice(debt)}\n` : ''}----------------------------
+🙏 _Merci de votre fidélité et à bientôt !_`
 
     window.open(`https://wa.me/?text=${encodeURIComponent(receiptText)}`, '_blank')
   }
@@ -82,16 +82,16 @@ ${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice(debt)}\n` : '
     >
       <div className="w-full max-w-lg bg-[#faf5e8] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* En-tÃªte */}
+        {/* En-tête */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-xl bg-amber-100 text-amber-900">
               <Receipt className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-gray-900 font-handwritten tracking-wide">DÃ©tails de la Vente</h3>
+              <h3 className="text-base font-semibold text-gray-900 font-handwritten tracking-wide">Détails de la Vente</h3>
               <p className="text-xs text-gray-600 font-mono">
-                {sale.date} {sale.time ? `Ã  ${sale.time}` : ''} â€¢ {sale.client || sale.client_name || 'Client anonyme'}
+                {sale.date} {sale.time ? `à ${sale.time}` : ''} • {sale.client || sale.client_name || 'Client anonyme'}
               </p>
             </div>
           </div>
@@ -115,7 +115,7 @@ ${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice(debt)}\n` : '
                 <div>
                   <p className="text-xs font-semibold text-gray-900">{art.name}</p>
                   <p className="text-[11px] text-gray-600 font-mono tabular-nums">
-                    {art.quantity} Ã— {formatPrice(art.unit_price)}
+                    {art.quantity} × {formatPrice(art.unit_price)}
                   </p>
                 </div>
                 <span className="text-xs font-mono font-semibold text-amber-950 tabular-nums tracking-tight">
@@ -125,7 +125,7 @@ ${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice(debt)}\n` : '
             ))
           ) : (
             <p className="text-xs text-gray-500 italic text-center py-4 font-mono">
-              {sale.notes ? `Notes : ${sale.notes}` : "Aucun dÃ©tail d'article spÃ©cifique enregistrÃ©."}
+              {sale.notes ? `Notes : ${sale.notes}` : "Aucun détail d'article spécifique enregistré."}
             </p>
           )}
         </div>
@@ -133,11 +133,11 @@ ${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice(debt)}\n` : '
         {/* Bilan financier */}
         <div className="bg-amber-100/90 p-4 rounded-xl border border-amber-300 space-y-2 font-mono text-xs shadow-xs">
           <div className="flex justify-between text-amber-950 font-bold">
-            <span>Total FacturÃ© :</span>
+            <span>Total Facturé :</span>
             <span className="font-semibold text-gray-900 tabular-nums tracking-tight">{formatPrice(sale.total ?? sale.total_amount ?? 0)}</span>
           </div>
           <div className="flex justify-between text-emerald-800 font-bold">
-            <span>Montant EncaissÃ© :</span>
+            <span>Montant Encaissé :</span>
             <span className="font-semibold tabular-nums tracking-tight">{formatPrice(sale.paid ?? sale.paid_amount ?? 0)}</span>
           </div>
           {(sale.debt > 0 || sale.debt_amount > 0) && (

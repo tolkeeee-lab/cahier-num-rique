@@ -8,7 +8,7 @@ import { audioFeedback } from '@/lib/audioFeedback'
 export interface StockSuggestionItem {
   id: string
   name: string
-  price: number // Prix unitaire dÃ©tail
+  price: number // Prix unitaire détail
   category?: string
   stock?: number
   multiplier?: number
@@ -53,7 +53,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
           <span>Articles du Stock ({suggestions.length})</span>
         </div>
         <span className="text-[10px] font-mono text-amber-800/80 hidden sm:inline">
-          SÃ©lectionnez un conditionnement en 1 clic
+          Sélectionnez un conditionnement en 1 clic
         </span>
       </div>
 
@@ -77,7 +77,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
             ? item.quarter_package_price
             : (item.wholesale_price ? Math.round(item.wholesale_price / 4) : Math.round(cartonPrice * 0.27))
 
-          // Stock formatÃ© avec Ã©quivalent cartons
+          // Stock formaté avec équivalent cartons
           let stockLabel = ''
           if (item.stock !== undefined) {
             if (mult > 1 && item.stock >= mult) {
@@ -94,9 +94,9 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
           return (
             <div
               key={item.id}
-              className="p-2 bg-emerald-700 border border-amber-200/90 rounded-xl space-y-1.5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.9)]"
+              className="p-2.5 bg-[#faf5e8] border border-[#e2d6be] rounded-xl space-y-1.5"
             >
-              {/* En-tÃªte du produit */}
+              {/* En-tête du produit */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Package className="w-3.5 h-3.5 text-amber-800 flex-shrink-0" />
@@ -120,7 +120,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                         onOpenTactileSheet(item)
                       }}
                       className="px-1.5 py-0.5 bg-amber-200/60 hover:bg-amber-300/80 border border-amber-300/80 text-amber-950 rounded-md transition-colors active:scale-95 flex items-center gap-1 text-[10px] font-bold cursor-pointer"
-                      title="Ouvrir la feuille de vente tactile avancÃ©e"
+                      title="Ouvrir la feuille de vente tactile avancée"
                     >
                       <SlidersHorizontal className="w-3 h-3 text-amber-800" />
                       <span>Tactile</span>
@@ -145,22 +145,22 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
 
               {/* Puces de conditionnement 1-Clic */}
               <div className="flex flex-wrap items-center gap-1.5">
-                {/* 1. Palier DÃ©tail (Ã€ l'unitÃ©) */}
+                {/* 1. Palier Détail (À l'unité) */}
                 <button
                   type="button"
                   onClick={() => {
                     audioFeedback.playPenClick()
                     const total = item.price * qty
                     onSelectSuggestion(item, {
-                      label: 'DÃ©tail',
-                      inputText: `${qty} ${item.name} Ã  ${item.price}`,
+                      label: 'Détail',
+                      inputText: `${qty} ${item.name} à ${item.price}`,
                       price: total,
                       piecesCount: qty,
                     })
                   }}
                   className="px-2.5 py-1 bg-white hover:bg-amber-100/80 border border-amber-300/80 hover:border-amber-400 text-amber-950 rounded-lg text-xs font-bold transition-transform duration-100 ease-out active:scale-[0.97] cursor-pointer flex items-center gap-1 shadow-2xs"
                 >
-                  <span className="text-[10px] text-gray-600 font-sans">{qty > 1 ? `${qty} DÃ©tail` : '1 PiÃ¨ce'}</span>
+                  <span className="text-[10px] text-gray-600 font-sans">{qty > 1 ? `${qty} Détail` : '1 Pièce'}</span>
                   <span className="font-mono text-[11px] font-semibold text-amber-900 tabular-nums">
                     {formatPrice(item.price * qty)}
                   </span>
@@ -176,7 +176,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                       const pieces = Math.max(1, Math.round(mult * 0.25)) * qty
                       onSelectSuggestion(item, {
                         label: '1/4 carton',
-                        inputText: `${qty > 1 ? `${qty} ` : ''}1/4 ${pkgName} de ${item.name} Ã  ${total}`,
+                        inputText: `${qty > 1 ? `${qty} ` : ''}1/4 ${pkgName} de ${item.name} à ${total}`,
                         price: total,
                         piecesCount: pieces,
                       })
@@ -202,7 +202,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                       const pieces = Math.max(1, Math.round(mult * 0.5)) * qty
                       onSelectSuggestion(item, {
                         label: '1/2 carton',
-                        inputText: `${qty > 1 ? `${qty} ` : ''}1/2 ${pkgName} de ${item.name} Ã  ${total}`,
+                        inputText: `${qty > 1 ? `${qty} ` : ''}1/2 ${pkgName} de ${item.name} à ${total}`,
                         price: total,
                         piecesCount: pieces,
                       })
@@ -228,7 +228,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                       const pieces = mult * qty
                       onSelectSuggestion(item, {
                         label: 'Carton',
-                        inputText: `${qty} ${pkgName} de ${item.name} Ã  ${total}`,
+                        inputText: `${qty} ${pkgName} de ${item.name} à ${total}`,
                         price: total,
                         piecesCount: pieces,
                       })
@@ -244,7 +244,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                   </button>
                 )}
 
-                {/* 5. Palier Lot DÃ©gressif */}
+                {/* 5. Palier Lot Dégressif */}
                 {hasLot && item.lot_quantity && item.lot_price && (
                   <button
                     type="button"
@@ -254,7 +254,7 @@ export const StockSuggestionsBubble: React.FC<StockSuggestionsBubbleProps> = ({
                       const pieces = item.lot_quantity! * qty
                       onSelectSuggestion(item, {
                         label: `Lot de ${item.lot_quantity}`,
-                        inputText: `${qty > 1 ? `${qty} ` : ''}lot de ${item.lot_quantity} de ${item.name} Ã  ${total}`,
+                        inputText: `${qty > 1 ? `${qty} ` : ''}lot de ${item.lot_quantity} de ${item.name} à ${total}`,
                         price: total,
                         piecesCount: pieces,
                       })

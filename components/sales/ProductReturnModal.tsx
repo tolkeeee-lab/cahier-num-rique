@@ -41,7 +41,7 @@ export function ProductReturnModal({
   onClose,
   sale,
   onConfirmReturn,
-  shopName = 'Cahier NumÃ©rique',
+  shopName = 'Cahier Numérique',
 }: ProductReturnModalProps) {
   const [returnQuantities, setReturnQuantities] = useState<Record<string, number>>({})
   const [refundMode, setRefundMode] = useState<'cash' | 'credit_note'>('cash')
@@ -50,7 +50,7 @@ export function ProductReturnModal({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Articles Ã©ligibles au retour
+  // Articles éligibles au retour
   const articles = useMemo(() => {
     if (!sale?.articles || !Array.isArray(sale.articles) || sale.articles.length === 0) {
       if (sale?.notes && sale?.total) {
@@ -74,7 +74,7 @@ export function ProductReturnModal({
     }
   }, [isOpen, articles])
 
-  // Calcul du montant total Ã  rembourser
+  // Calcul du montant total à rembourser
   const { totalRefundAmount, returnedItemsList } = useMemo(() => {
     let total = 0
     const items: ReturnedItem[] = []
@@ -108,7 +108,7 @@ export function ProductReturnModal({
 
   const handleSubmit = async () => {
     if (returnedItemsList.length === 0) {
-      setError('Veuillez sÃ©lectionner au moins 1 article Ã  retourner.')
+      setError('Veuillez sélectionner au moins 1 article à retourner.')
       return
     }
 
@@ -153,7 +153,7 @@ export function ProductReturnModal({
                 Retour & Remboursement
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                Vente de {sale.client || 'Client'} du {sale.date} â€¢ {shopName}
+                Vente de {sale.client || 'Client'} du {sale.date} • {shopName}
               </p>
             </div>
           </div>
@@ -176,7 +176,7 @@ export function ProductReturnModal({
         {/* Liste des articles de la vente */}
         <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
           <label className="text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-400">
-            Articles de la vente Ã  retourner
+            Articles de la vente à retourner
           </label>
           
           {articles.map((art: any, idx: number) => {
@@ -198,11 +198,11 @@ export function ProductReturnModal({
                     {art.name}
                   </div>
                   <div className="text-xs text-slate-500 font-mono tabular-nums">
-                    {formatPrice(art.unit_price)} l'unitÃ© â€¢ AchetÃ© : {maxQty}
+                    {formatPrice(art.unit_price)} l'unité • Acheté : {maxQty}
                   </div>
                 </div>
 
-                {/* SÃ©lecteur de quantitÃ© tactile */}
+                {/* Sélecteur de quantité tactile */}
                 <div className="flex items-center gap-2 shrink-0 bg-white border border-slate-200 rounded-xl p-1 shadow-xs">
                   <button
                     type="button"
@@ -243,10 +243,10 @@ export function ProductReturnModal({
             >
               <div className="flex items-center gap-1.5 text-xs font-semibold">
                 <Coins className="w-3.5 h-3.5" />
-                <span>EspÃ¨ces (Caisse)</span>
+                <span>Espèces (Caisse)</span>
               </div>
               <p className={`text-[11px] mt-0.5 ${refundMode === 'cash' ? 'text-slate-300' : 'text-slate-500'}`}>
-                Sortie de caisse immÃ©diate
+                Sortie de caisse immédiate
               </p>
             </button>
 
@@ -264,12 +264,12 @@ export function ProductReturnModal({
                 <span>Avoir Client</span>
               </div>
               <p className={`text-[11px] mt-0.5 ${refundMode === 'credit_note' ? 'text-slate-300' : 'text-slate-500'}`}>
-                CrÃ©dit pour prochain achat
+                Crédit pour prochain achat
               </p>
             </button>
           </div>
 
-          {/* Option RÃ©intÃ©gration Stock */}
+          {/* Option Réintégration Stock */}
           <label className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50/60 border border-emerald-200 cursor-pointer">
             <input
               type="checkbox"
@@ -292,7 +292,7 @@ export function ProductReturnModal({
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Ex: Produit dÃ©fectueux, erreur sur la commande..."
+              placeholder="Ex: Produit défectueux, erreur sur la commande..."
               className="w-full mt-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900"
             />
           </div>
@@ -302,7 +302,7 @@ export function ProductReturnModal({
         <div className="bg-slate-900 text-white rounded-2xl p-4 flex items-center justify-between shadow-lg">
           <div>
             <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-400">
-              Montant Ã  compenser
+              Montant à compenser
             </span>
             <div className="text-xl font-semibold font-mono tabular-nums text-white">
               {formatPrice(totalRefundAmount)}

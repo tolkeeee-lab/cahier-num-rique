@@ -69,42 +69,42 @@ export const ReceiptShareModal: React.FC<ReceiptShareModalProps> = ({
   let articlesText = ''
   if (sale.articles && sale.articles.length > 0) {
     articlesText = sale.articles
-      .map(a => `â€¢ ${a.quantity}x ${a.name} (${formatPrice(a.unit_price)}) : ${formatPrice(a.quantity * a.unit_price)}`)
+      .map(a => `• ${a.quantity}x ${a.name} (${formatPrice(a.unit_price)}) : ${formatPrice(a.quantity * a.unit_price)}`)
       .join('\n')
   } else if (sale.notes) {
-    articlesText = `â€¢ ${sale.notes}`
+    articlesText = `• ${sale.notes}`
   } else {
-    articlesText = `â€¢ Achat comptant : ${formatPrice(total)}`
+    articlesText = `• Achat comptant : ${formatPrice(total)}`
   }
 
   const shopHeaderLines = [
-    `ðŸ§¾ *REÃ‡U DE CAISSE* â€” ${shopName}`,
-    shopAddress ? `ðŸ“ ${shopAddress}` : '',
-    shopPhone ? `ðŸ“ž ${shopPhone}` : '',
-    `ðŸ“… *Date :* ${dateStr} Ã  ${timeStr}`,
-    `ðŸ‘¤ *Client :* ${clientName}`,
+    `🧾 *REÇU DE CAISSE* — ${shopName}`,
+    shopAddress ? `📍 ${shopAddress}` : '',
+    shopPhone ? `📞 ${shopPhone}` : '',
+    `📅 *Date :* ${dateStr} à ${timeStr}`,
+    `👤 *Client :* ${clientName}`,
   ].filter(Boolean).join('\n')
 
   const changeLines = amountGiven && changeReturned !== undefined && changeReturned >= 0
-    ? `ðŸ’µ *Montant remis :* ${formatPrice(amountGiven)}\nðŸ¤ *Monnaie rendue :* ${formatPrice(changeReturned)}\n`
+    ? `💵 *Montant remis :* ${formatPrice(amountGiven)}\n🤝 *Monnaie rendue :* ${formatPrice(changeReturned)}\n`
     : ''
 
   const receiptText = `${shopHeaderLines}
 
-ðŸ“¦ *Articles :*
+📦 *Articles :*
 ${articlesText}
 
 ----------------------------
-ðŸ’° *TOTAL :* ${formatPrice(total)}
-ðŸ’µ *PayÃ© :* ${formatPrice(paid)}
-${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice(debt)}\n` : ''}----------------------------
-ðŸ™ _Merci de votre confiance et Ã  trÃ¨s bientÃ´t !_`
+💰 *TOTAL :* ${formatPrice(total)}
+💵 *Payé :* ${formatPrice(paid)}
+${changeLines}${debt > 0 ? `💳 *Reste à payer (Dette) :* ${formatPrice(debt)}\n` : ''}----------------------------
+🙏 _Merci de votre confiance et à très bientôt !_`
 
   const getCleanPhoneNumber = (phone: string): string => {
     const digitsOnly = phone.replace(/[^\d+]/g, '')
     if (!digitsOnly) return ''
     if (digitsOnly.startsWith('+')) return digitsOnly.replace('+', '')
-    // Si format local 10 chiffres (CÃ´te d'Ivoire 01/05/07)
+    // Si format local 10 chiffres (Côte d'Ivoire 01/05/07)
     if (digitsOnly.length === 10 && digitsOnly.startsWith('0')) {
       return `225${digitsOnly.slice(1)}`
     }
@@ -123,11 +123,11 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
     if (!navigator.share) return
     try {
       await navigator.share({
-        title: `ReÃ§u de caisse - ${shopName}`,
+        title: `Reçu de caisse - ${shopName}`,
         text: receiptText,
       })
     } catch {
-      // Annulation ou non supportÃ©
+      // Annulation ou non supporté
     }
   }
 
@@ -148,12 +148,12 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
     >
       <div className="w-full max-w-md bg-[#faf5e8] border-2 border-amber-300 rounded-3xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* EntÃªte */}
+        {/* Entête */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-2.5">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
             <h3 className="text-base font-semibold text-gray-900 font-handwritten tracking-wide">
-              ReÃ§u NumÃ©rique WhatsApp
+              Reçu Numérique WhatsApp
             </h3>
           </div>
           <button
@@ -166,11 +166,11 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
           </button>
         </div>
 
-        {/* Saisie facultative du tÃ©lÃ©phone WhatsApp */}
+        {/* Saisie facultative du téléphone WhatsApp */}
         <div className="space-y-1">
           <label className="text-[11px] font-mono font-bold text-amber-950 uppercase flex items-center gap-1.5">
             <Phone className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
-            <span>NÂ° WhatsApp du Client (Optionnel) :</span>
+            <span>N° WhatsApp du Client (Optionnel) :</span>
           </label>
           <input
             type="tel"
@@ -180,11 +180,11 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
             className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-xs text-gray-900 font-mono tabular-nums tracking-tight placeholder-gray-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500 shadow-inner"
           />
           <p className="text-[10px] text-amber-900/70 font-mono">
-            {clientPhone.trim() ? 'âœ“ Envoi direct sur la conversation de ce numÃ©ro.' : 'ðŸ’¡ Laissez vide pour choisir le contact directement dans WhatsApp.'}
+            {clientPhone.trim() ? '✓ Envoi direct sur la conversation de ce numéro.' : '💡 Laissez vide pour choisir le contact directement dans WhatsApp.'}
           </p>
         </div>
 
-        {/* AperÃ§u Ticket de Caisse */}
+        {/* Aperçu Ticket de Caisse */}
         <div className="bg-white p-3.5 rounded-2xl border border-amber-200 shadow-inner font-mono text-xs whitespace-pre-wrap text-gray-800 leading-relaxed max-h-52 overflow-y-auto">
           {receiptText}
         </div>
@@ -197,7 +197,7 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
             className="py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono active:scale-[0.97] flex-1 min-w-[110px]"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-700" strokeWidth={1.75} /> : <Copy className="w-4 h-4 text-amber-800" strokeWidth={1.75} />}
-            <span>{copied ? 'CopiÃ© !' : 'Copier texte'}</span>
+            <span>{copied ? 'Copié !' : 'Copier texte'}</span>
           </button>
 
           {canNativeShare && (

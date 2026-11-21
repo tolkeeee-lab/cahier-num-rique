@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Sparkles, RefreshCw, X } from 'lucide-react'
+import { RefreshCw, X } from 'lucide-react'
 
 /**
  * PwaUpdateBanner.tsx
@@ -141,7 +141,7 @@ export function PwaUpdateBanner() {
       >
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-400">
-            <Sparkles className="w-5 h-5 animate-pulse" strokeWidth={1.75} />
+            <RefreshCw className="w-4 h-4" strokeWidth={1.75} />
           </div>
           <div className="min-w-0">
             <h2 className="text-xs font-semibold text-white tracking-tight leading-tight">

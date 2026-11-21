@@ -49,10 +49,10 @@ export function HouseholdBudgetWidget({
     let totalReserve = 0
 
     const categoryMap: Record<string, number> = {
-      'Alimentation & MarchÃ©': 0,
+      'Alimentation & Marché': 0,
       'Loyer, Gaz & Maison': 0,
-      'ScolaritÃ© & Enfants': 0,
-      'SantÃ© & HygiÃ¨ne': 0,
+      'Scolarité & Enfants': 0,
+      'Santé & Hygiène': 0,
       'Transport & Comms': 0,
       'Divers & Autres': 0,
     }
@@ -73,14 +73,14 @@ export function HouseholdBudgetWidget({
         totalSorties += paidVal
 
         const notesLower = (s.notes || '').toLowerCase()
-        if (/riz|huile|pain|viande|poisson|marchÃ©|lait|nourriture/i.test(notesLower)) {
-          categoryMap['Alimentation & MarchÃ©'] += paidVal
+        if (/riz|huile|pain|viande|poisson|marché|lait|nourriture/i.test(notesLower)) {
+          categoryMap['Alimentation & Marché'] += paidVal
         } else if (/loyer|gaz|courant|eau|cie|sodeci|maison/i.test(notesLower)) {
           categoryMap['Loyer, Gaz & Maison'] += paidVal
-        } else if (/Ã©cole|ecole|scolaritÃ©|cahier|tenue|livre/i.test(notesLower)) {
-          categoryMap['ScolaritÃ© & Enfants'] += paidVal
-        } else if (/pharmacie|mÃ©dicament|savon|couche|soin/i.test(notesLower)) {
-          categoryMap['SantÃ© & HygiÃ¨ne'] += paidVal
+        } else if (/école|ecole|scolarité|cahier|tenue|livre/i.test(notesLower)) {
+          categoryMap['Scolarité & Enfants'] += paidVal
+        } else if (/pharmacie|médicament|savon|couche|soin/i.test(notesLower)) {
+          categoryMap['Santé & Hygiène'] += paidVal
         } else if (/essence|carburant|taxi|transport|deplacement/i.test(notesLower)) {
           categoryMap['Transport & Comms'] += paidVal
         } else {
@@ -134,7 +134,7 @@ export function HouseholdBudgetWidget({
         )
       })()}
 
-      {/* Bilan SynthÃ©tique */}
+      {/* Bilan Synthétique */}
       <HouseholdMonthlyComparison
         income={budgetStats.totalEntrees}
         expenses={budgetStats.totalSorties}
@@ -142,7 +142,7 @@ export function HouseholdBudgetWidget({
         netBalance={budgetStats.resteAVivre}
       />
 
-      {/* Ventilation par CatÃ©gories */}
+      {/* Ventilation par Catégories */}
       <HouseholdCategoryChart
         categories={budgetStats.sortedCategories}
         totalExpenses={budgetStats.totalSorties}

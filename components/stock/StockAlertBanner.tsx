@@ -35,7 +35,7 @@ export const StockAlertBanner: React.FC<StockAlertBannerProps> = ({
           <p className="text-[11px] text-amber-900 font-mono">
             {outOfStockCount > 0 && (
               <span className="text-rose-700 font-semibold">
-                <span className="tabular-nums">{outOfStockCount}</span> Ã©puisÃ©(s).{' '}
+                <span className="tabular-nums">{outOfStockCount}</span> épuisé(s).{' '}
               </span>
             )}
             {lowStockCount > 0 && (
@@ -69,12 +69,12 @@ export const StockAlertBanner: React.FC<StockAlertBannerProps> = ({
             onClick={onAddOutOfStockToShoppingList}
             disabled={isAddingToShoppingList}
             className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-[0.97] disabled:opacity-50"
-            title="Ajouter automatiquement les produits en alerte Ã  la liste de courses"
+            title="Ajouter automatiquement les produits en alerte à la liste de courses"
           >
             {addedCount ? (
               <>
                 <Check className="w-3.5 h-3.5 text-white" strokeWidth={2} />
-                <span>{addedCount} ajoutÃ©(s) aux courses !</span>
+                <span>{addedCount} ajouté(s) aux courses !</span>
               </>
             ) : (
               <>

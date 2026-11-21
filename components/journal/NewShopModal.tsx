@@ -45,7 +45,7 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
     >
       <div className="w-full max-w-md bg-[#faf5e8] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* EntÃªte Modale */}
+        {/* Entête Modale */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-800">
@@ -79,7 +79,7 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
 
           <div>
             <label className="block text-xs font-mono font-semibold text-amber-950 uppercase mb-1.5">
-              Type d'ActivitÃ© :
+              Type d'Activité :
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
@@ -139,7 +139,7 @@ export const NewShopModal: React.FC<NewShopModalProps> = ({
             disabled={!newShopName.trim()}
             className="px-5 py-2 bg-emerald-700 text-white text-xs font-semibold rounded-xl hover:bg-emerald-800 active:scale-[0.97] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md cursor-pointer"
           >
-            CrÃ©er la Boutique
+            Créer la Boutique
           </button>
         </div>
       </div>

@@ -21,7 +21,7 @@ export const DataExportBackupSettings: React.FC<DataExportBackupSettingsProps> =
     <div className="bg-white/90 p-4 sm:p-5 rounded-2xl border border-amber-300/80 space-y-4 shadow-sm">
       <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
         <Download className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-        <h4 className="text-sm font-semibold text-gray-900">Sauvegarde & Nettoyage des DonnÃ©es</h4>
+        <h4 className="text-sm font-semibold text-gray-900">Sauvegarde & Nettoyage des Données</h4>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -33,14 +33,14 @@ export const DataExportBackupSettings: React.FC<DataExportBackupSettingsProps> =
             className="flex items-center justify-between p-3.5 sm:p-4 bg-amber-50/70 rounded-xl border border-amber-200 hover:border-amber-400 active:scale-[0.98] transition-colors duration-100 ease-out text-left cursor-pointer shadow-2xs"
           >
             <div>
-              <p className="text-xs font-semibold text-gray-900">Sauvegarde ComplÃ¨te (JSON)</p>
+              <p className="text-xs font-semibold text-gray-900">Sauvegarde Complète (JSON)</p>
               <p className="text-[11px] text-gray-600 font-mono">Exporter l'ensemble de votre cahier</p>
             </div>
             <Download className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
           </button>
         )}
 
-        {/* Bouton de Suppression SÃ©lective / RÃ©initialisation */}
+        {/* Bouton de Suppression Sélective / Réinitialisation */}
         <button
           type="button"
           onClick={() => setShowPurgeModal(true)}
@@ -49,17 +49,17 @@ export const DataExportBackupSettings: React.FC<DataExportBackupSettingsProps> =
           <div>
             <p className="text-xs font-semibold text-rose-900 flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4 text-rose-700" strokeWidth={1.75} />
-              <span>Supprimer / RÃ©initialiser des DonnÃ©es</span>
+              <span>Supprimer / Réinitialiser des Données</span>
             </p>
             <p className="text-[11px] text-rose-700/80 font-mono">
-              Effacer les ventes, dettes ou stock avec choix sÃ©lectif
+              Effacer les ventes, dettes ou stock avec choix sélectif
             </p>
           </div>
           <Trash2 className="w-5 h-5 text-rose-600 flex-shrink-0" strokeWidth={1.75} />
         </button>
       </div>
 
-      {/* Modale de suppression sÃ©lective */}
+      {/* Modale de suppression sélective */}
       <SelectiveDataPurgeModal
         isOpen={showPurgeModal}
         onClose={() => setShowPurgeModal(false)}

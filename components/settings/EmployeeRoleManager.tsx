@@ -60,11 +60,11 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
       }
 
       if (data?.inviteSent) {
-        setFeedback({ type: 'success', msg: `EmployÃ© ajoutÃ© & e-mail d'invitation envoyÃ© Ã  ${email} (VÃ©rifiez les Spams / IndÃ©sirables)` })
+        setFeedback({ type: 'success', msg: `Employé ajouté & e-mail d'invitation envoyé à ${email} (Vérifiez les Spams / Indésirables)` })
       } else if (data?.inviteError) {
-        setFeedback({ type: 'success', msg: `EmployÃ© ajoutÃ© au systÃ¨me (${data.inviteError})` })
+        setFeedback({ type: 'success', msg: `Employé ajouté au système (${data.inviteError})` })
       } else {
-        setFeedback({ type: 'success', msg: `EmployÃ© ajoutÃ© pour ${email} (VÃ©rifiez les Spams / IndÃ©sirables)` })
+        setFeedback({ type: 'success', msg: `Employé ajouté pour ${email} (Vérifiez les Spams / Indésirables)` })
       }
 
       setNameInput('')
@@ -81,7 +81,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
     <div className="bg-white/90 p-5 rounded-2xl border border-amber-300/80 space-y-4 shadow-sm">
       <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
         <Users className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-        <h4 className="text-sm font-semibold text-gray-900">Gestion des EmployÃ©s & Droits</h4>
+        <h4 className="text-sm font-semibold text-gray-900">Gestion des Employés & Droits</h4>
       </div>
 
       {/* Formulaire d'invitation */}
@@ -91,7 +91,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
             type="text"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
-            placeholder="PrÃ©nom et nom de l'employÃ© (optionnel)..."
+            placeholder="Prénom et nom de l'employé (optionnel)..."
             className="flex-grow px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-bold placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner"
           />
         </div>
@@ -100,7 +100,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
             type="email"
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}
-            placeholder="Adresse e-mail de l'employÃ© (obligatoire)..."
+            placeholder="Adresse e-mail de l'employé (obligatoire)..."
             required
             className="flex-grow px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-bold placeholder-gray-400 focus:outline-none focus:border-amber-500 shadow-inner"
           />
@@ -109,8 +109,8 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
             onChange={(e) => setRoleInput(e.target.value as 'admin' | 'employee')}
             className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
           >
-            <option value="employee">Vendeur / EmployÃ©</option>
-            <option value="admin">GÃ©rant / Admin</option>
+            <option value="employee">Vendeur / Employé</option>
+            <option value="admin">Gérant / Admin</option>
           </select>
           <button
             type="submit"
@@ -130,7 +130,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
         )}
       </form>
 
-      {/* Liste de l'Ã©quipe */}
+      {/* Liste de l'équipe */}
       <div className="space-y-2 pt-2">
         {employees.map((emp) => (
           <div
@@ -154,7 +154,7 @@ export const EmployeeRoleManager: React.FC<EmployeeRoleManagerProps> = ({
                   type="button"
                   onClick={() => onRemoveEmployee(emp.id)}
                   className="p-1 text-rose-600 hover:text-rose-800 active:scale-[0.97] transition-colors duration-100 ease-out cursor-pointer"
-                  title="Retirer l'employÃ©"
+                  title="Retirer l'employé"
                 >
                   <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                 </button>

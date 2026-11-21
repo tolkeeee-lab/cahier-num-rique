@@ -4,11 +4,11 @@ import { formatPrice } from '@/lib/productUtils'
 /**
  * PriceChangeDialog.tsx
  *
- * Dialogue d'alerte quand le prix saisi est diffÃ©rent du prix mÃ©morisÃ© dans le catalogue.
+ * Dialogue d'alerte quand le prix saisi est différent du prix mémorisé dans le catalogue.
  *
  * Deux choix :
- * - "Mettre Ã  jour" â†’ enregistre avec le nouveau prix ET met Ã  jour le catalogue
- * - "Garder l'ancien" â†’ enregistre avec l'ancien prix sans changer le catalogue
+ * - "Mettre à jour" → enregistre avec le nouveau prix ET met à jour le catalogue
+ * - "Garder l'ancien" → enregistre avec l'ancien prix sans changer le catalogue
  */
 
 import React from 'react'
@@ -19,7 +19,7 @@ interface PriceChangeDialogProps {
   productName: string
   oldLotPrice: number
   newLotPrice: number
-  packaging: string     // 'unitÃ©' ou 'carton', etc.
+  packaging: string     // 'unité' ou 'carton', etc.
   onAcceptNewPrice: () => Promise<void>    // Enregistre avec nouveau prix + MAJ catalogue
   onKeepOldPrice: () => Promise<void>     // Enregistre avec l'ancien prix
   onCancel: () => void
@@ -55,7 +55,7 @@ export function PriceChangeDialog({
   const diff = newLotPrice - oldLotPrice
   const isIncrease = diff > 0
   const pctChange = Math.abs(Math.round((diff / oldLotPrice) * 100))
-  const isUnit = packaging === 'unitÃ©' || !packaging
+  const isUnit = packaging === 'unité' || !packaging
 
   const handleAccept = async () => {
     setLoadingAccept(true)
@@ -76,7 +76,7 @@ export function PriceChangeDialog({
     >
       <div className="bg-[#fffdf2] border border-amber-400 rounded-[24px] p-5 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
 
-        {/* En-tÃªte */}
+        {/* En-tête */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" strokeWidth={1.75} />
@@ -93,14 +93,14 @@ export function PriceChangeDialog({
 
         {/* Info produit */}
         <p className="text-sm text-gray-700">
-          Le prix saisi pour <span className="font-bold text-gray-900">Â« {productName} Â»</span>{' '}
-          {!isUnit && `(par ${packaging})`} est diffÃ©rent de votre catalogue.
+          Le prix saisi pour <span className="font-bold text-gray-900">« {productName} »</span>{' '}
+          {!isUnit && `(par ${packaging})`} est différent de votre catalogue.
         </p>
 
         {/* Comparaison */}
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-500 font-semibold">Prix mÃ©morisÃ©</span>
+            <span className="text-xs text-gray-500 font-semibold">Prix mémorisé</span>
             <span className="font-mono font-bold text-gray-700 tabular-nums">{formatPrice(oldLotPrice)}</span>
           </div>
           <div className="flex justify-between items-center">
@@ -110,7 +110,7 @@ export function PriceChangeDialog({
             </span>
           </div>
           <div className="border-t border-amber-200 pt-2 flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-600">Ã‰cart</span>
+            <span className="text-xs font-bold text-gray-600">Écart</span>
             <div className={`flex items-center gap-1 text-xs font-bold tabular-nums ${isIncrease ? 'text-red-600' : 'text-emerald-600'}`}>
               {isIncrease
                 ? <TrendingUp className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -124,8 +124,8 @@ export function PriceChangeDialog({
         {/* Explication */}
         <p className="text-xs text-gray-600">
           {isIncrease
-            ? 'Le prix saisi est supÃ©rieur au tarif habituel. Souhaitez-vous actualiser votre catalogue ?'
-            : 'Le prix saisi est infÃ©rieur au tarif habituel. Souhaitez-vous actualiser votre catalogue ?'
+            ? 'Le prix saisi est supérieur au tarif habituel. Souhaitez-vous actualiser votre catalogue ?'
+            : 'Le prix saisi est inférieur au tarif habituel. Souhaitez-vous actualiser votre catalogue ?'
           }
         </p>
 

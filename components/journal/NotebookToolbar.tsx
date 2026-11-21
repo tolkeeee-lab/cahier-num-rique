@@ -41,7 +41,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
 }) => {
   const [breakdownType, setBreakdownType] = useState<'all' | 'blue' | 'red' | 'green' | 'purple' | 'yellow' | 'total' | null>(null)
 
-  // Calcul des totaux par stylo / catÃ©gorie (Ignore les demandes clients Ã  0 FCFA)
+  // Calcul des totaux par stylo / catégorie (Ignore les demandes clients à 0 FCFA)
   const validSales = sales.filter(s => s.status !== 'crossed_out' && s.type !== 'client_request')
 
   const getPenAmount = (penId: string) => {
@@ -79,7 +79,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
   return (
     <>
       <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none w-full select-none text-xs font-mono">
-        {/* â”€â”€ AU DÃ‰BUT : TOUS â”€â”€ */}
+        {/* ── AU DÉBUT : TOUS ── */}
         <button
           type="button"
           onClick={() => {
@@ -91,7 +91,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
               ? 'bg-amber-950 text-amber-100 border-amber-950 shadow-xs scale-102 ring-2 ring-amber-400/80'
               : 'bg-white/90 text-gray-800 border-amber-300/80 hover:bg-amber-100 shadow-2xs'
           }`}
-          title="Afficher toutes les Ã©critures"
+          title="Afficher toutes les écritures"
         >
           <ClipboardList className="w-3.5 h-3.5" />
           <span>TOUS</span>
@@ -102,7 +102,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
           </span>
         </button>
 
-        {/* â”€â”€ AU MILIEU : Les 5 Stylos â”€â”€ */}
+        {/* ── AU MILIEU : Les 5 Stylos ── */}
         {pens.map((pen) => {
           const isSelected = selectedPen === pen.id
 
@@ -144,7 +144,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
           )
         })}
 
-        {/* â”€â”€ Ã€ LA FIN : BOUTON TOTAL / SOLDE NET (Active le Calcul en Page) â”€â”€ */}
+        {/* ── À LA FIN : BOUTON TOTAL / SOLDE NET (Active le Calcul en Page) ── */}
         <button
           type="button"
           onClick={() => {
@@ -167,7 +167,7 @@ export const NotebookToolbar: React.FC<NotebookToolbarProps> = ({
         </button>
       </div>
 
-      {/* Cadre Modal des Calculs et DÃ©tails */}
+      {/* Cadre Modal des Calculs et Détails */}
       {breakdownType && (
         <CategoryBreakdownModal
           isOpen={!!breakdownType}

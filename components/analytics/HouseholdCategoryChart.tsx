@@ -22,12 +22,12 @@ export const HouseholdCategoryChart: React.FC<HouseholdCategoryChartProps> = ({
     <div className="bg-white/90 p-4 rounded-2xl border border-amber-300/80 space-y-4 shadow-sm">
       <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
         <PieChart className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-        <h4 className="text-sm font-semibold text-gray-900">Postes de DÃ©penses Foyer</h4>
+        <h4 className="text-sm font-semibold text-gray-900">Postes de Dépenses Foyer</h4>
       </div>
 
       {categories.length === 0 || categories.every(c => c.amount === 0) ? (
         <div className="py-6 text-center text-xs font-mono italic text-gray-500 bg-amber-50/50 rounded-xl border border-dashed border-amber-200">
-          Aucune dÃ©pense enregistrÃ©e sur cette pÃ©riode.
+          Aucune dépense enregistrée sur cette période.
         </div>
       ) : (
         <div className="space-y-3">

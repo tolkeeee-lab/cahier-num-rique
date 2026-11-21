@@ -81,7 +81,7 @@ export function CategoryCashboxWidget({
         return
       }
       const sign = delta > 0 ? '+' : '-'
-      noteText = `Ajustement Caisse (${adjustingGroup.name}) : Ã‰cart ${sign}${Math.abs(delta)} F ${adjustNote ? `(${adjustNote})` : ''}`
+      noteText = `Ajustement Caisse (${adjustingGroup.name}) : Écart ${sign}${Math.abs(delta)} F ${adjustNote ? `(${adjustNote})` : ''}`
     } else if (adjustMode === 'add') {
       const val = parseCash(actualCashInput)
       if (val <= 0) return
@@ -151,7 +151,7 @@ export function CategoryCashboxWidget({
         markAsSynced(sId, localSale.id)
       }
     } catch (err) {
-      console.warn('Sauvegarde rÃ©seau Ã©chouÃ©e, conservÃ© en local:', err)
+      console.warn('Sauvegarde réseau échouée, conservé en local:', err)
     } finally {
       setSavingAdjust(false)
       setAdjustingGroup(null)
@@ -181,7 +181,7 @@ export function CategoryCashboxWidget({
     return list
   }, [breakdown])
 
-  // Totaux GÃ©nÃ©raux Caisse Unique
+  // Totaux Généraux Caisse Unique
   const unifiedTotals = useMemo(() => {
     let totalStockSale = 0
     let totalStockCost = 0
@@ -213,7 +213,7 @@ export function CategoryCashboxWidget({
 
   return (
     <div className="bg-[#fffdf9] border-2 border-amber-900/15 rounded-3xl p-5 shadow-sm space-y-4 font-sans">
-      {/* En-tÃªte avec SÃ©lecteur de Mode (Caisse Unique vs Multi-Caisses) */}
+      {/* En-tête avec Sélecteur de Mode (Caisse Unique vs Multi-Caisses) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-amber-100 pb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-amber-900 text-amber-100 flex items-center justify-center font-bold shadow-xs">
@@ -221,17 +221,17 @@ export function CategoryCashboxWidget({
           </div>
           <div>
             <h3 className="font-handwritten text-lg font-bold text-amber-950">
-              Gestion de Caisse & TrÃ©sorerie
+              Gestion de Caisse & Trésorerie
             </h3>
             <p className="text-xs text-amber-800 font-medium">
               {cashboxMode === 'unified' 
-                ? 'Mode Caisse Unique (Toutes les Ã©critures regroupÃ©es)' 
-                : 'Mode Multi-Caisses (Fonds de roulement sÃ©parÃ©s par rayon)'}
+                ? 'Mode Caisse Unique (Toutes les écritures regroupées)' 
+                : 'Mode Multi-Caisses (Fonds de roulement séparés par rayon)'}
             </p>
           </div>
         </div>
 
-        {/* Boutons d'interrupteur Caisse Unique â†” Multi-Caisses */}
+        {/* Boutons d'interrupteur Caisse Unique ↔ Multi-Caisses */}
         <div className="flex items-center gap-1 bg-amber-100/70 p-1 rounded-2xl border border-amber-300 self-start md:self-auto text-xs font-bold font-mono">
           <button
             onClick={() => setCashboxMode('unified')}
@@ -268,7 +268,7 @@ export function CategoryCashboxWidget({
                 <div>
                   <h4 className="font-bold text-base text-amber-100">Caisse Commune Centrale</h4>
                   <span className="text-[10px] text-amber-300 font-mono">
-                    Ensemble des recettes, dÃ©penses et stocks de la boutique ({unifiedTotals.itemCount} rÃ©fÃ©rences)
+                    Ensemble des recettes, dépenses et stocks de la boutique ({unifiedTotals.itemCount} références)
                   </span>
                 </div>
               </div>
@@ -308,35 +308,35 @@ export function CategoryCashboxWidget({
               <div className="p-3 bg-amber-950/70 border border-amber-800/70 rounded-xl space-y-1">
                 <span className="text-[9.5px] uppercase font-bold text-amber-300 block">Chiffre d'Affaires</span>
                 <span className="text-base font-bold text-amber-100 block">{formatPrice(unifiedTotals.revenue)}</span>
-                <span className="text-[9px] text-emerald-400">Cash encaissÃ© : {formatPrice(unifiedTotals.paidCash)}</span>
+                <span className="text-[9px] text-emerald-400">Cash encaissé : {formatPrice(unifiedTotals.paidCash)}</span>
               </div>
 
               <div className="p-3 bg-amber-950/70 border border-amber-800/70 rounded-xl space-y-1">
                 <span className="text-[9.5px] uppercase font-bold text-amber-300 block">Capital Stock Total</span>
                 <span className="text-base font-bold text-amber-100 block">{formatPrice(unifiedTotals.stockValueSale)}</span>
-                <span className="text-[9px] text-amber-300/80">CoÃ»t d'achat : {formatPrice(unifiedTotals.stockValueCost)}</span>
+                <span className="text-[9px] text-amber-300/80">Coût d'achat : {formatPrice(unifiedTotals.stockValueCost)}</span>
               </div>
 
               <div className="p-3 bg-amber-950/70 border border-amber-800/70 rounded-xl space-y-1">
-                <span className="text-[9.5px] uppercase font-bold text-amber-300 block">CrÃ©dits Clients</span>
+                <span className="text-[9.5px] uppercase font-bold text-amber-300 block">Crédits Clients</span>
                 <span className="text-base font-bold text-amber-200 block">{formatPrice(unifiedTotals.debt)}</span>
-                <span className="text-[9px] text-amber-300/80">Reste Ã  recouvrer</span>
+                <span className="text-[9px] text-amber-300/80">Reste à recouvrer</span>
               </div>
 
               <div className="p-3 bg-amber-950/70 border border-amber-800/70 rounded-xl space-y-1">
-                <span className="text-[9.5px] uppercase font-bold text-amber-300 block">DÃ©penses Cash</span>
+                <span className="text-[9.5px] uppercase font-bold text-amber-300 block">Dépenses Cash</span>
                 <span className="text-base font-bold text-rose-300 block">-{formatPrice(unifiedTotals.expenses)}</span>
                 <span className="text-[9px] text-rose-300/80">Sorties de caisse</span>
               </div>
             </div>
 
-            {/* AccordÃ©on de dÃ©tail optionnel */}
+            {/* Accordéon de détail optionnel */}
             <div className="pt-1 flex justify-end">
               <button
                 onClick={() => setShowDetailInUnified(!showDetailInUnified)}
                 className="text-xs font-bold text-amber-200 hover:text-white flex items-center gap-1 font-mono transition-colors"
               >
-                <span>{showDetailInUnified ? 'Masquer la rÃ©partition par rayon' : 'Afficher la rÃ©partition par rayon (Boissons / Divers)'}</span>
+                <span>{showDetailInUnified ? 'Masquer la répartition par rayon' : 'Afficher la répartition par rayon (Boissons / Divers)'}</span>
                 {showDetailInUnified ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
             </div>
@@ -373,7 +373,7 @@ export function CategoryCashboxWidget({
           )}
         </div>
       ) : (
-        /* MODE 2 : MULTI-CAISSES (PAR RAYON SEPARÃ‰S) */
+        /* MODE 2 : MULTI-CAISSES (PAR RAYON SEPARÉS) */
         <div className="space-y-4">
           {onSelectCashboxFilter && (
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs font-bold font-mono">
@@ -428,7 +428,7 @@ export function CategoryCashboxWidget({
 
               return (
                 <div key={group.key} className={`border rounded-2xl p-4 space-y-3.5 shadow-xs ${themeClass}`}>
-                  {/* EntÃªte Caisse avec bouton Ajuster */}
+                  {/* Entête Caisse avec bouton Ajuster */}
                   <div className="flex items-center justify-between border-b border-black/5 pb-2">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-white/90 rounded-xl border border-black/5 shadow-2xs">
@@ -437,7 +437,7 @@ export function CategoryCashboxWidget({
                       <div>
                         <h4 className="font-bold text-sm text-gray-900">{group.name}</h4>
                         <span className="text-[10px] text-gray-500 font-medium">
-                          {group.itemCount} rÃ©fÃ©rence(s) en stock
+                          {group.itemCount} référence(s) en stock
                         </span>
                       </div>
                     </div>
@@ -462,7 +462,7 @@ export function CategoryCashboxWidget({
                     </div>
                   </div>
 
-                  {/* Chiffres ClÃ©s de la Caisse */}
+                  {/* Chiffres Clés de la Caisse */}
                   <div className="grid grid-cols-2 gap-2.5 font-mono">
                     <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-1">
                       <span className="text-[9.5px] uppercase font-bold text-gray-500 block">
@@ -478,7 +478,7 @@ export function CategoryCashboxWidget({
 
                     <div className="p-3 bg-white border border-gray-200/80 rounded-xl space-y-1">
                       <span className="text-[9.5px] uppercase font-bold text-gray-500 block">
-                        Capital Stock (ImmobilisÃ©)
+                        Capital Stock (Immobilisé)
                       </span>
                       <span className="text-base font-bold text-gray-900 block tabular-nums">
                         {formatPrice(group.stockValueSale)}
@@ -489,18 +489,18 @@ export function CategoryCashboxWidget({
                     </div>
                   </div>
 
-                  {/* DÃ©tails CrÃ©dits & DÃ©penses du rayon */}
+                  {/* Détails Crédits & Dépenses du rayon */}
                   <div className="flex items-center justify-between text-xs font-mono pt-1">
                     <div className="flex items-center gap-1.5 text-amber-900">
                       <span className="w-2 h-2 rounded-full bg-amber-500 inline-block flex-shrink-0" />
-                      <span>CrÃ©dits en cours :</span>
+                      <span>Crédits en cours :</span>
                       <strong className="font-bold tabular-nums">{formatPrice(group.debt)}</strong>
                     </div>
 
                     {group.expenses > 0 && (
                       <div className="text-red-700 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
-                        <span>DÃ©penses rayon : <strong className="tabular-nums">-{formatPrice(group.expenses)}</strong></span>
+                        <span>Dépenses rayon : <strong className="tabular-nums">-{formatPrice(group.expenses)}</strong></span>
                       </div>
                     )}
                   </div>
@@ -511,7 +511,7 @@ export function CategoryCashboxWidget({
         </div>
       )}
 
-      {/* â”€â”€ Modal d'Ajustement Physique de Caisse â”€â”€ */}
+      {/* ── Modal d'Ajustement Physique de Caisse ── */}
       {adjustingGroup && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-[#fffdf8] border-2 border-amber-400 rounded-3xl p-5 max-w-md w-full shadow-2xl space-y-4 font-sans animate-in zoom-in-95 duration-150">
@@ -541,7 +541,7 @@ export function CategoryCashboxWidget({
 
             <div className="bg-amber-100/60 border border-amber-300 rounded-2xl p-3 text-xs font-mono space-y-1">
               <div className="flex justify-between text-gray-700">
-                <span>Cash ThÃ©orique CalculÃ© :</span>
+                <span>Cash Théorique Calculé :</span>
                 <strong className="text-amber-950 font-bold">{formatPrice(adjustingGroup.paidCash)}</strong>
               </div>
             </div>
@@ -549,7 +549,7 @@ export function CategoryCashboxWidget({
             {/* Mode d'Ajustement */}
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase font-bold text-gray-600 tracking-normal block font-mono">
-                Type d'opÃ©ration :
+                Type d'opération :
               </label>
               <div className="grid grid-cols-3 gap-1.5 text-[11px] font-bold font-mono">
                 <button
@@ -616,19 +616,19 @@ export function CategoryCashboxWidget({
                     if (diff === 0) return (
                       <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Compte exact, aucun Ã©cart.</span>
+                        <span>Compte exact, aucun écart.</span>
                       </span>
                     )
                     if (diff > 0) return (
                       <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
                         <TrendingUp className="w-3.5 h-3.5" />
-                        <span>ExcÃ©dent dÃ©tectÃ© : +{formatPrice(diff)}</span>
+                        <span>Excédent détecté : +{formatPrice(diff)}</span>
                       </span>
                     )
                     return (
                       <span className="inline-flex items-center gap-1 text-rose-700 font-bold">
                         <AlertTriangle className="w-3.5 h-3.5" />
-                        <span>Manquant dÃ©tectÃ© : {formatPrice(diff)}</span>
+                        <span>Manquant détecté : {formatPrice(diff)}</span>
                       </span>
                     )
                   })()}

@@ -21,13 +21,13 @@ export const HouseholdMonthlyComparison: React.FC<HouseholdMonthlyComparisonProp
     <div className="bg-white/90 p-4 rounded-2xl border border-amber-300/80 space-y-4 shadow-sm">
       <div className="flex items-center gap-2 border-b border-amber-200 pb-3">
         <Calendar className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
-        <h4 className="text-sm font-semibold text-gray-900">Bilan Mensuel SynthÃ©tique</h4>
+        <h4 className="text-sm font-semibold text-gray-900">Bilan Mensuel Synthétique</h4>
       </div>
 
       <div className="grid grid-cols-2 gap-3 font-mono text-xs">
         <div className="bg-blue-50/90 p-3 rounded-xl border border-blue-200 space-y-1 shadow-xs">
           <p className="text-blue-800 font-semibold flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5 text-blue-600" strokeWidth={1.75} /> EntrÃ©es
+            <TrendingUp className="w-3.5 h-3.5 text-blue-600" strokeWidth={1.75} /> Entrées
           </p>
           <p className="text-sm font-semibold text-blue-950 tabular-nums tracking-tight">{formatPrice(income)}</p>
         </div>
@@ -40,12 +40,12 @@ export const HouseholdMonthlyComparison: React.FC<HouseholdMonthlyComparisonProp
         </div>
 
         <div className="bg-emerald-50/90 p-3 rounded-xl border border-emerald-200 space-y-1 shadow-xs">
-          <p className="text-emerald-800 font-semibold">RÃ©serve Stock</p>
+          <p className="text-emerald-800 font-semibold">Réserve Stock</p>
           <p className="text-sm font-semibold text-emerald-950 tabular-nums tracking-tight">{formatPrice(reserve)}</p>
         </div>
 
         <div className="bg-amber-100/90 p-3 rounded-xl border border-amber-300 space-y-1 shadow-xs">
-          <p className="text-amber-900 font-semibold">Reste Ã  Vivre</p>
+          <p className="text-amber-900 font-semibold">Reste à Vivre</p>
           <p className="text-sm font-semibold text-amber-950 tabular-nums tracking-tight">{formatPrice(netBalance)}</p>
         </div>
       </div>

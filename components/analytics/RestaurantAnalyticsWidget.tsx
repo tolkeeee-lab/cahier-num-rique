@@ -56,7 +56,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
           const unitPrice = Number(art.unit_price || 0)
           const qty = Number(art.quantity || 1)
           const rev = unitPrice * qty
-          const isBar = nameLower.includes('biÃ¨re') || nameLower.includes('coca') || nameLower.includes('fanta') || nameLower.includes('sprite') || nameLower.includes('jus') || nameLower.includes('eau') || nameLower.includes('boisson') || nameLower.includes('vin') || nameLower.includes('bouteille') || art.category === 'Boissons'
+          const isBar = nameLower.includes('bière') || nameLower.includes('coca') || nameLower.includes('fanta') || nameLower.includes('sprite') || nameLower.includes('jus') || nameLower.includes('eau') || nameLower.includes('boisson') || nameLower.includes('vin') || nameLower.includes('bouteille') || art.category === 'Boissons'
 
           if (isBar) {
             totalBar += rev
@@ -103,7 +103,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
 
   return (
     <div className="space-y-6">
-      {/* En-tÃªte Resto */}
+      {/* En-tête Resto */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-amber-200 shadow-sm">
         <div className="flex items-center gap-2.5">
           <div className="p-2.5 bg-amber-100/80 rounded-2xl text-amber-800 flex items-center justify-center">
@@ -120,7 +120,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Boutons PÃ©riode */}
+          {/* Boutons Période */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border border-gray-200">
             {[
               { id: 'all', label: 'Tout' },
@@ -154,7 +154,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
         </div>
       </div>
 
-      {/* 4 KPIs ClÃ©s Cuisine & Bar */}
+      {/* 4 KPIs Clés Cuisine & Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-[24px] p-4 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
@@ -197,15 +197,15 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
         </div>
       </div>
 
-      {/* DualitÃ© Cuisine vs Bar (Graphique Comparatif) */}
+      {/* Dualité Cuisine vs Bar (Graphique Comparatif) */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
           <Scale className="w-5 h-5 text-amber-700" />
-          <span>Ã‰quilibre Recettes Cuisine vs Bar</span>
+          <span>Équilibre Recettes Cuisine vs Bar</span>
         </h3>
 
         <div className="space-y-3">
-          {/* Barre de rÃ©partition */}
+          {/* Barre de répartition */}
           <div className="h-6 w-full bg-gray-100 rounded-2xl overflow-hidden flex shadow-inner border border-gray-200">
             <div
               className="bg-amber-600 text-white font-mono font-bold text-[10px] flex items-center justify-center transition-colors overflow-hidden"
@@ -240,7 +240,7 @@ export function RestaurantAnalyticsWidget({ sales, period, onPeriodChange, shopN
         </div>
       </div>
 
-      {/* PalmarÃ¨s de la Carte (Top Plats & Boissons) */}
+      {/* Palmarès de la Carte (Top Plats & Boissons) */}
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm space-y-4">
         <h3 className="font-handwritten text-xl font-bold text-gray-800 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-amber-600" />

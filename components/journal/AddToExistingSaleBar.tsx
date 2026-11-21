@@ -4,12 +4,12 @@
  * AddToExistingSaleBar.tsx
  *
  * Barre de saisie qui remplace la barre WhatsApp quand l'utilisateur
- * veut ajouter un article Ã  une vente dÃ©jÃ  enregistrÃ©e.
+ * veut ajouter un article à une vente déjà enregistrée.
  *
- * Affiche le mode "Ajout Ã  vente" avec le nom du client cible.
- * Bouton Annuler pour revenir Ã  la saisie normale.
+ * Affiche le mode "Ajout à vente" avec le nom du client cible.
+ * Bouton Annuler pour revenir à la saisie normale.
  *
- * 100% UI â€” pas de logique mÃ©tier.
+ * 100% UI — pas de logique métier.
  */
 
 import React from 'react'
@@ -32,15 +32,15 @@ export function AddToExistingSaleBar({
   onSubmit,
   onCancel,
   isSubmitting,
-  placeholder = 'ex: 2 Sardines Ã  500',
+  placeholder = 'ex: 2 Sardines à 500',
 }: AddToExistingSaleBarProps) {
   return (
     <div className="flex-shrink-0 border-t-2 border-dashed border-blue-300 bg-blue-50/60 rounded-xl px-3 py-2 space-y-2">
-      {/* En-tÃªte */}
+      {/* En-tête */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-blue-700 flex items-center gap-1">
           <Plus className="w-3.5 h-3.5 text-blue-700" />
-          <span>Ajouter Ã  la vente de <span className="text-blue-900 font-semibold">{clientName}</span></span>
+          <span>Ajouter à la vente de <span className="text-blue-900 font-semibold">{clientName}</span></span>
         </span>
         <button
           type="button"

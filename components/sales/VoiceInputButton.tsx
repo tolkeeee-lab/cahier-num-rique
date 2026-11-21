@@ -71,7 +71,7 @@ export const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
           ? 'bg-red-500 text-white border-red-400 animate-pulse shadow-lg'
           : 'bg-[#2a2421] text-amber-400 border-gray-800 hover:bg-[#342d29]'
       }`}
-      title={isListening ? 'Ã‰coute en cours...' : 'DictÃ©e vocale (WebSpeech)'}
+      title={isListening ? 'Écoute en cours...' : 'Dictée vocale (WebSpeech)'}
     >
       {isListening ? <MicOff className="w-4 h-4" strokeWidth={1.75} /> : <Mic className="w-4 h-4" strokeWidth={1.75} />}
     </button>

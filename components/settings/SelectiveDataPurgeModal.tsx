@@ -20,7 +20,7 @@ export function SelectiveDataPurgeModal({
   const [options, setOptions] = useState<PurgeOptions>({
     deleteSales: true,
     deleteDebts: true,
-    deleteProducts: false, // Par dÃ©faut on propose de garder le catalogue
+    deleteProducts: false, // Par défaut on propose de garder le catalogue
     deleteShopping: true,
     deleteRequests: true,
     deleteTactileMenu: false,
@@ -70,7 +70,7 @@ export function SelectiveDataPurgeModal({
     setIsPurging(false)
 
     if (result.success) {
-      setPurgeMessage('DonnÃ©es supprimÃ©es avec succÃ¨s !')
+      setPurgeMessage('Données supprimées avec succès !')
       setTimeout(() => {
         if (onPurgeComplete) onPurgeComplete()
         window.location.reload()
@@ -94,7 +94,7 @@ export function SelectiveDataPurgeModal({
     >
       <div className="w-full max-w-lg bg-[#fffdf5] border-2 border-rose-400 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto font-sans">
         
-        {/* EntÃªte */}
+        {/* Entête */}
         <div className="flex items-center justify-between border-b border-rose-200 pb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-rose-100 border border-rose-300 text-rose-700 flex items-center justify-center shadow-2xs flex-shrink-0">
@@ -102,7 +102,7 @@ export function SelectiveDataPurgeModal({
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900 font-handwritten tracking-wide">
-                Suppression SÃ©lective des DonnÃ©es
+                Suppression Sélective des Données
               </h3>
               <p className="text-xs text-gray-500 font-mono">
                 Choisissez ce que vous souhaitez effacer ou conserver.
@@ -118,10 +118,10 @@ export function SelectiveDataPurgeModal({
           </button>
         </div>
 
-        {/* Ã‰tape 1 : SÃ©lection des modules Ã  effacer */}
+        {/* Étape 1 : Sélection des modules à effacer */}
         {!confirmStep && (
           <div className="space-y-4 font-mono text-xs">
-            {/* Raccourcis de sÃ©lection */}
+            {/* Raccourcis de sélection */}
             <div className="flex items-center justify-between gap-2 flex-wrap text-[11px] bg-amber-50/80 p-2.5 rounded-xl border border-amber-200/80">
               <span className="font-bold text-amber-950">Options rapides :</span>
               <div className="flex items-center gap-2">
@@ -132,7 +132,7 @@ export function SelectiveDataPurgeModal({
                 >
                   Tout cocher
                 </button>
-                <span>â€¢</span>
+                <span>•</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -152,7 +152,7 @@ export function SelectiveDataPurgeModal({
               </div>
             </div>
 
-            {/* Liste des cases Ã  cocher */}
+            {/* Liste des cases à cocher */}
             <div className="space-y-2">
               {/* Ventes */}
               <label
@@ -169,9 +169,9 @@ export function SelectiveDataPurgeModal({
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5 font-semibold text-xs">
                     <BookOpen className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
-                    <span>Ventes & Ã‰critures du Journal</span>
+                    <span>Ventes & Écritures du Journal</span>
                   </div>
-                  <p className="text-[10px] text-gray-500">Toutes les opÃ©rations d'entrÃ©es, sorties et dÃ©penses saisies au cahier.</p>
+                  <p className="text-[10px] text-gray-500">Toutes les opérations d'entrées, sorties et dépenses saisies au cahier.</p>
                 </div>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${options.deleteSales ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
                   {options.deleteSales ? 'SUPPRIMER' : 'GARDER'}
@@ -193,9 +193,9 @@ export function SelectiveDataPurgeModal({
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5 font-semibold text-xs">
                     <Users className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
-                    <span>Dettes & CrÃ©dits (Clients & Grossistes)</span>
+                    <span>Dettes & Crédits (Clients & Grossistes)</span>
                   </div>
-                  <p className="text-[10px] text-gray-500">Le carnet des crÃ©dits accordÃ©s et des dettes fournisseurs.</p>
+                  <p className="text-[10px] text-gray-500">Le carnet des crédits accordés et des dettes fournisseurs.</p>
                 </div>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${options.deleteDebts ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
                   {options.deleteDebts ? 'SUPPRIMER' : 'GARDER'}
@@ -219,7 +219,7 @@ export function SelectiveDataPurgeModal({
                     <Package className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
                     <span>Catalogue de Stock & Produits</span>
                   </div>
-                  <p className="text-[10px] text-gray-500">Liste des articles enregistrÃ©s, prix unitaires et seuils d'alerte.</p>
+                  <p className="text-[10px] text-gray-500">Liste des articles enregistrés, prix unitaires et seuils d'alerte.</p>
                 </div>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${options.deleteProducts ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
                   {options.deleteProducts ? 'SUPPRIMER' : 'GARDER'}
@@ -243,7 +243,7 @@ export function SelectiveDataPurgeModal({
                     <ShoppingCart className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
                     <span>Liste de Courses & Ravitaillement</span>
                   </div>
-                  <p className="text-[10px] text-gray-500">Articles Ã  acheter et paniers d'approvisionnement.</p>
+                  <p className="text-[10px] text-gray-500">Articles à acheter et paniers d'approvisionnement.</p>
                 </div>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${options.deleteShopping ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
                   {options.deleteShopping ? 'SUPPRIMER' : 'GARDER'}
@@ -265,9 +265,9 @@ export function SelectiveDataPurgeModal({
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5 font-semibold text-xs">
                     <ClipboardList className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
-                    <span>Demandes Clients RÃ©clamÃ©es</span>
+                    <span>Demandes Clients Réclamées</span>
                   </div>
-                  <p className="text-[10px] text-gray-500">Historique des articles demandÃ©s par les clients.</p>
+                  <p className="text-[10px] text-gray-500">Historique des articles demandés par les clients.</p>
                 </div>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${options.deleteRequests ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
                   {options.deleteRequests ? 'SUPPRIMER' : 'GARDER'}
@@ -291,7 +291,7 @@ export function SelectiveDataPurgeModal({
                     <Zap className="w-3.5 h-3.5 text-rose-700" strokeWidth={1.75} />
                     <span>Raccourcis Tactiles 1-Tap</span>
                   </div>
-                  <p className="text-[10px] text-gray-500">Boutons de vente rapide configurÃ©s sur le tiroir.</p>
+                  <p className="text-[10px] text-gray-500">Boutons de vente rapide configurés sur le tiroir.</p>
                 </div>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${options.deleteTactileMenu ? 'bg-rose-200 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
                   {options.deleteTactileMenu ? 'SUPPRIMER' : 'GARDER'}
@@ -316,26 +316,26 @@ export function SelectiveDataPurgeModal({
                 className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-[0.97] text-white font-semibold rounded-xl transition-colors shadow-md disabled:opacity-40 flex items-center gap-2 cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" strokeWidth={1.75} />
-                <span>Continuer ({selectedCount} sÃ©lectionnÃ©{selectedCount > 1 ? 's' : ''})</span>
+                <span>Continuer ({selectedCount} sélectionné{selectedCount > 1 ? 's' : ''})</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* Ã‰tape 2 : Confirmation stricte avant action irrÃ©versible */}
+        {/* Étape 2 : Confirmation stricte avant action irréversible */}
         {confirmStep && (
           <div className="space-y-4 font-mono text-xs animate-in fade-in duration-200">
             <div className="p-4 bg-rose-100/90 border border-rose-300 rounded-2xl space-y-2 text-rose-950">
               <div className="flex items-center gap-2 font-semibold text-sm text-rose-900">
                 <AlertTriangle className="w-5 h-5 text-rose-700 flex-shrink-0" strokeWidth={1.75} />
-                <span>Attention : Action IrrÃ©versible !</span>
+                <span>Attention : Action Irréversible !</span>
               </div>
               <p className="text-xs">
-                Vous Ãªtes sur le point de supprimer dÃ©finitivement :
+                Vous êtes sur le point de supprimer définitivement :
               </p>
               <ul className="list-disc pl-5 space-y-1 font-bold">
-                {options.deleteSales && <li>Ventes et Ã©critures du journal</li>}
-                {options.deleteDebts && <li>Dettes et crÃ©dits</li>}
+                {options.deleteSales && <li>Ventes et écritures du journal</li>}
+                {options.deleteDebts && <li>Dettes et crédits</li>}
                 {options.deleteProducts && <li>Catalogue de produits et stock</li>}
                 {options.deleteShopping && <li>Liste de courses</li>}
                 {options.deleteRequests && <li>Demandes clients</li>}

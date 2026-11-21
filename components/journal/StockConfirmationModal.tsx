@@ -4,10 +4,10 @@ import { formatPrice } from '@/lib/productUtils'
 /**
  * StockConfirmationModal.tsx
  *
- * Modale de confirmation rapide pour un rÃ©approvisionnement de produit connu.
- * Affiche les tarifs mÃ©morisÃ©s (coÃ»t d'achat + prix de vente) et demande confirmation.
+ * Modale de confirmation rapide pour un réapprovisionnement de produit connu.
+ * Affiche les tarifs mémorisés (coût d'achat + prix de vente) et demande confirmation.
  *
- * DÃ©clenchÃ© quand : "stock 2 Flag" â†’ Flag est dÃ©jÃ  dans le catalogue avec un unit_cost > 0
+ * Déclenché quand : "stock 2 Flag" → Flag est déjà dans le catalogue avec un unit_cost > 0
  */
 
 import React from 'react'
@@ -61,7 +61,7 @@ export function StockConfirmationModal({
 
   if (!isOpen) return null
 
-  const isUnit = packaging === 'unitÃ©' || !packaging
+  const isUnit = packaging === 'unité' || !packaging
   const lotPrice = product.unit_cost * multiplier
   const totalLotPrice = lotPrice * quantity
   const totalUnits = quantity * multiplier
@@ -84,11 +84,11 @@ export function StockConfirmationModal({
     >
       <div className="bg-[#fffdf2] border border-emerald-300 rounded-[24px] p-5 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
 
-        {/* En-tÃªte */}
+        {/* En-tête */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-emerald-600" strokeWidth={1.75} />
-            <h3 className="font-bold text-gray-900">RÃ©approvisionnement</h3>
+            <h3 className="font-bold text-gray-900">Réapprovisionnement</h3>
           </div>
           <button
             type="button"
@@ -105,7 +105,7 @@ export function StockConfirmationModal({
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">QuantitÃ©</p>
+              <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">Quantité</p>
               <p className="font-mono font-bold text-gray-900 tabular-nums">
                 {quantity} {isUnit ? `${unit}(s)` : `${packaging}(s)`}
               </p>
@@ -118,7 +118,7 @@ export function StockConfirmationModal({
             )}
             <div>
               <p className="text-gray-500 uppercase font-bold tracking-wide text-[9px]">
-                CoÃ»t {isUnit ? 'unitaire' : `/ ${packaging}`}
+                Coût {isUnit ? 'unitaire' : `/ ${packaging}`}
               </p>
               <p className="font-mono font-bold text-emerald-700 tabular-nums">{formatPrice(lotPrice)}</p>
             </div>
@@ -129,7 +129,7 @@ export function StockConfirmationModal({
           </div>
         </div>
 
-        {/* Total calculÃ© */}
+        {/* Total calculé */}
         <div className="border-t border-dashed border-emerald-200 pt-3">
           <div className="flex justify-between items-center">
             <div>

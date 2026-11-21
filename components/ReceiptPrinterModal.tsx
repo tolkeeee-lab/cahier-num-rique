@@ -36,7 +36,7 @@ export function ReceiptPrinterModal({
   isOpen,
   onClose,
   sale,
-  shopName = 'Cahier NumÃ©rique',
+  shopName = 'Cahier Numérique',
 }: ReceiptPrinterModalProps) {
   const [paperWidth, setPaperWidth] = useState<'58mm' | '80mm'>('58mm')
   const [copied, setCopied] = useState(false)
@@ -75,34 +75,34 @@ export function ReceiptPrinterModal({
     const clientName = sale.client || (sale as any).client_name
 
     const lines: string[] = [
-      `ðŸ§¾ *${shopName.toUpperCase()}*`,
-      `Date : ${sale.date}${sale.time ? ` Ã  ${sale.time}` : ''}`,
-      `RÃ©f : #${sale.id.slice(0, 8)}`,
+      `🧾 *${shopName.toUpperCase()}*`,
+      `Date : ${sale.date}${sale.time ? ` à ${sale.time}` : ''}`,
+      `Réf : #${sale.id.slice(0, 8)}`,
     ]
 
     if (clientName) {
       lines.push(`Client : ${clientName}`)
     }
 
-    lines.push('â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€')
+    lines.push('────────────────────────')
 
     if (sale.articles && sale.articles.length > 0) {
       sale.articles.forEach(art => {
-        lines.push(`â€¢ ${art.quantity}x ${art.name} (${formatPrice(art.unit_price)}) = ${formatPrice(art.quantity * art.unit_price)}`)
+        lines.push(`• ${art.quantity}x ${art.name} (${formatPrice(art.unit_price)}) = ${formatPrice(art.quantity * art.unit_price)}`)
       })
     } else {
-      lines.push(`â€¢ ${sale.notes || 'Vente'} = ${formatPrice(effectiveTotal)}`)
+      lines.push(`• ${sale.notes || 'Vente'} = ${formatPrice(effectiveTotal)}`)
     }
 
-    lines.push('â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€')
+    lines.push('────────────────────────')
     lines.push(`*TOTAL :* ${formatPrice(effectiveTotal)}`)
-    lines.push(`PayÃ© : ${formatPrice(effectivePaid)}`)
+    lines.push(`Payé : ${formatPrice(effectivePaid)}`)
 
     if (debtAmount > 0) {
-      lines.push(`*Reste dÃ» (Dette) :* ${formatPrice(debtAmount)}`)
+      lines.push(`*Reste dû (Dette) :* ${formatPrice(debtAmount)}`)
     }
 
-    lines.push('â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€')
+    lines.push('────────────────────────')
     lines.push('Merci de votre confiance !')
 
     return lines.join('\n')
@@ -131,7 +131,7 @@ export function ReceiptPrinterModal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      {/* Styles CSS dÃ©diÃ©s Ã  l'impression thermique */}
+      {/* Styles CSS dédiés à l'impression thermique */}
       <style jsx global>{`
         @media print {
           body * {
@@ -190,7 +190,7 @@ export function ReceiptPrinterModal({
           </div>
         </div>
 
-        {/* AperÃ§u du reÃ§u thermique */}
+        {/* Aperçu du reçu thermique */}
         <div className="p-5 max-h-[65vh] overflow-y-auto bg-gray-100 flex justify-center">
           <div
             id="thermal-receipt-printable"
@@ -198,14 +198,14 @@ export function ReceiptPrinterModal({
               paperWidth === '58mm' ? 'w-[230px]' : 'w-[300px]'
             }`}
           >
-            {/* En-tÃªte ticket */}
+            {/* En-tête ticket */}
             <div className="text-center pb-2 border-b border-dashed border-black">
               <div className="font-bold text-sm uppercase tracking-normal">{shopName}</div>
-              <div className="text-[10px] text-gray-600 mt-0.5">ReÃ§u de caisse</div>
+              <div className="text-[10px] text-gray-600 mt-0.5">Reçu de caisse</div>
               <div className="text-[9px] mt-1">
-                Date: {sale.date} {sale.time ? `â€¢ ${sale.time}` : ''}
+                Date: {sale.date} {sale.time ? `• ${sale.time}` : ''}
               </div>
-              <div className="text-[9px] text-gray-500">RÃ©f: #{sale.id.slice(0, 8)}</div>
+              <div className="text-[9px] text-gray-500">Réf: #{sale.id.slice(0, 8)}</div>
               {(() => {
                 const clientName = sale.client || (sale as any).client_name
                 return clientName ? (
@@ -232,7 +232,7 @@ export function ReceiptPrinterModal({
                 ))
               ) : (
                 <div className="flex justify-between font-mono tabular-nums">
-                  <span>{sale.notes || 'Vente enregistrÃ©e'}</span>
+                  <span>{sale.notes || 'Vente enregistrée'}</span>
                   <span>{formatPrice(sale.total ?? (sale as any).total_amount ?? 0)}</span>
                 </div>
               )}
@@ -255,12 +255,12 @@ export function ReceiptPrinterModal({
                     <span>{formatPrice(effectiveTotal)}</span>
                   </div>
                   <div className="flex justify-between text-gray-800">
-                    <span>Montant PayÃ© :</span>
+                    <span>Montant Payé :</span>
                     <span>{formatPrice(effectivePaid)}</span>
                   </div>
                   {debtAmount > 0 && (
                     <div className="flex justify-between font-bold text-red-700 bg-red-50 p-1 rounded-sm mt-1">
-                      <span>RESTANT DÃ› (DETTE) :</span>
+                      <span>RESTANT DÛ (DETTE) :</span>
                       <span>{formatPrice(debtAmount)}</span>
                     </div>
                   )}
@@ -271,8 +271,8 @@ export function ReceiptPrinterModal({
             {/* Pied de page */}
             <div className="text-center pt-3 text-[9px] text-gray-600 space-y-0.5">
               <p className="font-bold uppercase">Merci de votre visite !</p>
-              <p>Ã€ bientÃ´t dans notre boutique</p>
-              <p className="text-[8px] pt-1 opacity-70">GÃ©nÃ©rÃ© par Cahier NumÃ©rique PWA</p>
+              <p>À bientôt dans notre boutique</p>
+              <p className="text-[8px] pt-1 opacity-70">Généré par Cahier Numérique PWA</p>
             </div>
           </div>
         </div>
@@ -287,7 +287,7 @@ export function ReceiptPrinterModal({
               {copied ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-600" strokeWidth={1.75} />
-                  <span className="text-emerald-700">CopiÃ© !</span>
+                  <span className="text-emerald-700">Copié !</span>
                 </>
               ) : (
                 <>

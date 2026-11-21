@@ -25,12 +25,12 @@ export const DebtSummaryCards: React.FC<DebtSummaryCardsProps> = ({
 
   return (
     <div className={`grid grid-cols-1 ${isEmployee ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-2.5`}>
-      {/* CrÃ©ances Clients (Argent Dehors) */}
+      {/* Créances Clients (Argent Dehors) */}
       <div className="bg-[#faf5e8] px-4 py-3 rounded-xl border border-stone-900/10 space-y-1">
         <div className="flex items-center justify-between text-xs text-stone-600 font-medium">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-rose-600 flex-shrink-0" />
-            <span>CrÃ©dits clients</span>
+            <span>Crédits clients</span>
           </span>
           <span className="font-mono text-[11px] text-stone-500 tabular-nums">
             {clientCount} en cours
@@ -41,7 +41,7 @@ export const DebtSummaryCards: React.FC<DebtSummaryCardsProps> = ({
         </p>
       </div>
 
-      {/* Dettes Fournisseurs (MasquÃ© pour les employÃ©s) */}
+      {/* Dettes Fournisseurs (Masqué pour les employés) */}
       {!isEmployee && (
         <div className="bg-[#faf5e8] px-4 py-3 rounded-xl border border-stone-900/10 space-y-1">
           <div className="flex items-center justify-between text-xs text-stone-600 font-medium">
@@ -59,16 +59,16 @@ export const DebtSummaryCards: React.FC<DebtSummaryCardsProps> = ({
         </div>
       )}
 
-      {/* DÃ©jÃ  recouvrÃ© */}
+      {/* Déjà recouvré */}
       <div className="bg-[#faf5e8] px-4 py-3 rounded-xl border border-stone-900/10 space-y-1">
         <div className="flex items-center justify-between text-xs text-stone-600 font-medium">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-600 flex-shrink-0" />
-            <span>DÃ©jÃ  encaissÃ©</span>
+            <span>Déjà encaissé</span>
           </span>
           {totalVolume > 0 && (
             <span className="font-mono text-[11px] text-emerald-800 tabular-nums">
-              {recoveryPct}% recouvrÃ©
+              {recoveryPct}% recouvré
             </span>
           )}
         </div>

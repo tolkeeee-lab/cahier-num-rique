@@ -76,36 +76,36 @@ export const QuickCashierReceiptBanner: React.FC<QuickCashierReceiptBannerProps>
     let articlesText = ''
     if (sale.articles && sale.articles.length > 0) {
       articlesText = sale.articles
-        .map(a => `â€¢ ${a.quantity}x ${a.name} (${formatPrice(a.unit_price)}) : ${formatPrice(a.quantity * a.unit_price)}`)
+        .map(a => `• ${a.quantity}x ${a.name} (${formatPrice(a.unit_price)}) : ${formatPrice(a.quantity * a.unit_price)}`)
         .join('\n')
     } else if (sale.notes) {
-      articlesText = `â€¢ ${sale.notes}`
+      articlesText = `• ${sale.notes}`
     } else {
-      articlesText = `â€¢ Achat comptant : ${formatPrice(total)}`
+      articlesText = `• Achat comptant : ${formatPrice(total)}`
     }
 
     const shopHeaderLines = [
-      `ðŸ§¾ *REÃ‡U DE CAISSE* â€” ${shopName}`,
-      shopAddress ? `ðŸ“ ${shopAddress}` : '',
-      shopPhone ? `ðŸ“ž ${shopPhone}` : '',
-      `ðŸ“… *Date :* ${dateStr} Ã  ${timeStr}`,
-      `ðŸ‘¤ *Client :* ${clientName}`,
+      `🧾 *REÇU DE CAISSE* — ${shopName}`,
+      shopAddress ? `📍 ${shopAddress}` : '',
+      shopPhone ? `📞 ${shopPhone}` : '',
+      `📅 *Date :* ${dateStr} à ${timeStr}`,
+      `👤 *Client :* ${clientName}`,
     ].filter(Boolean).join('\n')
 
     const changeLines = givenNum > 0 && changeReturned !== null
-      ? `ðŸ’µ *Montant remis :* ${formatPrice(givenNum)}\nðŸ¤ *Monnaie rendue :* ${formatPrice(changeReturned)}\n`
+      ? `💵 *Montant remis :* ${formatPrice(givenNum)}\n🤝 *Monnaie rendue :* ${formatPrice(changeReturned)}\n`
       : ''
 
     const receiptText = `${shopHeaderLines}
 
-ðŸ“¦ *Articles :*
+📦 *Articles :*
 ${articlesText}
 
 ----------------------------
-ðŸ’° *TOTAL :* ${formatPrice(total)}
-ðŸ’µ *PayÃ© :* ${formatPrice(paid)}
-${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice(debt)}\n` : ''}----------------------------
-ðŸ™ _Merci de votre confiance et Ã  trÃ¨s bientÃ´t !_`
+💰 *TOTAL :* ${formatPrice(total)}
+💵 *Payé :* ${formatPrice(paid)}
+${changeLines}${debt > 0 ? `💳 *Reste à payer (Dette) :* ${formatPrice(debt)}\n` : ''}----------------------------
+🙏 _Merci de votre confiance et à très bientôt !_`
 
     window.open(`https://wa.me/?text=${encodeURIComponent(receiptText)}`, '_blank')
   }
@@ -121,7 +121,7 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
 
   return (
     <aside 
-      aria-label="ExpÃ©rience Caisse et ReÃ§u"
+      aria-label="Expérience Caisse et Reçu"
       className="flex-shrink-0 bg-[#fffdfa] border-2 border-amber-300/90 rounded-2xl p-3 shadow-xl relative font-mono space-y-2.5 animate-in slide-in-from-bottom-3 duration-200 z-30 ring-2 ring-amber-400/20"
       style={{
         boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.9), 0 4px 16px -2px rgba(0, 0, 0, 0.12)',
@@ -135,10 +135,10 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
           </div>
           <div className="flex items-center gap-2 truncate">
             <span className="text-xs font-semibold text-gray-900 tracking-tight truncate">
-              {sale.client && sale.client !== 'Client' ? `${sale.client} â€¢ ` : ''}
+              {sale.client && sale.client !== 'Client' ? `${sale.client} • ` : ''}
               {sale.articles && sale.articles.length > 0 
                 ? sale.articles.map(a => `${a.quantity} ${a.name}`).join(', ')
-                : (sale.notes || 'Vente enregistrÃ©e')}
+                : (sale.notes || 'Vente enregistrée')}
             </span>
           </div>
         </div>
@@ -160,7 +160,7 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
         </div>
       </div>
 
-      {/* Ligne 2 : Coupures espÃ¨ces & Rendu de monnaie (uniquement pour les ventes cash) */}
+      {/* Ligne 2 : Coupures espèces & Rendu de monnaie (uniquement pour les ventes cash) */}
       {!isCredit && (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -168,7 +168,7 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
               Coupures & Monnaie :
             </span>
 
-            {/* Rendu affichÃ© en direct si calculÃ© */}
+            {/* Rendu affiché en direct si calculé */}
             {changeReturned !== null && (
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-950 font-semibold text-xs animate-in fade-in zoom-in-95 duration-150">
                 <ArrowRight className="w-3.5 h-3.5 text-emerald-700" strokeWidth={2} />
@@ -209,7 +209,7 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
 
             {/* Saisie montant libre */}
             <div className="flex items-center gap-1 ml-auto">
-              <span className="text-[10px] text-gray-500 font-bold hidden sm:inline">ReÃ§u :</span>
+              <span className="text-[10px] text-gray-500 font-bold hidden sm:inline">Reçu :</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -224,26 +224,26 @@ ${changeLines}${debt > 0 ? `ðŸ’³ *Reste Ã  payer (Dette) :* ${formatPrice
         </div>
       )}
 
-      {/* Ligne 3 : Actions ReÃ§u WhatsApp 1-Clic */}
+      {/* Ligne 3 : Actions Reçu WhatsApp 1-Clic */}
       <div className="flex items-center gap-2 pt-1 border-t border-amber-200/60">
         <button
           type="button"
           onClick={handleOneClickWhatsApp}
           className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md active:scale-[0.97]"
-          title="Partager immÃ©diatement le reÃ§u sur WhatsApp"
+          title="Partager immédiatement le reçu sur WhatsApp"
         >
           <Share2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-          <span>ReÃ§u WhatsApp (1-Clic)</span>
+          <span>Reçu WhatsApp (1-Clic)</span>
         </button>
 
         <button
           type="button"
           onClick={handleOpenDetailedModal}
           className="py-2 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-[0.97]"
-          title="Ouvrir le reÃ§u avec options de numÃ©ro et aperÃ§u"
+          title="Ouvrir le reçu avec options de numéro et aperçu"
         >
           <Receipt className="w-3.5 h-3.5 text-amber-800" strokeWidth={1.75} />
-          <span className="hidden sm:inline">Options / NÂ°</span>
+          <span className="hidden sm:inline">Options / N°</span>
         </button>
       </div>
     </aside>

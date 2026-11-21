@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 
-// â”€â”€ Composants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Composants ────────────────────────────────────────────────────────────────
 import { DebtsBook } from '@/components/DebtsBook'
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard'
 import { ShoppingListManager } from '@/components/ShoppingListManager'
@@ -32,7 +32,7 @@ import { EditSaleModal } from '@/components/journal/EditSaleModal'
 import { ReceiptShareModal } from '@/components/sales/ReceiptShareModal'
 import { QuickCashierReceiptBanner } from '@/components/journal/QuickCashierReceiptBanner'
 
-// â”€â”€ Hooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Hooks ─────────────────────────────────────────────────────────────────────
 import { useShopManager } from '@/hooks/useShopManager'
 import { useJournalData } from '@/hooks/useJournalData'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -42,7 +42,7 @@ import { useOfflineSync } from '@/hooks/useOfflineSync'
 import { useInputPipeline, StockConfirmationData, PriceChangeData, WizardPrefill } from '@/hooks/useInputPipeline'
 import { saveOfflineProduct, getOfflineProducts, OfflineSale } from '@/lib/offlineDb'
 
-// â”€â”€ Utils â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Utils ─────────────────────────────────────────────────────────────────────
 import { exportFullBackupJSON } from '@/lib/exportUtils'
 import { supabaseClient, isSupabaseClientConfigured } from '@/lib/supabaseClient'
 import { getPens } from '@/lib/penUtils'
@@ -51,7 +51,7 @@ import { isEmployeeRole } from '@/lib/roleUtils'
 import { findShopIdByCode, isRealUuid, formatShortShopCode } from '@/lib/shopCodeUtils'
 import { Send, Loader, Zap, ScanLine } from 'lucide-react'
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function JournalPage() {
   const isConfigured = isSupabaseClientConfigured()
@@ -61,7 +61,7 @@ export default function JournalPage() {
     setMounted(true)
   }, [])
 
-  // â”€â”€ Utilisateur connectÃ© & Session Supabase synchronisÃ©e â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Utilisateur connecté & Session Supabase synchronisée ────────────────────
   const [user, setUser] = useState<any>(() => {
     if (typeof window === 'undefined') return null
     const loggedOut = localStorage.getItem('cahier_logged_out_flag') === 'true'
@@ -74,11 +74,11 @@ export default function JournalPage() {
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
 
-  // Ã‰coute de session Supabase pour synchronisation cross-device temps rÃ©el
+  // Écoute de session Supabase pour synchronisation cross-device temps réel
   useEffect(() => {
     if (!isConfigured) return
 
-    // 1. RÃ©cupÃ©ration de la session active Supabase
+    // 1. Récupération de la session active Supabase
     supabaseClient.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         const u = session.user
@@ -88,7 +88,7 @@ export default function JournalPage() {
       }
     }).catch(() => {})
 
-    // 2. Ã‰couteur de changement d'Ã©tat d'authentification
+    // 2. Écouteur de changement d'état d'authentification
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         if (session?.user) {
@@ -136,9 +136,9 @@ export default function JournalPage() {
       }
     } catch (err: any) {
       if (err.message?.toLowerCase().includes('email not confirmed')) {
-        setAuthError('E-mail non confirmÃ©. Veuillez valider le lien reÃ§u par e-mail, ou cliquez sur "Connexion sans mot de passe (Magic Link)" ci-dessous.')
+        setAuthError('E-mail non confirmé. Veuillez valider le lien reçu par e-mail, ou cliquez sur "Connexion sans mot de passe (Magic Link)" ci-dessous.')
       } else {
-        setAuthError(err?.message || 'Erreur de connexion. VÃ©rifiez vos identifiants.')
+        setAuthError(err?.message || 'Erreur de connexion. Vérifiez vos identifiants.')
       }
     } finally {
       setAuthLoading(false)
@@ -165,15 +165,15 @@ export default function JournalPage() {
 
       if (role === 'employee') {
         const rawCode = (shopCode || '').trim().toUpperCase()
-        if (!rawCode) throw new Error('Le code boutique du propriÃ©taire est obligatoire.')
+        if (!rawCode) throw new Error('Le code boutique du propriétaire est obligatoire.')
         
-        // RÃ©soudre l'UUID rÃ©el de la boutique du patron dans Supabase
+        // Résoudre l'UUID réel de la boutique du patron dans Supabase
         assignedShopId = await findShopIdByCode(rawCode)
         if (!assignedShopId || !isRealUuid(assignedShopId)) {
-          throw new Error('Code boutique introuvable ou incorrect. Demandez Ã  votre patron de vÃ©rifier le Code Ã‰quipe affichÃ© dans ses ParamÃ¨tres.')
+          throw new Error('Code boutique introuvable ou incorrect. Demandez à votre patron de vérifier le Code Équipe affiché dans ses Paramètres.')
         }
 
-        // Tenter de rÃ©cupÃ©rer le vrai nom de la boutique du patron
+        // Tenter de récupérer le vrai nom de la boutique du patron
         try {
           const { data: sRow } = await supabaseClient.from('shops').select('name').eq('id', assignedShopId).maybeSingle()
           if (sRow?.name) assignedShopName = sRow.name
@@ -198,7 +198,7 @@ export default function JournalPage() {
 
           if (error) {
             if (error.message?.toLowerCase().includes('rate limit') || error.message?.toLowerCase().includes('exceeded')) {
-              console.warn('Limite d\'emails Supabase atteinte. Connexion/CrÃ©ation directe...')
+              console.warn('Limite d\'emails Supabase atteinte. Connexion/Création directe...')
               const { data: signInData } = await supabaseClient.auth.signInWithPassword({ email: cleanEmail, password })
               if (signInData?.user) {
                 signUpUser = signInData.user
@@ -242,7 +242,7 @@ export default function JournalPage() {
         if (signUpUser) {
           const targetShopId = role === 'employee' ? (assignedShopId || signUpUser.id) : signUpUser.id
           try {
-            // Nettoyer toute invitation prÃ©cÃ©dente rÃ©siduelle pour cet e-mail pour Ã©viter les doublons
+            // Nettoyer toute invitation précédente résiduelle pour cet e-mail pour éviter les doublons
             await supabaseClient.from('employees').delete().eq('email', cleanEmail)
 
             await supabaseClient.from('employees').upsert([
@@ -269,7 +269,7 @@ export default function JournalPage() {
               ], { onConflict: 'id' })
             }
           } catch (e) {
-            console.warn('Erreur insertion employÃ©s/patron/shops:', e)
+            console.warn('Erreur insertion employés/patron/shops:', e)
           }
 
 
@@ -292,9 +292,9 @@ export default function JournalPage() {
       }
     } catch (err: any) {
       if (err.message?.toLowerCase().includes('rate limit') || err.message?.toLowerCase().includes('exceeded')) {
-        setAuthError('Limite d\'envoi d\'emails Supabase atteinte. RÃ©essayez avec la Connexion Directe ou changez d\'email.')
+        setAuthError('Limite d\'envoi d\'emails Supabase atteinte. Réessayez avec la Connexion Directe ou changez d\'email.')
       } else {
-        setAuthError(err?.message || 'Erreur lors de la crÃ©ation du compte.')
+        setAuthError(err?.message || 'Erreur lors de la création du compte.')
       }
     } finally {
       setAuthLoading(false)
@@ -314,7 +314,7 @@ export default function JournalPage() {
           options: { emailRedirectTo: typeof window !== 'undefined' ? window.location.origin + '/journal' : undefined }
         })
         if (error) throw error
-        alert('Un lien de connexion magique a Ã©tÃ© envoyÃ© Ã  votre adresse e-mail !')
+        alert('Un lien de connexion magique a été envoyé à votre adresse e-mail !')
       }
     } catch (err: any) {
       setAuthError(err?.message || "Erreur lors de l'envoi du lien magique.")
@@ -340,7 +340,7 @@ export default function JournalPage() {
     if (!user) return null
     const meta = user.user_metadata || {}
     // IMPORTANT: user.role dans Supabase Auth vaut toujours "authenticated".
-    // Le rÃ´le applicatif ('owner' ou 'employee') se trouve dans user_metadata.role ou user.app_role.
+    // Le rôle applicatif ('owner' ou 'employee') se trouve dans user_metadata.role ou user.app_role.
     const rawRole = meta.role || user.app_role || (user.role && user.role !== 'authenticated' ? user.role : null) || 'owner'
     return {
       id: user.id,
@@ -353,14 +353,14 @@ export default function JournalPage() {
   }, [user])
 
 
-  // â”€â”€ Onglets & UI locale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Onglets & UI locale ────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<JournalTab>('cahier')
   const [selectedPen, setSelectedPen] = useState('blue')
   const [activeFilter, setActiveFilter] = useState('all')
   const [postItMessage, setPostItMessage] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState('')
   const [receiptSale, setReceiptSale] = useState<any>(null)
-  // Mode ajout d'article Ã  une vente existante
+  // Mode ajout d'article à une vente existante
   const [addingToSaleId, setAddingToSaleId] = useState<string | null>(null)
   const [addingToSaleClient, setAddingToSaleClient] = useState<string>('')
   const [addArticleInput, setAddArticleInput] = useState('')
@@ -383,7 +383,7 @@ export default function JournalPage() {
   const [wizardPrefill, setWizardPrefill] = useState<WizardPrefill | null>(null)
   const [showStockWizard, setShowStockWizard] = useState(false)
 
-  // Ã‰tat de modification d'une vente & modale menu tactile
+  // État de modification d'une vente & modale menu tactile
   const [editingSale, setEditingSale] = useState<any | null>(null)
   const [showTactileMenuModal, setShowTactileMenuModal] = useState(false)
   const [tactileSheetProduct, setTactileSheetProduct] = useState<StockSuggestionItem | null>(null)
@@ -395,8 +395,8 @@ export default function JournalPage() {
     const ids = new Set<string>()
     if (mappedUser?.id) ids.add(mappedUser.id)
     if (mappedUser?.shop_id && mappedUser.shop_id !== shopManager.shopId) ids.add(mappedUser.shop_id)
-    // SÃ‰CURITÃ‰ : Ne jamais ajouter les noms publics de boutique (shop_name) dans les canaux Realtime
-    // (shopManager.currentShop?.name exclu des topics Realtime pour Ã©viter l'Ã©coute sur nom public)
+    // SÉCURITÉ : Ne jamais ajouter les noms publics de boutique (shop_name) dans les canaux Realtime
+    // (shopManager.currentShop?.name exclu des topics Realtime pour éviter l'écoute sur nom public)
     shopManager.userShops.forEach((s) => {
       if (s.id && s.id !== shopManager.shopId) ids.add(s.id)
       // (s.name exclu des topics Realtime)
@@ -406,14 +406,14 @@ export default function JournalPage() {
 
   const journalData = useJournalData(shopManager.shopId, isOnline, extraShopIds)
 
-  // â”€â”€ Protection d'accÃ¨s aux onglets pour les employÃ©s â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Protection d'accès aux onglets pour les employés ────────────────────────
   useEffect(() => {
     if (isEmployeeRole(effectiveRole) && !['cahier', 'history', 'dettes'].includes(activeTab)) {
       setActiveTab('cahier')
     }
   }, [effectiveRole, activeTab])
 
-  // â”€â”€ Enregistrement auto du PropriÃ©taire dans employees pour le Code Boutique â”€
+  // ── Enregistrement auto du Propriétaire dans employees pour le Code Boutique ─
   useEffect(() => {
     if (!isConfigured || !mappedUser?.id || mappedUser?.role === 'employee') return
 
@@ -427,7 +427,7 @@ export default function JournalPage() {
             {
               id: mappedUser.id,
               shop_id: ownerShopId,
-              name: mappedUser.name || 'PropriÃ©taire',
+              name: mappedUser.name || 'Propriétaire',
               email: (mappedUser.email || '').toLowerCase().trim(),
               role: 'owner',
             }
@@ -438,7 +438,7 @@ export default function JournalPage() {
   }, [isConfigured, mappedUser?.id, mappedUser?.role, shopManager.shopId, mappedUser?.name, mappedUser?.email])
 
 
-  // â”€â”€ Gestion des EmployÃ©s â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Gestion des Employés ───────────────────────────────────────────────────
 
 
   const [employees, setEmployees] = useState<any[]>([])
@@ -450,7 +450,7 @@ export default function JournalPage() {
       const data = await res.json()
       if (res.ok) setEmployees(data.employees || [])
     } catch (err) {
-      console.error('Erreur chargement employÃ©s:', err)
+      console.error('Erreur chargement employés:', err)
     }
   }
 
@@ -475,7 +475,7 @@ export default function JournalPage() {
   }
 
   const handleRemoveEmployee = async (id: string) => {
-    if (!confirm('Voulez-vous vraiment retirer cet employÃ© ?')) return
+    if (!confirm('Voulez-vous vraiment retirer cet employé ?')) return
     try {
       const res = await fetch(`/api/employees?id=${id}`, {
         method: 'DELETE',
@@ -485,7 +485,7 @@ export default function JournalPage() {
       await fetchEmployees()
     } catch (err) {
       console.error('Erreur:', err)
-      alert('Impossible de supprimer cet employÃ©')
+      alert('Impossible de supprimer cet employé')
     }
   }
 
@@ -515,7 +515,7 @@ export default function JournalPage() {
     setInput: saleCreation.setInput,
   })
 
-  // â”€â”€ Pipeline de saisie intelligent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Pipeline de saisie intelligent ────────────────────────────────────────
   const { processInput } = useInputPipeline({
     shopId: shopManager.shopId,
     selectedPen,
@@ -541,7 +541,7 @@ export default function JournalPage() {
     }
   }
 
-  // â”€â”€ Suggestions prÃ©dictives (dernier fragment tapÃ©) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Suggestions prédictives (dernier fragment tapé) ────────────────────────
   const stockSuggestions = useMemo(() => {
     const text = saleCreation.input
     if (!text.trim()) return []
@@ -582,11 +582,11 @@ export default function JournalPage() {
     const parts = saleCreation.input.split(/(?:,|\+|\bet\b)/i)
     parts.pop()
     const prefix = parts.join(', ').trim()
-    const entry = tier?.inputText || `${activeQty} ${item.name} Ã  ${item.price * activeQty}`
+    const entry = tier?.inputText || `${activeQty} ${item.name} à ${item.price * activeQty}`
     saleCreation.setInput(prefix ? `${prefix}, ${entry}` : entry)
   }
 
-  // â”€â”€ Nombre de crÃ©ances en attente pour le badge de l'onglet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Nombre de créances en attente pour le badge de l'onglet ───────────────
   const pendingDebtsCount = useMemo(() => {
     const debtMap = new Map<string, number>()
     journalData.allSales.forEach(s => {
@@ -607,7 +607,7 @@ export default function JournalPage() {
     return count
   }, [journalData.allSales])
 
-  // â”€â”€ Horloge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Horloge ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const update = () => setCurrentTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
     update()
@@ -615,7 +615,7 @@ export default function JournalPage() {
     return () => clearInterval(t)
   }, [])
 
-  // â”€â”€ Ã‰couteurs globaux de vente crÃ©Ã©e â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Écouteurs globaux de vente créée ──────────────────────────────────────
   const { reloadData } = journalData
   useEffect(() => {
     const handleSaleCreated = () => {
@@ -629,7 +629,7 @@ export default function JournalPage() {
 
   const pens = getPens(shopManager.shopActivity)
 
-  // Handler pour ajouter un article Ã  une vente existante
+  // Handler pour ajouter un article à une vente existante
   const handleAddArticleToSale = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!addArticleInput.trim() || !addingToSaleId || isAddingArticle) return
@@ -650,10 +650,10 @@ export default function JournalPage() {
   const handleBarcodeDetected = (formattedSaleText: string) => {
     if (!formattedSaleText.trim()) return
     saleCreation.setInput(prev => prev.trim() ? `${prev}, ${formattedSaleText}` : formattedSaleText)
-    setPostItMessage('Articles scannÃ©s ajoutÃ©s Ã  la vente !')
+    setPostItMessage('Articles scannés ajoutés à la vente !')
   }
 
-  // Enregistrer un nouveau produit dÃ©couvert par code-barres
+  // Enregistrer un nouveau produit découvert par code-barres
   const handleSaveNewProduct = async (name: string, price: number, barcode: string) => {
     const newProd = {
       id: `stk_${Date.now()}`,
@@ -665,7 +665,7 @@ export default function JournalPage() {
       current_stock: 0,
       alert_threshold: 5,
       category: 'Divers',
-      unit: 'unitÃ©',
+      unit: 'unité',
       barcode,
       created_at: new Date().toISOString(),
     }
@@ -677,10 +677,10 @@ export default function JournalPage() {
         body: JSON.stringify(newProd),
       })
     } catch {}
-    setPostItMessage(`Produit enregistrÃ© : ${name} (${price} F)`)
+    setPostItMessage(`Produit enregistré : ${name} (${price} F)`)
   }
 
-  // Associer un code-barres Ã  un produit du stock
+  // Associer un code-barres à un produit du stock
   const handleAssociateBarcode = (productId: string, barcode: string) => {
     const products = getOfflineProducts(shopManager.shopId) || []
     const prod = products.find(p => p.id === productId)
@@ -691,11 +691,11 @@ export default function JournalPage() {
         headers: { 'Content-Type': 'application/json', 'x-shop-id': shopManager.shopId },
         body: JSON.stringify({ id: productId, barcode }),
       }).catch(() => {})
-      setPostItMessage(`Code-barres liÃ© Ã  ${prod.name}`)
+      setPostItMessage(`Code-barres lié à ${prod.name}`)
     }
   }
 
-  // â”€â”€ Garde SSR / Hydratation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Garde SSR / Hydratation ───────────────────────────────────────────────
   if (!mounted) {
     return (
       <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4">
@@ -707,7 +707,7 @@ export default function JournalPage() {
     )
   }
 
-  // â”€â”€ Garde d'authentification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Garde d'authentification ───────────────────────────────────────────────
   if (!user && isConfigured) {
     return (
       <AuthScreen
@@ -722,15 +722,15 @@ export default function JournalPage() {
     )
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="h-screen w-screen max-h-screen max-w-screen bg-[#141210] text-[#1e1a18] font-sans p-0 sm:p-2 md:p-2.5 lg:p-3 antialiased flex flex-col justify-between overflow-hidden select-none">
 
-      {/* â”€â”€ Chassis Principal du Cahier Ouvert â”€â”€ */}
+      {/* ── Chassis Principal du Cahier Ouvert ── */}
       <div className="flex-1 min-h-0 bg-[#faf5e8] rounded-none sm:rounded-2xl md:rounded-3xl border-0 sm:border border-amber-950/20 shadow-2xl flex relative z-0 overflow-hidden w-full max-w-[1550px] mx-auto flex-row">
 
-        {/* Reliure Cuir Ã‰meraude (FIXE) */}
+        {/* Reliure Cuir Émeraude (FIXE) */}
         <div className="hidden sm:flex w-10 md:w-16 notebook-cover-left flex-col items-center justify-between py-6 md:py-10 z-10 flex-shrink-0 select-none h-full">
           <div className="brass-screw" />
           <div className="font-semibold text-[8px] md:text-[10px] text-[#f59e0b] tracking-[0.3em] uppercase select-none my-auto whitespace-nowrap [writing-mode:vertical-lr] rotate-180 text-center opacity-90">
@@ -750,10 +750,10 @@ export default function JournalPage() {
           ))}
         </div>
 
-        {/* â”€â”€ Page Seyes â”€â”€ */}
+        {/* ── Page Seyes ── */}
         <div className="flex-1 min-w-0 flex flex-col h-full bg-[#faf5e8] relative overflow-hidden">
 
-          {/* En-tÃªte + KPIs (FIXE) */}
+          {/* En-tête + KPIs (FIXE) */}
           <div className="flex-shrink-0 z-30 relative">
             <JournalHeader
               user={mappedUser}
@@ -794,7 +794,7 @@ export default function JournalPage() {
           </div>
 
 
-          {/* Corps principal â€” Hauteur MaximisÃ©e */}
+          {/* Corps principal — Hauteur Maximisée */}
           <div className="p-1 sm:p-2 md:p-2.5 flex-1 min-h-0 flex flex-col justify-between overflow-hidden space-y-1">
             <JournalPostIt message={postItMessage} onDismiss={() => setPostItMessage(null)} />
 
@@ -816,7 +816,7 @@ export default function JournalPage() {
                   />
                 </div>
 
-                {/* Page Seyes â€” SEUL Ã‰LÃ‰MENT QUI DÃ‰FILE */}
+                {/* Page Seyes — SEUL ÉLÉMENT QUI DÉFILE */}
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
                   <NotebookPage
                     sales={journalData.sales}
@@ -834,7 +834,7 @@ export default function JournalPage() {
                   />
                 </div>
 
-                {/* Barre ajout Ã  vente existante â€” remplace la barre normale */}
+                {/* Barre ajout à vente existante — remplace la barre normale */}
                 {addingToSaleId && (
                   <AddToExistingSaleBar
                     clientName={addingToSaleClient}
@@ -846,7 +846,7 @@ export default function JournalPage() {
                   />
                 )}
 
-                {/* ExpÃ©rience Caisse : Bandeau Rendu de Monnaie & ReÃ§u WhatsApp 1-Clic */}
+                {/* Expérience Caisse : Bandeau Rendu de Monnaie & Reçu WhatsApp 1-Clic */}
                 {activeCashierSale && (
                   <div className="flex-shrink-0 pb-1.5 relative z-30">
                     <QuickCashierReceiptBanner
@@ -874,35 +874,33 @@ export default function JournalPage() {
                       onOpenTactileSheet={(item) => setTactileSheetProduct(item)}
                     />
 
-                    {/* Bouton Raccourcis 1-Tap dÃ©diÃ© Ã  la saisie */}
                     <button
                       type="button"
                       onClick={() => setShowTactileMenuModal(true)}
-                      className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 border border-amber-400 text-amber-950 rounded-xl text-xs font-semibold transition-colors shadow-xs flex items-center gap-1 sm:gap-1.5 flex-shrink-0 cursor-pointer hover:scale-[1.02] active:scale-95"
+                      className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#faf5e8] hover:bg-white border border-[#e2d6be] text-stone-800 rounded-xl text-xs font-medium transition-colors flex items-center gap-1 sm:gap-1.5 flex-shrink-0 cursor-pointer active:scale-[0.97]"
                       title="Ouvrir le menu des raccourcis 1-tap"
                     >
-                      <Zap className="w-3.5 h-3.5 fill-amber-950 text-amber-950" />
-                      <span className="hidden sm:inline font-mono text-xs">Raccourcis</span>
+                      <Zap className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.5} />
+                      <span className="hidden sm:inline text-xs">Raccourcis</span>
                       {tactileMenu.menuItems.length > 0 && (
-                        <span className="bg-amber-950 text-amber-100 text-[9px] sm:text-[10px] px-1 py-0.2 rounded-full font-mono font-semibold">
+                        <span className="bg-stone-900 text-white text-[10px] px-1.5 py-0.2 rounded-md font-mono font-medium tabular-nums">
                           {tactileMenu.menuItems.length}
                         </span>
                       )}
                     </button>
 
-                    {/* Bouton Scanner Code-barres 1-Tap */}
                     <button
                       type="button"
                       onClick={() => setShowBarcodeScannerModal(true)}
-                      className="px-2 sm:px-2.5 py-1.5 sm:py-2 bg-amber-200/90 hover:bg-amber-300 border border-amber-400 text-amber-950 rounded-xl text-xs font-bold transition-colors shadow-xs flex items-center gap-1 flex-shrink-0 cursor-pointer hover:scale-[1.02] active:scale-95"
-                      title="Scanner un code-barres avec la camÃ©ra"
+                      className="px-2 sm:px-2.5 py-1.5 sm:py-2 bg-[#faf5e8] hover:bg-white border border-[#e2d6be] text-stone-800 rounded-xl text-xs font-medium transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer active:scale-[0.97]"
+                      title="Scanner un code-barres avec la caméra"
                     >
-                      <ScanLine className="w-3.5 h-3.5 text-amber-950" />
-                      <span className="hidden md:inline font-mono text-xs">Scanner</span>
+                      <ScanLine className="w-3.5 h-3.5 text-stone-600" strokeWidth={1.5} />
+                      <span className="hidden md:inline text-xs">Scanner</span>
                     </button>
 
-                    <div className="hidden sm:inline-block font-mono text-xs font-semibold text-amber-900 flex-shrink-0 min-w-[45px] text-center bg-amber-200/60 px-2 py-1 rounded-lg">
-                      â° {currentTime || '--:--'}
+                    <div className="hidden sm:inline-block font-mono text-xs font-medium text-stone-600 tabular-nums flex-shrink-0 min-w-[45px] text-center bg-[#faf5e8] border border-[#e2d6be] px-2 py-1 rounded-lg">
+                      {currentTime || '--:--'}
                     </div>
 
                     <div className="relative flex-grow">
@@ -915,7 +913,7 @@ export default function JournalPage() {
                         data-lpignore="true"
                         value={saleCreation.input}
                         onChange={(e) => saleCreation.setInput(e.target.value)}
-                        placeholder={pens.find(p => p.id === selectedPen)?.placeholder || 'Ã‰crivez une vente...'}
+                        placeholder={pens.find(p => p.id === selectedPen)?.placeholder || 'Écrivez une vente...'}
                         className="w-full pl-3 pr-3 py-2 sm:py-2.5 bg-white border border-amber-300/90 rounded-xl text-xs sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/40 font-handwritten shadow-inner font-bold"
                       />
                     </div>
@@ -923,7 +921,7 @@ export default function JournalPage() {
                     <button
                       type="submit"
                       disabled={!saleCreation.input.trim() || saleCreation.isSubmitting}
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#f59e0b] to-[#d97706] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-colors disabled:opacity-40 flex-shrink-0 shadow-md hover:shadow-lg border border-amber-300"
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center active:scale-[0.97] transition-colors disabled:opacity-40 flex-shrink-0 cursor-pointer"
                     >
                       {saleCreation.isSubmitting
                         ? <Loader className="w-3.5 h-3.5 animate-spin" />
@@ -1030,7 +1028,7 @@ export default function JournalPage() {
                     saleCreation.setInput(text)
                     setSelectedPen('green')
                     setActiveTab('cahier')
-                    setPostItMessage('Bon de commande transfÃ©rÃ© dans le cahier (Stylo Vert Stock) !')
+                    setPostItMessage('Bon de commande transféré dans le cahier (Stylo Vert Stock) !')
                   }}
                 />
               </div>
@@ -1049,12 +1047,12 @@ export default function JournalPage() {
 
           {/* Pied de page (FIXE) */}
           <footer className="flex-shrink-0 text-center text-[10px] text-amber-900/60 font-mono py-1 uppercase tracking-normal border-t border-dashed border-amber-300/40 select-none">
-            CAHIER NO. 200 â€¢ WEST AFRICA MARKET RD.
+            CAHIER NO. 200 • WEST AFRICA MARKET RD.
           </footer>
         </div>
       </div>
 
-      {/* â”€â”€ Modales â”€â”€ */}
+      {/* ── Modales ── */}
       <NotebookModals
         showAssistantModal={showAssistantModal}
         onCloseAssistantModal={() => setShowAssistantModal(false)}
@@ -1071,7 +1069,7 @@ export default function JournalPage() {
         onCloseReceiptModal={() => setShowReceiptModal(false)}
         sales={journalData.allSales}
         products={getOfflineProducts(shopManager.shopId)}
-        currentShopName={shopManager.currentShop?.name || 'Cahier NumÃ©rique'}
+        currentShopName={shopManager.currentShop?.name || 'Cahier Numérique'}
         receiptSale={receiptSale}
         shopId={shopManager.shopId}
       />
@@ -1093,24 +1091,24 @@ export default function JournalPage() {
         onSaveAdjustment={journalData.reloadData}
       />
 
-      {/* â”€â”€ Pipeline Interception Modals â”€â”€ */}
+      {/* ── Pipeline Interception Modals ── */}
 
       <StockConfirmationModal
         isOpen={!!stockConfirmationData}
-        product={stockConfirmationData?.product || { name: '', unit: 'piÃ¨ce', unit_cost: 0, unit_price: 0 }}
+        product={stockConfirmationData?.product || { name: '', unit: 'pièce', unit_cost: 0, unit_price: 0 }}
         quantity={stockConfirmationData?.quantity || 1}
-        packaging={stockConfirmationData?.packaging || 'unitÃ©'}
+        packaging={stockConfirmationData?.packaging || 'unité'}
         multiplier={stockConfirmationData?.multiplier || 1}
-        unit={stockConfirmationData?.unit || 'piÃ¨ce'}
+        unit={stockConfirmationData?.unit || 'pièce'}
         onConfirm={async () => {
           if (!stockConfirmationData) return
           const { product, quantity, packaging, multiplier, unit } = stockConfirmationData
           const lotPrice = product.unit_cost * multiplier
           const salePrice = product.unit_price
-          const isUnit = packaging === 'unitÃ©' || !packaging
+          const isUnit = packaging === 'unité' || !packaging
           const text = isUnit
-            ? `stock de ${quantity} ${product.name} Ã  ${lotPrice} prix de vente Ã  l'unitÃ© ${salePrice}`
-            : `stock de ${quantity} ${packaging} de ${product.name} de ${multiplier} ${unit} Ã  ${lotPrice} prix de vente Ã  l'unitÃ© ${salePrice}`
+            ? `stock de ${quantity} ${product.name} à ${lotPrice} prix de vente à l'unité ${salePrice}`
+            : `stock de ${quantity} ${packaging} de ${product.name} de ${multiplier} ${unit} à ${lotPrice} prix de vente à l'unité ${salePrice}`
           await saleCreation.submitText(text, 'green')
           setStockConfirmationData(null)
         }}
@@ -1134,7 +1132,7 @@ export default function JournalPage() {
         productName={priceChangeData?.product?.name || ''}
         oldLotPrice={priceChangeData?.oldLotPrice || 0}
         newLotPrice={priceChangeData?.newLotPrice || 0}
-        packaging={priceChangeData?.product?.packaging_name || 'unitÃ©'}
+        packaging={priceChangeData?.product?.packaging_name || 'unité'}
         onAcceptNewPrice={async () => {
           if (!priceChangeData) return
           // Enregistrer avec le nouveau prix
@@ -1142,7 +1140,7 @@ export default function JournalPage() {
             priceChangeData.rawText,
             priceChangeData.penColor
           )
-          // Mettre Ã  jour le catalogue offline avec le nouveau prix
+          // Mettre à jour le catalogue offline avec le nouveau prix
           const product = priceChangeData.product
           const newUnitCost = Math.round(priceChangeData.newLotPrice / (product.multiplier || 1))
           saveOfflineProduct(shopManager.shopId, { ...product, unit_cost: newUnitCost })
@@ -1160,10 +1158,10 @@ export default function JournalPage() {
           if (!priceChangeData) return
           // Enregistre avec le texte original mais remet l'ancien prix en catalogue
           const product = priceChangeData.product
-          const isUnit = !product.packaging_name || product.packaging_name === 'unitÃ©'
+          const isUnit = !product.packaging_name || product.packaging_name === 'unité'
           const safeText = isUnit
-            ? `stock de 1 ${product.name} Ã  ${priceChangeData.oldLotPrice}`
-            : `stock de 1 ${product.packaging_name} de ${product.name} Ã  ${priceChangeData.oldLotPrice}`
+            ? `stock de 1 ${product.name} à ${priceChangeData.oldLotPrice}`
+            : `stock de 1 ${product.packaging_name} de ${product.name} à ${priceChangeData.oldLotPrice}`
           await saleCreation.submitText(
             safeText,
             priceChangeData.penColor
@@ -1180,7 +1178,7 @@ export default function JournalPage() {
         onClose={() => { setShowStockWizard(false); setWizardPrefill(null) }}
         onComplete={async (product) => {
           const qty = wizardPrefill?.quantity || 1
-          const isUnit = product.packaging === 'unitÃ©'
+          const isUnit = product.packaging === 'unité'
           const mult = product.multiplier || 1
           const unitCost = isUnit ? product.purchasePrice : Math.round(product.purchasePrice / mult)
 
@@ -1189,14 +1187,14 @@ export default function JournalPage() {
             id: `stk_${Date.now()}`,
             shop_id: shopManager.shopId,
             name: product.name,
-            category: product.category || 'GÃ©nÃ©ral',
-            unit: product.unit || 'unitÃ©',
+            category: product.category || 'Général',
+            unit: product.unit || 'unité',
             alert_threshold: product.alertThreshold || 5,
             initial_stock: 0,
             unit_cost: unitCost,
             unit_price: product.salePrice,
             multiplier: mult,
-            packaging_name: product.packaging || 'unitÃ©',
+            packaging_name: product.packaging || 'unité',
             created_at: new Date().toISOString(),
           }
           saveOfflineProduct(shopManager.shopId, newProductItem as any)
@@ -1206,10 +1204,10 @@ export default function JournalPage() {
             body: JSON.stringify(newProductItem),
           }).catch(() => {})
 
-          // 2. Enregistrer l'opÃ©ration d'approvisionnement dans le cahier
+          // 2. Enregistrer l'opération d'approvisionnement dans le cahier
           const text = isUnit
-            ? `stock de ${qty} ${product.name} Ã  ${product.purchasePrice} prix de vente Ã  l'unitÃ© ${product.salePrice}`
-            : `stock de ${qty} ${product.packaging} de ${product.name} de ${product.multiplier} ${product.unit} Ã  ${product.purchasePrice} prix de vente Ã  l'unitÃ© ${product.salePrice}`
+            ? `stock de ${qty} ${product.name} à ${product.purchasePrice} prix de vente à l'unité ${product.salePrice}`
+            : `stock de ${qty} ${product.packaging} de ${product.name} de ${product.multiplier} ${product.unit} à ${product.purchasePrice} prix de vente à l'unité ${product.salePrice}`
           await saleCreation.submitText(text, 'green')
           setShowStockWizard(false)
           setWizardPrefill(null)

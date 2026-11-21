@@ -58,10 +58,10 @@ interface RetailAnalyticsWidgetProps {
 const PRODUCT_CATEGORY_INFOS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; bg: string; text: string }> = {
   'Alimentation': { label: 'Alimentation', icon: ShoppingBag, bg: 'bg-amber-500', text: 'text-amber-700' },
   'Boissons': { label: 'Boissons', icon: CupSoda, bg: 'bg-blue-500', text: 'text-blue-700' },
-  'HygiÃ¨ne & CosmÃ©tique': { label: 'HygiÃ¨ne & CosmÃ©tique', icon: Sparkles, bg: 'bg-[#9d60ec]', text: 'text-[#9d60ec]' },
-  'Ã‰lectronique': { label: 'Ã‰lectronique & Mobile', icon: Smartphone, bg: 'bg-emerald-500', text: 'text-emerald-700' },
+  'Hygiène & Cosmétique': { label: 'Hygiène & Cosmétique', icon: Sparkles, bg: 'bg-[#9d60ec]', text: 'text-[#9d60ec]' },
+  'Électronique': { label: 'Électronique & Mobile', icon: Smartphone, bg: 'bg-emerald-500', text: 'text-emerald-700' },
   'Habillement': { label: 'Habillement & Textile', icon: Shirt, bg: 'bg-rose-500', text: 'text-rose-700' },
-  'Divers': { label: 'Divers & GÃ©nÃ©ral', icon: Package, bg: 'bg-gray-400', text: 'text-gray-600' }
+  'Divers': { label: 'Divers & Général', icon: Package, bg: 'bg-gray-400', text: 'text-gray-600' }
 }
 
 function formatPrice(price: number): string {
@@ -131,7 +131,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
     const averageBasket = clientSalesCount > 0 ? Math.round(totalRevenue / clientSalesCount) : 0
     const topProduct = productList[0] || null
 
-    // CatÃ©gories
+    // Catégories
     const catMap: Record<string, number> = {}
     productList.forEach(p => {
       const cat = p.category || 'Divers'
@@ -178,7 +178,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Boutons PÃ©riode */}
+          {/* Boutons Période */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border border-gray-200">
             {[
               { id: 'all', label: 'Tout' },
@@ -228,7 +228,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
         </div>
       </div>
 
-      {/* 4 KPIs ClÃ©s Boutique */}
+      {/* 4 KPIs Clés Boutique */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-[24px] p-4 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
@@ -265,7 +265,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
             <Award className="w-5 h-5" />
           </div>
           <div className="overflow-hidden">
-            <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">NÂ°1 des Ventes</span>
+            <span className="text-[9px] uppercase font-bold text-gray-400 font-sans block">N°1 des Ventes</span>
             <span className="text-xs font-bold text-gray-800 block truncate font-handwritten">
               {retailStats.topProduct ? retailStats.topProduct.name : 'Aucun'}
             </span>
@@ -273,15 +273,15 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
         </div>
       </div>
 
-      {/* Widget SÃ©paration des Caisses par CatÃ©gorie (Boissons vs Divers) */}
+      {/* Widget Séparation des Caisses par Catégorie (Boissons vs Divers) */}
       <CategoryCashboxWidget sales={sales} shopId={shopId} onRefreshData={onRefreshData} />
 
-      {/* RÃ©partition par CatÃ©gorie de Produit */}
+      {/* Répartition par Catégorie de Produit */}
       {retailStats.categoryStats.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-[28px] p-6 shadow-sm">
           <h3 className="font-handwritten text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
             <Layers className="w-5 h-5 text-gray-700" />
-            RÃ©partition du Chiffre d'Affaires par CatÃ©gorie de Produit
+            Répartition du Chiffre d'Affaires par Catégorie de Produit
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {retailStats.categoryStats.map((cat, idx) => (
@@ -316,7 +316,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
               <span>Classement des Produits ({retailStats.productList.length})</span>
             </h3>
             <p className="text-[9px] font-mono uppercase text-gray-400">
-              {sortBy === 'revenue' ? 'TriÃ© par Chiffre d\'Affaires gÃ©nÃ©rÃ©' : sortBy === 'quantity' ? 'TriÃ© par volume d\'articles vendus' : 'TriÃ© par frÃ©quence de vente'}
+              {sortBy === 'revenue' ? 'Trié par Chiffre d\'Affaires généré' : sortBy === 'quantity' ? 'Trié par volume d\'articles vendus' : 'Trié par fréquence de vente'}
             </p>
           </div>
 
@@ -337,7 +337,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
               }`}
             >
               <Package className="w-3.5 h-3.5" />
-              <span>Par QuantitÃ©</span>
+              <span>Par Quantité</span>
             </button>
             <button
               onClick={() => setSortBy('frequency')}
@@ -346,7 +346,7 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
               }`}
             >
               <RotateCw className="w-3.5 h-3.5" />
-              <span>Par FrÃ©quence</span>
+              <span>Par Fréquence</span>
             </button>
           </div>
         </div>
@@ -357,10 +357,10 @@ export function RetailAnalyticsWidget({ sales, period, onPeriodChange, shopName 
               <tr>
                 <th className="py-3.5 px-4 bg-[#f5f1e8]">Rang</th>
                 <th className="py-3.5 px-4 bg-[#f5f1e8]">Produit</th>
-                <th className="py-3.5 px-4 bg-[#f5f1e8]">CatÃ©gorie</th>
-                <th className="py-3.5 px-4 text-center bg-[#f5f1e8]">QuantitÃ© Vendue</th>
-                <th className="py-3.5 px-4 text-center bg-[#f5f1e8]">FrÃ©quence Ventes</th>
-                <th className="py-3.5 px-4 text-right bg-[#f5f1e8]">CA GÃ©nÃ©rÃ©</th>
+                <th className="py-3.5 px-4 bg-[#f5f1e8]">Catégorie</th>
+                <th className="py-3.5 px-4 text-center bg-[#f5f1e8]">Quantité Vendue</th>
+                <th className="py-3.5 px-4 text-center bg-[#f5f1e8]">Fréquence Ventes</th>
+                <th className="py-3.5 px-4 text-right bg-[#f5f1e8]">CA Généré</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-sans bg-white">

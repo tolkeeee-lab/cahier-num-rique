@@ -37,7 +37,7 @@ interface AuditLogsViewerModalProps {
 
 const ACTION_CONFIG: Record<string, { label: string; icon: any; color: string; badge: string }> = {
   sale_crossed_out: {
-    label: 'Vente biffÃ©e',
+    label: 'Vente biffée',
     icon: RotateCcw,
     color: 'text-amber-600 bg-amber-50 border-amber-200',
     badge: 'bg-amber-100 text-amber-900 border-amber-200',
@@ -49,13 +49,13 @@ const ACTION_CONFIG: Record<string, { label: string; icon: any; color: string; b
     badge: 'bg-rose-100 text-rose-900 border-rose-200',
   },
   sale_deleted: {
-    label: 'Vente supprimÃ©e',
+    label: 'Vente supprimée',
     icon: Trash2,
     color: 'text-red-600 bg-red-50 border-red-200',
     badge: 'bg-red-100 text-red-900 border-red-200',
   },
   cash_closing: {
-    label: 'ClÃ´ture Z',
+    label: 'Clôture Z',
     icon: Coins,
     color: 'text-stone-700 bg-stone-100 border-stone-200',
     badge: 'bg-stone-100 text-stone-700 border-stone-200',
@@ -162,7 +162,7 @@ export function AuditLogsViewerModal({
                 Journal d'Audit Anti-Fraude
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                TraÃ§abilitÃ© des actions sensibles et conformitÃ© pour {shopName}
+                Traçabilité des actions sensibles et conformité pour {shopName}
               </p>
             </div>
           </div>
@@ -171,7 +171,7 @@ export function AuditLogsViewerModal({
             <button
               onClick={fetchLogs}
               disabled={loading}
-              title="RafraÃ®chir les logs"
+              title="Rafraîchir les logs"
               className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 active:scale-[0.97] transition-colors"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -193,7 +193,7 @@ export function AuditLogsViewerModal({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher par employÃ©, article, action..."
+              placeholder="Rechercher par employé, article, action..."
               className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-slate-900"
             />
           </div>
@@ -241,7 +241,7 @@ export function AuditLogsViewerModal({
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              ClÃ´tures Z
+              Clôtures Z
             </button>
           </div>
         </div>
@@ -255,7 +255,7 @@ export function AuditLogsViewerModal({
             </div>
           ) : filteredLogs.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-xs">
-              Aucune action enregistrÃ©e pour ces critÃ¨res.
+              Aucune action enregistrée pour ces critères.
             </div>
           ) : (
             filteredLogs.map((log) => {
@@ -303,13 +303,13 @@ export function AuditLogsViewerModal({
                     </button>
                   </div>
 
-                  {/* RÃ©sumÃ© textuel concis */}
+                  {/* Résumé textuel concis */}
                   {log.details && (
                     <div className="text-xs text-slate-700 bg-white p-2.5 rounded-xl border border-slate-150">
                       {log.action === 'sale_returned' && (
                         <div className="space-y-1">
                           <div className="font-semibold text-rose-700">
-                            Montant remboursÃ© : {formatPrice(log.details.totalRefundAmount || 0)} ({log.details.refundMode === 'cash' ? 'EspÃ¨ces' : 'Avoir'})
+                            Montant remboursé : {formatPrice(log.details.totalRefundAmount || 0)} ({log.details.refundMode === 'cash' ? 'Espèces' : 'Avoir'})
                           </div>
                           {log.details.reason && (
                             <div className="text-slate-500">Motif : {log.details.reason}</div>
@@ -318,19 +318,19 @@ export function AuditLogsViewerModal({
                       )}
                       {log.action === 'sale_crossed_out' && (
                         <div className="font-semibold text-amber-800">
-                          Vente nÂ° {log.target_id?.slice(0, 8)} annulÃ©e/biffÃ©e
+                          Vente n° {log.target_id?.slice(0, 8)} annulée/biffée
                         </div>
                       )}
                       {log.action === 'cash_closing' && (
                         <div className="space-y-0.5">
-                          <div>Caisse rÃ©elle : <span className="font-mono font-bold">{formatPrice(log.details.actual_cash || 0)}</span></div>
+                          <div>Caisse réelle : <span className="font-mono font-bold">{formatPrice(log.details.actual_cash || 0)}</span></div>
                           <div className={log.details.difference < 0 ? 'text-rose-600 font-bold' : 'text-emerald-600'}>
-                            Ã‰cart constatÃ© : {formatPrice(log.details.difference || 0)}
+                            Écart constaté : {formatPrice(log.details.difference || 0)}
                           </div>
                         </div>
                       )}
 
-                      {/* Vue dÃ©taillÃ©e JSON si dÃ©pliÃ©e */}
+                      {/* Vue détaillée JSON si dépliée */}
                       {isExpanded && (
                         <pre className="mt-2 pt-2 border-t border-slate-100 text-[11px] font-mono text-slate-600 overflow-x-auto whitespace-pre-wrap">
                           {JSON.stringify(log.details, null, 2)}

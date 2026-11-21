@@ -23,8 +23,8 @@ const CATEGORY_OPTIONS: Record<string, { id: string; label: string }[]> = {
     { id: 'Divers', label: 'Divers' },
   ],
   resto: [
-    { id: 'Cuisine', label: 'Plats cuisinÃ©s' },
-    { id: 'CafÃ©tÃ©ria', label: 'CafÃ©tÃ©ria' },
+    { id: 'Cuisine', label: 'Plats cuisinés' },
+    { id: 'Cafétéria', label: 'Cafétéria' },
     { id: 'Boissons', label: 'Boissons' },
   ],
   prestations: [
@@ -34,7 +34,7 @@ const CATEGORY_OPTIONS: Record<string, { id: string; label: string }[]> = {
   ],
   particulier: [
     { id: 'Foyer', label: 'Maison & Charges' },
-    { id: 'Alimentation', label: 'MarchÃ© & Nourriture' },
+    { id: 'Alimentation', label: 'Marché & Nourriture' },
     { id: 'Divers', label: 'Divers' },
   ],
 }
@@ -101,20 +101,20 @@ export function TactileMenuModal({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end pb-16 sm:pb-20 bg-black/25 backdrop-blur-2xs animate-in fade-in duration-150 pointer-events-none">
-      {/* ArriÃ¨re-plan cliquable pour fermer */}
+      {/* Arrière-plan cliquable pour fermer */}
       <div className="flex-1 pointer-events-auto" onClick={onClose} />
 
-      {/* Ruban horizontal compact et dÃ©filable positionnÃ© juste au-dessus de la barre WhatsApp */}
+      {/* Ruban horizontal compact et défilable positionné juste au-dessus de la barre WhatsApp */}
       <div className="w-full max-w-4xl mx-auto bg-[#fffdf2] border-2 border-amber-400 rounded-3xl p-3 shadow-2xl space-y-2 animate-in slide-in-from-bottom duration-200 pointer-events-auto">
         
-        {/* En-tÃªte ultra fin du ruban */}
+        {/* En-tête ultra fin du ruban */}
         <div className="flex items-center justify-between gap-2 border-b border-amber-200 pb-1.5 flex-wrap">
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded-lg bg-amber-400 text-amber-950 flex items-center justify-center font-semibold shadow-xs">
               <Zap className="w-3.5 h-3.5 fill-amber-950" strokeWidth={1.75} />
             </div>
             <span className="font-semibold text-amber-950 text-xs font-mono">
-              Raccourcis 1-Tap (DÃ©filement Horizontal)
+              Raccourcis 1-Tap (Défilement Horizontal)
             </span>
           </div>
 
@@ -184,7 +184,7 @@ export function TactileMenuModal({
           </form>
         )}
 
-        {/* â”€â”€ Ruban DÃ©filable Horizontalement (Single / Double Line Scroll) â”€â”€ */}
+        {/* ── Ruban Défilable Horizontalement (Single / Double Line Scroll) ── */}
         {isLoading ? (
           <div className="flex items-center justify-center py-3 text-amber-700 text-xs gap-1.5 font-mono">
             <Loader className="w-3.5 h-3.5 animate-spin" strokeWidth={1.75} />
@@ -238,7 +238,7 @@ export function TactileMenuModal({
           </div>
         ) : (
           <div className="py-2.5 text-center text-gray-400 text-xs italic font-mono bg-amber-50/50 rounded-xl border border-dashed border-amber-200">
-            Aucun raccourci. Cliquez sur "+ Nouveau" pour crÃ©er vos boutons 1-tap.
+            Aucun raccourci. Cliquez sur "+ Nouveau" pour créer vos boutons 1-tap.
           </div>
         )}
       </div>

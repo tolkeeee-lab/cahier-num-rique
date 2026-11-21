@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useMemo } from 'react'
 import { formatPrice } from '@/lib/penUtils'
 import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical, Share2, Coins, Lightbulb, Calendar, TrendingUp, ArrowDownRight, Package, Clock, CreditCard, Ruler } from 'lucide-react'
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Types ─────────────────────────────────────────────────────────────────
 
 interface SaleItem {
   id: string
@@ -38,7 +38,7 @@ interface NotebookPageProps {
   activeFilter?: string
 }
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
 function formatLongDateFr(dateStr?: string): string {
   if (!dateStr) {
@@ -87,18 +87,18 @@ function getBadgeClass(penId: string, type?: string) {
 
 function getPenLabel(penId: string, type?: string) {
   if (type === 'client_request') return 'DEMANDE'
-  if (type === 'payment_client') return 'RÃˆGLEMENT REÃ‡U'
-  if (type === 'payment_supplier') return 'RÃˆGLEMENT PAYÃ‰'
+  if (type === 'payment_client') return 'RÈGLEMENT REÇU'
+  if (type === 'payment_supplier') return 'RÈGLEMENT PAYÉ'
   switch (penId) {
-    case 'red':    return 'DÃ‰PENSE'
+    case 'red':    return 'DÉPENSE'
     case 'green':  return 'ACHAT STOCK'
-    case 'purple': return 'ACHAT CRÃ‰DIT'
-    case 'yellow': return 'VENTE CRÃ‰DIT'
+    case 'purple': return 'ACHAT CRÉDIT'
+    case 'yellow': return 'VENTE CRÉDIT'
     default:       return 'VENTE CASH'
   }
 }
 
-// â”€â”€â”€ Composant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Composant ─────────────────────────────────────────────────────────────
 
 export const NotebookPage: React.FC<NotebookPageProps> = ({
   sales,
@@ -125,10 +125,10 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
     }
   }, [sales.length])
 
-  // Filtrage combinÃ© (Recherche + Filtre par catÃ©gorie de stylo)
+  // Filtrage combiné (Recherche + Filtre par catégorie de stylo)
   const filteredSales = useMemo(() => {
     return sales.filter((s) => {
-      // Filtre par catÃ©gorie de stylo cliquÃ©
+      // Filtre par catégorie de stylo cliqué
       if (activeFilter === 'blue' && !(s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale' || s.type === 'sale_cash' || s.type === 'payment_client')) return false
       if (activeFilter === 'red' && !(s.pen_color === 'red' || s.type === 'cash_out' || s.type === 'payment_supplier' || s.type === 'stock_damage')) return false
       if (activeFilter === 'green' && !(s.pen_color === 'green' || s.type === 'purchase_cash' || s.type === 'stock_cash')) return false
@@ -164,7 +164,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
     <div className="lined-paper relative pl-5 sm:pl-9 pr-1.5 sm:pr-3.5 py-1 sm:py-2 flex-1 min-h-0 flex flex-col rounded-xl sm:rounded-2xl border border-amber-300/40 shadow-xs overflow-hidden bg-[#faf5e8]">
       <div className="relative z-10 flex flex-col h-full space-y-1 sm:space-y-1.5">
 
-        {/* Liste des Ã©critures avec BanniÃ¨re Dynamique de CatÃ©gorie sur chaque journÃ©e */}
+        {/* Liste des écritures avec Bannière Dynamique de Catégorie sur chaque journée */}
         <div
           ref={listRef}
           className="flex-1 min-h-0 overflow-y-auto space-y-2 sm:space-y-3 lined-text-container pr-1 scrollbar-none pb-2"
@@ -201,7 +201,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
 
             return (
               <div key={dateKey} className="space-y-1.5">
-                {/* â”€â”€ BANNIÃˆRE DYNAMIQUE DE CATÃ‰GORIE DU CAHIER â”€â”€ */}
+                {/* ── BANNIÈRE DYNAMIQUE DE CATÉGORIE DU CAHIER ── */}
                 {activeFilter === 'blue' ? (
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border border-blue-300 font-mono text-xs text-blue-950 font-bold bg-blue-50/90 rounded-xl shadow-2xs">
                     <div className="flex items-center gap-1.5 font-handwritten text-xs sm:text-sm text-blue-900 font-bold">
@@ -221,7 +221,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     </div>
                     <span className="px-2.5 py-0.5 rounded-full font-semibold text-xs bg-rose-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
                       <ArrowDownRight className="w-3.5 h-3.5" />
-                      <span>DÃ©penses : -{formatPrice(expensesTotal)}</span>
+                      <span>Dépenses : -{formatPrice(expensesTotal)}</span>
                     </span>
                   </div>
                 ) : activeFilter === 'green' ? (
@@ -254,11 +254,11 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     </div>
                     <span className="px-2.5 py-0.5 rounded-full font-semibold text-xs bg-amber-600 text-white shadow-xs font-mono tabular-nums flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>CrÃ©dits Clients : +{formatPrice(yellowCreditTotal)}</span>
+                      <span>Crédits Clients : +{formatPrice(yellowCreditTotal)}</span>
                     </span>
                   </div>
                 ) : activeFilter === 'total' ? null : (
-                  /* â”€â”€ BANNIÃˆRE TOUS â”€â”€ */
+                  /* ── BANNIÈRE TOUS ── */
                   <div className="flex items-center justify-between gap-2 py-1 px-2 border-b border-dashed border-amber-300/80 font-handwritten text-xs sm:text-sm text-amber-900 select-none font-bold bg-amber-50/60 rounded-xl">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
@@ -269,15 +269,15 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         CA : +{formatPrice(salesTotal)}
                       </span>
                       <span className="px-2 py-0.5 rounded-full font-semibold bg-amber-200/90 text-amber-950 border border-amber-300 tabular-nums">
-                        {allDayOperations.length} Ã©criture(s)
+                        {allDayOperations.length} écriture(s)
                       </span>
                     </div>
                   </div>
                 )}
 
-                {/* â”€â”€ MODE SOLDE EXCLUSIF : Affiche UNIQUEMENT le Bilan de Caisse â”€â”€ */}
+                {/* ── MODE SOLDE EXCLUSIF : Affiche UNIQUEMENT le Bilan de Caisse ── */}
                 {activeFilter === 'total' ? (
-                  <div className="py-3 px-3.5 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/85 border-2 border-emerald-400/90 rounded-2xl font-mono text-xs shadow-md space-y-3 select-none">
+                  <div className="py-3 px-3.5 sm:px-4 bg-[#faf5e8] border border-[#e2d6be] rounded-xl font-mono text-xs space-y-3 select-none">
                     <div className="flex items-center justify-between border-b-2 border-dashed border-amber-300 pb-2 font-handwritten font-semibold text-amber-950 text-sm sm:text-base">
                       <div className="flex items-center gap-2">
                         <Calculator className="w-4 h-4 text-emerald-800" />
@@ -288,7 +288,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       </span>
                     </div>
 
-                    {/* Lignes de dÃ©composition arithmÃ©tique */}
+                    {/* Lignes de décomposition arithmétique */}
                     <div className="space-y-1.5 pt-1">
                       {/* Ventes Cash */}
                       <div className="flex justify-between items-center bg-blue-100/70 p-2 rounded-xl border border-blue-300/80">
@@ -299,11 +299,11 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         <span className="font-semibold text-blue-950 text-sm font-mono tabular-nums">+{formatPrice(salesCashTotal)}</span>
                       </div>
 
-                      {/* DÃ©penses */}
+                      {/* Dépenses */}
                       <div className="flex justify-between items-center bg-rose-100/70 p-2 rounded-xl border border-rose-300/80">
                         <span className="text-rose-950 font-bold flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
-                          <span>DÃ©penses Diverses</span>
+                          <span>Dépenses Diverses</span>
                         </span>
                         <span className="font-semibold text-rose-950 text-sm font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
                       </div>
@@ -317,7 +317,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         <span className="font-semibold text-emerald-950 text-sm font-mono tabular-nums">-{formatPrice(stockCashTotal)}</span>
                       </div>
 
-                      {/* Ligne MaÃ®tresse : Solde Net */}
+                      {/* Ligne Maîtresse : Solde Net */}
                       <div className={`mt-3 pt-3 pb-3 px-3 border-2 flex items-center justify-between font-semibold text-sm sm:text-base rounded-xl shadow-xs ${
                         dayNet >= 0
                           ? 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-300/60'
@@ -332,13 +332,13 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         </span>
                       </div>
 
-                      {/* CrÃ©dits et Dettes */}
+                      {/* Crédits et Dettes */}
                       {(yellowCreditTotal > 0 || purpleCreditTotal > 0) && (
                         <div className="pt-2 border-t border-dashed border-amber-300 flex items-center justify-between text-[11px] font-bold text-gray-700 flex-wrap gap-2">
                           {yellowCreditTotal > 0 && (
                             <span className="text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300 flex items-center gap-1 font-mono tabular-nums">
                               <Clock className="w-3.5 h-3.5 text-amber-700" />
-                              <span>CrÃ©dits clients en cours : +{formatPrice(yellowCreditTotal)}</span>
+                              <span>Crédits clients en cours : +{formatPrice(yellowCreditTotal)}</span>
                             </span>
                           )}
                           {purpleCreditTotal > 0 && (
@@ -356,7 +356,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     {/* Ventes du jour */}
                     {dateSales.length === 0 ? (
                       <div className="py-4 text-center text-gray-400 handwritten text-sm flex flex-col items-center justify-center">
-                        Aucune Ã©criture enregistrÃ©e pour cette journÃ©e.
+                        Aucune écriture enregistrée pour cette journée.
                       </div>
                     ) : (
                       dateSales.map((sale) => {
@@ -380,7 +380,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                           {/* Contenu principal */}
                           <div className="flex-grow space-y-0.5 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {/* 1. Type d'Ã©criture tout devant */}
+                              {/* 1. Type d'écriture tout devant */}
                               <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-mono uppercase font-semibold border flex-shrink-0 shadow-2xs ${getBadgeClass(sale.pen_color, sale.type)}`}>
                                 {getPenLabel(sale.pen_color, sale.type)}
                               </span>
@@ -392,22 +392,22 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                 </span>
                               )}
 
-                              {/* 3. Texte manuscrit de l'Ã©criture */}
+                              {/* 3. Texte manuscrit de l'écriture */}
                               <span className={`text-xs sm:text-sm font-bold break-words whitespace-normal leading-snug ${inkClass}`}>
                                 {sale.notes || sale.client}
                               </span>
                             </div>
 
-                            {/* Reste dÃ» ou dette soldÃ©e */}
+                            {/* Reste dû ou dette soldée */}
                             {!isCrossedOut && (
                               sale.debt > 0 ? (
                                 <div className="pl-4 text-[11px] text-amber-800 font-bold flex items-center gap-1 font-mono">
                                   <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                  <span>DÃ» : {formatPrice(sale.debt)} â€” {sale.client}</span>
+                                  <span>Dû : {formatPrice(sale.debt)} — {sale.client}</span>
                                 </div>
                               ) : (sale.type === 'sale_credit' || sale.type === 'purchase_credit' || sale.pen_color === 'yellow' || sale.pen_color === 'purple') ? (
                                 <div className="pl-4 text-[11px] text-emerald-800 font-bold flex items-center gap-1 font-mono">
-                                  <span>âœ“ CrÃ©dit soldÃ© ({sale.client})</span>
+                                  <span>✓ Crédit soldé ({sale.client})</span>
                                 </div>
                               ) : null
                             )}
@@ -426,15 +426,15 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                 let prefix = ''
                                 
                                 if (sale.pen_color === 'blue' || sale.type === 'sale' || sale.type === 'cash_in' || sale.type === 'payment_client') {
-                                  // RentrÃ©e d'argent (Vente cash) - Couleur Bleue, avec +
+                                  // Rentrée d'argent (Vente cash) - Couleur Bleue, avec +
                                   badgeClass = 'bg-blue-50 text-blue-800 border-blue-200'
                                   prefix = '+'
                                 } else if (sale.pen_color === 'yellow' || sale.type === 'sale_credit') {
-                                  // Vente Ã  crÃ©dit - Couleur Jaune/Ambre, SANS SIGNE
+                                  // Vente à crédit - Couleur Jaune/Ambre, SANS SIGNE
                                   badgeClass = 'bg-amber-50 text-amber-800 border-amber-200'
                                   prefix = ''
                                 } else if (sale.pen_color === 'red' || sale.type === 'cash_out' || sale.type === 'payment_supplier' || (sale.type === 'cash_adjustment' && ((sale.notes || '').toLowerCase().includes('retrait') || sale.pen_color === 'red'))) {
-                                  // Sortie d'argent (DÃ©pense) - Couleur Rouge, avec -
+                                  // Sortie d'argent (Dépense) - Couleur Rouge, avec -
                                   badgeClass = 'bg-rose-50 text-rose-800 border-rose-200'
                                   prefix = '-'
                                 } else if (sale.pen_color === 'green' || sale.type === 'purchase_cash') {
@@ -442,7 +442,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                   badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                   prefix = '-'
                                 } else if (sale.pen_color === 'purple' || sale.type === 'purchase_credit') {
-                                  // Achat CrÃ©dit - Couleur Violette, SANS SIGNE
+                                  // Achat Crédit - Couleur Violette, SANS SIGNE
                                   badgeClass = 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200'
                                   prefix = ''
                                 }
@@ -457,13 +457,13 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
 
                             {!isCrossedOut && (
                               <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity relative">
-                                {/* Bouton ReÃ§u WhatsApp Direct 1-Clic */}
+                                {/* Bouton Reçu WhatsApp Direct 1-Clic */}
                                 {onShareWhatsAppReceipt && sale.total > 0 && (sale.pen_color === 'blue' || sale.pen_color === 'yellow' || sale.type === 'cash_in' || sale.type === 'sale' || sale.type === 'sale_cash' || sale.type === 'sale_credit') && (
                                   <button
                                     type="button"
                                     onClick={() => onShareWhatsAppReceipt(sale)}
                                     className="p-1 rounded-lg text-emerald-800 hover:bg-emerald-200/90 bg-emerald-100/90 border border-emerald-300 shadow-2xs transition-colors active:scale-[0.97] cursor-pointer"
-                                    title="ReÃ§u WhatsApp direct (1-Clic)"
+                                    title="Reçu WhatsApp direct (1-Clic)"
                                   >
                                     <Share2 className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
                                   </button>
@@ -475,12 +475,12 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                     type="button"
                                     onClick={() => setActiveActionMenuSaleId(activeActionMenuSaleId === sale.id ? null : sale.id)}
                                     className="p-1 rounded-lg text-amber-950 hover:bg-amber-200/90 bg-amber-100/90 border border-amber-300 shadow-2xs transition-colors cursor-pointer"
-                                    title="Actions sur cette Ã©criture"
+                                    title="Actions sur cette écriture"
                                   >
                                     <MoreVertical className="w-3.5 h-3.5" />
                                   </button>
 
-                                  {/* Menu Popup d'actions pour cette Ã©criture */}
+                                  {/* Menu Popup d'actions pour cette écriture */}
                                   {activeActionMenuSaleId === sale.id && (
                                     <>
                                       <div
@@ -526,7 +526,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                             className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-emerald-50 text-emerald-900 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                                           >
                                             <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-                                            <span>ReÃ§u WhatsApp (1-Clic)</span>
+                                            <span>Reçu WhatsApp (1-Clic)</span>
                                           </button>
                                         )}
 
@@ -540,7 +540,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                                             className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-blue-50 text-blue-900 font-bold flex items-center gap-2 transition-colors cursor-pointer"
                                           >
                                             <Printer className="w-3.5 h-3.5 text-blue-700" />
-                                            <span>Imprimer le reÃ§u</span>
+                                            <span>Imprimer le reçu</span>
                                           </button>
                                         )}
 
@@ -582,7 +582,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         {/* Calculateur de monnaie en ligne */}
                         {isChangeActive && !isCrossedOut && (
                           <div className="mt-1.5 pt-1.5 border-t border-amber-200/80 flex flex-wrap items-center gap-1.5 text-xs font-mono bg-amber-50/70 p-1.5 rounded-lg">
-                            <span className="text-amber-900 font-bold text-[10px]">ReÃ§u :</span>
+                            <span className="text-amber-900 font-bold text-[10px]">Reçu :</span>
                             <input
                               type="number"
                               placeholder="5000"
@@ -628,25 +628,25 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                   })
                 )}
 
-                {/* â”€â”€ BILAN MANUSCRIT AU BAS DES Ã‰CRITURES (Mode TOUS uniquement) â”€â”€ */}
+                {/* ── BILAN MANUSCRIT AU BAS DES ÉCRITURES (Mode TOUS uniquement) ── */}
                 {activeFilter === 'all' && (
-                  <div className="mt-3 pt-2.5 pb-2 px-3 sm:px-4 bg-gradient-to-br from-amber-50/95 to-yellow-50/80 border-2 border-dashed border-amber-300/90 rounded-2xl font-mono text-xs shadow-2xs space-y-2 select-none">
+                  <div className="mt-3 pt-2.5 pb-2 px-3 sm:px-4 bg-[#faf5e8] border border-[#e2d6be] rounded-xl font-mono text-xs space-y-2 select-none">
                   <div className="flex items-center justify-between border-b border-amber-300/80 pb-1 font-handwritten font-semibold text-amber-950 text-xs sm:text-sm">
                     <div className="flex items-center gap-1.5">
                       <Ruler className="w-4 h-4 text-amber-900" />
                       <span className="tracking-wide uppercase">Bilan de Caisse du Jour</span>
                     </div>
                     <span className="font-mono text-[11px] text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full font-bold">
-                      {allDaySales.length} opÃ©ration(s)
+                      {allDaySales.length} opération(s)
                     </span>
                   </div>
 
-                  {/* Lignes de dÃ©composition du calcul */}
+                  {/* Lignes de décomposition du calcul */}
                   <div className="space-y-1.5 text-[11px] sm:text-xs">
                     <div className="flex items-center justify-between text-blue-900 font-bold">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
-                        <span>(+) Ventes encaissÃ©es (CA)</span>
+                        <span>(+) Ventes encaissées (CA)</span>
                       </span>
                       <span className="font-semibold text-blue-950 font-mono tabular-nums">+{formatPrice(salesTotal)}</span>
                     </div>
@@ -654,7 +654,7 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                     <div className="flex items-center justify-between text-rose-900 font-bold">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-rose-600 inline-block" />
-                        <span>(-) DÃ©penses rÃ©glÃ©es</span>
+                        <span>(-) Dépenses réglées</span>
                       </span>
                       <span className="font-semibold text-rose-950 font-mono tabular-nums">-{formatPrice(expensesTotal)}</span>
                     </div>
@@ -682,13 +682,13 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                       </span>
                     </div>
 
-                    {/* Dettes et CrÃ©dits Ã  suivre si prÃ©sents */}
+                    {/* Dettes et Crédits à suivre si présents */}
                     {(yellowCreditTotal > 0 || purpleCreditTotal > 0) && (
                       <div className="pt-1.5 border-t border-dashed border-amber-300/60 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-gray-700 flex-wrap gap-2">
                         {yellowCreditTotal > 0 && (
                           <span className="text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-lg border border-amber-300 flex items-center gap-1 font-mono tabular-nums">
                             <Clock className="w-3.5 h-3.5 text-amber-800" />
-                            <span>CrÃ©dits clients : +{formatPrice(yellowCreditTotal)}</span>
+                            <span>Crédits clients : +{formatPrice(yellowCreditTotal)}</span>
                           </span>
                         )}
                         {purpleCreditTotal > 0 && (

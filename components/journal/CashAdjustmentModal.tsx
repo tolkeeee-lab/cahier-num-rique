@@ -72,7 +72,7 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
     >
       <div className="w-full max-w-md bg-[#faf5e8] border-2 border-amber-300 rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
         
-        {/* EntÃªte */}
+        {/* Entête */}
         <div className="flex items-center justify-between border-b border-amber-200 pb-3">
           <div className="flex items-center gap-2">
             <Calculator className="w-5 h-5 text-amber-700" strokeWidth={1.75} />
@@ -115,7 +115,7 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
 
         {/* Solde Actuel */}
         <div className="bg-amber-100/90 p-3 rounded-xl border border-amber-300 flex justify-between items-center font-mono">
-          <span className="text-xs text-amber-950 font-bold">Solde actuel thÃ©orique :</span>
+          <span className="text-xs text-amber-950 font-bold">Solde actuel théorique :</span>
           <span className="text-sm font-semibold text-emerald-800 font-mono tabular-nums">
             {formatPrice(currentCash)}
           </span>
@@ -169,7 +169,7 @@ export const CashAdjustmentModal: React.FC<CashAdjustmentModalProps> = ({
           ) : (
             <div>
               <label className="block text-xs font-mono font-semibold text-amber-950 uppercase mb-1">
-                Cash rÃ©ellement comptÃ© en caisse (FCFA) :
+                Cash réellement compté en caisse (FCFA) :
               </label>
               <input
                 type="text"

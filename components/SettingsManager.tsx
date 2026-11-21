@@ -36,7 +36,7 @@ export interface SettingsManagerProps {
 export function SettingsManager({
   shopId = '',
   shopName = 'Ma Boutique',
-  activity = 'Commerce gÃ©nÃ©ral',
+  activity = 'Commerce général',
   phone = '',
   address = '',
   country = 'BJ',
@@ -56,7 +56,7 @@ export function SettingsManager({
 
   return (
     <div className="space-y-6">
-      {/* Mode Super Admin (CachÃ© pour les autres) */}
+      {/* Mode Super Admin (Caché pour les autres) */}
       {isAdminUser && (
         <div className="bg-stone-100 p-6 rounded-2xl border border-stone-200 shadow-sm">
           <div className="flex items-center justify-between mb-2">
@@ -66,7 +66,7 @@ export function SettingsManager({
                 <span>Mode Super Admin</span>
               </h2>
               <p className="text-sm text-stone-700">
-                Vous avez des privilÃ¨ges globaux. AccÃ©dez au tableau de bord administrateur.
+                Vous avez des privilèges globaux. Accédez au tableau de bord administrateur.
               </p>
             </div>
             <a 
@@ -91,7 +91,7 @@ export function SettingsManager({
         onSaveProfile={onSaveProfile}
       />
 
-      {/* SÃ©curitÃ© & Journal d'Audit Anti-Fraude (RÃ©servÃ© PropriÃ©taire / Admin) */}
+      {/* Sécurité & Journal d'Audit Anti-Fraude (Réservé Propriétaire / Admin) */}
       {!isEmployee && (
         <div className="bg-amber-50/70 p-6 rounded-2xl border border-amber-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -103,7 +103,7 @@ export function SettingsManager({
                 Journal d'Audit Anti-Fraude
               </h3>
               <p className="text-xs text-amber-800 mt-0.5 max-w-md">
-                Consultez l'historique immuable de toutes les actions sensibles : ventes biffÃ©es, retours marchandises, Ã©carts de caisse Z et suppressions.
+                Consultez l'historique immuable de toutes les actions sensibles : ventes biffées, retours marchandises, écarts de caisse Z et suppressions.
               </p>
             </div>
           </div>
@@ -118,7 +118,7 @@ export function SettingsManager({
         </div>
       )}
 
-      {/* Gestion de l'Ã©quipe d'employÃ©s */}
+      {/* Gestion de l'équipe d'employés */}
       <EmployeeRoleManager
         employees={employees}
         shopId={shopId}
@@ -127,7 +127,7 @@ export function SettingsManager({
         onRemoveEmployee={onRemoveEmployee}
       />
 
-      {/* Sauvegarde & Nettoyage SÃ©lectif */}
+      {/* Sauvegarde & Nettoyage Sélectif */}
       <DataExportBackupSettings
         shopId={shopId}
         onExportBackup={onExportBackup}

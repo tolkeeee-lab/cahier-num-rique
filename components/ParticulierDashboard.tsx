@@ -33,7 +33,7 @@ export function ParticulierDashboard({
 }: ParticulierDashboardProps) {
   const [activeTab, setActiveTab] = useState<'budget' | 'tontine' | 'carnet' | 'historique'>('budget')
 
-  // Calculs BudgÃ©taires SpÃ©cifiques Famille / Foyer
+  // Calculs Budgétaires Spécifiques Famille / Foyer
   const incomeTotal = sales
     .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'blue' || s.type === 'cash_in' || s.type === 'sale'))
     .reduce((sum, s) => sum + (Number(s.paid) || Number(s.total) || 0), 0)
@@ -59,11 +59,11 @@ export function ParticulierDashboard({
 
   const categoryBreakdown = [
     {
-      category: 'MarchÃ©',
-      label: 'MarchÃ© & Nourriture',
+      category: 'Marché',
+      label: 'Marché & Nourriture',
       icon: <ShoppingCart className="w-4 h-4 text-emerald-600 flex-shrink-0" />,
       amount: sales
-        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && (s.notes || '').toLowerCase().includes('marchÃ©'))
+        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && (s.notes || '').toLowerCase().includes('marché'))
         .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
     {
@@ -83,11 +83,11 @@ export function ParticulierDashboard({
         .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
     {
-      category: 'Ã‰cole',
-      label: 'ScolaritÃ© & Enfants',
+      category: 'École',
+      label: 'Scolarité & Enfants',
       icon: <GraduationCap className="w-4 h-4 text-stone-700 flex-shrink-0" />,
       amount: sales
-        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && /ecole|Ã©cole|scolaritÃ©/i.test(s.notes || ''))
+        .filter(s => s.status !== 'crossed_out' && (s.pen_color === 'red' || s.type === 'cash_out') && /ecole|école|scolarité/i.test(s.notes || ''))
         .reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     },
   ]
@@ -119,7 +119,7 @@ export function ParticulierDashboard({
           }`}
         >
           <PiggyBank className="w-4 h-4" strokeWidth={1.5} />
-          <span>Tontine & Ã©pargne</span>
+          <span>Tontine & épargne</span>
         </button>
 
         <button

@@ -27,7 +27,7 @@ export function SyscohadaModal({
   onClose,
   sales,
   periodLabel = 'Cette_periode',
-  shopName = 'Cahier NumÃ©rique'
+  shopName = 'Cahier Numérique'
 }: SyscohadaModalProps) {
   const [activeTab, setActiveTab] = useState<'smt' | 'journal' | 'balance'>('smt')
   const [searchQuery, setSearchQuery] = useState('')
@@ -84,14 +84,14 @@ export function SyscohadaModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-handwritten text-xl font-bold text-amber-950">
-                  Ã‰tats Comptables SYSCOHADA (OHADA SMT)
+                  États Comptables SYSCOHADA (OHADA SMT)
                 </h3>
                 <span className="px-2 py-0.5 bg-amber-200/80 text-amber-900 text-[10px] font-mono font-bold rounded-full border border-amber-300">
-                  SystÃ¨me Minimal de TrÃ©sorerie
+                  Système Minimal de Trésorerie
                 </span>
               </div>
               <p className="text-xs text-amber-800 font-medium">
-                Nomenclature officielle des 17 pays membres â€¢ {shopName} ({periodLabel.replace(/_/g, ' ')})
+                Nomenclature officielle des 17 pays membres • {shopName} ({periodLabel.replace(/_/g, ' ')})
               </p>
             </div>
           </div>
@@ -101,7 +101,7 @@ export function SyscohadaModal({
               type="button"
               onClick={() => exportSyscohadaJournalCSV(sales, periodLabel, shopName)}
               className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.97] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
-              title="TÃ©lÃ©charger le Journal en format CSV Excel pour votre comptable"
+              title="Télécharger le Journal en format CSV Excel pour votre comptable"
             >
               <FileSpreadsheet className="w-4 h-4" strokeWidth={1.75} />
               <span className="hidden sm:inline">Export CSV SYSCOHADA</span>
@@ -138,7 +138,7 @@ export function SyscohadaModal({
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" strokeWidth={1.75} />
-            <span>1. Compte de RÃ©sultat & TrÃ©sorerie (SMT)</span>
+            <span>1. Compte de Résultat & Trésorerie (SMT)</span>
           </button>
 
           <button
@@ -151,7 +151,7 @@ export function SyscohadaModal({
             }`}
           >
             <Layers className="w-3.5 h-3.5" strokeWidth={1.75} />
-            <span>2. Grand Livre Partie Double ({journalRows.length} Ã©critures)</span>
+            <span>2. Grand Livre Partie Double ({journalRows.length} écritures)</span>
           </button>
 
           <button
@@ -171,14 +171,14 @@ export function SyscohadaModal({
         {/* Corps du Document */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-          {/* â”€â”€ TAB 1 : COMPTE DE RÃ‰SULTAT ET TABLEAU DE TRÃ‰SORERIE (SMT) â”€â”€ */}
+          {/* ── TAB 1 : COMPTE DE RÉSULTAT ET TABLEAU DE TRÉSORERIE (SMT) ── */}
           {activeTab === 'smt' && (
             <div className="space-y-6 animate-fade-in">
-              {/* Cartes ClÃ©s SMT */}
+              {/* Cartes Clés SMT */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
                   <span className="text-[10px] font-bold font-mono text-emerald-800 uppercase block">
-                    Classe 7 â€” Ventes Nettes (Compte 7011)
+                    Classe 7 — Ventes Nettes (Compte 7011)
                   </span>
                   <div className="text-xl font-bold font-mono text-emerald-950 mt-1">
                     {formatPrice(smtSummary.totalProduits)}
@@ -188,12 +188,12 @@ export function SyscohadaModal({
 
                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
                   <span className="text-[10px] font-bold font-mono text-amber-800 uppercase block">
-                    Compte 6011 â€” Achats Stock
+                    Compte 6011 — Achats Stock
                   </span>
                   <div className="text-xl font-bold font-mono text-amber-950 mt-1">
                     {formatPrice(smtSummary.achatsMarchandises601)}
                   </div>
-                  <span className="text-[10px] text-amber-700 font-medium">RÃ©approvisionnement</span>
+                  <span className="text-[10px] text-amber-700 font-medium">Réapprovisionnement</span>
                 </div>
 
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
@@ -208,7 +208,7 @@ export function SyscohadaModal({
 
                 <div className={`p-4 border rounded-2xl ${smtSummary.resultatNetSMT >= 0 ? 'bg-emerald-100/70 border-emerald-300' : 'bg-red-50 border-red-200'}`}>
                   <span className="text-[10px] font-bold font-mono uppercase block text-gray-700">
-                    RÃ©sultat Net SMT (BÃ©nÃ©fice/Perte)
+                    Résultat Net SMT (Bénéfice/Perte)
                   </span>
                   <div className={`text-xl font-bold font-mono mt-1 ${smtSummary.resultatNetSMT >= 0 ? 'text-emerald-900' : 'text-red-800'}`}>
                     {smtSummary.resultatNetSMT >= 0 ? '+' : ''}{formatPrice(smtSummary.resultatNetSMT)}
@@ -217,12 +217,12 @@ export function SyscohadaModal({
                 </div>
               </div>
 
-              {/* Tableau SynthÃ©tique Compte de RÃ©sultat OHADA SMT */}
+              {/* Tableau Synthétique Compte de Résultat OHADA SMT */}
               <div className="bg-white border border-amber-200 rounded-2xl overflow-hidden shadow-xs">
                 <div className="px-4 py-3 bg-[#f6f1e7] border-b border-amber-200 font-bold text-xs text-amber-950 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <BarChart2 className="w-4 h-4 text-amber-900" />
-                    <span>COMPTE DE RÃ‰SULTAT SIMPLIFIÃ‰ (SYSCOHADA SMT)</span>
+                    <span>COMPTE DE RÉSULTAT SIMPLIFIÉ (SYSCOHADA SMT)</span>
                   </span>
                   <span className="font-mono text-[10px] text-amber-800">Montants en FCFA</span>
                 </div>
@@ -230,16 +230,16 @@ export function SyscohadaModal({
                 <div className="divide-y divide-gray-100 text-xs font-sans">
                   <div className="flex items-center justify-between p-3 bg-emerald-50/40">
                     <div>
-                      <span className="font-bold text-gray-900 block">7011 â€” Ventes de marchandises</span>
-                      <span className="text-[10px] text-gray-500">Total encaissements et ventes Ã  crÃ©dit enregistrÃ©es</span>
+                      <span className="font-bold text-gray-900 block">7011 — Ventes de marchandises</span>
+                      <span className="text-[10px] text-gray-500">Total encaissements et ventes à crédit enregistrées</span>
                     </div>
                     <span className="font-mono font-bold text-emerald-900">+{formatPrice(smtSummary.chiffreAffaires701)}</span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 bg-amber-50/40">
                     <div>
-                      <span className="font-bold text-gray-900 block">6011 â€” Achats de marchandises</span>
-                      <span className="text-[10px] text-gray-500">Achats stock payÃ©s cash et Ã  crÃ©dit chez les grossistes</span>
+                      <span className="font-bold text-gray-900 block">6011 — Achats de marchandises</span>
+                      <span className="text-[10px] text-gray-500">Achats stock payés cash et à crédit chez les grossistes</span>
                     </div>
                     <span className="font-mono font-bold text-amber-900">-{formatPrice(smtSummary.achatsMarchandises601)}</span>
                   </div>
@@ -251,41 +251,41 @@ export function SyscohadaModal({
 
                   <div className="flex items-center justify-between p-3 pl-6">
                     <div>
-                      <span className="font-semibold text-gray-800">6221 â€” Loyer commercial</span>
+                      <span className="font-semibold text-gray-800">6221 — Loyer commercial</span>
                     </div>
                     <span className="font-mono text-red-700">-{formatPrice(smtSummary.chargesLoyer622)}</span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 pl-6">
                     <div>
-                      <span className="font-semibold text-gray-800">6051 â€” Ã‰lectricitÃ©, Eau & TÃ©lÃ©coms</span>
+                      <span className="font-semibold text-gray-800">6051 — Électricité, Eau & Télécoms</span>
                     </div>
                     <span className="font-mono text-red-700">-{formatPrice(smtSummary.chargesEnergie605)}</span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 pl-6">
                     <div>
-                      <span className="font-semibold text-gray-800">6111 â€” Transport & Livraisons</span>
+                      <span className="font-semibold text-gray-800">6111 — Transport & Livraisons</span>
                     </div>
                     <span className="font-mono text-red-700">-{formatPrice(smtSummary.chargesTransport611)}</span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 pl-6">
                     <div>
-                      <span className="font-semibold text-gray-800">6611 â€” Salaires & Gratifications personnel</span>
+                      <span className="font-semibold text-gray-800">6611 — Salaires & Gratifications personnel</span>
                     </div>
                     <span className="font-mono text-red-700">-{formatPrice(smtSummary.chargesSalaires661)}</span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 pl-6">
                     <div>
-                      <span className="font-semibold text-gray-800">6581 â€” Autres charges diverses de gestion</span>
+                      <span className="font-semibold text-gray-800">6581 — Autres charges diverses de gestion</span>
                     </div>
                     <span className="font-mono text-red-700">-{formatPrice(smtSummary.autresCharges658)}</span>
                   </div>
 
                   <div className="flex items-center justify-between p-4 bg-amber-100/70 border-t-2 border-amber-300 font-bold text-sm">
-                    <span className="text-amber-950 uppercase tracking-wide">RÃ‰SULTAT COMPTABLE NET (SMT)</span>
+                    <span className="text-amber-950 uppercase tracking-wide">RÉSULTAT COMPTABLE NET (SMT)</span>
                     <span className={`font-mono ${smtSummary.resultatNetSMT >= 0 ? 'text-emerald-900' : 'text-red-800'}`}>
                       {smtSummary.resultatNetSMT >= 0 ? '+' : ''}{formatPrice(smtSummary.resultatNetSMT)}
                     </span>
@@ -293,30 +293,30 @@ export function SyscohadaModal({
                 </div>
               </div>
 
-              {/* Solde de TrÃ©sorerie & Bilan SynthÃ©tique */}
+              {/* Solde de Trésorerie & Bilan Synthétique */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
                 <div className="p-3.5 bg-white border border-gray-200 rounded-2xl space-y-1">
-                  <span className="text-[10px] text-gray-500 uppercase font-bold block">5711 â€” Solde Caisse EspÃ¨ces</span>
+                  <span className="text-[10px] text-gray-500 uppercase font-bold block">5711 — Solde Caisse Espèces</span>
                   <span className="font-bold text-gray-900 text-sm block">{formatPrice(smtSummary.soldeCaisse571)}</span>
-                  <span className="text-[9px] text-gray-400">TrÃ©sorerie liquide disponible</span>
+                  <span className="text-[9px] text-gray-400">Trésorerie liquide disponible</span>
                 </div>
 
                 <div className="p-3.5 bg-white border border-amber-200 rounded-2xl space-y-1">
-                  <span className="text-[10px] text-amber-800 uppercase font-bold block">4111 â€” CrÃ©ances Clients Ã  Recouvrer</span>
+                  <span className="text-[10px] text-amber-800 uppercase font-bold block">4111 — Créances Clients à Recouvrer</span>
                   <span className="font-bold text-amber-900 text-sm block">{formatPrice(smtSummary.creancesClients411)}</span>
-                  <span className="text-[9px] text-amber-700">CrÃ©dits clients en cours</span>
+                  <span className="text-[9px] text-amber-700">Crédits clients en cours</span>
                 </div>
 
                 <div className="p-3.5 bg-white border border-stone-200 rounded-2xl space-y-1">
-                  <span className="text-[10px] text-stone-700 uppercase font-bold block">4011 â€” Dettes Grossistes Ã  Payer</span>
+                  <span className="text-[10px] text-stone-700 uppercase font-bold block">4011 — Dettes Grossistes à Payer</span>
                   <span className="font-bold text-stone-700 text-sm block">{formatPrice(smtSummary.dettesFournisseurs401)}</span>
-                  <span className="text-[9px] text-stone-700">Achats fournisseurs Ã  rÃ©gler</span>
+                  <span className="text-[9px] text-stone-700">Achats fournisseurs à régler</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* â”€â”€ TAB 2 : GRAND LIVRE & JOURNAL PARTIE DOUBLE â”€â”€ */}
+          {/* ── TAB 2 : GRAND LIVRE & JOURNAL PARTIE DOUBLE ── */}
           {activeTab === 'journal' && (
             <div className="space-y-4 animate-fade-in">
               {/* Barre de Recherche */}
@@ -327,7 +327,7 @@ export function SyscohadaModal({
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Filtrer par nÂ° de compte (ex: 5711, 7011, 6011), libellÃ© ou rÃ©f piÃ¨ce..."
+                    placeholder="Filtrer par n° de compte (ex: 5711, 7011, 6011), libellé ou réf pièce..."
                     className="w-full pl-9 pr-4 py-2 bg-white border border-amber-250 rounded-xl text-xs outline-none focus:border-amber-500 font-mono"
                   />
                 </div>
@@ -342,11 +342,11 @@ export function SyscohadaModal({
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-[#f5f1e8] text-amber-950 font-bold border-b border-amber-200 font-mono text-[10.5px]">
-                        <th className="py-2.5 px-3">PiÃ¨ce</th>
+                        <th className="py-2.5 px-3">Pièce</th>
                         <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">LibellÃ© de l'Ã‰criture</th>
-                        <th className="py-2.5 px-3">DÃ©bit (Compte)</th>
-                        <th className="py-2.5 px-3">CrÃ©dit (Compte)</th>
+                        <th className="py-2.5 px-3">Libellé de l'Écriture</th>
+                        <th className="py-2.5 px-3">Débit (Compte)</th>
+                        <th className="py-2.5 px-3">Crédit (Compte)</th>
                         <th className="py-2.5 px-3 text-right">Montant</th>
                       </tr>
                     </thead>
@@ -354,7 +354,7 @@ export function SyscohadaModal({
                       {filteredJournal.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="text-center py-8 text-gray-400 text-xs italic">
-                            Aucune Ã©criture comptable trouvÃ©e pour cette recherche.
+                            Aucune écriture comptable trouvée pour cette recherche.
                           </td>
                         </tr>
                       ) : (
@@ -394,40 +394,40 @@ export function SyscohadaModal({
             </div>
           )}
 
-          {/* â”€â”€ TAB 3 : BALANCE DES TIERS (411 vs 401) â”€â”€ */}
+          {/* ── TAB 3 : BALANCE DES TIERS (411 vs 401) ── */}
           {activeTab === 'balance' && (
             <div className="space-y-6 animate-fade-in">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
-                {/* 4111 â€” Compte Clients */}
+                {/* 4111 — Compte Clients */}
                 <div className="bg-white border border-amber-250 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between border-b border-amber-100 pb-2">
                     <div>
-                      <span className="font-bold font-mono text-amber-900 text-sm block">Compte 4111 â€” Clients (CrÃ©dits AccordÃ©s)</span>
-                      <span className="text-[10px] text-gray-500">CrÃ©ances Ã  recouvrer auprÃ¨s des clients</span>
+                      <span className="font-bold font-mono text-amber-900 text-sm block">Compte 4111 — Clients (Crédits Accordés)</span>
+                      <span className="text-[10px] text-gray-500">Créances à recouvrer auprès des clients</span>
                     </div>
                     <span className="px-2.5 py-1 bg-amber-100 text-amber-950 font-mono font-bold text-xs rounded-xl border border-amber-300">
                       {formatPrice(smtSummary.creancesClients411)}
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-600 leading-relaxed">
-                    Toutes les ventes rÃ©alisÃ©es avec le **Stylo Jaune** sont imputÃ©es au dÃ©bit du compte `4111 Clients` et au crÃ©dit du compte `7011 Ventes`. Le rÃ¨glement ultÃ©rieur crÃ©dite le compte `4111` par le dÃ©bit du compte `5711 Caisse`.
+                    Toutes les ventes réalisées avec le **Stylo Jaune** sont imputées au débit du compte `4111 Clients` et au crédit du compte `7011 Ventes`. Le règlement ultérieur crédite le compte `4111` par le débit du compte `5711 Caisse`.
                   </p>
                 </div>
 
-                {/* 4011 â€” Compte Fournisseurs */}
+                {/* 4011 — Compte Fournisseurs */}
                 <div className="bg-white border border-purple-250 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between border-b border-purple-100 pb-2">
                     <div>
-                      <span className="font-bold font-mono text-stone-700 text-sm block">Compte 4011 â€” Fournisseurs (Dettes Grossistes)</span>
-                      <span className="text-[10px] text-gray-500">Dettes sur rÃ©approvisionnement Ã  crÃ©dit</span>
+                      <span className="font-bold font-mono text-stone-700 text-sm block">Compte 4011 — Fournisseurs (Dettes Grossistes)</span>
+                      <span className="text-[10px] text-gray-500">Dettes sur réapprovisionnement à crédit</span>
                     </div>
                     <span className="px-2.5 py-1 bg-stone-100 text-stone-700 font-mono font-bold text-xs rounded-xl border border-stone-200">
                       {formatPrice(smtSummary.dettesFournisseurs401)}
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-600 leading-relaxed">
-                    Les achats de stock effectuÃ©s avec le **Stylo Violet** sont imputÃ©s au dÃ©bit du compte `6011 Achats` et au crÃ©dit du compte `4011 Fournisseurs`. Le paiement ultÃ©rieur au fournisseur dÃ©bite le compte `4011` par le crÃ©dit du compte `5711 Caisse`.
+                    Les achats de stock effectués avec le **Stylo Violet** sont imputés au débit du compte `6011 Achats` et au crédit du compte `4011 Fournisseurs`. Le paiement ultérieur au fournisseur débite le compte `4011` par le crédit du compte `5711 Caisse`.
                   </p>
                 </div>
 
@@ -441,7 +441,7 @@ export function SyscohadaModal({
         <div className="px-6 py-3 bg-[#f4ebd9] border-t border-amber-250 flex items-center justify-between text-xs text-amber-900 flex-shrink-0 select-none">
           <div className="flex items-center gap-2 font-mono text-[10px]">
             <ShieldCheck className="w-4 h-4 text-emerald-700" strokeWidth={1.75} />
-            <span>Conforme aux normes du Conseil Comptable OHADA (SYSCOHADA rÃ©visÃ© 2017)</span>
+            <span>Conforme aux normes du Conseil Comptable OHADA (SYSCOHADA révisé 2017)</span>
           </div>
           <button
             type="button"

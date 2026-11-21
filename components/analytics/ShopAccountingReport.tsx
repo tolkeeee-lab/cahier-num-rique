@@ -69,7 +69,7 @@ export function ShopAccountingReport({
       .catch(() => {})
   }, [shopId])
 
-  // Filtrer les ventes selon la pÃ©riode
+  // Filtrer les ventes selon la période
   const filteredSales = useMemo(() => {
     const valid = sales.filter(s => s.status !== 'crossed_out')
     if (period === 'all') return valid
@@ -98,25 +98,25 @@ export function ShopAccountingReport({
 
   // Calculs Comptables Complets
   const accounting = useMemo(() => {
-    let totalSalesCa = 0           // CA Total (Ventes au comptant + CrÃ©dits accordÃ©s)
-    let totalCashReceived = 0      // Argent rÃ©el encaissÃ© en caisse
-    let totalCustomerDebts = 0     // Dettes clients (crÃ©dits dehors)
-    let totalStockPurchases = 0    // Achats de marchandises / RÃ©approvisionnement (Stylo Vert)
-    let totalGeneralExpenses = 0   // DÃ©penses gÃ©nÃ©rales / Charges (Stylo Rouge)
+    let totalSalesCa = 0           // CA Total (Ventes au comptant + Crédits accordés)
+    let totalCashReceived = 0      // Argent réel encaissé en caisse
+    let totalCustomerDebts = 0     // Dettes clients (crédits dehors)
+    let totalStockPurchases = 0    // Achats de marchandises / Réapprovisionnement (Stylo Vert)
+    let totalGeneralExpenses = 0   // Dépenses générales / Charges (Stylo Rouge)
 
     const expenseCategoryMap: Record<string, number> = {}
 
     filteredSales.forEach(s => {
-      // 1. DÃ©penses d'exploitation & RÃ¨glements Fournisseurs
+      // 1. Dépenses d'exploitation & Règlements Fournisseurs
       if (s.pen_color === 'red' || s.type === 'cash_out' || s.type === 'payment_supplier') {
         const amt = s.total || s.paid || 0
         totalGeneralExpenses += amt
-        const cat = s.category || (s.type === 'payment_supplier' ? 'RÃ¨glements Fournisseurs' : 'Charges diverses')
+        const cat = s.category || (s.type === 'payment_supplier' ? 'Règlements Fournisseurs' : 'Charges diverses')
         expenseCategoryMap[cat] = (expenseCategoryMap[cat] || 0) + amt
         return
       }
 
-      // 2. Achats de Marchandises / Stock (Cash ou CrÃ©dit Grossiste)
+      // 2. Achats de Marchandises / Stock (Cash ou Crédit Grossiste)
       if (s.pen_color === 'green' || s.pen_color === 'purple' || s.type === 'purchase_cash' || s.type === 'purchase_credit' || s.type === 'stock_cash') {
         const amt = s.total || s.paid || s.debt || 0
         totalStockPurchases += amt
@@ -124,13 +124,13 @@ export function ShopAccountingReport({
         return
       }
 
-      // 3. Encaissements de crÃ©ances clients (RÃ¨glement dette)
+      // 3. Encaissements de créances clients (Règlement dette)
       if (s.type === 'payment_client') {
         totalCashReceived += (s.paid || s.total || 0)
         return
       }
 
-      // 4. Ventes Clients (Cash ou CrÃ©dit)
+      // 4. Ventes Clients (Cash ou Crédit)
       if (s.type !== 'client_request') {
         totalSalesCa += (s.total || 0)
         totalCashReceived += (s.paid || 0)
@@ -138,7 +138,7 @@ export function ShopAccountingReport({
       }
     })
 
-    // CoÃ»t estimÃ© des marchandises vendues (COGS)
+    // Coût estimé des marchandises vendues (COGS)
     let costOfGoodsSold = 0
     filteredSales.forEach(s => {
       const isClientSale = ['cash_in', 'sale', 'sale_cash', 'sale_credit'].includes(s.type) || s.pen_color === 'blue' || s.pen_color === 'yellow'
@@ -151,14 +151,14 @@ export function ShopAccountingReport({
       }
     })
 
-    // BÃ©nÃ©fice Net RÃ©alisÃ© = CA Total - CoÃ»t des marchandises vendues (ou achats) - DÃ©penses gÃ©nÃ©rales
+    // Bénéfice Net Réalisé = CA Total - Coût des marchandises vendues (ou achats) - Dépenses générales
     const realProfit = totalSalesCa - (costOfGoodsSold > 0 ? costOfGoodsSold : totalStockPurchases) - totalGeneralExpenses
     const profitMarginPercent = totalSalesCa > 0 ? Math.round((realProfit / totalSalesCa) * 100) : 0
 
-    // â”€â”€ Valorisation Actuelle du Stock en Magasin â”€â”€
-    let totalStockPurchaseValue = 0  // Valeur d'Achat du stock immobilisÃ©
+    // ── Valorisation Actuelle du Stock en Magasin ──
+    let totalStockPurchaseValue = 0  // Valeur d'Achat du stock immobilisé
     let totalStockSalesValue = 0     // Valeur Marchande de Revente du stock
-    let totalUnitsInStock = 0        // Nombre total d'unitÃ©s physiques en magasin
+    let totalUnitsInStock = 0        // Nombre total d'unités physiques en magasin
 
     products.forEach(p => {
       const stockQty = Math.max(0, p.current_stock ?? p.initial_stock ?? 0)
@@ -171,7 +171,7 @@ export function ShopAccountingReport({
 
     const expectedStockProfit = Math.max(0, totalStockSalesValue - totalStockPurchaseValue)
 
-    // Dettes clients totales non soldÃ©es (toute pÃ©riode confondue)
+    // Dettes clients totales non soldées (toute période confondue)
     const allTimeUnpaidDebts = sales
       .filter(s => s.status !== 'crossed_out')
       .reduce((sum, s) => sum + (s.debt || 0), 0)
@@ -203,7 +203,7 @@ export function ShopAccountingReport({
 
   // Partager le rapport WhatsApp
   const handleShareWhatsApp = () => {
-    const periodLabel = period === 'all' ? 'Ã€ vie (Depuis crÃ©ation)' : period === 'month' ? 'Ce mois' : period === '7days' ? '7 derniers jours' : 'Aujourd\'hui'
+    const periodLabel = period === 'all' ? 'À vie (Depuis création)' : period === 'month' ? 'Ce mois' : period === '7days' ? '7 derniers jours' : 'Aujourd\'hui'
     const url = generateWhatsAppPerformanceReport(filteredSales as any, periodLabel, shopName)
     if (typeof window !== 'undefined') {
       window.open(url, '_blank')
@@ -212,21 +212,21 @@ export function ShopAccountingReport({
 
   return (
     <div className="space-y-4 font-sans text-stone-900 pb-8">
-      {/* â”€â”€ 1. EntÃªte & SÃ©lecteur de PÃ©riode â”€â”€ */}
+      {/* ── 1. Entête & Sélecteur de Période ── */}
       <div className="bg-white border border-amber-300/80 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-amber-950 flex items-center gap-2 font-mono">
               <Landmark className="w-5 h-5 text-amber-800" strokeWidth={1.75} />
-              <span>ComptabilitÃ© & Bilan : {shopName}</span>
+              <span>Comptabilité & Bilan : {shopName}</span>
             </h2>
           </div>
           <p className="text-xs text-stone-500 font-mono mt-0.5">
-            Pilotage financier certifiÃ©, chiffre d'affaires, dÃ©penses et valorisation du stock
+            Pilotage financier certifié, chiffre d'affaires, dépenses et valorisation du stock
           </p>
         </div>
 
-        {/* Boutons de PÃ©riode */}
+        {/* Boutons de Période */}
         <div className="flex items-center gap-1 bg-amber-100/80 p-1 rounded-xl border border-amber-300 font-mono text-xs w-full sm:w-auto flex-wrap sm:flex-nowrap">
           <button
             type="button"
@@ -267,7 +267,7 @@ export function ShopAccountingReport({
         </div>
       </div>
 
-      {/* â”€â”€ 2. Les 4 Piliers Financiers Majeurs â”€â”€ */}
+      {/* ── 2. Les 4 Piliers Financiers Majeurs ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* CA Total */}
         <div className="bg-[#faf5e8] border border-stone-900/10 rounded-2xl p-4 space-y-1.5">
@@ -281,15 +281,15 @@ export function ShopAccountingReport({
             {formatPrice(accounting.totalSalesCa)}
           </div>
           <div className="text-[11px] text-blue-800 font-mono flex items-center justify-between pt-1 border-t border-blue-200/60">
-            <span>EncaissÃ© rÃ©el :</span>
+            <span>Encaissé réel :</span>
             <span className="font-semibold tabular-nums">{formatPrice(accounting.totalCashReceived)}</span>
           </div>
         </div>
 
-        {/* DÃ©penses Totales */}
+        {/* Dépenses Totales */}
         <div className="bg-[#faf5e8] border border-stone-900/10 rounded-2xl p-4 space-y-1.5">
           <div className="flex items-center justify-between text-rose-900 font-mono text-xs font-semibold">
-            <span>DÃ‰PENSES & ACHATS</span>
+            <span>DÉPENSES & ACHATS</span>
             <span className="p-1.5 bg-rose-200/80 text-rose-900 rounded-xl">
               <ArrowDownRight className="w-4 h-4" />
             </span>
@@ -302,10 +302,10 @@ export function ShopAccountingReport({
           </div>
         </div>
 
-        {/* BÃ©nÃ©fice Net RÃ©alisÃ© */}
+        {/* Bénéfice Net Réalisé */}
         <div className="bg-[#faf5e8] border border-stone-900/10 rounded-2xl p-4 space-y-1.5">
           <div className="flex items-center justify-between text-emerald-900 font-mono text-xs font-semibold">
-            <span>BÃ‰NÃ‰FICE NET RÃ‰EL</span>
+            <span>BÉNÉFICE NET RÉEL</span>
             <span className="p-1.5 bg-emerald-200 text-emerald-950 rounded-xl">
               <TrendingUp className="w-4 h-4" />
             </span>
@@ -337,23 +337,23 @@ export function ShopAccountingReport({
         </div>
       </div>
 
-      {/* â”€â”€ 3. Section Valorisation ComplÃ¨te du Stock â”€â”€ */}
+      {/* ── 3. Section Valorisation Complète du Stock ── */}
       <div className="bg-white border border-amber-300/80 rounded-2xl p-4 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-amber-200 pb-2.5">
           <div className="flex items-center gap-2 text-amber-950 font-semibold font-mono text-sm">
             <Package className="w-4 h-4 text-amber-800" />
-            <span>Inventaire & Valorisation DÃ©taillÃ©e du Stock :</span>
+            <span>Inventaire & Valorisation Détaillée du Stock :</span>
           </div>
           <span className="text-xs text-amber-900 font-mono font-bold bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-300">
-            {products.length} rÃ©fÃ©rences ({accounting.totalUnitsInStock} unitÃ©s au total)
+            {products.length} références ({accounting.totalUnitsInStock} unités au total)
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
           <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
-            <span className="text-[11px] text-amber-800 font-bold">Valeur d'Achat ImmobilisÃ©e :</span>
+            <span className="text-[11px] text-amber-800 font-bold">Valeur d'Achat Immobilisée :</span>
             <div className="text-lg font-semibold text-amber-950 tabular-nums">{formatPrice(accounting.totalStockPurchaseValue)}</div>
-            <p className="text-[10px] text-gray-500">Ce que ces marchandises ont coÃ»tÃ© chez le fournisseur</p>
+            <p className="text-[10px] text-gray-500">Ce que ces marchandises ont coûté chez le fournisseur</p>
           </div>
 
           <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1">
@@ -363,21 +363,21 @@ export function ShopAccountingReport({
           </div>
 
           <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
-            <span className="text-[11px] text-emerald-800 font-bold">BÃ©nÃ©fice Futur en Magasin :</span>
+            <span className="text-[11px] text-emerald-800 font-bold">Bénéfice Futur en Magasin :</span>
             <div className="text-lg font-semibold text-emerald-900 tabular-nums">+{formatPrice(accounting.expectedStockProfit)}</div>
-            <p className="text-[10px] text-gray-500">Gain net prÃ©visionnel enfermÃ© dans les rayons</p>
+            <p className="text-[10px] text-gray-500">Gain net prévisionnel enfermé dans les rayons</p>
           </div>
         </div>
       </div>
 
-      {/* â”€â”€ 4. Ventilation des DÃ©penses & Dettes Dehors â”€â”€ */}
+      {/* ── 4. Ventilation des Dépenses & Dettes Dehors ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 font-mono">
-        {/* DÃ©penses par poste */}
+        {/* Dépenses par poste */}
         <div className="bg-white border border-amber-300/80 rounded-2xl p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-amber-200 pb-2">
             <h3 className="text-xs font-semibold text-amber-950 uppercase flex items-center gap-1.5">
               <ArrowDownRight className="w-4 h-4 text-rose-700" />
-              <span>OÃ¹ est parti l'argent (DÃ©penses) :</span>
+              <span>Où est parti l'argent (Dépenses) :</span>
             </h3>
             <span className="text-xs font-bold text-rose-800 tabular-nums">{formatPrice(accounting.totalAllExpenses)}</span>
           </div>
@@ -401,41 +401,41 @@ export function ShopAccountingReport({
             </div>
           ) : (
             <div className="p-4 text-center text-xs text-gray-400 italic">
-              Aucune dÃ©pense enregistrÃ©e sur cette pÃ©riode.
+              Aucune dépense enregistrée sur cette période.
             </div>
           )}
         </div>
 
-        {/* TrÃ©sorerie & Dettes Clients */}
+        {/* Trésorerie & Dettes Clients */}
         <div className="bg-white border border-amber-300/80 rounded-2xl p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between border-b border-amber-200 pb-2">
             <h3 className="text-xs font-semibold text-amber-950 uppercase flex items-center gap-1.5">
               <Scale className="w-4 h-4 text-amber-800" />
-              <span>TrÃ©sorerie & CrÃ©dits Clients :</span>
+              <span>Trésorerie & Crédits Clients :</span>
             </h3>
           </div>
 
           <div className="space-y-2.5">
             <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-emerald-950">Cash RÃ©el EncaissÃ© en Caisse :</span>
-                <p className="text-[10px] text-emerald-800">Paiements reÃ§us sur la pÃ©riode</p>
+                <span className="text-xs font-bold text-emerald-950">Cash Réel Encaissé en Caisse :</span>
+                <p className="text-[10px] text-emerald-800">Paiements reçus sur la période</p>
               </div>
               <span className="text-base font-semibold text-emerald-900 tabular-nums">{formatPrice(accounting.totalCashReceived)}</span>
             </div>
 
             <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-amber-950">CrÃ©dits AccordÃ©s sur la pÃ©riode :</span>
-                <p className="text-[10px] text-amber-800">Ventes non payÃ©es de la pÃ©riode</p>
+                <span className="text-xs font-bold text-amber-950">Crédits Accordés sur la période :</span>
+                <p className="text-[10px] text-amber-800">Ventes non payées de la période</p>
               </div>
               <span className="text-base font-semibold text-amber-900 tabular-nums">{formatPrice(accounting.totalCustomerDebts)}</span>
             </div>
 
             <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-rose-950">Total Dettes Dehors (Ã€ vie) :</span>
-                <p className="text-[10px] text-rose-800">Argent Ã  recouvrer auprÃ¨s des clients</p>
+                <span className="text-xs font-bold text-rose-950">Total Dettes Dehors (À vie) :</span>
+                <p className="text-[10px] text-rose-800">Argent à recouvrer auprès des clients</p>
               </div>
               <span className="text-base font-semibold text-rose-900 tabular-nums">{formatPrice(accounting.allTimeUnpaidDebts)}</span>
             </div>
@@ -443,7 +443,7 @@ export function ShopAccountingReport({
         </div>
       </div>
 
-      {/* â”€â”€ 5. Actions d'Exportation & Partage â”€â”€ */}
+      {/* ── 5. Actions d'Exportation & Partage ── */}
       <div className="bg-amber-100/60 border border-amber-300 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
         <span className="text-amber-950 font-bold flex items-center gap-1.5">
           <FileText className="w-4 h-4 text-amber-900" />

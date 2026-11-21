@@ -46,9 +46,9 @@ export const RestockAdvisorModal: React.FC<RestockAdvisorModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
-  // Calcul intelligent des besoins de rÃ©approvisionnement
+  // Calcul intelligent des besoins de réapprovisionnement
   const suggestions = useMemo(() => {
-    // Calculer les quantitÃ©s vendues par produit sur les 7 derniers jours
+    // Calculer les quantités vendues par produit sur les 7 derniers jours
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
     const cutoffStr = sevenDaysAgo.toISOString().slice(0, 10)
@@ -79,12 +79,12 @@ export const RestockAdvisorModal: React.FC<RestockAdvisorModalProps> = ({
       const dailyRunRate = totalSold7d > 0 ? totalSold7d / 7 : 0
       const threshold = p.alert_threshold || 5
       const mult = p.multiplier && p.multiplier > 1 ? p.multiplier : 1
-      const packName = p.packaging_name || (mult > 1 ? 'carton' : 'unitÃ©')
+      const packName = p.packaging_name || (mult > 1 ? 'carton' : 'unité')
 
       // S'il est sous le seuil ou s'il reste moins de 3 jours de stock
       const daysOfStockLeft = dailyRunRate > 0 ? currentStock / dailyRunRate : 999
       if (currentStock <= threshold || daysOfStockLeft <= 3) {
-        // QuantitÃ© suggÃ©rÃ©e pour 7 jours de rÃ©serve
+        // Quantité suggérée pour 7 jours de réserve
         const neededUnits = Math.max(mult, Math.ceil(dailyRunRate * 7) - currentStock)
         const suggestedPackages = Math.max(1, Math.ceil(neededUnits / mult))
         results.push({
@@ -105,16 +105,16 @@ export const RestockAdvisorModal: React.FC<RestockAdvisorModalProps> = ({
 
   const todayStr = new Date().toLocaleDateString('fr-FR')
   const orderListText = suggestions.length > 0
-    ? suggestions.map(s => `â€¢ ${s.suggestedPackages} ${s.packageName}(s) de ${s.product.name} (soit ~${s.suggestedUnits} piÃ¨ces)`).join('\n')
-    : 'â€¢ Aucun rÃ©approvisionnement urgent requis. Stock en bon Ã©tat !'
+    ? suggestions.map(s => `• ${s.suggestedPackages} ${s.packageName}(s) de ${s.product.name} (soit ~${s.suggestedUnits} pièces)`).join('\n')
+    : '• Aucun réapprovisionnement urgent requis. Stock en bon état !'
 
-  const messageWhatsApp = `ðŸ“¦ *BON DE COMMANDE FOURNISSEUR* â€” ${shopName}
-ðŸ“… *Date :* ${todayStr}
+  const messageWhatsApp = `📦 *BON DE COMMANDE FOURNISSEUR* — ${shopName}
+📅 *Date :* ${todayStr}
 
-Bonjour, merci de nous prÃ©parer la commande suivante :
+Bonjour, merci de nous préparer la commande suivante :
 ${orderListText}
 
-Merci de nous confirmer la disponibilitÃ© et le montant total !`
+Merci de nous confirmer la disponibilité et le montant total !`
 
   const handleShareWhatsApp = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(messageWhatsApp)}`, '_blank')
@@ -145,9 +145,9 @@ Merci de nous confirmer la disponibilitÃ© et le montant total !`
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900 font-handwritten">
-                Assistant RÃ©approvisionnement Grossiste
+                Assistant Réapprovisionnement Grossiste
               </h3>
-              <p className="text-[11px] font-mono text-gray-600">Calcul basÃ© sur vos ventes rÃ©elles des 7 derniers jours</p>
+              <p className="text-[11px] font-mono text-gray-600">Calcul basé sur vos ventes réelles des 7 derniers jours</p>
             </div>
           </div>
           <button
@@ -174,7 +174,7 @@ Merci de nous confirmer la disponibilitÃ© et le montant total !`
                   <div className="font-semibold text-sm text-gray-900">{item.product.name}</div>
                   <div className="text-[11px] text-gray-500 flex items-center gap-2 pt-0.5 font-mono tabular-nums">
                     <span className="text-rose-700 font-bold">Stock actuel : {item.currentStock}</span>
-                    <span>â€¢</span>
+                    <span>•</span>
                     <span>Vente : ~{item.dailyRunRate}/jour</span>
                   </div>
                 </div>
@@ -188,7 +188,7 @@ Merci de nous confirmer la disponibilitÃ© et le montant total !`
           )}
         </div>
 
-        {/* AperÃ§u Message WhatsApp & Actions */}
+        {/* Aperçu Message WhatsApp & Actions */}
         <div className="pt-2 border-t border-amber-200 flex items-center gap-2 flex-shrink-0">
           <button
             type="button"
@@ -196,7 +196,7 @@ Merci de nous confirmer la disponibilitÃ© et le montant total !`
             className="flex-1 py-2.5 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer font-mono active:scale-[0.97]"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-700" strokeWidth={1.75} /> : <Copy className="w-4 h-4 text-amber-800" strokeWidth={1.75} />}
-            <span>{copied ? 'CopiÃ© !' : 'Copier Bon'}</span>
+            <span>{copied ? 'Copié !' : 'Copier Bon'}</span>
           </button>
 
           <button

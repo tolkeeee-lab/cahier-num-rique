@@ -17,14 +17,14 @@ interface DashboardCustomizerModalProps {
 const ALL_WIDGETS = [
   {
     id: DASHBOARD_WIDGET_IDS.REVENUE_SUMMARY,
-    label: 'SynthÃ¨se des Chiffres d\'Affaires',
-    description: 'Affiche le Total Ventes, EncaissÃ©, CrÃ©ances et DÃ©penses sur la pÃ©riode.',
+    label: 'Synthèse des Chiffres d\'Affaires',
+    description: 'Affiche le Total Ventes, Encaissé, Créances et Dépenses sur la période.',
     ownerOnly: false,
   },
   {
     id: DASHBOARD_WIDGET_IDS.NET_MARGINS,
-    label: 'Marges & BÃ©nÃ©fices Nets',
-    description: 'Calcul automatique des marges financiÃ¨res (Prix vente - CoÃ»t grossiste).',
+    label: 'Marges & Bénéfices Nets',
+    description: 'Calcul automatique des marges financières (Prix vente - Coût grossiste).',
     ownerOnly: true,
   },
   {
@@ -35,26 +35,26 @@ const ALL_WIDGETS = [
   },
   {
     id: DASHBOARD_WIDGET_IDS.DEBT_SUMMARY,
-    label: 'Suivi des CrÃ©ances & Dettes',
-    description: 'AbonnÃ©s, crÃ©dits clients en attente et dettes auprÃ¨s des grossistes.',
+    label: 'Suivi des Créances & Dettes',
+    description: 'Abonnés, crédits clients en attente et dettes auprès des grossistes.',
     ownerOnly: true,
   },
   {
     id: DASHBOARD_WIDGET_IDS.SYSCOHADA_SUMMARY,
     label: 'Export & Bilan Comptable SYSCOHADA',
-    description: 'Module de prÃ©-comptabilitÃ© rÃ©visÃ©e aux normes ouest-africaines.',
+    description: 'Module de pré-comptabilité révisée aux normes ouest-africaines.',
     ownerOnly: true,
   },
   {
     id: DASHBOARD_WIDGET_IDS.ACTIVITY_WIDGET,
-    label: 'Analyse MÃ©tier SpÃ©cifique',
-    description: 'Widget adaptÃ© au secteur (Commerce, Resto/Maquis, Services, Budget).',
+    label: 'Analyse Métier Spécifique',
+    description: 'Widget adapté au secteur (Commerce, Resto/Maquis, Services, Budget).',
     ownerOnly: false,
   },
   {
     id: DASHBOARD_WIDGET_IDS.DAILY_CAISSE,
-    label: 'Ã‰tat de la Caisse JournaliÃ¨re',
-    description: 'Solde du tiroir-caisse, entrÃ©es/sorties en espÃ¨ces du jour.',
+    label: 'État de la Caisse Journalière',
+    description: 'Solde du tiroir-caisse, entrées/sorties en espèces du jour.',
     ownerOnly: false,
   },
 ]
@@ -119,7 +119,7 @@ export function DashboardCustomizerModal({
             </div>
             <div>
               <h3 className="font-bold text-stone-900 text-lg leading-tight">Personnaliser le Tableau de Bord</h3>
-              <p className="text-xs text-stone-500">Choisissez les indicateurs visibles sur votre Ã©cran</p>
+              <p className="text-xs text-stone-500">Choisissez les indicateurs visibles sur votre écran</p>
             </div>
           </div>
           <button
@@ -141,7 +141,7 @@ export function DashboardCustomizerModal({
               className="text-xs text-amber-800 hover:text-amber-900 active:scale-[0.97] font-semibold flex items-center gap-1 hover:underline cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.75} />
-              <span>RÃ©initialiser</span>
+              <span>Réinitialiser</span>
             </button>
           </div>
 

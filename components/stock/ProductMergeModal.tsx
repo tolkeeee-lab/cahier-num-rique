@@ -57,7 +57,7 @@ export function ProductMergeModal({
 
         <div className="p-5 space-y-4 text-xs text-gray-700">
           <p className="text-gray-600">
-            Ces deux articles semblent identiques. Choisissez le nom canonique Ã  conserver :
+            Ces deux articles semblent identiques. Choisissez le nom canonique à conserver :
           </p>
 
           <div className="grid grid-cols-2 gap-3">
@@ -72,7 +72,7 @@ export function ProductMergeModal({
             >
               <div>
                 <div className="font-bold text-sm text-gray-900 group-hover:text-amber-900">
-                  Â« {currentPair.item1.name} Â»
+                  « {currentPair.item1.name} »
                 </div>
                 <span className="text-[10px] text-gray-400 block mt-1">Conserver ce nom</span>
               </div>
@@ -92,7 +92,7 @@ export function ProductMergeModal({
             >
               <div>
                 <div className="font-bold text-sm text-gray-900 group-hover:text-amber-900">
-                  Â« {currentPair.item2.name} Â»
+                  « {currentPair.item2.name} »
                 </div>
                 <span className="text-[10px] text-gray-400 block mt-1">Conserver ce nom</span>
               </div>
@@ -104,7 +104,7 @@ export function ProductMergeModal({
 
           <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-[10px] text-amber-900 flex items-start gap-2">
             <Info className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
-            <span><strong>Remarque :</strong> La fusion transfÃ©rera automatiquement l'historique complet des ventes et mouvements sous le nom sÃ©lectionnÃ© et supprimera l'autre version.</span>
+            <span><strong>Remarque :</strong> La fusion transférera automatiquement l'historique complet des ventes et mouvements sous le nom sélectionné et supprimera l'autre version.</span>
           </div>
         </div>
 
