@@ -197,7 +197,10 @@ export default function SuperAdminPage() {
           </button>
 
           <button
-            onClick={() => {
+            onClick={async () => {
+              try {
+                await supabaseClient.auth.signOut()
+              } catch {}
               localStorage.removeItem('cahier_admin_email')
               setIsAdmin(false)
             }}

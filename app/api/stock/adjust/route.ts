@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { stockAdjustSchema, validatePayload } from '@/lib/validations'
-import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+import { requireShopOwner, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 import type { Database } from '@/lib/types/database.types'
 
 type ProductRow = Database['public']['Tables']['products']['Row'] & { tracking_started_at?: string | null }
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   let shopId: string
   let employeeName = 'Gérant'
   try {
-    const authorization = await requireShopAccess(request, requestedShopId)
+    const authorization = await requireShopOwner(request, requestedShopId)
     shopId = authorization.shop.id
     employeeName =
       authorization.user.user_metadata?.full_name ||

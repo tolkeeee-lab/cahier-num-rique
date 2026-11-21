@@ -101,6 +101,9 @@ export default function JournalPage() {
         localStorage.setItem('cahier_logged_out_flag', 'true')
         localStorage.removeItem('cahier_last_active_user')
         localStorage.removeItem('cahier_mock_session')
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {})
+    }
         setUser(null)
       }
     })
@@ -327,6 +330,9 @@ export default function JournalPage() {
     localStorage.setItem('cahier_logged_out_flag', 'true')
     localStorage.removeItem('cahier_last_active_user')
     localStorage.removeItem('cahier_mock_session')
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {})
+    }
     setUser(null)
   }
 
@@ -389,11 +395,11 @@ export default function JournalPage() {
     const ids = new Set<string>()
     if (mappedUser?.id) ids.add(mappedUser.id)
     if (mappedUser?.shop_id && mappedUser.shop_id !== shopManager.shopId) ids.add(mappedUser.shop_id)
-    if (mappedUser?.shop_name) ids.add(mappedUser.shop_name)
-    if (shopManager.currentShop?.name) ids.add(shopManager.currentShop.name)
+    // SÉCURITÉ : Ne jamais ajouter les noms publics de boutique (shop_name) dans les canaux Realtime
+    // (shopManager.currentShop?.name exclu des topics Realtime pour éviter l'écoute sur nom public)
     shopManager.userShops.forEach((s) => {
       if (s.id && s.id !== shopManager.shopId) ids.add(s.id)
-      if (s.name) ids.add(s.name)
+      // (s.name exclu des topics Realtime)
     })
     return Array.from(ids)
   }, [mappedUser?.id, mappedUser?.shop_id, shopManager.shopId, shopManager.userShops])

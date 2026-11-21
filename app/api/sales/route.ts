@@ -143,6 +143,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Supabase n\'est pas configuré sur le serveur' }, { status: 503 })
     }
 
+    if (body.id) {
+      const { data: existingSale } = await targetClient
+        .from('sales')
+        .select('shop_id')
+        .eq('id', saleId)
+        .maybeSingle()
+      if (existingSale && existingSale.shop_id !== shopId) {
+        return NextResponse.json({ error: 'Accès interdit à cette écriture.' }, { status: 403 })
+      }
+    }
+
     const { error: saleErr } = await targetClient.from('sales').upsert([saleRecord], { onConflict: 'id' })
     if (saleErr) {
       console.error('Erreur Supabase lors de la sauvegarde vente:', saleErr)
@@ -150,8 +161,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (parsedData?.articles && parsedData.articles.length > 0) {
-      // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de retry
-      await targetClient.from('sold_articles').delete().eq('sale_id', saleId)
+      // Idempotence : Nettoyer les éventuels anciens articles pour cette vente en cas de retry (strictement scopé à shopId)
+      await targetClient.from('sold_articles').delete().eq('sale_id', saleId).eq('shop_id', shopId)
 
       const soldArticlesRecords: SoldArticleInsert[] = parsedData.articles.map(a => {
         const qty = a.quantite || 1;

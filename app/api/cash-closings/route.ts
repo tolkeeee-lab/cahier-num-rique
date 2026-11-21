@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, isBackendSupabaseConfigured } from '@/lib/supabase'
-import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+import { requireShopOwner, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 import type { Database } from '@/lib/types/database.types'
 
 type CashClosingRow = Database['public']['Tables']['cash_closings']['Row']
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   let shopId: string
   let targetClient: any = supabase
   try {
-    const auth = await requireShopAccess(request, requestedShopId)
+    const auth = await requireShopOwner(request, requestedShopId)
     shopId = auth.shop.id
     targetClient = auth.client || supabase
   } catch (err) {
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as Record<string, unknown>
     const requestedShopId = request.headers.get('x-shop-id') || (typeof body.shop_id === 'string' ? body.shop_id : null)
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop, client: dbClient } = await requireShopAccess(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopOwner(request, requestedShopId)
     const shopId = shop.id
     const targetClient = dbClient || supabase
 

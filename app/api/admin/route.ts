@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
         authenticatedEmail = (user.email || '').toLowerCase().trim()
         const role = user.app_metadata?.role
         const allowedEmails = ['admin@cahier.com', 'tolkeeee@gmail.com', 'tolkeeeee@gmail.com']
-        if (role === 'super_admin' || role === 'admin' || allowedEmails.includes(authenticatedEmail) || authenticatedEmail.endsWith('@cahier.admin')) {
+        const isEmailConfirmed = Boolean(user.email_confirmed_at || (user as { confirmed_at?: string | null }).confirmed_at)
+        if (isEmailConfirmed && (role === 'super_admin' || allowedEmails.includes(authenticatedEmail))) {
           isAuthorized = true
         }
       }

@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
 
     const cleanEmail = email.trim().toLowerCase()
     const cleanName = name.trim()
+    const allowedRoles = ['employee', 'admin']
+    const safeRole = allowedRoles.includes(String(role || '').toLowerCase()) ? String(role).toLowerCase() : 'employee'
 
     if (isSupabaseConfigured()) {
       // 1. Supprimer toute ancienne ligne résiduelle avec cet email pour cette boutique pour autoriser la ré-invitation
@@ -76,7 +78,7 @@ export async function POST(request: NextRequest) {
             shop_id: shopId,
             name: cleanName,
             email: cleanEmail,
-            role: role || 'employee',
+            role: safeRole,
             created_at: new Date().toISOString()
           }
         ])
@@ -101,7 +103,7 @@ export async function POST(request: NextRequest) {
             {
               data: {
                 full_name: cleanName,
-                role: role || 'employee',
+                role: safeRole,
                 shop_id: shopId,
                 shop_name: shopName,
                 shop_activity: 'boutique',
@@ -111,40 +113,10 @@ export async function POST(request: NextRequest) {
           )
 
           if (invErr) {
-            console.warn('[Invite] Premier essai invitation échoué, tentative de mise à jour:', invErr.message)
-            // Si l'utilisateur a déjà un compte Auth, mettre à jour ses métadonnées boutique
-            const { data: authUsers } = await supabase.auth.admin.listUsers()
-            const existingUser = authUsers?.users?.find(u => u.email?.toLowerCase() === cleanEmail)
-
-            if (existingUser) {
-              await supabase.auth.admin.updateUserById(existingUser.id, {
-                user_metadata: {
-                  full_name: cleanName,
-                  role: role || 'employee',
-                  shop_id: shopId,
-                  shop_name: shopName,
-                  shop_activity: 'boutique',
-                }
-              })
-
-              const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
-                type: 'magiclink',
-                email: cleanEmail,
-                options: {
-                  redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || ''}/auth/callback`,
-                }
-              })
-
-              if (!linkErr && linkData) {
-                inviteSent = true
-                inviteError = null
-              } else {
-                inviteSent = true
-                inviteError = 'Employé associé. Lien d\'accès réactivé.'
-              }
-            } else {
-              inviteError = invErr.message
-            }
+            // SECURITE : Ne jamais modifier les user_metadata d'un compte Auth existant (peut appartenir a un autre patron ou superadmin).
+            console.warn('[Invite] Compte Auth deja existant — rattachement via public.employees uniquement:', invErr.message)
+            inviteSent = false
+            inviteError = 'Compte deja existant : l\'employe a ete rattache a votre boutique.'
           } else {
             inviteSent = true
           }
@@ -234,21 +206,9 @@ export async function DELETE(request: NextRequest) {
         .eq('id', id)
         .eq('shop_id', shopId)
 
-      // 3. Nettoyer le compte Auth Supabase correspondant pour permettre une ré-invitation ultérieure
-      const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
-        !process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')
-
-      if (hasServiceRoleKey && empEmail) {
-        try {
-          const { data: authUsers } = await supabase.auth.admin.listUsers()
-          const matchedUser = authUsers?.users?.find(u => u.email?.toLowerCase() === empEmail)
-          if (matchedUser) {
-            await supabase.auth.admin.deleteUser(matchedUser.id)
-          }
-        } catch (authErr) {
-          console.warn('[DELETE Employee Auth Warning]:', authErr)
-        }
-      }
+      // 3. SÉCURITÉ : Ne jamais appeler supabase.auth.admin.deleteUser() ici.
+      // La suppression de la ligne dans `employees` (scopée à shopId) suffit à révoquer l'accès à cette boutique
+      // sans risquer de détruire le compte Auth global d'un propriétaire d'une autre boutique ou d'un administrateur.
 
       return NextResponse.json({ success: true })
     }

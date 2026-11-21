@@ -62,7 +62,13 @@ export function getLocalDeviceId(): string {
  */
 export function getRealtimeChannelName(shopId: string): string {
   if (!shopId) return 'realtime_shop_default'
-  const clean = normalizeShopCode(shopId) || (typeof shopId === 'string' ? shopId.trim() : String(shopId))
+  const raw = typeof shopId === 'string' ? shopId.trim() : String(shopId)
+  // SÉCURITÉ : Si shopId est un UUID complet (122 bits d'entropie), utiliser l'UUID complet comme topic
+  // au lieu d'un préfixe tronqué à 5 caractères (20 bits) facilement énumérable.
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw)) {
+    return `realtime_shop_${raw.toLowerCase()}`
+  }
+  const clean = normalizeShopCode(raw) || raw
   return `realtime_shop_${clean}`
 }
 

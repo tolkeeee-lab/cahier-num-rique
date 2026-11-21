@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { supabase, Database, isBackendSupabaseConfigured } from '@/lib/supabase'
 import { normalizeProductName, sanitizeProductData, CleanableProduct } from '@/lib/productUtils'
-import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+import { requireShopAccess, requireShopOwner, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&')
+}
 type ProductRow = Database['public']['Tables']['products']['Row'] & { tracking_started_at?: string | null }
 type ProductInsert = Database['public']['Tables']['products']['Insert']
 type ProductUpdate = Database['public']['Tables']['products']['Update']
@@ -32,7 +35,14 @@ export async function GET(request: Request) {
   const requestedShopId = request.headers.get('x-shop-id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
-  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  let shopRole = 'employee'
+  try {
+    const auth = await requireShopAccess(request, requestedShopId)
+    shopId = auth.shop.id
+    shopRole = auth.shop.role
+  } catch (err) {
+    return shopAuthorizationErrorResponse(err)
+  }
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ products: [], orphans: [], total: 0, offline: true })
@@ -159,7 +169,9 @@ export async function GET(request: Request) {
       return sanitizeProductData({
         ...product,
         name: cleanName,
-        unit_cost: cleanUnitCost,
+        unit_cost: shopRole === 'owner' ? cleanUnitCost : 0,
+        package_cost: shopRole === 'owner' ? ((product as any).package_cost ?? 0) : 0,
+        wholesale_price: shopRole === 'owner' ? ((product as any).wholesale_price ?? 0) : 0,
         total_in: totalIn,
         total_out: stockTracked ? totalOut : 0,
         current_stock: currentStock,
@@ -241,7 +253,7 @@ export async function POST(request: Request) {
   const requestedShopId = request.headers.get('x-shop-id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
-  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
   }
@@ -355,7 +367,7 @@ export async function PATCH(request: Request) {
   const requestedShopId = request.headers.get('x-shop-id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
-  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
   }
@@ -536,7 +548,7 @@ export async function DELETE(request: Request) {
 
   let shopId: string
   try {
-    shopId = (await requireShopAccess(request, requestedShopId)).shop.id
+    shopId = (await requireShopOwner(request, requestedShopId)).shop.id
   } catch (err) {
     return shopAuthorizationErrorResponse(err)
   }
@@ -564,7 +576,7 @@ export async function DELETE(request: Request) {
           .from('sold_articles')
           .delete()
           .in('sale_id', saleIds)
-          .ilike('product_name', orphanName)
+          .ilike('product_name', escapeLikePattern(orphanName.trim()))
       }
       return NextResponse.json({ success: true })
     }
@@ -626,7 +638,7 @@ export async function DELETE(request: Request) {
           .from('sold_articles')
           .delete()
           .in('sale_id', saleIds)
-          .ilike('product_name', nameToPurge)
+          .ilike('product_name', escapeLikePattern(nameToPurge.trim()))
       }
     }
 

@@ -264,6 +264,10 @@ export function exportSalesToPDF(
   const formatPrice = (p: number) => new Intl.NumberFormat('fr-FR').format(Number.isFinite(p) ? p : 0) + ' FCFA'
   const todayStr = new Date().toLocaleDateString('fr-FR')
 
+  const escapeHtml = (value: unknown): string => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+  const safeShopName = escapeHtml(shopName)
+  const safePeriodLabel = escapeHtml(periodLabel)
+
   const rowsHtml = sales.map(s => {
     const isCrossed = s.status === 'crossed_out'
     const statusBg = isCrossed ? '#fee2e2' : s.debt > 0 ? '#fef3c7' : '#dcfce7'
@@ -271,14 +275,14 @@ export function exportSalesToPDF(
     const statusLabel = isCrossed ? 'Annulée' : s.debt > 0 ? 'Crédit' : 'Payée'
 
     const articlesStr = Array.isArray(s.articles) && s.articles.length > 0
-      ? s.articles.map(a => `${Number(a?.quantity || 1)}x ${String(a?.name || 'Article').replace(/</g, '&lt;').replace(/>/g, '&gt;')} (${formatPrice(Number(a?.unit_price || 0))})`).join(', ')
-      : (s.notes || '—').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      ? s.articles.map(a => `${Number(a?.quantity || 1)}x ${escapeHtml(a?.name || 'Article')} (${formatPrice(Number(a?.unit_price || 0))})`).join(', ')
+      : escapeHtml(s.notes || '—')
 
-    const clientSafe = (s.client || 'Client anonyme').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const clientSafe = escapeHtml(s.client || 'Client anonyme')
 
     return `
       <tr style="${isCrossed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-family: monospace;">${s.date} ${s.time || ''}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-family: monospace;">${escapeHtml(s.date || '')} ${escapeHtml(s.time || '')}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>${clientSafe}</strong></td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; font-size: 11px;">${articlesStr}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">
@@ -303,7 +307,7 @@ export function exportSalesToPDF(
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Rapport Financier - ${shopName} - ${periodLabel}</title>
+        <title>Rapport Financier - ${safeShopName} - ${safePeriodLabel}</title>
         <style>
           body { font-family: system-ui, -apple-system, sans-serif; color: #111827; margin: 0; padding: 24px; font-size: 12px; }
           .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #374151; padding-bottom: 12px; margin-bottom: 16px; }
@@ -324,7 +328,7 @@ export function exportSalesToPDF(
         <div class="header">
           <div>
             <div class="shop-title">RAPPORT FINANCIER & D'ACTIVITÉ</div>
-            <div style="color: #4b5563; margin-top: 2px;">Commerce : <strong>${shopName}</strong> | Période : <strong>${periodLabel}</strong></div>
+            <div style="color: #4b5563; margin-top: 2px;">Commerce : <strong>${safeShopName}</strong> | Période : <strong>${safePeriodLabel}</strong></div>
           </div>
           <div style="text-align: right; color: #6b7280; font-size: 11px;">
             Généré le ${todayStr}<br/>

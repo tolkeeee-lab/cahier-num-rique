@@ -30,17 +30,41 @@ export async function POST(request: Request) {
       stream = false,
     } = body
 
-    if (!Array.isArray(messages) || messages.length > 50) return NextResponse.json({ error: 'Trop de messages dans la requête.' }, { status: 400 })
-    if (typeof prompt === 'string' && prompt.length > 20000) return NextResponse.json({ error: 'Prompt trop volumineux.' }, { status: 400 })
-    const safeMaxTokens = Math.min(Math.max(Number(max_tokens) || 4096, 1), 16384)
-    const safeReasoningBudget = Math.min(Math.max(Number(reasoning_budget) || 0, 0), 8192)
+    const ALLOWED_MODELS = new Set([
+      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+      'meta/llama-3.1-8b-instruct',
+      'meta/llama-3.3-70b-instruct',
+    ])
+    const safeModel = typeof model === 'string' && ALLOWED_MODELS.has(model)
+      ? model
+      : 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'
 
-    const formattedMessages = messages.length > 0
-      ? messages
-      : [{ role: 'user', content: prompt || 'Bonjour' }]
+    if (!Array.isArray(messages) || messages.length > 30) return NextResponse.json({ error: 'Trop de messages dans la requête.' }, { status: 400 })
+    if (typeof prompt === 'string' && prompt.length > 20000) return NextResponse.json({ error: 'Prompt trop volumineux.' }, { status: 400 })
+
+    // Bloquer l'injection de rôle system côté client et borner la taille cumulée de messages[i].content
+    let totalChars = 0
+    const sanitizedMessages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+    for (const m of messages) {
+      if (!m || typeof m !== 'object') continue
+      const content = typeof m.content === 'string' ? m.content : ''
+      totalChars += content.length
+      if (totalChars > 20000) {
+        return NextResponse.json({ error: 'Contenu total des messages trop volumineux (max 20 000 caractères).' }, { status: 400 })
+      }
+      const role = m.role === 'assistant' ? 'assistant' : 'user'
+      sanitizedMessages.push({ role, content })
+    }
+
+    const safeMaxTokens = Math.min(Math.max(Number(max_tokens) || 2048, 1), 4096)
+    const safeReasoningBudget = Math.min(Math.max(Number(reasoning_budget) || 0, 0), 2048)
+
+    const formattedMessages = sanitizedMessages.length > 0
+      ? sanitizedMessages
+      : [{ role: 'user' as const, content: typeof prompt === 'string' && prompt.trim() ? prompt : 'Bonjour' }]
 
     const payload: Record<string, any> = {
-      model,
+      model: safeModel,
       messages: formattedMessages,
       max_tokens: safeMaxTokens,
       reasoning_budget: safeReasoningBudget,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, isBackendSupabaseConfigured } from '@/lib/supabase'
-import { requireShopAccess, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
+import { requireShopAccess, requireShopOwner, shopAuthorizationErrorResponse } from '@/lib/server/shopAccess'
 import type { Database, Json } from '@/lib/types/database.types'
 
 type AuditLogRow = Database['public']['Tables']['audit_logs']['Row']
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const requestedShopId = request.headers.get('x-shop-id') || searchParams.get('shop_id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
-  try { shopId = (await requireShopAccess(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
   const actionFilter = searchParams.get('action')
   const limit = Math.min(Number(searchParams.get('limit')) || 100, 200)
 
@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
     const action = typeof body.action === 'string' ? body.action : 'unknown'
     const targetId = typeof body.target_id === 'string' ? body.target_id : null
     const details = (body.details && typeof body.details === 'object' ? body.details : {}) as Json
-    const createdAt = typeof body.created_at === 'string' ? body.created_at : new Date().toISOString()
-    const userEmail = typeof body.user_email === 'string' ? body.user_email : authUserEmail
+    const createdAt = new Date().toISOString()
+    const userEmail = authUserEmail
 
     const payload: AuditLogInsert = {
       shop_id: shopId,

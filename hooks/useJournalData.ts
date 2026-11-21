@@ -474,8 +474,8 @@ export function useJournalData(shopId: string, isOnline: boolean, extraShopIds: 
           const newSale: Sale = {
             id: incomingData.id,
             shop_id: incomingData.shop_id || shopId,
-            date: (incomingData.date || '').split('T')[0] || today,
-            time: incomingData.time || '00:00',
+            date: /^\d{4}-\d{2}-\d{2}$/.test(String(incomingData.date || '').split('T')[0]) ? String(incomingData.date).split('T')[0] : today,
+            time: /^\d{2}:\d{2}(:\d{2})?$/.test(String(incomingData.time || '')) ? String(incomingData.time) : '00:00',
             client: incomingData.client || incomingData.client_name || 'Client',
             articles: (incomingData.articles || []).map((art: any) => ({
               name: art.name || art.nom || art.product_name || 'Produit',

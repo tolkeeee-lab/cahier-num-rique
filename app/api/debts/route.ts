@@ -276,6 +276,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Supabase non configuré sur le serveur' }, { status: 503 })
     }
 
+    if (id) {
+      const { data: existingSale } = await targetClient
+        .from('sales')
+        .select('shop_id')
+        .eq('id', saleId)
+        .maybeSingle()
+      if (existingSale && existingSale.shop_id !== shopId) {
+        return NextResponse.json({ error: 'Accès interdit à cette écriture.' }, { status: 403 })
+      }
+    }
+
     const { error: sError } = await targetClient
       .from('sales')
       .upsert([

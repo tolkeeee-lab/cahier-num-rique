@@ -1,6 +1,6 @@
 /* Service Worker PWA Robust Offline Shell — Cahier Numérique */
 
-const CACHE_NAME = 'cahier-pwa-v36'
+const CACHE_NAME = 'cahier-pwa-v37'
 const STATIC_ASSETS = [
   '/',
   '/journal',
@@ -79,8 +79,14 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url)
 
-  // 1. Ignorer les API dynamiques et requêtes non-GET (gérées côté client avec IndexedDB)
-  if (url.pathname.startsWith('/api/') || event.request.method !== 'GET') {
+  // 1. Ne jamais intercepter ni mettre en cache les requêtes cross-origin (ex: Supabase REST/Auth),
+  // les requêtes authentifiées (Authorization), les API dynamiques ou les requêtes non-GET
+  if (
+    url.origin !== self.location.origin ||
+    event.request.headers.has('authorization') ||
+    url.pathname.startsWith('/api/') ||
+    event.request.method !== 'GET'
+  ) {
     return
   }
 
