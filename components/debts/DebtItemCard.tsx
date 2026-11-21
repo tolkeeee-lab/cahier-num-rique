@@ -1,9 +1,19 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { Share2, Calculator, AlertTriangle, Bell, Calendar } from 'lucide-react'
+import { MessageCircle, Phone, Banknote, AlertTriangle, Calendar, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
 import { getTodayDateString } from '@/lib/dateUtils'
+
+export interface DebtHistoryEntry {
+  id: string
+  date: string
+  time?: string
+  type: string
+  amount: number
+  notes?: string
+  articles?: Array<{ name?: string; quantity?: number; unit_price?: number }>
+}
 
 interface Debt {
   id: string
@@ -20,6 +30,7 @@ interface Debt {
 interface DebtItemCardProps {
   debt: Debt
   shopName?: string
+  history?: DebtHistoryEntry[]
   onOpenRepaymentModal?: (debt: Debt) => void
 }
 
@@ -36,21 +47,34 @@ function extractPhoneNumber(str?: string): string {
   return ''
 }
 
+function getInitials(name?: string): string {
+  const clean = (name || 'C').replace(/\+?\d[\d\s-]{6,}/g, '').trim()
+  const parts = clean.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return (clean.slice(0, 2) || 'CL').toUpperCase()
+}
+
 export const DebtItemCard: React.FC<DebtItemCardProps> = ({
   debt,
   shopName,
+  history = [],
   onOpenRepaymentModal,
 }) => {
+  const [expanded, setExpanded] = useState(false)
   const isSettled = debt.status === 'settled' || debt.amount_owed <= 0
   const isSupplier = debt.debt_type === 'supplier'
 
   const todayStr = getTodayDateString()
-  const isOverdue = !isSettled && debt.due_date && debt.due_date < todayStr
-  const isDueToday = !isSettled && debt.due_date && debt.due_date === todayStr
+  const isOverdue = !isSettled && Boolean(debt.due_date && debt.due_date < todayStr)
+  const isDueToday = !isSettled && Boolean(debt.due_date && debt.due_date === todayStr)
+
+  const paidAmount = Number(debt.paid_amount || 0)
+  const totalContracted = Number(debt.amount_owed || 0) + paidAmount
+  const paidPercent = totalContracted > 0 ? Math.min(100, Math.round((paidAmount / totalContracted) * 100)) : 0
+  const targetPhone = extractPhoneNumber(debt.notes) || extractPhoneNumber(debt.client_name)
 
   const handleSendWhatsAppReminder = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const targetPhone = extractPhoneNumber(debt.notes) || extractPhoneNumber(debt.client_name)
     const storeLabel = shopName ? `*${shopName}*` : 'notre boutique'
     const message = `Bonjour ${debt.client_name},\n\nNous vous rappelons amicalement qu'il reste un solde impayé de *${formatPrice(debt.amount_owed)}* sur votre compte chez ${storeLabel}.\n\nMerci de bien vouloir passer à la boutique pour régulariser votre situation.\nExcellente journée !`
 
@@ -62,72 +86,152 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
 
   return (
     <div
-      className={`p-4 rounded-2xl border transition-all duration-200 ${
+      className={`rounded-xl border transition-colors ${
         isSettled
-          ? 'bg-gray-50/80 border-gray-200 opacity-60'
+          ? 'bg-stone-50/80 border-stone-900/10 opacity-75'
           : isOverdue
-          ? 'bg-rose-50/50 hover:bg-rose-50 border-rose-300 shadow-sm'
-          : 'bg-white hover:bg-amber-50/50 border-amber-300/80 shadow-sm'
+          ? 'bg-[#fdfaf2] border-rose-300'
+          : 'bg-[#fdfaf2] border-stone-900/10 hover:border-stone-900/20'
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        {/* Infos Dette */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-extrabold text-sm text-gray-900">{debt.client_name || 'Client anonyme'}</span>
-            <span
-              className={`text-[10px] px-2.5 py-0.5 rounded-full font-mono uppercase font-extrabold border ${
-                isSupplier
-                  ? 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300'
-                  : 'bg-amber-100 text-amber-800 border-amber-300'
+      <div className="p-3.5 space-y-3">
+        {/* En-tête : Avatar + Identité + Montant */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div
+              className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-semibold flex-shrink-0 border ${
+                isSettled
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-900/15'
+                  : isSupplier
+                  ? 'bg-violet-50 text-violet-900 border-violet-900/15'
+                  : 'bg-[#faf5e8] text-stone-800 border-stone-900/10'
               }`}
             >
-              {isSupplier ? 'FOURNISSEUR' : 'CLIENT'}
-            </span>
+              {isSettled ? <CheckCircle2 className="w-4 h-4 text-emerald-700" strokeWidth={1.75} /> : getInitials(debt.client_name)}
+            </div>
 
-            {isOverdue && (
-              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono bg-rose-100 text-rose-800 border border-rose-300 font-extrabold animate-pulse">
-                <AlertTriangle className="w-3 h-3 text-rose-600" strokeWidth={1.75} />
-                <span>En retard ({new Date(debt.due_date!).toLocaleDateString('fr-FR')})</span>
-              </span>
-            )}
-            {isDueToday && (
-              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono bg-amber-200 text-amber-950 border border-amber-400 font-extrabold">
-                <Bell className="w-3 h-3 text-amber-800" strokeWidth={1.75} />
-                <span>Échéance aujourd'hui !</span>
-              </span>
-            )}
-            {!isOverdue && !isDueToday && debt.due_date && (
-              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono bg-blue-50 text-blue-800 border border-blue-200 font-bold">
-                <Calendar className="w-3 h-3 text-blue-600" strokeWidth={1.75} />
-                <span>Promesse : {new Date(debt.due_date).toLocaleDateString('fr-FR')}</span>
-              </span>
-            )}
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-semibold text-sm text-stone-950 truncate">
+                  {debt.client_name || 'Client anonyme'}
+                </span>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${
+                    isSupplier
+                      ? 'bg-violet-50 text-violet-800 border-violet-900/15'
+                      : 'bg-[#faf5e8] text-stone-700 border-stone-900/10'
+                  }`}
+                >
+                  {isSupplier ? 'Fournisseur' : 'Client'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap text-[11px] text-stone-500">
+                <span className="font-mono">
+                  {new Date(debt.created_at).toLocaleDateString('fr-FR')}
+                </span>
+                {isOverdue && (
+                  <span className="inline-flex items-center gap-1 text-rose-700 font-medium">
+                    <AlertTriangle className="w-3 h-3" strokeWidth={1.75} />
+                    <span>En retard ({new Date(debt.due_date!).toLocaleDateString('fr-FR')})</span>
+                  </span>
+                )}
+                {isDueToday && (
+                  <span className="inline-flex items-center gap-1 text-amber-800 font-medium">
+                    <Calendar className="w-3 h-3" strokeWidth={1.75} />
+                    <span>Échéance aujourd&apos;hui</span>
+                  </span>
+                )}
+                {!isOverdue && !isDueToday && debt.due_date && (
+                  <span className="inline-flex items-center gap-1 text-stone-600">
+                    <Calendar className="w-3 h-3" strokeWidth={1.75} />
+                    <span>Promesse {new Date(debt.due_date).toLocaleDateString('fr-FR')}</span>
+                  </span>
+                )}
+              </div>
+
+              {debt.notes && (
+                <p className="text-xs text-stone-600 line-clamp-1 pt-0.5">{debt.notes}</p>
+              )}
+            </div>
           </div>
 
-          {debt.notes && <p className="text-xs text-gray-600 font-mono italic">{debt.notes}</p>}
-
-          <p className="text-[11px] text-gray-500 font-mono">
-            Date : {new Date(debt.created_at).toLocaleDateString('fr-FR')}
-          </p>
+          {/* Solde restant */}
+          <div className="text-right flex-shrink-0">
+            <div
+              className={`text-base font-semibold font-mono tabular-nums tracking-tight ${
+                isSettled
+                  ? 'text-emerald-800 line-through'
+                  : isSupplier
+                  ? 'text-stone-950'
+                  : 'text-rose-900'
+              }`}
+            >
+              {formatPrice(debt.amount_owed)}
+            </div>
+            <div className="text-[10px] text-stone-500">
+              {isSettled ? 'Soldé' : 'Reste à payer'}
+            </div>
+          </div>
         </div>
 
-        {/* Montant & Actions */}
-        <div className="flex flex-col items-end gap-2">
-          <span className={`text-base font-black font-mono tabular-nums tracking-tight ${isSupplier ? 'text-fuchsia-900' : 'text-rose-900'}`}>
-            {formatPrice(debt.amount_owed)}
-          </span>
+        {/* Barre de progression si des acomptes ont déjà été versés */}
+        {paidAmount > 0 && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[11px] text-stone-500 font-mono tabular-nums">
+              <span>Déjà réglé : {formatPrice(paidAmount)}</span>
+              <span>{paidPercent}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-stone-900/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-600 rounded-full transition-[width] duration-300"
+                style={{ width: `${paidPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
 
+        {/* Barre d'actions */}
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-900/10">
+          {/* Bouton Détails / Historique */}
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-stone-600 hover:text-stone-950 transition-colors cursor-pointer"
+          >
+            {expanded ? (
+              <ChevronUp className="w-3.5 h-3.5" strokeWidth={1.75} />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" strokeWidth={1.75} />
+            )}
+            <span>
+              Historique{history.length > 0 ? ` (${history.length})` : ''}
+            </span>
+          </button>
+
+          {/* Actions rapides */}
           {!isSettled && (
             <div className="flex items-center gap-1.5">
+              {targetPhone && (
+                <a
+                  href={`tel:+${targetPhone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded-lg bg-[#faf5e8] hover:bg-stone-200/70 text-stone-700 border border-stone-900/10 transition-colors active:scale-[0.97]"
+                  title={`Appeler (+${targetPhone})`}
+                >
+                  <Phone className="w-3.5 h-3.5" strokeWidth={1.75} />
+                </a>
+              )}
+
               {!isSupplier && (
                 <button
                   type="button"
                   onClick={handleSendWhatsAppReminder}
-                  className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 active:scale-[0.97] text-emerald-800 border border-emerald-300 transition-all duration-100 ease-out cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-900/15 text-xs font-medium transition-colors active:scale-[0.97] cursor-pointer"
                   title="Relancer par WhatsApp (1-Clic)"
                 >
-                  <Share2 className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
+                  <MessageCircle className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  <span>Relancer</span>
                 </button>
               )}
 
@@ -135,16 +239,57 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                 <button
                   type="button"
                   onClick={() => onOpenRepaymentModal(debt)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-all duration-100 ease-out text-xs font-mono font-bold cursor-pointer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#064e3b] hover:bg-[#075e47] text-[#f59e0b] text-xs font-semibold transition-colors active:scale-[0.97] cursor-pointer"
                 >
-                  <Calculator className="w-3.5 h-3.5 text-amber-700" strokeWidth={1.75} />
-                  <span>Solder</span>
+                  <Banknote className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  <span>{isSupplier ? 'Payer' : 'Encaisser'}</span>
                 </button>
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Historique dépliable des crédits & acomptes de ce client */}
+      {expanded && (
+        <div className="px-3.5 pb-3.5 pt-2 border-t border-stone-900/10 bg-[#faf5e8]/60 rounded-b-xl space-y-1.5">
+          {history.length === 0 ? (
+            <p className="text-[11px] text-stone-500">
+              Aucun détail d&apos;opération locale disponible pour ce compte.
+            </p>
+          ) : (
+            history.slice(0, 8).map((entry) => {
+              const isPayment = entry.type === 'payment_client' || entry.type === 'payment_supplier'
+              const articleSummary =
+                entry.articles && entry.articles.length > 0
+                  ? entry.articles.map((a) => `${a.quantity || 1}x ${a.name || 'Article'}`).join(', ')
+                  : entry.notes || (isPayment ? 'Remboursement' : 'Crédit')
+
+              return (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between gap-2 text-[11px] py-1 border-b border-stone-900/5 last:border-b-0"
+                >
+                  <div className="min-w-0">
+                    <span className="font-mono text-stone-500 mr-2">
+                      {entry.date}
+                      {entry.time ? ` ${entry.time}` : ''}
+                    </span>
+                    <span className="text-stone-800 truncate">{articleSummary}</span>
+                  </div>
+                  <span
+                    className={`font-mono font-semibold tabular-nums flex-shrink-0 ${
+                      isPayment ? 'text-emerald-700' : 'text-rose-800'
+                    }`}
+                  >
+                    {isPayment ? `-${formatPrice(entry.amount)}` : `+${formatPrice(entry.amount)}`}
+                  </span>
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
     </div>
   )
 }

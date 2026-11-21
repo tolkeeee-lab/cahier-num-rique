@@ -964,6 +964,7 @@ export default function JournalPage() {
                   shopId={shopManager.shopId} 
                   sales={journalData.allSales} 
                   currentCash={journalData.tiroirCaisse}
+                  isEmployee={isEmployeeRole(effectiveRole)}
                   onSettleDebt={async (_debtId, amount, notes, clientName, isSupplier) => {
                     await journalData.settleDebt(clientName || '', amount, isSupplier, notes)
                   }}

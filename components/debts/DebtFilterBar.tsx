@@ -1,7 +1,9 @@
 'use client'
 
 import React from 'react'
-import { Search, X } from 'lucide-react'
+import { Search, X, Plus, ArrowUpDown } from 'lucide-react'
+
+export type DebtSortOption = 'amount_desc' | 'recent' | 'name_asc'
 
 interface DebtFilterBarProps {
   searchQuery: string
@@ -10,6 +12,10 @@ interface DebtFilterBarProps {
   onDebtTypeFilterChange: (type: 'all' | 'client' | 'supplier') => void
   statusFilter: 'all' | 'pending' | 'settled'
   onStatusFilterChange: (status: 'all' | 'pending' | 'settled') => void
+  sortBy?: DebtSortOption
+  onSortChange?: (sort: DebtSortOption) => void
+  onOpenNewDebt?: () => void
+  isEmployee?: boolean
 }
 
 export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
@@ -19,14 +25,17 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
   onDebtTypeFilterChange,
   statusFilter,
   onStatusFilterChange,
+  sortBy = 'amount_desc',
+  onSortChange,
+  onOpenNewDebt,
+  isEmployee = false,
 }) => {
   return (
-    <div className="bg-white/90 p-3.5 rounded-2xl border border-amber-300/80 space-y-3 mb-4 shadow-sm">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        
-        {/* Champ de recherche */}
-        <div className="relative flex-grow max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.75} />
+    <div className="bg-[#faf5e8] p-3 rounded-xl border border-stone-900/10 space-y-2.5">
+      {/* Ligne 1 : Recherche + Bouton Nouvelle dette */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" strokeWidth={1.75} />
           <input
             type="text"
             value={searchQuery}
@@ -34,45 +43,102 @@ export const DebtFilterBar: React.FC<DebtFilterBarProps> = ({
             onKeyDown={(e) => {
               if (e.key === 'Escape') onSearchChange('')
             }}
-            placeholder="Rechercher par nom de client ou fournisseur..."
-            className="w-full pl-9 pr-8 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 font-mono shadow-inner font-bold"
+            placeholder="Rechercher un client ou un numéro..."
+            className="w-full pl-9 pr-8 py-2 bg-[#fdfaf2] border border-stone-900/15 rounded-lg text-xs text-stone-900 placeholder-stone-400 focus:outline-none focus:border-emerald-700"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-600 rounded-md active:scale-[0.97] transition-all duration-100 ease-out"
-              title="Effacer la recherche (Échap)"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-stone-700 rounded cursor-pointer transition-colors"
+              title="Effacer la recherche"
             >
               <X className="w-3.5 h-3.5" strokeWidth={1.75} />
             </button>
           )}
         </div>
 
-        {/* Filtres par Type & Statut */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          {/* Filtre Type (Client vs Fournisseur) */}
-          <select
-            value={debtTypeFilter}
-            onChange={(e) => onDebtTypeFilterChange(e.target.value as any)}
-            className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
+        {onOpenNewDebt && (
+          <button
+            type="button"
+            onClick={onOpenNewDebt}
+            className="px-3.5 py-2 bg-[#064e3b] hover:bg-[#075e47] text-[#f59e0b] text-xs font-semibold rounded-lg transition-colors active:scale-[0.98] flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
           >
-            <option value="all">Tous les carnets</option>
-            <option value="client">Dettes Clients</option>
-            <option value="supplier">Dettes Grossistes</option>
-          </select>
+            <Plus className="w-3.5 h-3.5" strokeWidth={2} />
+            <span>Nouvelle dette</span>
+          </button>
+        )}
+      </div>
 
-          {/* Filtre Statut */}
-          <select
-            value={statusFilter}
-            onChange={(e) => onStatusFilterChange(e.target.value as any)}
-            className="px-3 py-2 bg-amber-50/50 border border-amber-300/80 rounded-xl text-xs text-gray-900 font-mono font-bold focus:outline-none cursor-pointer"
-          >
-            <option value="all">Tous les statuts</option>
-            <option value="pending">En cours</option>
-            <option value="settled">Soldés</option>
-          </select>
+      {/* Ligne 2 : Onglets segmentés Type + Statut + Tri */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Type (masqué pour employé qui ne voit que les clients) */}
+          {!isEmployee && (
+            <div className="inline-flex bg-[#f3ecda] p-0.5 rounded-lg border border-stone-900/10 text-[11px]">
+              {(
+                [
+                  { id: 'all', label: 'Tous' },
+                  { id: 'client', label: 'Clients' },
+                  { id: 'supplier', label: 'Grossistes' },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => onDebtTypeFilterChange(opt.id)}
+                  className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                    debtTypeFilter === opt.id
+                      ? 'bg-[#fdfaf2] text-stone-950 shadow-2xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Statut */}
+          <div className="inline-flex bg-[#f3ecda] p-0.5 rounded-lg border border-stone-900/10 text-[11px]">
+            {(
+              [
+                { id: 'pending', label: 'En cours' },
+                { id: 'settled', label: 'Soldés' },
+                { id: 'all', label: 'Tout' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => onStatusFilterChange(opt.id)}
+                className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                  statusFilter === opt.id
+                    ? 'bg-[#fdfaf2] text-stone-950 shadow-2xs'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Tri */}
+        {onSortChange && (
+          <div className="inline-flex items-center gap-1.5 text-[11px] text-stone-600">
+            <ArrowUpDown className="w-3.5 h-3.5 text-stone-400" strokeWidth={1.75} />
+            <select
+              value={sortBy}
+              onChange={(e) => onSortChange(e.target.value as DebtSortOption)}
+              className="bg-[#fdfaf2] border border-stone-900/15 rounded-lg px-2 py-1 text-[11px] font-medium text-stone-800 focus:outline-none focus:border-emerald-700 cursor-pointer"
+            >
+              <option value="amount_desc">Plus gros solde</option>
+              <option value="recent">Plus récent</option>
+              <option value="name_asc">Nom A–Z</option>
+            </select>
+          </div>
+        )}
       </div>
     </div>
   )
