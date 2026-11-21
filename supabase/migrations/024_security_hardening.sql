@@ -1,15 +1,12 @@
 -- ==============================================================================
 -- Migration 024 : Durcissement Sécurité Post-Audit (RBAC RLS, Cleanup, RPC)
 --
--- Corrige les failles identifiées par l'audit de sécurité (run-1) :
---   1. Isolation stricte de public.supplier_transactions (suppression USING (true)).
---   2. Suppression idempotente de toutes les anciennes politiques (011/015/019/020/022).
---   3. Correction de private.user_shop_role() (ajout de e.user_id = auth.uid()).
---   4. Séparation RBAC Patron vs Employé sur les tables métier (DELETE réservé au patron,
---      gestion catalogue/fournisseurs/courses/clôtures Z réservée au patron).
---   5. Anti-falsification sur public.audit_logs (user_id et user_email liés au JWT).
---   6. Révocation et suppression de la RPC SECURITY DEFINER public.resolve_shop_uuid().
+-- 100% idempotente (peut être relancée sans erreur).
 -- ==============================================================================
+
+CREATE SCHEMA IF NOT EXISTS private;
+REVOKE ALL ON SCHEMA private FROM PUBLIC, anon;
+GRANT USAGE ON SCHEMA private TO authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 1. Corriger private.user_shop_role(TEXT) pour vérifier aussi e.user_id
@@ -50,35 +47,59 @@ REVOKE ALL ON FUNCTION private.user_shop_role(TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION private.user_shop_role(TEXT) TO authenticated;
 
 -- ------------------------------------------------------------------------------
--- 2. Supprimer la RPC SECURITY DEFINER public.resolve_shop_uuid (énumération UUID)
+-- 2. Supprimer la RPC SECURITY DEFINER public.resolve_shop_uuid si elle existe
 -- ------------------------------------------------------------------------------
 
-REVOKE ALL ON FUNCTION public.resolve_shop_uuid(TEXT) FROM PUBLIC, anon, authenticated;
-DROP FUNCTION IF EXISTS public.resolve_shop_uuid(TEXT);
+DO $$
+BEGIN
+  IF to_regprocedure('public.resolve_shop_uuid(text)') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.resolve_shop_uuid(TEXT) FROM PUBLIC, anon, authenticated;
+    DROP FUNCTION public.resolve_shop_uuid(TEXT);
+  END IF;
+END $$;
 
 -- ------------------------------------------------------------------------------
--- 3. Nettoyage idempotent des anciennes politiques permissives (011/015/019/020/022)
+-- 3. Nettoyage idempotent des anciennes politiques (011/015/019/020/022/023/024)
 -- ------------------------------------------------------------------------------
 
 DROP POLICY IF EXISTS "sales_strict_tenant_policy" ON public.sales;
 DROP POLICY IF EXISTS "sales_member_policy" ON public.sales;
+DROP POLICY IF EXISTS "sales_member_select" ON public.sales;
+DROP POLICY IF EXISTS "sales_member_insert" ON public.sales;
+DROP POLICY IF EXISTS "sales_member_update" ON public.sales;
+DROP POLICY IF EXISTS "sales_owner_delete" ON public.sales;
 
 DROP POLICY IF EXISTS "sold_articles_strict_tenant_policy" ON public.sold_articles;
 DROP POLICY IF EXISTS "sold_articles_member_policy" ON public.sold_articles;
+DROP POLICY IF EXISTS "sold_articles_member_select" ON public.sold_articles;
+DROP POLICY IF EXISTS "sold_articles_member_insert" ON public.sold_articles;
+DROP POLICY IF EXISTS "sold_articles_member_update" ON public.sold_articles;
+DROP POLICY IF EXISTS "sold_articles_owner_delete" ON public.sold_articles;
 
 DROP POLICY IF EXISTS "products_strict_tenant_policy" ON public.products;
 DROP POLICY IF EXISTS "products_member_policy" ON public.products;
+DROP POLICY IF EXISTS "products_member_select" ON public.products;
+DROP POLICY IF EXISTS "products_owner_insert" ON public.products;
+DROP POLICY IF EXISTS "products_owner_update" ON public.products;
+DROP POLICY IF EXISTS "products_owner_delete" ON public.products;
 
 DROP POLICY IF EXISTS "debts_strict_tenant_policy" ON public.debts;
 DROP POLICY IF EXISTS "debts_member_policy" ON public.debts;
+DROP POLICY IF EXISTS "debts_member_select" ON public.debts;
+DROP POLICY IF EXISTS "debts_member_insert" ON public.debts;
+DROP POLICY IF EXISTS "debts_member_update" ON public.debts;
+DROP POLICY IF EXISTS "debts_owner_delete" ON public.debts;
 
 DROP POLICY IF EXISTS "supplier_debts_strict_tenant_policy" ON public.supplier_debts;
 DROP POLICY IF EXISTS "supplier_debts_member_policy" ON public.supplier_debts;
+DROP POLICY IF EXISTS "supplier_debts_owner_all" ON public.supplier_debts;
 
 DROP POLICY IF EXISTS "shopping_list_strict_tenant_policy" ON public.shopping_list;
 DROP POLICY IF EXISTS "shopping_list_member_policy" ON public.shopping_list;
+DROP POLICY IF EXISTS "shopping_list_owner_all" ON public.shopping_list;
 
 DROP POLICY IF EXISTS "cash_closings_member_policy" ON public.cash_closings;
+DROP POLICY IF EXISTS "cash_closings_owner_all" ON public.cash_closings;
 
 DROP POLICY IF EXISTS "shops_read_policy" ON public.shops;
 DROP POLICY IF EXISTS "shops_write_policy" ON public.shops;
@@ -199,6 +220,7 @@ WITH CHECK (shop_id IS NOT NULL AND shop_id IN (SELECT private.user_shop_ids()) 
 -- ------------------------------------------------------------------------------
 
 DROP POLICY IF EXISTS "audit_logs_member_select" ON public.audit_logs;
+DROP POLICY IF EXISTS "audit_logs_owner_select" ON public.audit_logs;
 DROP POLICY IF EXISTS "audit_logs_member_insert" ON public.audit_logs;
 
 CREATE POLICY "audit_logs_owner_select"
