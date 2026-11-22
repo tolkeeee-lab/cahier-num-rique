@@ -51,30 +51,18 @@ export function PwaUpdateBanner() {
         await Promise.all(keys.map((key) => caches.delete(key)))
       }
 
-      // 2. Activer le nouveau Service Worker s'il est en attente
+      // 2. Désenregistrer les anciens Service Workers (contourne le cache tenace de Chrome Desktop/Android)
+      //    Le nouveau /sw.js?v=<buildId> se ré-enregistrera automatiquement dès le rechargement.
       if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-        const worker = waitingWorkerRef.current
-        if (worker) {
-          worker.postMessage({ type: 'SKIP_WAITING' })
-        } else {
-          const reg = await navigator.serviceWorker.getRegistration()
-          if (reg?.waiting) {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' })
-          } else if (reg) {
-            await reg.update().catch(() => {})
-          }
-        }
+        const regs = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(regs.map((r) => r.unregister().catch(() => {})))
       }
     } catch {
       // Continuer vers le rechargement propre
     }
 
-    setTimeout(() => {
-      if (!refreshingRef.current) {
-        refreshingRef.current = true
-        window.location.reload()
-      }
-    }, 350)
+    refreshingRef.current = true
+    window.location.reload()
   }, [])
 
   useEffect(() => {
