@@ -223,6 +223,7 @@ function filterProductDbColumns(obj: Record<string, any>): Record<string, any> {
     'unit',
     'alert_threshold',
     'initial_stock',
+    'current_stock',
     'unit_cost',
     'unit_price',
     'multiplier',
@@ -324,6 +325,7 @@ const cleanData: Record<string, any> = sanitizeProductData({
     // Quand on crée/enregistre un produit avec un stock initial > 0, activer le suivi à partir de maintenant
     // pour éviter que d'anciennes ventes antérieures ne le mettent immédiatement en rupture (stock 0).
     const numericInitialStock = Number(cleanData.initial_stock) || 0
+    cleanData.current_stock = numericInitialStock
     if (numericInitialStock > 0) {
       cleanData.stock_tracked = true
       cleanData.tracking_started_at = new Date().toISOString()
