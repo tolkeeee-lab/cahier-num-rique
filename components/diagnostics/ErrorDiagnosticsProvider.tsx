@@ -8,6 +8,11 @@ import {
   type AppErrorRecord,
 } from '@/lib/errorDiagnostics'
 import { AlertTriangle, Copy, Check, ExternalLink, X } from 'lucide-react'
+import { installAuthenticatedApiFetch } from '@/lib/clientAuthFetch'
+
+if (typeof window !== 'undefined') {
+  installAuthenticatedApiFetch()
+}
 
 /**
  * ErrorDiagnosticsProvider.tsx
@@ -41,6 +46,7 @@ export function ErrorDiagnosticsProvider({ children }: { children: React.ReactNo
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    installAuthenticatedApiFetch()
 
     // 1. Interception des erreurs runtime non gérées
     const handleGlobalError = (event: ErrorEvent) => {
