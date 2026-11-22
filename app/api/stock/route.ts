@@ -574,8 +574,11 @@ export async function DELETE(request: Request) {
   }
 
   let shopId: string
+  let targetClient: any = supabase
   try {
-    shopId = (await requireShopOwner(request, requestedShopId)).shop.id
+    const auth = await requireShopOwner(request, requestedShopId)
+    shopId = auth.shop.id
+    targetClient = auth.client || supabase
   } catch (err) {
     return shopAuthorizationErrorResponse(err)
   }
@@ -592,16 +595,17 @@ export async function DELETE(request: Request) {
 // 1. Cas d'un article orphelin (historique de vente sans fiche produit dans le catalogue)
     if (id && id.startsWith('orphan_')) {
       const orphanName = id.replace(/^orphan_/, '')
-      const { data: shopSales } = await supabase
+      const { data: shopSales } = await targetClient
         .from('sales')
         .select('id')
         .eq('shop_id', shopId)
 
-      const saleIds = (shopSales || []).map(s => s.id)
+      const saleIds = (shopSales || []).map((s: { id: string }) => s.id)
       if (saleIds.length > 0) {
-        await supabase
+        await targetClient
           .from('sold_articles')
           .delete()
+          .eq('shop_id', shopId)
           .in('sale_id', saleIds)
           .ilike('product_name', escapeLikePattern(orphanName.trim()))
       }
@@ -612,7 +616,7 @@ export async function DELETE(request: Request) {
     let productToDelete: ProductRow | null = null
 
     if (id) {
-      const { data: prod } = await supabase
+      const { data: prod } = await targetClient
         .from('products')
         .select('*')
         .eq('id', id)
@@ -623,7 +627,7 @@ export async function DELETE(request: Request) {
     }
 
     if (!productToDelete && productName) {
-      const { data: prodByName } = await supabase
+      const { data: prodByName } = await targetClient
         .from('products')
         .select('*')
         .ilike('name', productName.trim())
@@ -635,7 +639,7 @@ export async function DELETE(request: Request) {
 
     // Si le produit existe dans la table products, on le supprime
     if (productToDelete?.id) {
-      const { error: deleteProdErr } = await supabase
+      const { error: deleteProdErr } = await targetClient
         .from('products')
         .delete()
         .eq('id', productToDelete.id)
@@ -644,7 +648,7 @@ export async function DELETE(request: Request) {
       if (deleteProdErr) throw deleteProdErr
     } else if (id && !id.startsWith('stk_')) {
       // Tentative directe par ID au cas où
-      await supabase
+      await targetClient
         .from('products')
         .delete()
         .eq('id', id)
@@ -654,16 +658,17 @@ export async function DELETE(request: Request) {
     // 3. Purger les sold_articles associés au produit pour cette boutique
     const nameToPurge = productToDelete?.name || productName
     if (nameToPurge) {
-      const { data: shopSales } = await supabase
+      const { data: shopSales } = await targetClient
         .from('sales')
         .select('id')
         .eq('shop_id', shopId)
 
-      const saleIds = (shopSales || []).map(s => s.id)
+      const saleIds = (shopSales || []).map((s: { id: string }) => s.id)
       if (saleIds.length > 0) {
-        await supabase
+        await targetClient
           .from('sold_articles')
           .delete()
+          .eq('shop_id', shopId)
           .in('sale_id', saleIds)
           .ilike('product_name', escapeLikePattern(nameToPurge.trim()))
       }

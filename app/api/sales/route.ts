@@ -311,7 +311,7 @@ export async function PATCH(request: NextRequest) {
       if (clientName) patchObj.client_name = clientName
       await targetClient.from('sales').update(patchObj).eq('id', id).eq('shop_id', shopId)
 
-      await targetClient.from('sold_articles').delete().eq('sale_id', id)
+      await targetClient.from('sold_articles').delete().eq('sale_id', id).eq('shop_id', shopId)
       if (updatedArticles.length > 0) {
         await targetClient.from('sold_articles').insert(
           updatedArticles.map(a => ({
