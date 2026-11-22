@@ -1,43 +1,49 @@
-/* Service Worker PWA Robust Offline Shell — Cahier Numérique */
+/* Service Worker PWA Unifié — Cahier Numérique
+ * - Versionné automatiquement via ?v=<NEXT_PUBLIC_BUILD_ID> (plus besoin d'incrémenter manuellement)
+ * - Ne met JAMAIS en cache les requêtes API, authentifiées ou RSC Next.js
+ * - Pages HTML en Network-First strict (cache: 'no-store', timeout 4s) avec repli hors-ligne instantané
+ * - Cache-First réservé uniquement aux fichiers immuables avec hash (/_next/static/, icônes, logos)
+ */
 
-const CACHE_NAME = 'cahier-pwa-v46'
+const SW_VERSION = (() => {
+  try {
+    return new URL(self.location.href).searchParams.get('v') || 'v47'
+  } catch {
+    return 'v47'
+  }
+})()
+
+const CACHE_PREFIX = 'cahier-pwa-'
+const CACHE_NAME = `${CACHE_PREFIX}${SW_VERSION}`
+
 const STATIC_ASSETS = [
-  '/',
-  '/journal',
   '/manifest.json',
-  '/manifest.json?v=3',
   '/manifest.webmanifest',
-  '/icons/pwa-192.png?v=3',
-  '/icons/pwa-512.png?v=3',
-  '/icons/pwa-maskable-192.png?v=3',
-  '/icons/pwa-maskable-512.png?v=3',
-  '/icons/pwa-apple-touch-icon.png?v=3',
   '/icons/pwa-192.png',
   '/icons/pwa-512.png',
+  '/icons/pwa-maskable-192.png',
+  '/icons/pwa-maskable-512.png',
+  '/icons/pwa-apple-touch-icon.png',
   '/icons/favicon-32.png',
   '/icons/favicon-48.png',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
   '/icons/icon-any.svg',
   '/logo/logo-horizontal.svg',
   '/logo/logo-symbole.svg',
 ]
 
-// Installation : Pre-caching robuste asset par asset avec Promise.allSettled
+// Installation : pré-cache uniquement les icônes/manifestes (les pages HTML sont cachées à la volée en Network-First)
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      console.log('[SW] Pre-caching static assets...')
       await Promise.allSettled(
         STATIC_ASSETS.map(async (url) => {
           try {
             const response = await fetch(url, { cache: 'no-cache' })
             if (response.ok) {
               await cache.put(url, response)
-              console.log('[SW] Cached asset:', url)
             }
-          } catch (err) {
-            console.warn('[SW] Could not pre-cache asset:', url, err)
+          } catch {
+            // Ignorer en cas d'installation hors-ligne
           }
         })
       )
@@ -46,76 +52,74 @@ self.addEventListener('install', (event) => {
   self.skipWaiting()
 })
 
-// Activation : Nettoyage immédiat des anciens caches + prise en charge des clients
+// Activation : purge immédiate de tous les anciens caches + prise de contrôle des clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
+    caches.keys().then((keys) =>
+      Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('[SW] Removing old cache:', key)
             return caches.delete(key)
           }
+          return undefined
         })
       )
-    })
+    )
   )
   self.clients.claim()
 })
 
-// Réception des messages du client (forcer la mise à jour immédiate)
+// Messages du client (mise à jour forcée ou purge complète du cache)
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (!event.data) return
+  if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting()
+  }
+  if (event.data.type === 'CLEAR_ALL_CACHES') {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+    )
   }
 })
 
 // Interception des requêtes réseau
 self.addEventListener('fetch', (event) => {
-  // Ignorer toute requête non HTTP/HTTPS (ex: chrome-extension://, moz-extension://, data:)
   if (!event.request.url.startsWith('http://') && !event.request.url.startsWith('https://')) {
     return
   }
 
   const url = new URL(event.request.url)
 
-  // 1. Ne jamais intercepter ni mettre en cache les requêtes cross-origin (ex: Supabase REST/Auth),
-  // les requêtes authentifiées (Authorization), les API dynamiques ou les requêtes non-GET
+  // 1. Ne JAMAIS intercepter ni mettre en cache :
+  // - requêtes cross-origin (Supabase, polices externes, etc.)
+  // - requêtes non-GET ou authentifiées
+  // - routes /api/* et /sw.js
+  // - payloads Next.js App Router RSC (?_rsc= ou header RSC) -> évite le blocage entre deux versions
   if (
     url.origin !== self.location.origin ||
+    event.request.method !== 'GET' ||
     event.request.headers.has('authorization') ||
     url.pathname.startsWith('/api/') ||
-    event.request.method !== 'GET'
+    url.pathname === '/sw.js' ||
+    url.searchParams.has('_rsc') ||
+    event.request.headers.get('rsc') === '1' ||
+    event.request.headers.get('next-router-prefetch') === '1'
   ) {
     return
   }
 
-    // 1.5. Manifeste PWA et Icônes : Toujours chercher sur le réseau en priorité (anti-cache)
-  if (url.pathname.includes('manifest') || url.pathname.includes('/icons/') || url.pathname.includes('pwa-')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
-          }
-          return response
-        })
-        .catch(() => caches.match(event.request))
-    )
-    return
-  }
-
-  // 2. Navigation HTML (pages web, reload PWA) -> Fast Network (1200ms) avec Fallback Cache Instantané
+  // 2. Navigation HTML (pages web, lancement PWA) -> Network-First strict (cache: 'no-store', timeout 4s)
   if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
       (async () => {
-        // Tenter le réseau avec un timeout de 1200ms max pour éviter tout blocage d'écran blanc
         try {
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 1200)
+          const timeoutId = setTimeout(() => controller.abort(), 4000)
 
-          const response = await fetch(event.request, { signal: controller.signal })
+          const response = await fetch(event.request, {
+            cache: 'no-store',
+            signal: controller.signal,
+          })
           clearTimeout(timeoutId)
 
           if (response && response.ok) {
@@ -123,11 +127,10 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
             return response
           }
-        } catch (err) {
-          // Timeout réseau ou absence de connexion : bascule instantanée sur le cache
+        } catch {
+          // Hors-ligne ou réseau trop lent : bascule sur le cache local
         }
 
-        // Cache local immédiat (0 ms)
         const cachedExact = await caches.match(event.request)
         if (cachedExact) return cachedExact
 
@@ -137,43 +140,52 @@ self.addEventListener('fetch', (event) => {
         const cachedHome = await caches.match('/')
         if (cachedHome) return cachedHome
 
-        const cache = await caches.open(CACHE_NAME)
-        const keys = await cache.keys()
-        for (const key of keys) {
-          if (key.url.includes('/journal') || key.url.endsWith('/')) {
-            const res = await cache.match(key)
-            if (res) return res
-          }
-        }
-
-        // Dernier recours : tenter le réseau sans timeout
-        try {
-          return await fetch(event.request)
-        } catch {
-          return new Response(
-            '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cahier Numérique</title></head><body style="background:#141210;color:#fff;font-family:sans-serif;text-align:center;padding:50px;"><h2>Cahier Numérique (Mode Hors Ligne)</h2><p>L\'application est chargée. Veuillez rafraîchir ou vous reconnecter.</p></body></html>',
-            { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-          )
-        }
+        return new Response(
+          '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cahier Numérique</title></head><body style="background:#f5efe0;color:#1c1917;font-family:system-ui,sans-serif;text-align:center;padding:48px 24px;"><h2>Cahier Numérique — Mode hors-ligne</h2><p style="color:#57534e;max-width:360px;margin:12px auto;">Connexion indisponible pour le premier chargement. Reconnectez-vous puis actualisez la page.</p></body></html>',
+          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+        )
       })()
     )
     return
   }
 
-  // 3. Fichiers statiques Next.js (/_next/static/, JS, CSS, images, polices)
-  event.respondWith(
-    caches.match(event.request).then(async (cachedResponse) => {
-      if (cachedResponse) return cachedResponse
-      try {
-        const networkResponse = await fetch(event.request)
-        if (networkResponse && (networkResponse.status === 200 || networkResponse.status === 0)) {
-          const responseClone = networkResponse.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone))
+  // 3. Assets immuables avec hash (/_next/static/, icônes, logos) -> Cache-First
+  if (
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.startsWith('/icons/') ||
+    url.pathname.startsWith('/logo/')
+  ) {
+    event.respondWith(
+      caches.match(event.request).then(async (cachedResponse) => {
+        if (cachedResponse) return cachedResponse
+        try {
+          const networkResponse = await fetch(event.request)
+          if (networkResponse && networkResponse.ok) {
+            const clone = networkResponse.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+          }
+          return networkResponse
+        } catch {
+          return new Response('', { status: 408, statusText: 'Offline' })
         }
-        return networkResponse
-      } catch (err) {
-        return new Response('', { status: 408, statusText: 'Request Failed' })
-      }
-    })
+      })
+    )
+    return
+  }
+
+  // 4. Autres ressources même origine (manifest, etc.) -> Network-First avec fallback cache
+  event.respondWith(
+    fetch(event.request, { cache: 'no-cache' })
+      .then((response) => {
+        if (response && response.ok) {
+          const clone = response.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+        }
+        return response
+      })
+      .catch(async () => {
+        const cached = await caches.match(event.request)
+        return cached || new Response('', { status: 408, statusText: 'Offline' })
+      })
   )
 })

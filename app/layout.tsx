@@ -72,15 +72,17 @@ export default function RootLayout({
           </FeatureProvider>
         </ErrorDiagnosticsProvider>
         
-                {/* Enregistrement du Service Worker pour le support PWA */}
+        {/* Enregistrement unifié du Service Worker versionné automatiquement par build */}
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
+              var buildId = ${JSON.stringify(process.env.NEXT_PUBLIC_BUILD_ID || 'v47')};
               var registerSW = function() {
-                navigator.serviceWorker.register('/sw.js?v=3').then(
+                navigator.serviceWorker.register('/sw.js?v=' + encodeURIComponent(buildId), {
+                  updateViaCache: 'none'
+                }).then(
                   function(reg) {
-                    console.log('SW enregistré scope:', reg.scope);
-                    reg.update(); // Force vérification de mise à jour immédiate
+                    reg.update().catch(function() {});
                   },
                   function(err) {
                     console.error('SW échec enregistrement:', err);

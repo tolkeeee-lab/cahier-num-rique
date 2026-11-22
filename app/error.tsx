@@ -47,35 +47,38 @@ export default function GlobalError({
     }
   }, [error])
 
-  const handleApplyUpdateAndReload = () => {
-    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistration().then((reg) => {
+  const clearStaleCachesAndActivateSW = async () => {
+    try {
+      if (typeof caches !== 'undefined') {
+        const keys = await caches.keys()
+        await Promise.all(keys.map((k) => caches.delete(k)))
+      }
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration()
         if (reg?.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' })
         }
-      }).catch(() => {})
-    }
-    setTimeout(() => {
+      }
+    } catch {}
+  }
+
+  const handleApplyUpdateAndReload = () => {
+    clearStaleCachesAndActivateSW().finally(() => {
       if (typeof window !== 'undefined') {
         window.location.reload()
       }
-    }, 400)
+    })
   }
 
   const handleReload = () => {
     try {
       reset()
     } catch {}
-    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        if (reg?.waiting) {
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' })
-        }
-      }).catch(() => {})
-    }
-    if (typeof window !== 'undefined') {
-      window.location.reload()
-    }
+    clearStaleCachesAndActivateSW().finally(() => {
+      if (typeof window !== 'undefined') {
+        window.location.reload()
+      }
+    })
   }
 
   const handleForceOfflineMode = () => {
