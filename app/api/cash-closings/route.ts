@@ -44,8 +44,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ closings: typedClosings })
   } catch (err: unknown) {
     const status = (err as { status?: number })?.status
-    if (status === 401 || status === 403) return shopAuthorizationErrorResponse(err)
-    const message = err instanceof Error ? err.message : String(err)
+    if (status === 400 || status === 401 || status === 403 || status === 404) {
+      return shopAuthorizationErrorResponse(err)
+    }
+    const message =
+      err instanceof Error
+        ? err.message
+        : err && typeof err === 'object' && 'message' in err && typeof (err as { message?: unknown }).message === 'string'
+          ? (err as { message: string }).message
+          : String(err)
     console.error('[API cash-closings] Exception GET:', message)
     return NextResponse.json({ closings: [], error: message }, { status: 500 })
   }
@@ -100,8 +107,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ closing: typedClosing, success: true })
   } catch (err: unknown) {
     const status = (err as { status?: number })?.status
-    if (status === 401 || status === 403) return shopAuthorizationErrorResponse(err)
-    const message = err instanceof Error ? err.message : String(err)
+    if (status === 400 || status === 401 || status === 403 || status === 404) {
+      return shopAuthorizationErrorResponse(err)
+    }
+    const message =
+      err instanceof Error
+        ? err.message
+        : err && typeof err === 'object' && 'message' in err && typeof (err as { message?: unknown }).message === 'string'
+          ? (err as { message: string }).message
+          : String(err)
     console.error('[API cash-closings] Exception POST:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }

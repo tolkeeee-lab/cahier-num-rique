@@ -46,6 +46,8 @@ export type AuthorizedShop = {
   role: string
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function normalizeShopId(value: string) {
   return value.trim()
 }
@@ -65,26 +67,34 @@ export async function requireShopAccess(
 
   const client = getAuthorizedServerClient(accessToken)
 
-  // 1. Recherche par UUID exact
-  let { data: shop, error: shopError } = await client
-    .from('shops')
-    .select('id, shop_code, owner_id, name')
-    .eq('id', shopId)
-    .maybeSingle()
+  let shop: { id: string; shop_code: string | null; owner_id: string | null; name: string | null } | null = null
 
-  if (shopError) throw shopError
+  // 1. Recherche par UUID exact (uniquement si le format est un UUID valide pour éviter Postgres 22P02)
+  if (UUID_REGEX.test(shopId)) {
+    const { data, error: shopError } = await client
+      .from('shops')
+      .select('id, shop_code, owner_id, name')
+      .eq('id', shopId)
+      .maybeSingle()
+
+    if (shopError) throw shopError
+    shop = data
+  }
 
   // 2. Recherche par shop_code (avec ou sans préfixe BTQ- / SHOP-)
   if (!shop) {
-    const rawClean = shopId.replace(/^(BTQ-|SHOP-)/i, '').trim()
-    const result = await client
-      .from('shops')
-      .select('id, shop_code, owner_id, name')
-      .or(`shop_code.eq.${shopId},shop_code.ilike.%${rawClean}%`)
-      .limit(1)
-      .maybeSingle()
+    const safeShopId = shopId.replace(/[^a-zA-Z0-9_-]/g, '')
+    const rawClean = safeShopId.replace(/^(BTQ-|SHOP-)/i, '').trim()
+    if (safeShopId && rawClean) {
+      const result = await client
+        .from('shops')
+        .select('id, shop_code, owner_id, name')
+        .or(`shop_code.eq.${safeShopId},shop_code.ilike.%${rawClean}%`)
+        .limit(1)
+        .maybeSingle()
 
-    shop = result.data
+      shop = result.data
+    }
   }
 
   // 3. Recherche par nom officiel de la boutique (ex: "MAFRO")
@@ -121,7 +131,7 @@ export async function requireShopAccess(
       .limit(1)
       .maybeSingle()
 
-    if (empResult.data?.shop_id) {
+    if (empResult.data?.shop_id && UUID_REGEX.test(empResult.data.shop_id)) {
       const empShopRes = await client
         .from('shops')
         .select('id, shop_code, owner_id, name')
@@ -196,10 +206,14 @@ export function shopAuthorizationErrorResponse(error: unknown) {
       ? error.status
       : 500
 
-  return Response.json(
-    { error: error instanceof Error ? error.message : 'Authorization failed' },
-    { status },
-  )
+  const message =
+    error instanceof Error
+      ? error.message
+      : error && typeof error === 'object' && 'message' in error && typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : 'Authorization failed'
+
+  return Response.json({ error: message }, { status })
 }
 
 export async function requireShopOwner(
