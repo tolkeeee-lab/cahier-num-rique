@@ -250,11 +250,6 @@ export function StockManager({
         return [finalProduct, ...prev]
       })
 
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
-        broadcastInstantSync(shopId, 'stock')
-      }
-
       setIsProductModalOpen(false)
       setEditingProduct(null)
 
@@ -268,11 +263,23 @@ export function StockManager({
         if (res.ok) {
           const savedData = await res.json()
           if (savedData?.product) {
-            saveOfflineProduct(shopId, savedData.product as any)
+            const syncedProd: Product = {
+              ...finalProduct,
+              ...savedData.product,
+              current_stock: savedData.product.current_stock ?? savedData.product.initial_stock ?? stockVal,
+            }
+            saveOfflineProduct(shopId, syncedProd as any)
+            setProducts(prev => prev.map(p =>
+              p.id === finalProduct.id || p.id === syncedProd.id ? syncedProd : p
+            ))
           }
         }
       } catch (netErr) {
         console.warn('Mode hors-ligne : produit enregistré localement, synchronisation en attente.', netErr)
+      }
+
+      if (typeof window !== 'undefined') {
+        broadcastInstantSync(shopId, 'stock')
       }
       } catch (err) {
       console.error('Erreur sauvegarde produit:', err)
@@ -344,6 +351,7 @@ export function StockManager({
         initial_stock: newTotalStock,
         current_stock: newTotalStock,
         unit_cost: Number(productData.unit_cost) || (existing?.unit_cost || 0),
+        package_cost: Number(productData.package_cost) || (existing?.package_cost || 0),
         unit_price: Number(productData.unit_price) || (existing?.unit_price || 0),
         alert_threshold: Number(productData.alert_threshold) || (existing?.alert_threshold || 5),
         category: productData.category || existing?.category || 'Divers',
@@ -380,11 +388,6 @@ export function StockManager({
         }
         return [finalProduct, ...prev]
       })
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
-        broadcastInstantSync(shopId, 'stock')
-      }
 
       // 3. Liaison automatique Trésorerie : Sortie de Caisse ou Crédit Fournisseur
       if (financialImpact && financialImpact.type !== 'none' && financialImpact.amount > 0) {
@@ -441,7 +444,7 @@ export function StockManager({
         }
       }
 
-      // 4. Synchronisation serveur du produit en arrière-plan
+      // 4. Synchronisation serveur du produit puis notification
       try {
         const res = await fetch('/api/stock', {
           method: existing ? 'PATCH' : 'POST',
@@ -451,11 +454,25 @@ export function StockManager({
         if (res.ok) {
           const savedData = await res.json()
           if (savedData?.product) {
-            saveOfflineProduct(shopId, savedData.product as any)
+            const syncedProd: Product = {
+              ...finalProduct,
+              ...savedData.product,
+              current_stock: savedData.product.current_stock ?? savedData.product.initial_stock ?? newTotalStock,
+            }
+            saveOfflineProduct(shopId, syncedProd as any)
+            setProducts(prev => prev.map(p =>
+              p.id === finalProduct.id || p.id === syncedProd.id || p.name.toLowerCase() === syncedProd.name.toLowerCase()
+                ? syncedProd
+                : p
+            ))
           }
         }
       } catch (netErr) {
         console.warn('Mode hors-ligne : produit enregistré localement, synchronisation en attente.', netErr)
+      }
+
+      if (typeof window !== 'undefined') {
+        broadcastInstantSync(shopId, 'stock')
       }
     } catch (err) {
       console.error('Erreur ajout rapide produit:', err)

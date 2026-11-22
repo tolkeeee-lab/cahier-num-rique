@@ -36,10 +36,12 @@ export async function GET(request: Request) {
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
   let shopRole = 'employee'
+  let targetClient: any = supabase
   try {
     const auth = await requireShopAccess(request, requestedShopId)
     shopId = auth.shop.id
     shopRole = auth.shop.role
+    targetClient = auth.client || supabase
   } catch (err) {
     return shopAuthorizationErrorResponse(err)
   }
@@ -50,7 +52,7 @@ export async function GET(request: Request) {
 
   try {
 // 1. Catalogue des produits
-    const { data: products, error: productsError } = await supabase
+    const { data: products, error: productsError } = await targetClient
       .from('products')
       .select('*')
       .eq('shop_id', shopId)
@@ -59,7 +61,7 @@ export async function GET(request: Request) {
     if (productsError) throw productsError
 
     // 2. Toutes les ventes avec leurs articles (non rayées)
-    const { data: salesData, error: salesError } = await supabase
+    const { data: salesData, error: salesError } = await targetClient
       .from('sales')
       .select(`
         id, type, date, notes, status, created_at,
@@ -253,7 +255,12 @@ export async function POST(request: Request) {
   const requestedShopId = request.headers.get('x-shop-id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
-  try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  let targetClient: any = supabase
+  try {
+    const auth = await requireShopOwner(request, requestedShopId)
+    shopId = auth.shop.id
+    targetClient = auth.client || supabase
+  } catch (err) { return shopAuthorizationErrorResponse(err) }
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
   }
@@ -314,10 +321,18 @@ const cleanData: Record<string, any> = sanitizeProductData({
       cleanData.created_at = created_at
     }
 
+    // Quand on crée/enregistre un produit avec un stock initial > 0, activer le suivi à partir de maintenant
+    // pour éviter que d'anciennes ventes antérieures ne le mettent immédiatement en rupture (stock 0).
+    const numericInitialStock = Number(cleanData.initial_stock) || 0
+    if (numericInitialStock > 0) {
+      cleanData.stock_tracked = true
+      cleanData.tracking_started_at = new Date().toISOString()
+    }
+
     const insertData = filterProductDbColumns(cleanData)
 
     // Vérifier si le produit existe déjà pour cette boutique
-    const { data: existingProd } = await supabase
+    const { data: existingProd } = await targetClient
       .from('products')
       .select('*')
       .eq('shop_id', shopId)
@@ -328,18 +343,20 @@ const cleanData: Record<string, any> = sanitizeProductData({
       const updatePayload: ProductUpdate = { ...insertData }
       delete updatePayload.id
       delete updatePayload.created_at
-      const { data: updated, error: upErr } = await supabase
+      const { data: updated, error: upErr } = await targetClient
         .from('products')
         .update(updatePayload)
         .eq('id', existingProd.id)
         .select()
         .single()
       if (!upErr && updated) {
-        return NextResponse.json({ product: { ...updated, trade_type: cleanData.trade_type } }, { status: 200 })
+        return NextResponse.json({
+          product: { ...updated, current_stock: updated.initial_stock ?? numericInitialStock, trade_type: cleanData.trade_type },
+        }, { status: 200 })
       }
     }
 
-    let { data, error } = await supabase
+    let { data, error } = await targetClient
       .from('products')
       .insert(insertData)
       .select()
@@ -347,13 +364,15 @@ const cleanData: Record<string, any> = sanitizeProductData({
 
     if (error && (error.message?.includes('barcode') || (error as { details?: string }).details?.includes('barcode'))) {
       delete insertData.barcode
-      const retry = await supabase.from('products').insert(insertData).select().single()
+      const retry = await targetClient.from('products').insert(insertData).select().single()
       data = retry.data
       error = retry.error
     }
 
     if (error) throw error
-    return NextResponse.json({ product: { ...data, trade_type: cleanData.trade_type } }, { status: 201 })
+    return NextResponse.json({
+      product: { ...data, current_stock: data.initial_stock ?? numericInitialStock, trade_type: cleanData.trade_type },
+    }, { status: 201 })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erreur inconnue'
     console.error('[API/stock POST]', msg)
@@ -367,7 +386,12 @@ export async function PATCH(request: Request) {
   const requestedShopId = request.headers.get('x-shop-id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
-  try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  let targetClient: any = supabase
+  try {
+    const auth = await requireShopOwner(request, requestedShopId)
+    shopId = auth.shop.id
+    targetClient = auth.client || supabase
+  } catch (err) { return shopAuthorizationErrorResponse(err) }
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
   }
@@ -445,7 +469,7 @@ let updates: Record<string, any> = {}
     // 1. Tenter une mise à jour directe par ID
     let updatedProduct: ProductRow | null = null
     if (id && !id.startsWith('stk_') && !id.startsWith('orphan_')) {
-      const { data, error } = await supabase
+      const { data, error } = await targetClient
         .from('products')
         .update(dbUpdates)
         .eq('id', id)
@@ -461,7 +485,7 @@ let updates: Record<string, any> = {}
     // 2. Si non trouvé par ID, chercher par nom exact ou canonique pour cette boutique
     if (!updatedProduct && name) {
       const canonicalName = normalizeProductName(name)
-      const { data: existingByName } = await supabase
+      const { data: existingByName } = await targetClient
         .from('products')
         .select('id')
         .eq('shop_id', shopId)
@@ -469,7 +493,7 @@ let updates: Record<string, any> = {}
         .maybeSingle()
 
       if (existingByName?.id) {
-        const { data, error } = await supabase
+        const { data, error } = await targetClient
           .from('products')
           .update(dbUpdates)
           .eq('id', existingByName.id)
@@ -503,13 +527,14 @@ let updates: Record<string, any> = {}
         lot_quantity: lot_quantity ?? 0,
         lot_price: lot_price ?? 0,
         stock_tracked: body.stock_tracked !== undefined ? Boolean(body.stock_tracked) : ((initial_stock ?? 0) > 0),
+        tracking_started_at: (initial_stock ?? 0) > 0 ? new Date().toISOString() : undefined,
         created_at: new Date().toISOString(),
       }
 
       const cleanInsert = sanitizeProductData(insertData as CleanableProduct)
       const dbInsert = filterProductDbColumns(cleanInsert) as ProductInsert
 
-      const { data, error } = await supabase
+      const { data, error } = await targetClient
         .from('products')
         .insert(dbInsert)
         .select()

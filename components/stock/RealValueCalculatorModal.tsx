@@ -27,6 +27,7 @@ export interface RealValueCalculatorModalProps {
   onSaveProduct?: (updated: {
     multiplier: number
     unit_cost: number
+    package_cost?: number
     unit_price: number
     current_stock: number
     wholesale_price?: number
@@ -62,7 +63,8 @@ export function RealValueCalculatorModal({
     const initialUnitCost = product?.unit_cost || 0
     const initialSalePrice = product?.unit_price || 0
     const initialStock = product?.current_stock ?? 0
-    const initialCartonCost = product?.wholesale_price || (initialUnitCost > 0 ? initialUnitCost * initialMult : '')
+    const savedPkgCost = (product as any)?.package_cost || 0
+    const initialCartonCost = savedPkgCost > 0 ? savedPkgCost : (initialUnitCost > 0 ? initialUnitCost * initialMult : '')
 
     setMultiplierInput(String(initialMult))
     setUnitSalePriceInput(initialSalePrice > 0 ? String(initialSalePrice) : '')
@@ -142,6 +144,7 @@ export function RealValueCalculatorModal({
         await onSaveProduct({
           multiplier,
           unit_cost: valuation.unitCost,
+          package_cost: cartonCost,
           unit_price: unitSalePrice,
           current_stock: currentStock,
           wholesale_price: cartonTier?.suggestedPrice,

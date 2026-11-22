@@ -74,35 +74,30 @@ export function calculateInfallibleValuation(
   const safeSalePrice = Math.max(0, Math.round(unitSalePrice))
   const safeStock = Math.max(0, Math.round(currentStock))
 
-  // 1. Coût de revient unitaire
+  // 1. Coût de revient unitaire exact (ne JAMAIS arrondir un coût d'achat au 25 F, cela fausse toute la comptabilité)
   const rawUnitCost = safeCartonCost / safeMult
-  // Arrondi monétaire propre du coût unitaire (si coût >= 200, par 25 F, sinon par 5 F)
-  const unitCost = safeMult === 1
-    ? safeCartonCost
-    : roundToCfaCurrency(rawUnitCost, rawUnitCost >= 200 ? 25 : 5)
+  const unitCost = safeMult === 1 ? safeCartonCost : Math.round(rawUnitCost)
 
-  // 2. Marge unitaire au détail
-  const unitMargin = safeSalePrice - unitCost
+  // 2. Marge unitaire au détail (basée sur le coût exact)
+  const unitMargin = Math.round(safeSalePrice - rawUnitCost)
   const unitMarginPercent = safeSalePrice > 0
-    ? Math.round((unitMargin / safeSalePrice) * 100)
+    ? Math.round(((safeSalePrice - rawUnitCost) / safeSalePrice) * 100)
     : 0
 
   // 3. Décomposition du stock physique restant
   const fullCartons = Math.floor(safeStock / safeMult)
   const loosePieces = safeStock % safeMult
 
-  // 4. Valeur d'achat réelle immobilisée en magasin
-  // Règle d'or comptable : les cartons pleins valent exactement le prix d'achat carton déboursé,
-  // et les pièces en vrac sont valorisées au coût unitaire propre.
-  const immobilizedPurchaseValue = (fullCartons * safeCartonCost) + (loosePieces * unitCost)
+  // 4. Valeur d'achat réelle immobilisée en magasin (proportion exacte sans dérive d'arrondi)
+  const immobilizedPurchaseValue = Math.round((safeStock * safeCartonCost) / safeMult)
 
   // 5. Chiffre d'affaires et bénéfice potentiel au détail
   const potentialRevenue = safeStock * safeSalePrice
-  const potentialNetProfit = Math.max(0, potentialRevenue - immobilizedPurchaseValue)
+  const potentialNetProfit = potentialRevenue - immobilizedPurchaseValue
 
   // 6. Rentabilité d'un carton complet vendu au détail
   const cartonRevenueDetail = safeMult * safeSalePrice
-  const cartonNetProfitDetail = Math.max(0, cartonRevenueDetail - safeCartonCost)
+  const cartonNetProfitDetail = cartonRevenueDetail - safeCartonCost
   const cartonNetProfitPercent = cartonRevenueDetail > 0
     ? Math.round((cartonNetProfitDetail / cartonRevenueDetail) * 100)
     : 0
@@ -161,7 +156,7 @@ export function generateInfalliblePriceTiers(
   if (safeMult >= 3) {
     const rawPrice = safeSalePrice * 3 * 0.96 // ~4% remise
     const price = roundToCfaCurrency(rawPrice, 25)
-    const cost = unitCost * 3
+    const cost = Math.round((safeCartonCost * 3) / safeMult)
     const profit = price - cost
     const unitEq = Math.round(price / 3)
 
@@ -185,7 +180,7 @@ export function generateInfalliblePriceTiers(
     const label = safeMult >= 48 ? `1/8 Carton (${pieces} pcs)` : `Lot de 6 pièces`
     const rawPrice = safeSalePrice * pieces * 0.94 // ~6% remise
     const price = roundToCfaCurrency(rawPrice, pieces >= 10 ? 50 : 25)
-    const cost = unitCost * pieces
+    const cost = Math.round((safeCartonCost * pieces) / safeMult)
     const profit = price - cost
     const unitEq = Math.round(price / pieces)
 
@@ -208,7 +203,7 @@ export function generateInfalliblePriceTiers(
     const pieces = Math.round(safeMult * 0.25)
     const rawPrice = safeSalePrice * pieces * 0.92 // ~8% remise
     const price = roundToCfaCurrency(rawPrice, 50)
-    const cost = unitCost * pieces
+    const cost = Math.round((safeCartonCost * pieces) / safeMult)
     const profit = price - cost
     const unitEq = Math.round(price / pieces)
 
