@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { Plus, Minus, Edit3, Trash2, Sparkles, PackagePlus, PackageMinus } from 'lucide-react'
+import { Plus, Minus, Edit3, Trash2, Calculator, PackagePlus, PackageMinus, Package } from 'lucide-react'
 
 interface Product {
   id: string
@@ -42,162 +42,170 @@ export const StockTable: React.FC<StockTableProps> = ({
 }) => {
   if (products.length === 0) {
     return (
-      <div className="p-12 text-center text-gray-500 bg-white/80 rounded-2xl border border-amber-300/80 font-mono text-xs shadow-sm">
-        Aucun produit trouvé dans votre inventaire.
+      <div className="p-10 text-center bg-[#faf5e8] rounded-xl border border-[#e2d6be] space-y-1.5">
+        <Package className="w-6 h-6 text-stone-400 mx-auto" strokeWidth={1.5} />
+        <p className="text-sm font-medium text-stone-800">Aucun produit trouvé dans votre inventaire</p>
+        <p className="text-xs text-stone-500">Ajoutez votre premier article ci-dessus pour suivre votre stock.</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white/90 rounded-2xl border border-amber-300/80 overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-amber-100/80 border-b border-amber-200 text-[11px] font-mono font-bold text-amber-950 uppercase tracking-normal">
-              <th className="p-3.5">Produit</th>
-              <th className="p-3.5">Catégorie</th>
-              <th className="p-3.5 text-center">Stock</th>
-              {!isEmployee && <th className="p-3.5 text-right">Prix d'Achat</th>}
-              <th className="p-3.5 text-right">Prix de Vente</th>
-              <th className="p-3.5 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-amber-200/60 text-xs font-mono">
-            {products.map((prod) => {
-              const currentStock = prod.current_stock ?? prod.initial_stock ?? 0
-              const isLow = currentStock <= (prod.alert_threshold ?? 5) && currentStock > 0
-              const isOutOfStock = currentStock <= 0
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+      {products.map((prod) => {
+        const currentStock = prod.current_stock ?? prod.initial_stock ?? 0
+        const isLow = currentStock <= (prod.alert_threshold ?? 5) && currentStock > 0
+        const isOutOfStock = currentStock <= 0
+        const margin = prod.unit_cost > 0 && prod.unit_price > 0 ? prod.unit_price - prod.unit_cost : null
+        const marginPct = margin !== null && prod.unit_cost > 0 ? Math.round((margin / prod.unit_cost) * 100) : null
 
-              return (
-                <tr key={prod.id} className="hover:bg-amber-50/80 transition-colors">
-                  {/* Nom du produit */}
-                  <td className="p-3.5">
-                    <p className="font-semibold text-gray-900 text-sm">{prod.name}</p>
-                    {prod.unit && <p className="text-[11px] text-gray-500 font-sans font-medium">{prod.unit}</p>}
-                  </td>
-
-                  {/* Catégorie */}
-                  <td className="p-3.5">
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-100/90 border border-amber-300 text-amber-950 font-bold text-[11px]">
-                      {prod.category || 'Divers'}
-                    </span>
-                  </td>
-
-                  {/* Quantité en Stock + Contrôles d'ajustement */}
-                  <td className="p-3.5">
-                    <div className="flex items-center justify-center gap-1.5">
-                      {!isEmployee && (
-                        <div className="flex items-center gap-1">
-                          {onOpenExpressAdjustment && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenExpressAdjustment(prod, 'out')}
-                              className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 active:scale-[0.97] text-rose-800 border border-rose-200 transition-colors duration-100 ease-out cursor-pointer"
-                              title="Déclarer Casse, Perte ou Conso Personnelle"
-                            >
-                              <PackageMinus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => onAdjustStock(prod.id, -1)}
-                            className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-colors duration-100 ease-out cursor-pointer"
-                            title="Retirer 1 unité"
-                          >
-                            <Minus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                          </button>
-                        </div>
-                      )}
-
-                      <span className={`px-3 py-1 rounded-xl font-semibold text-sm font-mono tabular-nums tracking-tight border shadow-xs ${
-                        isOutOfStock
-                          ? 'bg-rose-100 text-rose-900 border-rose-300'
-                          : isLow
-                          ? 'bg-amber-100 text-amber-900 border-amber-300'
-                          : 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                      }`}>
-                        {currentStock}
-                      </span>
-
-                      {!isEmployee && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => onAdjustStock(prod.id, 1)}
-                            className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-950 border border-amber-300 transition-colors duration-100 ease-out cursor-pointer"
-                            title="Ajouter 1 unité"
-                          >
-                            <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                          </button>
-                          {onOpenExpressAdjustment && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenExpressAdjustment(prod, 'in')}
-                              className="p-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:scale-[0.97] text-emerald-800 border border-emerald-200 transition-colors duration-100 ease-out cursor-pointer"
-                              title="Entrée Express / Achat Carton"
-                            >
-                              <PackagePlus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Prix d'Achat (Masqué aux employés) */}
-                  {!isEmployee && (
-                    <td className="p-3.5 text-right text-gray-700 font-bold tabular-nums tracking-tight">
-                      {formatPrice(prod.unit_cost || 0)}
-                    </td>
+        return (
+          <div
+            key={prod.id}
+            className="bg-[#faf5e8] hover:bg-white/90 transition-colors rounded-xl border border-[#e2d6be] p-3.5 space-y-3"
+          >
+            {/* Ligne 1 : Nom + Catégorie | Stepper Stock */}
+            <div className="flex items-start justify-between gap-2.5">
+              <div className="min-w-0 space-y-1">
+                <p className="font-semibold text-sm text-stone-900 leading-snug truncate">
+                  {prod.name}
+                </p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-md bg-white border border-stone-200 text-stone-600 text-[11px] font-medium">
+                    {prod.category || 'Divers'}
+                  </span>
+                  {prod.unit && (
+                    <span className="text-[11px] text-stone-500">{prod.unit}</span>
                   )}
+                </div>
+              </div>
 
-                  {/* Prix de Vente */}
-                  <td className="p-3.5 text-right font-semibold text-amber-900 tabular-nums tracking-tight">
-                    {formatPrice(prod.unit_price || 0)}
-                  </td>
+              {/* Contrôle stock compact */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {!isEmployee && (
+                  <button
+                    type="button"
+                    onClick={() => onAdjustStock(prod.id, -1)}
+                    className="w-7 h-7 rounded-lg bg-white hover:bg-stone-50 active:scale-[0.96] text-stone-700 border border-stone-200 flex items-center justify-center transition-colors cursor-pointer"
+                    title="Retirer 1 unité"
+                  >
+                    <Minus className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  </button>
+                )}
 
-                  {/* Actions (Édition & Suppression) */}
-                  <td className="p-3.5 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {onOpenCalculator && (
-                        <button
-                          type="button"
-                          onClick={() => onOpenCalculator(prod)}
-                          className="px-2 py-1.5 rounded-lg bg-[#faf5e8] hover:bg-amber-100 active:scale-[0.97] text-stone-900 transition-colors border border-stone-900/15 cursor-pointer flex items-center gap-1 font-medium text-[11px]"
-                          title="Calculateur de Valeur Réelle & Tarification Paliers"
-                        >
-                          <Sparkles className="w-3 h-3 text-amber-950" strokeWidth={2} />
-                          <span className="hidden sm:inline">Valeur & Paliers</span>
-                        </button>
-                      )}
+                <span
+                  className={`min-w-[38px] text-center px-2 py-1 rounded-lg font-semibold text-xs font-mono tabular-nums border ${
+                    isOutOfStock
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : isLow
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  }`}
+                >
+                  {currentStock}
+                </span>
 
-                      <button
-                        type="button"
-                        onClick={() => onEditProduct(prod)}
-                        className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 active:scale-[0.97] text-amber-900 transition-colors duration-100 ease-out border border-amber-300 cursor-pointer"
-                        title="Modifier le produit"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" strokeWidth={1.75} />
-                      </button>
+                {!isEmployee && (
+                  <button
+                    type="button"
+                    onClick={() => onAdjustStock(prod.id, 1)}
+                    className="w-7 h-7 rounded-lg bg-white hover:bg-stone-50 active:scale-[0.96] text-stone-700 border border-stone-200 flex items-center justify-center transition-colors cursor-pointer"
+                    title="Ajouter 1 unité"
+                  >
+                    <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  </button>
+                )}
+              </div>
+            </div>
 
-                      {!isEmployee && (
-                        <button
-                          type="button"
-                          onClick={() => onDeleteProduct(prod.id)}
-                          className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 active:scale-[0.97] text-rose-800 transition-colors duration-100 ease-out border border-rose-300 cursor-pointer"
-                          title="Supprimer le produit"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+            {/* Ligne 2 : Prix d'achat & Prix de vente sur une ligne propre */}
+            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white border border-stone-200/80 text-xs">
+              {!isEmployee && (
+                <div className="flex items-center gap-1.5 text-stone-500">
+                  <span>Achat</span>
+                  <span className="font-mono font-semibold text-stone-800 tabular-nums whitespace-nowrap">
+                    {formatPrice(prod.unit_cost || 0)}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5 text-stone-500 ml-auto">
+                <span>Vente</span>
+                <span className="font-mono font-semibold text-emerald-800 tabular-nums whitespace-nowrap">
+                  {formatPrice(prod.unit_price || 0)}
+                </span>
+                {marginPct !== null && (
+                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 tabular-nums">
+                    +{marginPct}%
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Ligne 3 : Actions rapides propres */}
+            <div className="flex items-center justify-between gap-1.5 pt-0.5">
+              <div className="flex items-center gap-1.5">
+                {!isEmployee && onOpenExpressAdjustment && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onOpenExpressAdjustment(prod, 'in')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-stone-200 text-[11px] font-medium transition-colors active:scale-[0.97] cursor-pointer"
+                      title="Entrée express / Achat carton"
+                    >
+                      <PackagePlus className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      <span>Entrée</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenExpressAdjustment(prod, 'out')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white hover:bg-rose-50 text-stone-700 border border-stone-200 text-[11px] font-medium transition-colors active:scale-[0.97] cursor-pointer"
+                      title="Déclarer casse, perte ou conso"
+                    >
+                      <PackageMinus className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      <span>Perte</span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1">
+                {onOpenCalculator && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenCalculator(prod)}
+                    className="p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 transition-colors active:scale-[0.97] cursor-pointer flex items-center gap-1 text-[11px] font-medium"
+                    title="Valeur réelle & paliers"
+                  >
+                    <Calculator className="w-3.5 h-3.5 text-stone-500" strokeWidth={1.5} />
+                    <span className="hidden sm:inline">Paliers</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => onEditProduct(prod)}
+                  className="p-1.5 rounded-lg bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 transition-colors active:scale-[0.97] cursor-pointer"
+                  title="Modifier le produit"
+                >
+                  <Edit3 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                </button>
+
+                {!isEmployee && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteProduct(prod.id)}
+                    className="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-stone-500 hover:text-rose-700 border border-stone-200 transition-colors active:scale-[0.97] cursor-pointer"
+                    title="Supprimer le produit"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
