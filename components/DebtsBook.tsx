@@ -55,6 +55,7 @@ export function DebtsBook({
   const [newDebtName, setNewDebtName] = useState('')
   const [newDebtPhone, setNewDebtPhone] = useState('')
   const [newDebtAmount, setNewDebtAmount] = useState('')
+  const [newDebtDueDate, setNewDebtDueDate] = useState('')
   const [newDebtType, setNewDebtType] = useState<'client' | 'supplier'>('client')
   const [newDebtNotes, setNewDebtNotes] = useState('')
   const [isCreatingDebt, setIsCreatingDebt] = useState(false)
@@ -183,6 +184,10 @@ export function DebtsBook({
     const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     const saleId = generateOfflineId()
 
+    const baseNote = newDebtNotes.trim() || `Crédit ${effectiveType === 'supplier' ? 'fournisseur' : 'client'} - ${cleanName}`
+    const dueTag = newDebtDueDate ? ` [Échéance: ${newDebtDueDate}]` : ''
+    const finalNotes = `${baseNote}${dueTag}`
+
     const newSale: OfflineSale = {
       id: saleId,
       shop_id: shopId,
@@ -194,7 +199,7 @@ export function DebtsBook({
       paid: 0,
       debt: amount,
       status: 'debt',
-      notes: newDebtNotes.trim() || `Crédit ${effectiveType === 'supplier' ? 'fournisseur' : 'client'} - ${cleanName}`,
+      notes: finalNotes,
       pen_color: effectiveType === 'supplier' ? 'purple' : 'yellow',
       articles: [],
       is_synced: false,
@@ -230,6 +235,7 @@ export function DebtsBook({
     setNewDebtName('')
     setNewDebtPhone('')
     setNewDebtAmount('')
+    setNewDebtDueDate('')
     setNewDebtNotes('')
     setShowNewDebtForm(false)
     setIsCreatingDebt(false)
@@ -401,7 +407,7 @@ export function DebtsBook({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
             <input
               type="text"
               required
@@ -425,6 +431,13 @@ export function DebtsBook({
               onChange={(e) => setNewDebtAmount(e.target.value)}
               placeholder="Montant (FCFA)"
               className="px-3 py-2 bg-white border border-stone-900/15 rounded-lg text-xs font-mono font-semibold text-stone-900 focus:outline-none focus:border-emerald-700"
+            />
+            <input
+              type="date"
+              value={newDebtDueDate}
+              onChange={(e) => setNewDebtDueDate(e.target.value)}
+              title="Date d'échéance / promesse de paiement (facultatif)"
+              className="px-3 py-2 bg-white border border-stone-900/15 rounded-lg text-xs font-mono text-stone-700 focus:outline-none focus:border-emerald-700"
             />
           </div>
 

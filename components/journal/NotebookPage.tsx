@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useMemo } from 'react'
 import { formatPrice } from '@/lib/penUtils'
+import { getOfflineProducts } from '@/lib/offlineDb'
 import { AlertTriangle, Printer, Trash2, PlusCircle, Calculator, X, Edit3, MoreVertical, Share2, Coins, Lightbulb, Calendar, TrendingUp, ArrowDownRight, Package, Clock, CreditCard, Ruler } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ interface NotebookPageProps {
   searchQuery?: string
   currentDateStr: string
   activeFilter?: string
+  shopId?: string
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -110,11 +112,27 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
   searchQuery = '',
   currentDateStr,
   activeFilter = 'all',
+  shopId = '',
 }) => {
   const listRef = useRef<HTMLDivElement>(null)
   const [activeChangeSaleId, setActiveChangeSaleId] = React.useState<string | null>(null)
   const [changeReceivedMap, setChangeReceivedMap] = React.useState<Record<string, string>>({})
   const [activeActionMenuSaleId, setActiveActionMenuSaleId] = React.useState<string | null>(null)
+
+  const productCostMap = useMemo(() => {
+    const map = new Map<string, number>()
+    if (!shopId || typeof window === 'undefined') return map
+    try {
+      const products = getOfflineProducts(shopId)
+      for (const p of products) {
+        const key = (p.name || '').toLowerCase().trim()
+        if (key && Number(p.unit_cost) > 0) {
+          map.set(key, Number(p.unit_cost))
+        }
+      }
+    } catch {}
+    return map
+  }, [shopId, sales.length])
 
   useEffect(() => {
     if (listRef.current && sales.length > 0) {
@@ -198,6 +216,28 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
               .reduce((sum, s) => sum + (s.total || 0), 0)
 
             const dayNet = salesTotal - expensesTotal - stockCashTotal
+
+            // Estimation du bénéfice net du jour (prix de vente - coût d'achat des articles connus en stock)
+            let matchedRevenue = 0
+            let matchedCost = 0
+            for (const s of allDaySales) {
+              const isSale =
+                s.type !== 'client_request' &&
+                s.type !== 'payment_client' &&
+                (s.pen_color === 'blue' || s.pen_color === 'yellow' || s.type === 'cash_in' || s.type === 'sale_credit' || s.type === 'sale')
+              if (!isSale || !Array.isArray(s.articles)) continue
+              for (const art of s.articles) {
+                const key = (art?.name || '').toLowerCase().trim()
+                const cost = key ? productCostMap.get(key) : undefined
+                if (cost && cost > 0) {
+                  const qty = Number(art.quantity) || 1
+                  matchedRevenue += qty * (Number(art.unit_price) || 0)
+                  matchedCost += qty * cost
+                }
+              }
+            }
+            const estimatedProfit = matchedRevenue - matchedCost
+            const profitMarginPct = matchedRevenue > 0 ? Math.round((estimatedProfit / matchedRevenue) * 100) : 0
 
             return (
               <div key={dateKey} className="space-y-1.5">
@@ -330,6 +370,34 @@ export const NotebookPage: React.FC<NotebookPageProps> = ({
                         <span className="font-mono font-semibold text-base sm:text-lg tabular-nums">
                           {dayNet >= 0 ? `+${formatPrice(dayNet)}` : `-${formatPrice(Math.abs(dayNet))}`}
                         </span>
+                      </div>
+
+                      {/* Bénéfice net estimé (Ventes - Coût d'achat stock) */}
+                      <div className="p-2.5 rounded-xl bg-white border border-stone-200 flex items-center justify-between gap-2">
+                        {matchedCost > 0 ? (
+                          <>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-900">
+                                <TrendingUp className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" strokeWidth={1.75} />
+                                <span>Bénéfice net estimé</span>
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-mono tabular-nums">
+                                  {profitMarginPct}% marge
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-stone-500 mt-0.5">
+                                Calculé sur {formatPrice(matchedRevenue)} de ventes avec prix d&apos;achat renseigné
+                              </p>
+                            </div>
+                            <span className={`font-mono font-semibold text-sm tabular-nums flex-shrink-0 ${estimatedProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                              {estimatedProfit >= 0 ? `+${formatPrice(estimatedProfit)}` : `-${formatPrice(Math.abs(estimatedProfit))}`}
+                            </span>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2 text-[11px] text-stone-500">
+                            <TrendingUp className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" strokeWidth={1.5} />
+                            <span>Renseignez le prix d&apos;achat de vos articles dans Stock pour afficher votre bénéfice net estimé du jour.</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Crédits et Dettes */}

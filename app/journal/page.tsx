@@ -831,6 +831,7 @@ export default function JournalPage() {
                     onEditSale={(sale) => setEditingSale(sale)}
                     currentDateStr={getTodayDateString()}
                     activeFilter={activeFilter}
+                    shopId={shopManager.shopId}
                   />
                 </div>
 

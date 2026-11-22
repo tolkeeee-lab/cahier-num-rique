@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { formatPrice } from '@/lib/penUtils'
-import { MessageCircle, Phone, Banknote, AlertTriangle, Calendar, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
+import { MessageCircle, Phone, Banknote, AlertTriangle, Calendar, ChevronDown, ChevronUp, CheckCircle2, FileText } from 'lucide-react'
 import { getTodayDateString } from '@/lib/dateUtils'
 
 export interface DebtHistoryEntry {
@@ -65,8 +65,20 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
   const isSupplier = debt.debt_type === 'supplier'
 
   const todayStr = getTodayDateString()
-  const isOverdue = !isSettled && Boolean(debt.due_date && debt.due_date < todayStr)
-  const isDueToday = !isSettled && Boolean(debt.due_date && debt.due_date === todayStr)
+  const extractDueDate = (txt?: string): string | undefined => {
+    if (!txt) return undefined
+    const m = txt.match(/\[Échéance:\s*(\d{4}-\d{2}-\d{2})\]/i)
+    return m ? m[1] : undefined
+  }
+  const effectiveDueDate =
+    debt.due_date ||
+    extractDueDate(debt.notes) ||
+    history.map((h) => extractDueDate(h.notes)).find(Boolean)
+
+  const cleanNotes = debt.notes ? debt.notes.replace(/\s*\[Échéance:\s*\d{4}-\d{2}-\d{2}\]/gi, '').trim() : ''
+
+  const isOverdue = !isSettled && Boolean(effectiveDueDate && effectiveDueDate < todayStr)
+  const isDueToday = !isSettled && Boolean(effectiveDueDate && effectiveDueDate === todayStr)
 
   const paidAmount = Number(debt.paid_amount || 0)
   const totalContracted = Number(debt.amount_owed || 0) + paidAmount
@@ -76,8 +88,36 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
   const handleSendWhatsAppReminder = (e: React.MouseEvent) => {
     e.stopPropagation()
     const storeLabel = shopName ? `*${shopName}*` : 'notre boutique'
-    const message = `Bonjour ${debt.client_name},\n\nNous vous rappelons amicalement qu'il reste un solde impayé de *${formatPrice(debt.amount_owed)}* sur votre compte chez ${storeLabel}.\n\nMerci de bien vouloir passer à la boutique pour régulariser votre situation.\nExcellente journée !`
+    const dueLine = effectiveDueDate
+      ? `\nÉchéance convenue : ${new Date(effectiveDueDate).toLocaleDateString('fr-FR')}.`
+      : ''
+    const message = `Bonjour ${debt.client_name},\n\nNous vous rappelons amicalement qu'il reste un solde impayé de *${formatPrice(debt.amount_owed)}* sur votre compte chez ${storeLabel}.${dueLine}\n\nMerci de bien vouloir passer à la boutique pour régulariser votre situation.\nExcellente journée !`
 
+    const url = targetPhone
+      ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(url, '_blank')
+  }
+
+  const handleShareStatementWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const storeLabel = shopName || 'Ma Boutique'
+    const lines = history.slice(0, 15).map((entry) => {
+      const isPayment = entry.type === 'payment_client' || entry.type === 'payment_supplier'
+      const label =
+        entry.articles && entry.articles.length > 0
+          ? entry.articles.map((a) => `${a.quantity || 1}x ${a.name || 'Article'}`).join(', ')
+          : (entry.notes || (isPayment ? 'Remboursement' : 'Crédit')).replace(/\s*\[Échéance:\s*\d{4}-\d{2}-\d{2}\]/gi, '').trim()
+      return `• ${entry.date} : ${label} (${isPayment ? '-' : '+'}${formatPrice(entry.amount)})`
+    })
+
+    const header = `*RELEVÉ DE COMPTE — ${storeLabel}*\nClient : *${debt.client_name}*\nDate : ${new Date().toLocaleDateString('fr-FR')}`
+    const body = lines.length > 0 ? `\n\n*Détail des opérations :*\n${lines.join('\n')}` : ''
+    const footer = `\n\nTotal contracté : ${formatPrice(totalContracted)}\nDéjà réglé : ${formatPrice(paidAmount)}\n*Reste à payer : ${formatPrice(debt.amount_owed)}*${
+      effectiveDueDate ? `\nÉchéance : ${new Date(effectiveDueDate).toLocaleDateString('fr-FR')}` : ''
+    }`
+
+    const message = `${header}${body}${footer}`
     const url = targetPhone
       ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`
       : `https://wa.me/?text=${encodeURIComponent(message)}`
@@ -133,7 +173,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                 {isOverdue && (
                   <span className="inline-flex items-center gap-1 text-rose-700 font-medium">
                     <AlertTriangle className="w-3 h-3" strokeWidth={1.75} />
-                    <span>En retard ({new Date(debt.due_date!).toLocaleDateString('fr-FR')})</span>
+                    <span>En retard ({new Date(effectiveDueDate!).toLocaleDateString('fr-FR')})</span>
                   </span>
                 )}
                 {isDueToday && (
@@ -142,16 +182,16 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
                     <span>Échéance aujourd&apos;hui</span>
                   </span>
                 )}
-                {!isOverdue && !isDueToday && debt.due_date && (
+                {!isOverdue && !isDueToday && effectiveDueDate && (
                   <span className="inline-flex items-center gap-1 text-stone-600">
                     <Calendar className="w-3 h-3" strokeWidth={1.75} />
-                    <span>Promesse {new Date(debt.due_date).toLocaleDateString('fr-FR')}</span>
+                    <span>Promesse {new Date(effectiveDueDate).toLocaleDateString('fr-FR')}</span>
                   </span>
                 )}
               </div>
 
-              {debt.notes && (
-                <p className="text-xs text-stone-600 line-clamp-1 pt-0.5">{debt.notes}</p>
+              {cleanNotes && (
+                <p className="text-xs text-stone-600 line-clamp-1 pt-0.5">{cleanNotes}</p>
               )}
             </div>
           </div>
@@ -252,7 +292,22 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
 
       {/* Historique dépliable des crédits & acomptes de ce client */}
       {expanded && (
-        <div className="px-3.5 pb-3.5 pt-2 border-t border-stone-900/10 bg-[#faf5e8]/60 rounded-b-xl space-y-1.5">
+        <div className="px-3.5 pb-3.5 pt-2.5 border-t border-stone-900/10 bg-[#faf5e8]/60 rounded-b-xl space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-medium text-stone-500">
+              Détail du compte
+            </span>
+            <button
+              type="button"
+              onClick={handleShareStatementWhatsApp}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-stone-200 text-[11px] font-medium transition-colors active:scale-[0.97] cursor-pointer"
+              title="Envoyer le relevé complet par WhatsApp"
+            >
+              <FileText className="w-3 h-3" strokeWidth={1.75} />
+              <span>Relevé WhatsApp</span>
+            </button>
+          </div>
+
           {history.length === 0 ? (
             <p className="text-[11px] text-stone-500">
               Aucun détail d&apos;opération locale disponible pour ce compte.
@@ -263,7 +318,7 @@ export const DebtItemCard: React.FC<DebtItemCardProps> = ({
               const articleSummary =
                 entry.articles && entry.articles.length > 0
                   ? entry.articles.map((a) => `${a.quantity || 1}x ${a.name || 'Article'}`).join(', ')
-                  : entry.notes || (isPayment ? 'Remboursement' : 'Crédit')
+                  : (entry.notes || (isPayment ? 'Remboursement' : 'Crédit')).replace(/\s*\[Échéance:\s*\d{4}-\d{2}-\d{2}\]/gi, '').trim()
 
               return (
                 <div
