@@ -17,6 +17,8 @@ const CACHE_PREFIX = 'cahier-pwa-'
 const CACHE_NAME = `${CACHE_PREFIX}${SW_VERSION}`
 
 const STATIC_ASSETS = [
+  '/',
+  '/journal',
   '/manifest.json',
   '/manifest.webmanifest',
   '/icons/pwa-192.png',
@@ -31,14 +33,14 @@ const STATIC_ASSETS = [
   '/logo/logo-symbole.svg',
 ]
 
-// Installation : pré-cache uniquement les icônes/manifestes (les pages HTML sont cachées à la volée en Network-First)
+// Installation : pré-cache les pages clés et icônes avec cache: 'no-store' pour garantir le mode hors-ligne dès l'installation
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       await Promise.allSettled(
         STATIC_ASSETS.map(async (url) => {
           try {
-            const response = await fetch(url, { cache: 'no-cache' })
+            const response = await fetch(url, { cache: 'no-store' })
             if (response.ok) {
               await cache.put(url, response)
             }
