@@ -2,7 +2,24 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Calculator, CheckCircle2, ShieldCheck, AlertTriangle, Package, Clock, Play } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  Calculator,
+  CheckCircle2,
+  Clock,
+  Package,
+  Play,
+  ShieldCheck,
+} from 'lucide-react'
+
+const BIC_COLORS = [
+  { label: 'Vente', dot: 'bg-[#1d4ed8]' },
+  { label: 'Dépense', dot: 'bg-[#e11d48]' },
+  { label: 'Stock cash', dot: 'bg-[#047857]' },
+  { label: 'Crédit', dot: 'bg-[#b45309]' },
+] as const
 
 export default function LandingPage() {
   const [authError, setAuthError] = useState<string | null>(null)
@@ -14,18 +31,19 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#141210] text-[#fefdfa] font-sans antialiased overflow-x-hidden relative">
-      
+    <div className="min-h-screen bg-[#f5efe0] text-stone-900 font-sans antialiased overflow-x-hidden">
       {/* Bandeau d'erreur d'invitation — visible si ?auth_error= est présent dans l'URL */}
       {authError && (
-        <div className="relative z-20 bg-red-950/90 border-b border-red-800/60 px-6 py-4">
+        <div className="bg-rose-50 border-b border-rose-200 px-6 py-4">
           <div className="max-w-3xl mx-auto flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-300 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+            <AlertTriangle className="w-5 h-5 text-rose-700 flex-shrink-0 mt-0.5" strokeWidth={1.75} />
             <div>
-              <p className="text-sm font-semibold text-red-200">Lien d&apos;invitation invalide ou expiré</p>
-              <p className="text-xs text-red-300 mt-1">
+              <p className="text-sm font-semibold text-rose-900">
+                Lien d&apos;invitation invalide ou expiré
+              </p>
+              <p className="text-xs text-rose-800/90 mt-1 leading-relaxed">
                 {authError.includes('expired') || authError.includes('invalid')
-                  ? 'Ce lien d\'invitation a expiré ou est invalide. Demandez à votre gérant de vous en renvoyer un nouveau depuis les Paramètres de la boutique.'
+                  ? "Ce lien d'invitation a expiré ou est invalide. Demandez à votre gérant de vous en renvoyer un nouveau depuis les réglages de la boutique."
                   : `Détail : ${authError}. Contactez votre gérant pour un nouveau lien.`}
               </p>
             </div>
@@ -34,228 +52,269 @@ export default function LandingPage() {
       )}
 
       {/* Navigation */}
-      <nav className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between border-b border-white/[0.08] relative z-10">
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-[#f59e0b]" strokeWidth={1.75} />
-          <span className="font-semibold text-sm tracking-tight text-stone-100">
-            Cahier Numérique
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/presentation"
-            className="text-xs font-medium text-stone-400 hover:text-stone-100 transition-colors flex items-center gap-1.5"
-          >
-            <Play className="w-3.5 h-3.5" strokeWidth={1.75} />
-            <span>Démo</span>
+      <header className="border-b border-[#e2d6be] bg-[#faf5e8]/80 backdrop-blur-sm">
+        <nav className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-lg bg-[#064e3b] text-[#faf5e8] flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.16)]">
+              <BookOpen className="w-4 h-4" strokeWidth={1.75} />
+            </span>
+            <span className="font-semibold text-sm tracking-[-0.01em] text-stone-900">
+              Cahier Numérique
+            </span>
           </Link>
-          <Link 
-            href="/journal"
-            className="px-4 py-2 bg-[#064e3b] hover:bg-[#075e47] text-[#f59e0b] text-xs font-semibold rounded-lg transition-colors active:scale-[0.98] border border-emerald-500/20"
-          >
-            Ouvrir mon Cahier
-          </Link>
-        </div>
-      </nav>
+
+          <div className="flex items-center gap-4">
+            <Link
+              href="/presentation"
+              className="text-xs font-medium text-stone-600 hover:text-stone-900 transition-colors flex items-center gap-1.5"
+            >
+              <Play className="w-3.5 h-3.5 text-emerald-700" strokeWidth={1.75} />
+              <span>Démo</span>
+            </Link>
+            <Link
+              href="/journal"
+              className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg transition-[background-color,transform] duration-150 active:scale-[0.97] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.16)]"
+            >
+              Ouvrir mon cahier
+            </Link>
+          </div>
+        </nav>
+      </header>
 
       {/* Hero Section */}
-      <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        
+      <section className="max-w-6xl mx-auto px-6 pt-14 pb-20 md:pt-20 md:pb-24 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
         {/* Hero Left Text */}
         <div className="lg:col-span-6 space-y-6">
-          <p className="text-xs font-medium text-amber-400/90">
-            Cahier de caisse Seyes hors-ligne · Afrique de l'Ouest
-          </p>
+          <div className="flex items-center gap-2.5 text-xs font-medium text-stone-600">
+            <span className="inline-flex items-center gap-1" aria-hidden="true">
+              {BIC_COLORS.map((pen) => (
+                <span key={pen.label} className={`w-2 h-2 rounded-full ${pen.dot}`} />
+              ))}
+            </span>
+            <span>Cahier de caisse Seyes hors-ligne · Afrique de l&apos;Ouest</span>
+          </div>
 
-          <h1 className="text-4xl md:text-5xl font-semibold tracking-[-0.025em] leading-[1.1] text-stone-50">
-            Gérez votre caisse et vos dettes <span className="text-[#f59e0b]">à la main</span>, sans calculette
+          <h1 className="text-4xl md:text-[44px] font-semibold tracking-[-0.025em] leading-[1.1] text-stone-900">
+            Gérez votre caisse et vos dettes à la main, sans calculette
           </h1>
 
-          <p className="text-stone-400 text-sm md:text-base leading-relaxed">
-            Conçu pour les boutiquiers, commerçants de proximité et grossistes en Afrique de l'Ouest. Écrivez vos ventes comme sur un vrai cahier Seyes avec vos stylos Bic de couleur ; l'application calcule les totaux et sécurise votre tiroir-caisse.
+          <p className="text-stone-600 text-sm md:text-base leading-relaxed max-w-xl">
+            Pensé pour les boutiquiers, commerçants de proximité et grossistes. Écrivez vos ventes comme sur un vrai cahier Seyes avec vos stylos de couleur ; le cahier calcule vos totaux et protège votre tiroir-caisse.
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row gap-3">
             <Link
               href="/journal"
-              className="px-6 py-3.5 bg-[#f59e0b] hover:bg-[#fbbf24] text-[#141210] text-sm font-semibold rounded-xl transition-colors active:scale-[0.98] flex items-center justify-center gap-2 group"
+              className="px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.16),0_2px_8px_-2px_rgba(6,78,59,0.28)] flex items-center justify-center gap-2 group"
             >
-              <span>Ouvrir mon Cahier</span>
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
+              <span>Ouvrir mon cahier</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-0.5" strokeWidth={1.75} />
             </Link>
-            
+
             <Link
               href="/presentation"
-              className="px-5 py-3.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-stone-200 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="px-5 py-3.5 bg-[#faf5e8] hover:bg-[#efe6d1] border border-[#e2d6be] text-stone-800 text-sm font-medium rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85)] flex items-center justify-center gap-2"
             >
-              <Play className="w-4 h-4 text-[#f59e0b]" strokeWidth={1.75} />
+              <Play className="w-4 h-4 text-emerald-700" strokeWidth={1.75} />
               <span>Voir la démo</span>
             </Link>
           </div>
 
-          <div className="pt-4 flex flex-wrap items-center gap-5 text-xs text-stone-400 font-mono">
+          <div className="pt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-stone-600 font-mono tabular-nums">
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={1.75} />
-              <span>100% FCFA</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-700" strokeWidth={1.75} />
+              <span>100 % FCFA</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={1.75} />
-              <span>Sans IA obligatoire</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={1.75} />
+              <CheckCircle2 className="w-4 h-4 text-emerald-700" strokeWidth={1.75} />
               <span>Fonctionne hors-ligne</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-700" strokeWidth={1.75} />
+              <span>Synchronisé PC et mobile</span>
             </div>
           </div>
         </div>
 
-        {/* Hero Right Visual (Miniature Pure CSS open notebook) */}
-        <div className="lg:col-span-6 relative flex justify-center">
-          
-          <div className="w-full max-w-lg bg-[#faf5e8] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-stone-300/80 overflow-hidden flex relative aspect-[16/10]">
-            
-            {/* Left Cover Spine */}
-            <div className="w-8 bg-gradient-to-b from-[#064e3b] to-[#012b1c] flex flex-col justify-around py-4 z-10 flex-shrink-0">
-              <div className="w-2 h-2 rounded-full bg-yellow-500/60 mx-auto"></div>
-              <div className="w-2 h-2 rounded-full bg-yellow-500/60 mx-auto"></div>
-              <div className="w-2 h-2 rounded-full bg-yellow-500/60 mx-auto"></div>
+        {/* Hero Right Visual — Le cahier ouvert Seyes */}
+        <div className="lg:col-span-6 flex justify-center lg:justify-end">
+          <div className="w-full max-w-lg bg-[#faf5e8] rounded-2xl shadow-[0_18px_40px_-14px_rgba(28,25,23,0.18),0_2px_8px_-2px_rgba(28,25,23,0.08)] border border-[#d8cbb0] overflow-hidden flex relative aspect-[16/10]">
+            {/* Reliure vert foncé */}
+            <div className="w-8 bg-gradient-to-b from-[#064e3b] to-[#022c22] flex flex-col justify-around py-4 z-10 flex-shrink-0">
+              <div className="w-2 h-2 rounded-full bg-amber-400/70 mx-auto" />
+              <div className="w-2 h-2 rounded-full bg-amber-400/70 mx-auto" />
+              <div className="w-2 h-2 rounded-full bg-amber-400/70 mx-auto" />
             </div>
 
-            {/* Brass spiral loops binder */}
+            {/* Spirales laiton */}
             <div className="absolute left-[26px] top-0 bottom-0 w-3 flex flex-col justify-around py-4 z-20 pointer-events-none">
               {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="w-4 h-1.5 bg-gradient-to-r from-amber-800 to-yellow-400 rounded-full shadow-md"></div>
+                <div
+                  key={i}
+                  className="w-4 h-1.5 bg-gradient-to-r from-amber-800 to-amber-300 rounded-full shadow-sm"
+                />
               ))}
             </div>
 
-            {/* Page content */}
+            {/* Feuille Seyes */}
             <div className="flex-grow p-4 pl-12 relative flex flex-col justify-between">
-              {/* Red Margin Line */}
-              <div className="absolute left-10 top-0 bottom-0 w-[1px] bg-red-400 opacity-40"></div>
+              {/* Marge rouge */}
+              <div className="absolute left-10 top-0 bottom-0 w-[1px] bg-rose-400/45" />
 
-              {/* Lined Paper Lines */}
-              <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_19px,rgba(14,165,233,0.15)_20px)] bg-[size:100%_20px] pointer-events-none"></div>
+              {/* Lignes bleues Seyes */}
+              <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_19px,rgba(14,165,233,0.14)_20px)] bg-[size:100%_20px] pointer-events-none" />
 
-              {/* Mock Content */}
-              <div className="relative z-10 space-y-3 font-handwritten mt-2">
-                <div className="text-[10px] text-gray-400 font-mono uppercase tracking-wide mb-1">
-                  Jeudi 2 juillet 2026
-                </div>
-                <div className="text-[#1d4ed8] text-base leading-none">
-                  Vente 3 sacs de riz à 12000 F <span className="text-[8px] bg-blue-100 text-blue-800 border px-1 rounded font-sans">VENTE</span>
-                </div>
-                <div className="text-gray-500 text-[10px] -mt-1 ml-4 flex items-center gap-1">
-                  <Package className="w-3 h-3 text-gray-400" />
-                  <span>3x riz à 12000 F (Total 36 000 F)</span>
+              {/* En-tête + écritures */}
+              <div className="relative z-10 space-y-2.5 mt-1">
+                <div className="flex items-center justify-between gap-2 pb-1">
+                  <span className="text-[11px] text-stone-500 font-mono">
+                    Jeudi 2 juillet 2026
+                  </span>
+                  <span className="text-[10px] font-mono tabular-nums font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md">
+                    Tiroir : 33 500 F
+                  </span>
                 </div>
 
-                <div className="text-[#e11d48] text-base leading-none pt-2">
-                  achat emballages boutique 2500 <span className="text-[8px] bg-rose-100 text-rose-800 border px-1 rounded font-sans">DÉPENSE</span>
-                </div>
+                <div className="font-handwritten space-y-2.5">
+                  <div>
+                    <div className="text-[#1d4ed8] text-base leading-snug flex flex-wrap items-center gap-1.5">
+                      <span>Vente 3 sacs de riz à 12 000 F</span>
+                      <span className="text-[10px] bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded font-sans font-medium leading-none">
+                        Vente
+                      </span>
+                    </div>
+                    <div className="text-stone-500 text-[11px] mt-0.5 ml-3 flex items-center gap-1 font-sans tabular-nums">
+                      <Package className="w-3 h-3 text-stone-400" strokeWidth={1.75} />
+                      <span>3 × riz à 12 000 F · Total 36 000 F</span>
+                    </div>
+                  </div>
 
-                <div className="text-[#701a75] text-base leading-none pt-2">
-                  Grossiste Chantal carton peak credit 35000 <span className="text-[8px] bg-stone-100 text-stone-700 border px-1 rounded font-sans">STOCK CRÉDIT</span>
+                  <div className="text-[#e11d48] text-base leading-snug flex flex-wrap items-center gap-1.5">
+                    <span>Achat emballages boutique 2 500 F</span>
+                    <span className="text-[10px] bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.5 rounded font-sans font-medium leading-none">
+                      Dépense
+                    </span>
+                  </div>
+
+                  <div className="text-[#701a75] text-base leading-snug flex flex-wrap items-center gap-1.5">
+                    <span>Grossiste Chantal carton lait crédit 35 000 F</span>
+                    <span className="text-[10px] bg-stone-100 text-stone-700 border border-stone-300 px-1.5 py-0.5 rounded font-sans font-medium leading-none">
+                      Stock crédit
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Bottom Sticky mock bar */}
-              <div className="relative z-10 border-t border-gray-200/80 pt-2 flex items-center justify-between text-gray-400 font-mono text-[9px]">
-                <div className="flex items-center gap-1">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-2.5 h-2.5 text-gray-400" />
+              {/* Barre de saisie simulée */}
+              <div className="relative z-10 border-t border-[#e2d6be] pt-2 flex items-center justify-between text-stone-500 font-mono text-[10px]">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="flex items-center gap-1 tabular-nums flex-shrink-0">
+                    <Clock className="w-3 h-3 text-stone-400" strokeWidth={1.75} />
                     <span>22:51</span>
                   </span>
-                  <span className="text-gray-300">|</span>
-                  <span className="font-handwritten text-xs text-[#1d4ed8]">Ex: 3 litres d'huiles à 6000...</span>
+                  <span className="text-stone-300">|</span>
+                  <span className="font-handwritten text-xs text-[#1d4ed8] truncate">
+                    Ex : 3 litres d&apos;huile à 6 000...
+                  </span>
                 </div>
-                <div className="w-5 h-5 rounded-full bg-gray-900 text-white flex items-center justify-center">
-                  <ArrowRight className="w-2.5 h-2.5" />
+                <div className="w-5 h-5 rounded-full bg-emerald-700 text-white flex items-center justify-center flex-shrink-0">
+                  <ArrowRight className="w-3 h-3" strokeWidth={1.75} />
                 </div>
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </section>
 
-      {/* Feature Section */}
-      <section id="features" className="bg-[#1b1816] py-20 border-t border-gray-800/40 relative z-10">
+      {/* Section Fonctionnalités */}
+      <section id="features" className="bg-[#faf5e8] py-20 border-y border-[#e2d6be]">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center max-w-2xl mx-auto space-y-4">
-            <h3 className="text-3xl font-semibold tracking-tight text-white">
-              Une Métaphore Physique pour la Trésorerie
-            </h3>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Ne changez rien à vos habitudes. Nous avons numérisé le geste d'écrire sur votre carnet d'école tout en effectuant les calculs de caisse en temps réel.
+          <div className="max-w-2xl space-y-3">
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-[-0.025em] text-stone-900">
+              Un vrai cahier d&apos;école, les calculs en moins
+            </h2>
+            <p className="text-stone-600 text-sm md:text-base leading-relaxed">
+              Ne changez rien à vos habitudes au comptoir. Nous avons repris le geste d&apos;écrire sur votre carnet tout en gardant votre caisse juste à chaque ligne.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-            
-            {/* feature 1 */}
-            <div className="bg-[#24201d] p-8 rounded-2xl border border-gray-800/60 space-y-4 transition-colors hover:scale-[1.02]">
-              <div className="w-12 h-12 rounded-xl bg-[#064e3b]/30 flex items-center justify-center border border-[#047857]/20">
-                <BookOpen className="w-6 h-6 text-[#f59e0b]" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+            {/* Carte 1 */}
+            <div className="bg-[#f5efe0] p-6 rounded-2xl border border-[#e2d6be] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.75)] space-y-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-700/10 border border-emerald-700/15 flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-emerald-800" strokeWidth={1.5} />
               </div>
-              <h4 className="text-lg font-bold text-white">Le Stylo Bic 4-Couleurs</h4>
-              <p className="text-gray-400 text-xs leading-relaxed">
-                Utilisez l'encre bleue pour les ventes, le rouge pour les charges, le vert pour les stocks payés cash, le violet pour vos dettes grossistes et le jaune pour vos crédits clients. Classez visuellement vos flux.
+              <h3 className="text-base font-semibold tracking-[-0.01em] text-stone-900">
+                Le stylo Bic 4 couleurs
+              </h3>
+              <p className="text-stone-600 text-sm leading-relaxed">
+                Encre bleue pour les ventes, rouge pour les dépenses, verte pour le stock payé cash, violette pour vos dettes grossistes et ambre pour les crédits clients.
+              </p>
+              <div className="pt-1 flex flex-wrap gap-2">
+                {BIC_COLORS.map((pen) => (
+                  <span
+                    key={pen.label}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-700 bg-[#faf5e8] border border-[#e2d6be] px-2 py-0.5 rounded-md"
+                  >
+                    <span className={`w-2 h-2 rounded-full ${pen.dot}`} />
+                    {pen.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Carte 2 */}
+            <div className="bg-[#f5efe0] p-6 rounded-2xl border border-[#e2d6be] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.75)] space-y-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-700/10 border border-emerald-700/15 flex items-center justify-center">
+                <Calculator className="w-5 h-5 text-emerald-800" strokeWidth={1.5} />
+              </div>
+              <h3 className="text-base font-semibold tracking-[-0.01em] text-stone-900">
+                Zéro calculette au comptoir
+              </h3>
+              <p className="text-stone-600 text-sm leading-relaxed">
+                Tapez <span className="font-mono text-xs text-stone-900 bg-[#faf5e8] border border-[#e2d6be] px-1.5 py-0.5 rounded">3 litres d&apos;huile à 6 000</span>. Le cahier vérifie s&apos;il s&apos;agit du prix unitaire ou total, calcule le montant et met à jour votre stock.
               </p>
             </div>
 
-            {/* feature 2 */}
-            <div className="bg-[#24201d] p-8 rounded-2xl border border-gray-800/60 space-y-4 transition-colors hover:scale-[1.02]">
-              <div className="w-12 h-12 rounded-xl bg-[#064e3b]/30 flex items-center justify-center border border-[#047857]/20">
-                <Calculator className="w-6 h-6 text-[#f59e0b]" />
+            {/* Carte 3 */}
+            <div className="bg-[#f5efe0] p-6 rounded-2xl border border-[#e2d6be] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.75)] space-y-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-700/10 border border-emerald-700/15 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-emerald-800" strokeWidth={1.5} />
               </div>
-              <h4 className="text-lg font-bold text-white">Zéro Calculette (Aide au Calcul)</h4>
-              <p className="text-gray-400 text-xs leading-relaxed">
-                Tapez <span className="italic text-[#f59e0b]">"3 litres d'huiles à 6000"</span>. Le cahier s'ouvre pour vous demander s'il s'agit du prix unitaire ou global, réalise la division/multiplication, et remplit la fiche à votre place.
+              <h3 className="text-base font-semibold tracking-[-0.01em] text-stone-900">
+                Protection contre le solde négatif
+              </h3>
+              <p className="text-stone-600 text-sm leading-relaxed">
+                Règle de caisse stricte : impossible de valider une sortie cash ou d&apos;effacer une vente si cela fait passer votre tiroir sous <span className="font-mono tabular-nums text-stone-900">0 FCFA</span>.
               </p>
             </div>
-
-            {/* feature 3 */}
-            <div className="bg-[#24201d] p-8 rounded-2xl border border-gray-800/60 space-y-4 transition-colors hover:scale-[1.02]">
-              <div className="w-12 h-12 rounded-xl bg-[#064e3b]/30 flex items-center justify-center border border-[#047857]/20">
-                <ShieldCheck className="w-6 h-6 text-[#f59e0b]" />
-              </div>
-              <h4 className="text-lg font-bold text-white">Protection contre le Solde Négatif</h4>
-              <p className="text-gray-400 text-xs leading-relaxed">
-                Règle de caisse stricte : l'application bloque automatiquement l'achat de stock ou la rature d'une vente si cela fait passer votre caisse sous la barre des 0 FCFA. Votre argent est en sécurité.
-              </p>
-            </div>
-
           </div>
         </div>
       </section>
 
-      {/* CTA section */}
-      <section className="max-w-4xl mx-auto px-6 py-20 text-center space-y-8 relative z-10">
-        <h3 className="text-3xl md:text-4xl font-semibold text-white">
-          Prêt à abandonner vos fiches volantes ?
-        </h3>
-        <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto leading-relaxed">
-          Rejoignez les commerçants de proximité qui font confiance au Cahier de Caisse Intelligent pour suivre chaque franc.
+      {/* Section CTA finale */}
+      <section className="max-w-4xl mx-auto px-6 py-20 text-center space-y-6">
+        <h2 className="text-2xl md:text-3xl font-semibold tracking-[-0.025em] text-stone-900">
+          Prêt à remplacer vos fiches volantes ?
+        </h2>
+        <p className="text-stone-600 text-sm md:text-base max-w-xl mx-auto leading-relaxed">
+          Ouvrez votre cahier sur téléphone ou ordinateur et suivez chaque franc, même sans connexion internet.
         </p>
         <div className="pt-2">
           <Link
             href="/journal"
-            className="inline-flex items-center gap-2 px-7 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium rounded-xl transition-colors active:scale-[0.98]"
+            className="inline-flex items-center gap-2 px-7 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold rounded-xl transition-[background-color,transform] duration-150 active:scale-[0.97] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.16),0_2px_8px_-2px_rgba(6,78,59,0.28)]"
           >
-            <span>Ouvrir mon Cahier de Caisse</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>Ouvrir mon cahier de caisse</span>
+            <ArrowRight className="w-4 h-4" strokeWidth={1.75} />
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800/30 py-8 text-center text-xs text-gray-500 font-mono relative z-10 select-none">
-        © {new Date().getFullYear()} CAHIER NUMÉRIQUE INC. • TOUS DROITS RÉSERVÉS.
+      <footer className="border-t border-[#e2d6be] bg-[#faf5e8]/60 py-8 px-6 text-center text-xs text-stone-500">
+        © {new Date().getFullYear()} Cahier Numérique · Conçu pour les commerçants d&apos;Afrique de l&apos;Ouest
       </footer>
-
     </div>
   )
 }
