@@ -690,8 +690,8 @@ export function StockManager({
       window.dispatchEvent(new CustomEvent('cahier_stock_updated'))
     }
     try {
-      await fetch('/api/stock/reset', {
-        method: 'POST',
+      await fetch('/api/stock?all=true', {
+        method: 'DELETE',
         headers: { 'x-shop-id': shopId },
       })
     } catch (err) {

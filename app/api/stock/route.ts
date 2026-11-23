@@ -562,11 +562,12 @@ let updates: Record<string, any> = {}
 }
 
 // ─── DELETE /api/stock ────────────────────────────────────────────────────────
-// Supprime un produit du catalogue ou de l'historique des articles orphelins
+// Supprime un produit du catalogue, un article orphelin, ou tout le catalogue (?all=true)
 export async function DELETE(request: Request) {
   const url = new URL(request.url)
   const id = url.searchParams.get('id')
   const productName = url.searchParams.get('name')
+  const clearAll = url.searchParams.get('all') === 'true'
   const requestedShopId = request.headers.get('x-shop-id') || url.searchParams.get('shopId')
 
   if (!requestedShopId) {
@@ -585,6 +586,22 @@ export async function DELETE(request: Request) {
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données non configurée' }, { status: 503 })
+  }
+
+  if (clearAll) {
+    try {
+      const { error } = await targetClient
+        .from('products')
+        .delete()
+        .eq('shop_id', shopId)
+
+      if (error) throw error
+      return NextResponse.json({ success: true, message: 'Stock produits vidé avec succès' })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur vidage stock'
+      console.error('[API/stock DELETE all]', msg)
+      return NextResponse.json({ error: msg }, { status: 500 })
+    }
   }
 
   if (!id && !productName) {

@@ -9,7 +9,14 @@ export async function POST(request: Request) {
   const requestedShopId = request.headers.get('x-shop-id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
-  try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  let targetClient: typeof supabase = supabase
+  try {
+    const auth = await requireShopOwner(request, requestedShopId)
+    shopId = auth.shop.id
+    targetClient = (auth.client as typeof supabase) || supabase
+  } catch (err) {
+    return shopAuthorizationErrorResponse(err)
+  }
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Base de données distante non configurée' }, { status: 503 })
@@ -26,15 +33,15 @@ export async function POST(request: Request) {
     if (sourceProductId === targetProductId) {
       return NextResponse.json({ error: 'Impossible de fusionner un produit avec lui-même' }, { status: 400 })
     }
-// 1. Récupérer les 2 produits 
-    const { data: sourceProduct, error: err1 } = await supabase
+    // 1. Récupérer les 2 produits 
+    const { data: sourceProduct, error: err1 } = await targetClient
       .from('products')
       .select('*')
       .eq('id', sourceProductId)
       .eq('shop_id', shopId)
       .single()
 
-    const { data: targetProduct, error: err2 } = await supabase
+    const { data: targetProduct, error: err2 } = await targetClient
       .from('products')
       .select('*')
       .eq('id', targetProductId)
@@ -49,14 +56,14 @@ export async function POST(request: Request) {
     }
 
     // 2. Mettre à jour les articles vendus (sold_articles) associés pour cette boutique
-    const { data: shopSales } = await supabase
+    const { data: shopSales } = await targetClient
       .from('sales')
       .select('id')
       .eq('shop_id', shopId)
 
     const saleIds = (shopSales || []).map(s => s.id)
     if (saleIds.length > 0) {
-      const { error: updateArticlesErr } = await supabase
+      const { error: updateArticlesErr } = await targetClient
         .from('sold_articles')
         .update({
           product_id: targetProduct.id,
@@ -72,7 +79,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      await supabase
+      await targetClient
         .from('sold_articles')
         .update({
           product_id: targetProduct.id,
@@ -85,7 +92,7 @@ export async function POST(request: Request) {
     // 3. Consolider le stock initial du produit cible (si le produit source avait du stock)
     const combinedInitialStock = Number(targetProduct.initial_stock || 0) + Number(sourceProduct.initial_stock || 0)
     const isTracked = targetProduct.stock_tracked || sourceProduct.stock_tracked || combinedInitialStock > 0
-    const { data: updatedTarget, error: updateTargetErr } = await supabase
+    const { data: updatedTarget, error: updateTargetErr } = await targetClient
       .from('products')
       .update({
         initial_stock: combinedInitialStock,
@@ -100,7 +107,7 @@ export async function POST(request: Request) {
     if (updateTargetErr) throw updateTargetErr
 
     // 4. Supprimer le produit doublon source
-    const { error: deleteSourceErr } = await supabase
+    const { error: deleteSourceErr } = await targetClient
       .from('products')
       .delete()
       .eq('id', sourceProduct.id)

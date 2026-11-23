@@ -36,12 +36,6 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
         ],
       },
-      {
-        source: '/manifest.webmanifest',
-        headers: [
-          { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
-        ],
-      },
     ]
   },
   webpack: (config, { dev }) => {

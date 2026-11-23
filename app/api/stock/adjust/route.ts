@@ -16,9 +16,11 @@ export async function POST(request: Request) {
 
   let shopId: string
   let employeeName = 'Gérant'
+  let targetClient: typeof supabase = supabase
   try {
     const authorization = await requireShopOwner(request, requestedShopId)
     shopId = authorization.shop.id
+    targetClient = (authorization.client as typeof supabase) || supabase
     employeeName =
       authorization.user.user_metadata?.full_name ||
       authorization.user.user_metadata?.name ||
@@ -38,7 +40,7 @@ export async function POST(request: Request) {
     const { productId, quantity, type, reason, notes } = validation.data
 
     // 1. Récupérer le produit 
-    const { data: productData, error: prodErr } = await supabase
+    const { data: productData, error: prodErr } = await targetClient
       .from('products')
       .select('*')
       .eq('id', productId)
@@ -120,7 +122,7 @@ export async function POST(request: Request) {
       notes: fullNotes,
     }
 
-    const { data: saleData, error: saleErr } = await supabase
+    const { data: saleData, error: saleErr } = await targetClient
       .from('sales')
       .insert(saleInsertPayload)
       .select()
@@ -141,7 +143,7 @@ export async function POST(request: Request) {
       subtotal: calculatedTotal,
     }
 
-    const { error: articleErr } = await supabase
+    const { error: articleErr } = await targetClient
       .from('sold_articles')
       .insert(soldArticlePayload)
 
@@ -154,7 +156,7 @@ export async function POST(request: Request) {
       currentVal = Math.max(0, rawBody.currentStock)
     } else {
       const trackingStart = product.tracking_started_at || product.created_at
-      let articlesQuery = supabase
+      let articlesQuery = targetClient
         .from('sold_articles')
         .select('quantity, sales!inner(type, status, created_at)')
         .eq('product_id', product.id)
@@ -197,7 +199,7 @@ export async function POST(request: Request) {
       updatePayload.unit_cost = effectiveUnitCost
     }
 
-    await supabase
+    await targetClient
       .from('products')
       .update(updatePayload)
       .eq('id', product.id)
