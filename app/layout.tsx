@@ -64,7 +64,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" suppressHydrationWarning className={`${inter.variable} ${itim.variable} ${jetbrains.variable}`}>
-      <body suppressHydrationWarning className="font-sans antialiased bg-[#141210] text-gray-900 min-h-screen">
+      <body suppressHydrationWarning className="font-sans antialiased bg-[#f5efe0] text-stone-900 min-h-screen">
         <ErrorDiagnosticsProvider>
           <FeatureProvider>
             {children}

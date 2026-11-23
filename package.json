@@ -6,16 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "tsc --noEmit",
     "test": "npx -y tsx scripts/guard_anti_duplicate.ts && npx -y tsx scripts/test_critical_suite.ts",
     "test:all": "npx -y tsx scripts/guard_anti_duplicate.ts && npx -y tsx scripts/test_critical_suite.ts && npx -y tsx scripts/test_infallible_valuation.ts && npx -y tsx scripts/test_smart_product_parser.ts && npx -y tsx scripts/test_error_diagnostics.ts",
     "check:duplicates": "npx -y tsx scripts/guard_anti_duplicate.ts",
     "test:e2e": "playwright test",
     "test-stock": "npx -y tsx scripts/test_stock_flow.ts",
     "test-debts": "npx -y tsx scripts/test_debts_multitable_sync.ts",
-    "test-product-parser": "npx -y tsx scripts/test_smart_product_parser.ts",
-    "test-multi-tier": "npx -y tsx scripts/test_multi_tier_stock_nlp.ts",
-    "verify": "npx -y tsx scripts/verify_fixes.ts"
+    "test-product-parser": "npx -y tsx scripts/test_smart_product_parser.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

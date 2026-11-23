@@ -698,10 +698,10 @@ export default function JournalPage() {
   // ── Garde SSR / Hydratation ───────────────────────────────────────────────
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-[#141210] flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3 text-amber-400 font-mono text-xs">
-          <Loader className="w-7 h-7 animate-spin text-amber-500" />
-          <span className="font-bold tracking-normal">CHARGEMENT DU CAHIER...</span>
+      <div className="min-h-screen bg-[#f5efe0] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-stone-600 font-mono text-xs">
+          <Loader className="w-6 h-6 animate-spin text-emerald-700" />
+          <span className="font-medium">Chargement du cahier...</span>
         </div>
       </div>
     )
@@ -725,7 +725,7 @@ export default function JournalPage() {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-screen w-screen max-h-screen max-w-screen bg-[#141210] text-[#1e1a18] font-sans p-0 sm:p-2 md:p-2.5 lg:p-3 antialiased flex flex-col justify-between overflow-hidden select-none">
+    <div className="h-screen w-screen max-h-screen max-w-screen bg-[#ede4ce] text-[#1e1a18] font-sans p-0 sm:p-2 md:p-2.5 lg:p-3 antialiased flex flex-col justify-between overflow-hidden select-none">
 
       {/* ── Chassis Principal du Cahier Ouvert ── */}
       <div className="flex-1 min-h-0 bg-[#faf5e8] rounded-none sm:rounded-2xl md:rounded-3xl border-0 sm:border border-amber-950/20 shadow-2xl flex relative z-0 overflow-hidden w-full max-w-[1550px] mx-auto flex-row">
