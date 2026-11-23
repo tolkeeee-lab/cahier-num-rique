@@ -2,6 +2,8 @@ import { reconcileDebts, Sale } from '../hooks/useJournalData'
 import { normalizeProductName } from '../lib/productUtils'
 import { calculateCash, getItemCashDelta } from '../lib/sales/cashDrawerCalculator'
 import { calculateInfallibleValuation } from '../lib/stock/infallibleValuation'
+import { parseTextLocally } from '../lib/sales/offlineSaleParser'
+import { stockAdjustSchema, validatePayload } from '../lib/validations'
 
 console.log('🧪 ============================================================')
 console.log('       SUITE DE TESTS UNITAIRES CRITIQUES (NON-RÉGRESSION)     ')
@@ -153,6 +155,26 @@ assert(valCarton.unitCost === 367, 'Coût unitaire exact d’un carton 8 800 F /
 assert(valCarton.immobilizedPurchaseValue === 8800, 'Valeur d’achat d’un carton complet = exactement 8 800 F')
 assert(valCarton.potentialRevenue === 12000, 'CA potentiel de 24 pièces à 500 F = 12 000 F')
 assert(valCarton.potentialNetProfit === 3200, 'Bénéfice net potentiel exact = 3 200 F')
+
+// ── TEST 6 : Parseur de Ventes (Aucune lettre avalée dans les mots) ──
+console.log('\n--- 6. TEST PARSEUR VENTES (PRÉSERVATION INTÉGRALE DES MOTS) ---')
+const parsedFanta = parseTextLocally('Fanta 500', 'blue')
+const parsedSalsa = parseTextLocally('Salsa 500', 'blue')
+const parsedGloria = parseTextLocally('Gloria 800', 'blue')
+const parsedPasta = parseTextLocally('2 Pasta 1000', 'blue')
+const parsedWithSep = parseTextLocally('2 Fanta à 500', 'blue')
+assert(parsedFanta.articles[0]?.nom === 'Fanta', `« Fanta 500 » préserve le 'a' final (obtenu: ${parsedFanta.articles[0]?.nom})`)
+assert(parsedSalsa.articles[0]?.nom === 'Salsa', `« Salsa 500 » préserve le 'a' final (obtenu: ${parsedSalsa.articles[0]?.nom})`)
+assert(parsedGloria.articles[0]?.nom === 'Gloria', `« Gloria 800 » préserve le 'a' final (obtenu: ${parsedGloria.articles[0]?.nom})`)
+assert(parsedPasta.articles[0]?.nom === 'Pasta', `« 2 Pasta 1000 » préserve le 'a' final (obtenu: ${parsedPasta.articles[0]?.nom})`)
+assert(parsedWithSep.articles[0]?.nom === 'Fanta' && parsedWithSep.total_facture === 1000, '« 2 Fanta à 500 » préserve Fanta et calcule 1 000 F')
+
+// ── TEST 7 : Validation Zod des Payloads API ──
+console.log('\n--- 7. TEST VALIDATION ZOD DES PAYLOADS API ---')
+const invalidAdjust = validatePayload(stockAdjustSchema, { productId: '', quantity: -5, type: 'out' })
+const validAdjust = validatePayload(stockAdjustSchema, { productId: '11111111-1111-4111-8111-111111111111', quantity: 2, type: 'out', reason: 'damage' })
+assert(!invalidAdjust.success, 'Zod rejette un ajustement de stock avec quantité négative ou ID vide')
+assert(validAdjust.success, 'Zod accepte un ajustement de stock valide')
 
 // ── BILAN ──
 console.log('\n============================================================')

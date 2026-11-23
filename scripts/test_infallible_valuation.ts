@@ -75,8 +75,8 @@ tiers50.forEach(t => {
 console.log('\n--- 3. CARTON DE 24 SAVONS À 8 000 F ---')
 const valuation24 = calculateInfallibleValuation(8000, 24, 500, 26) // 1 carton + 2 savons
 
-assert(valuation24.unitCost % 5 === 0, `Coût unitaire savon multiple de 5 F attendu (obtenu: ${valuation24.unitCost} F)`)
-assert(valuation24.immobilizedPurchaseValue % 25 === 0 || valuation24.immobilizedPurchaseValue % 10 === 0, `Valeur stock savon propre (obtenu: ${valuation24.immobilizedPurchaseValue} F)`)
+assert(valuation24.unitCost === 333, `Coût unitaire exact 8000 / 24 = 333 F attendu (obtenu: ${valuation24.unitCost} F)`)
+assert(valuation24.immobilizedPurchaseValue === 8667, `Valeur stock savon exacte 8667 F attendue (obtenu: ${valuation24.immobilizedPurchaseValue} F)`)
 assert(valuation24.potentialNetProfit > 0, `Bénéfice positif attendu (obtenu: ${valuation24.potentialNetProfit} F)`)
 
 // --- 4. TEST DE LA FONCTION D'ARRONDI STRICT FCFA ---

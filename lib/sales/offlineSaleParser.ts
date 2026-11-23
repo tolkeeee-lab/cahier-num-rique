@@ -163,13 +163,13 @@ export function parseTextLocally(text: string, penColor: string, catalog?: any[]
     if (!cleanedText) continue
 
     const lotPourRegex = /^(\d+)\s+(?:pour|a|à)?\s*(\d{2,6})\s*(?:f|fcfa|cfa|francs)?\s+(.+)$/i
-    const qtyItemPriceRegex = /^(\d+)\s+([A-Za-zÀ-ÿ0-9\s'-]+?)\s+(?:à|a|@|pour)?\s*(\d{1,6})\s*(?:f|fcfa|cfa|francs)?$/i
-    const singleItemNoQtyRegex = /^([A-Za-zÀ-ÿ0-9\s'-]+?)\s*(?:à|a|@|pour)?\s*(\d{1,6})\s*(?:f|fcfa|cfa|francs)?$/i
+    const qtyItemPriceRegex = /^(\d+)\s+([A-Za-zÀ-ÿ0-9\s'-]+?)(?:\s+(?:à|a|@|pour))?\s+(\d{1,6})\s*(?:f|fcfa|cfa|francs)?$/i
+    const singleItemNoQtyRegex = /^([A-Za-zÀ-ÿ0-9\s'-]+?)(?:\s+(?:à|a|@|pour))?\s+(\d{1,6})\s*(?:f|fcfa|cfa|francs)?$/i
 
     const hasExplicitSeparator = /(?:^|\s)(?:à|a|@)(?:\s|$)/i.test(cleanedText)
     let segmentMatched = false
     // Détection explicite des fractions en tête : "1/2 carton de Savon BF 5200", "demi carton Savon BF 5200", "1/4 carton Savon BF 2650"
-    const fractionPriceRegex = /^(?:(\d+)\s+)?(1\/2|demi|demi-carton|1\/4|quart|3\/4)\s*(?:de\s+)?(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?|boites?|boîtes?|paquets?)?\s*(?:de\s+)?([A-Za-zÀ-ÿ0-9\s'-]+?)\s+(?:à|a|@|pour)?\s*(\d{1,6})\s*(?:f|fcfa|cfa|francs)?$/i
+    const fractionPriceRegex = /^(?:(\d+)\s+)?(1\/2|demi|demi-carton|1\/4|quart|3\/4)\s*(?:de\s+)?(?:cartons?|packs?|sacs?|casiers?|fardeaux?|caisses?|boites?|boîtes?|paquets?)?\s*(?:de\s+)?([A-Za-zÀ-ÿ0-9\s'-]+?)(?:\s+(?:à|a|@|pour))?\s+(\d{1,6})\s*(?:f|fcfa|cfa|francs)?$/i
     const matchFractionPrice = cleanedText.match(fractionPriceRegex)
     if (matchFractionPrice) {
       const outerQty = matchFractionPrice[1] ? parseInt(matchFractionPrice[1], 10) : 1
@@ -275,7 +275,7 @@ export function parseTextLocally(text: string, penColor: string, catalog?: any[]
 
     if (!segmentMatched) {
       const articleRegex = hasExplicitSeparator
-        ? /(\d+)\s*(.*?)\s*(?:à|a|@)\s*(\d+)/gi
+        ? /(\d+)\s+(.*?)\s+(?:à|a|@)\s+(\d+)/gi
         : /(\d+)\s+(.+?)\s+(\d+)/gi
       const packRegex = /de\s+(\d+)\s+([A-Za-zÀ-ÿ]+)/i
       const salePriceRegex = /(?:prix de vente|vente|prix de vente a l'unite|prix de vente a l'unité)\s+(?:de\s+|a\s+|à\s+|@\s+|l'unite\s+|l'unité\s+)*(\d+)/i

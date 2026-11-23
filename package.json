@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "npx -y tsx scripts/guard_anti_duplicate.ts && npx -y tsx scripts/test_critical_suite.ts",
+    "test:all": "npx -y tsx scripts/guard_anti_duplicate.ts && npx -y tsx scripts/test_critical_suite.ts && npx -y tsx scripts/test_infallible_valuation.ts && npx -y tsx scripts/test_smart_product_parser.ts && npx -y tsx scripts/test_error_diagnostics.ts",
     "check:duplicates": "npx -y tsx scripts/guard_anti_duplicate.ts",
     "test:e2e": "playwright test",
     "test-stock": "npx -y tsx scripts/test_stock_flow.ts",
