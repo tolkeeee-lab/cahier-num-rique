@@ -231,6 +231,85 @@ assert(
   'Fallback RLS manquant dans lib/server/shopAccess.ts'
 )
 
+// ── 9. GARDE-FOUS MAINTENABILITÉ, ROUTES API, SÉCURITÉ RLS & HYGIÈNE PWA ──
+console.log('\n--- 9. GARDE-FOUS MAINTENABILITÉ, ROUTES API & CYCLE PWA ---')
+
+// 9.1 Skill Qualité & Maintenabilité présent
+const hasQualitySkill = fs.existsSync('.agents/skills/quality-maintainability-gate/SKILL.md')
+assert(
+  hasQualitySkill,
+  'Compétence Qualité & Maintenabilité présente (.agents/skills/quality-maintainability-gate/SKILL.md)',
+  'Fichier .agents/skills/quality-maintainability-gate/SKILL.md manquant'
+)
+
+// 9.2 Aucun doublon de manifeste PWA (app/manifest.ts vs public/manifest.json)
+const hasDuplicateAppManifest = fs.existsSync('app/manifest.ts') || fs.existsSync('app/manifest.json')
+assert(
+  !hasDuplicateAppManifest,
+  'Source unique pour le manifeste PWA (public/manifest.json uniquement, aucun app/manifest.ts)',
+  'Doublon de manifeste détecté : app/manifest.ts ou app/manifest.json coexiste avec public/manifest.json'
+)
+
+// 9.3 Zéro route API morte (chaque route app/api/**/route.ts doit être appelée côté client)
+const nonApiFiles = allFileContents.filter(f => !f.path.startsWith('app' + path.sep + 'api') && !f.path.startsWith('scripts' + path.sep))
+const deadApiRoutes: string[] = []
+for (const route of apiRoutes) {
+  const apiPath = '/' + route.replace(/\\/g, '/').replace(/^app\//, '').replace(/\/route\.ts$/, '')
+  const isCalled = nonApiFiles.some(({ content }) => content.includes(apiPath))
+  if (!isCalled) {
+    deadApiRoutes.push(apiPath)
+  }
+}
+assert(
+  deadApiRoutes.length === 0,
+  `Aucune route API morte détectée (${apiRoutes.length} routes activement appelées)`,
+  `Routes API jamais appelées côté client : ${deadApiRoutes.join(', ')}`
+)
+
+// 9.4 Cohérence Auth/RLS sur toutes les routes API métier multi-tenant
+const publicOrAdminApiExceptions = new Set(['/api/version', '/api/admin', '/api/ai'])
+const unprotectedTenantRoutes: string[] = []
+for (const route of apiRoutes) {
+  const apiPath = '/' + route.replace(/\\/g, '/').replace(/^app\//, '').replace(/\/route\.ts$/, '')
+  if (publicOrAdminApiExceptions.has(apiPath)) continue
+  const content = fs.readFileSync(route, 'utf8')
+  const hasShopGuard = content.includes('requireShopAccess') || content.includes('requireShopOwner')
+  const usesAuthClient = content.includes('.client') || content.includes('client:')
+  if (!hasShopGuard || !usesAuthClient) {
+    unprotectedTenantRoutes.push(apiPath)
+  }
+}
+assert(
+  unprotectedTenantRoutes.length === 0,
+  'Toutes les routes API métier utilisent requireShopAccess/Owner et le client RLS authentifié',
+  `Routes API métier sans garde-fou shop ou client RLS : ${unprotectedTenantRoutes.join(', ')}`
+)
+
+// 9.5 Hygiène Service Worker & Mise à jour PWA sans désinstallation
+const swContent = fs.existsSync('public/sw.js') ? fs.readFileSync('public/sw.js', 'utf8') : ''
+const nextConfigContent = fs.existsSync('next.config.js') ? fs.readFileSync('next.config.js', 'utf8') : ''
+const swIsHealthy =
+  swContent.includes("'_rsc'") &&
+  swContent.includes("'/journal'") &&
+  swContent.includes("cache: 'no-store'") &&
+  nextConfigContent.includes('NEXT_PUBLIC_BUILD_ID') &&
+  nextConfigContent.includes('no-cache, no-store, must-revalidate')
+assert(
+  swIsHealthy,
+  'Hygiène PWA validée (anti-cache /sw.js, exclusion RSC, pré-cache hors-ligne /journal, BUILD_ID auto)',
+  'Régression PWA détectée dans public/sw.js ou next.config.js'
+)
+
+// 9.6 Intercepteur JWT client branché pour la synchronisation PC <-> Mobile
+const diagnosticsProviderContent = fs.existsSync('components/diagnostics/ErrorDiagnosticsProvider.tsx')
+  ? fs.readFileSync('components/diagnostics/ErrorDiagnosticsProvider.tsx', 'utf8')
+  : ''
+assert(
+  diagnosticsProviderContent.includes('installAuthenticatedApiFetch'),
+  'Intercepteur JWT client branché dans ErrorDiagnosticsProvider (sync PC <-> mobile garantie)',
+  'Régression critique : installAuthenticatedApiFetch absent de ErrorDiagnosticsProvider.tsx'
+)
+
 console.log('\n============================================================')
 console.log(`RÉSULTAT : ${passes} réussi(s), ${failures} échec(s)`)
 console.log('============================================================')

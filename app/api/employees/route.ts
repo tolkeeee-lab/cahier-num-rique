@@ -12,11 +12,12 @@ export async function GET(request: NextRequest) {
   try {
     const requestedShopId = request.headers.get('x-shop-id')
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop } = await requireShopAccess(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopAccess(request, requestedShopId)
     const shopId = shop.id
+    const targetClient = (dbClient as typeof supabase) || supabase
 
     if (isSupabaseConfigured()) {
-      const { data, error } = await supabase
+      const { data, error } = await targetClient
         .from('employees')
         .select('*')
         .eq('shop_id', shopId)
@@ -44,8 +45,9 @@ export async function POST(request: NextRequest) {
   try {
     const requestedShopId = request.headers.get('x-shop-id')
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop } = await requireShopOwner(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopOwner(request, requestedShopId)
     const shopId = shop.id
+    const targetClient = (dbClient as typeof supabase) || supabase
     const shopName = request.headers.get('x-shop-name') || ''
     const { name, email, role } = await request.json()
 
@@ -63,14 +65,14 @@ export async function POST(request: NextRequest) {
 
     if (isSupabaseConfigured()) {
       // 1. Supprimer toute ancienne ligne résiduelle avec cet email pour cette boutique pour autoriser la ré-invitation
-      await supabase
+      await targetClient
         .from('employees')
         .delete()
         .eq('shop_id', shopId)
         .eq('email', cleanEmail)
 
       // 2. Insérer la nouvelle fiche employé dans la table `employees`
-      const { data, error } = await supabase
+      const { data, error } = await targetClient
         .from('employees')
         .insert([
           {
@@ -166,8 +168,9 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id')
     const requestedShopId = request.headers.get('x-shop-id')
     if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
-    const { shop } = await requireShopOwner(request, requestedShopId)
+    const { shop, client: dbClient } = await requireShopOwner(request, requestedShopId)
     const shopId = shop.id
+    const targetClient = (dbClient as typeof supabase) || supabase
 
     if (!id) {
       return NextResponse.json(
@@ -178,7 +181,7 @@ export async function DELETE(request: NextRequest) {
 
     if (isSupabaseConfigured()) {
       // 1. Récupérer l'email de l'employé avant la suppression (restreint strictement à la boutique)
-      const { data: empData } = await supabase
+      const { data: empData } = await targetClient
         .from('employees')
         .select('*')
         .eq('id', id)
@@ -193,14 +196,14 @@ export async function DELETE(request: NextRequest) {
 
       // 2. Supprimer la ligne dans `employees` par ID et/ou email pour la boutique autorisée
       if (empEmail) {
-        await supabase
+        await targetClient
           .from('employees')
           .delete()
           .eq('shop_id', shopId)
           .eq('email', empEmail)
       }
 
-      await supabase
+      await targetClient
         .from('employees')
         .delete()
         .eq('id', id)

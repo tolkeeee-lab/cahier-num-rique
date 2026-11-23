@@ -14,7 +14,14 @@ export async function GET(request: NextRequest) {
   const requestedShopId = request.headers.get('x-shop-id') || searchParams.get('shop_id')
   if (!requestedShopId) return NextResponse.json({ error: 'Boutique requise' }, { status: 400 })
   let shopId: string
-  try { shopId = (await requireShopOwner(request, requestedShopId)).shop.id } catch (err) { return shopAuthorizationErrorResponse(err) }
+  let targetClient: typeof supabase = supabase
+  try {
+    const auth = await requireShopOwner(request, requestedShopId)
+    shopId = auth.shop.id
+    targetClient = (auth.client as typeof supabase) || supabase
+  } catch (err) {
+    return shopAuthorizationErrorResponse(err)
+  }
   const actionFilter = searchParams.get('action')
   const limit = Math.min(Number(searchParams.get('limit')) || 100, 200)
 
@@ -23,7 +30,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    let query = supabase
+    let query = targetClient
       .from('audit_logs')
       .select('*')
       .eq('shop_id', shopId)
@@ -61,11 +68,13 @@ export async function POST(request: NextRequest) {
     let shopId: string
     let authUserId: string | null = null
     let authUserEmail: string | null = null
+    let targetClient: typeof supabase = supabase
     try {
       const authResult = await requireShopAccess(request, requestedShopId)
       shopId = authResult.shop.id
       authUserId = authResult.user.id
       authUserEmail = authResult.user.email || null
+      targetClient = (authResult.client as typeof supabase) || supabase
     } catch (err) {
       return shopAuthorizationErrorResponse(err)
     }
@@ -90,7 +99,7 @@ export async function POST(request: NextRequest) {
       created_at: createdAt,
     }
 
-    const { error } = await supabase.from('audit_logs').insert(payload)
+    const { error } = await targetClient.from('audit_logs').insert(payload)
 
     if (error) {
       console.warn('[API audit-logs] Erreur INSERT:', error.message)

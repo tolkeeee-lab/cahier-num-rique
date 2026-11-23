@@ -1,5 +1,7 @@
 import { reconcileDebts, Sale } from '../hooks/useJournalData'
 import { normalizeProductName } from '../lib/productUtils'
+import { calculateCash, getItemCashDelta } from '../lib/sales/cashDrawerCalculator'
+import { calculateInfallibleValuation } from '../lib/stock/infallibleValuation'
 
 console.log('🧪 ============================================================')
 console.log('       SUITE DE TESTS UNITAIRES CRITIQUES (NON-RÉGRESSION)     ')
@@ -124,6 +126,33 @@ const sup1 = reconciledSupp.find(s => s.id === 'sup1')
 
 assert(sup1?.status === 'paid', 'La dette fournisseur (sup1 - 10000 F) est totalement apurée')
 assert(sup1?.debt === 0, 'Le solde fournisseur restant est de 0 F')
+
+// ── TEST 4 : Calcul du Tiroir-Caisse (Entrées, Sorties, Ratures, Ajustements) ──
+console.log('\n--- 4. TEST CALCUL TIROIR-CAISSE (SOLDE EXACT) ---')
+const cashLedger = [
+  { type: 'sale_cash', total_amount: 15000, paid_amount: 15000, status: 'paid' },          // +15 000
+  { type: 'sale_credit', total_amount: 10000, paid_amount: 3000, status: 'debt' },         // +3 000 (acompte seul)
+  { type: 'cash_out', total_amount: 2500, paid_amount: 2500, status: 'paid' },             // -2 500
+  { type: 'purchase_cash', total_amount: 4000, paid_amount: 4000, status: 'paid' },        // -4 000
+  { type: 'purchase_credit', total_amount: 20000, paid_amount: 1500, status: 'debt' },     // -1 500 (acompte seul)
+  { type: 'payment_client', total_amount: 2000, paid_amount: 2000, status: 'paid' },       // +2 000
+  { type: 'payment_supplier', total_amount: 1000, paid_amount: 1000, status: 'paid' },     // -1 000
+  { type: 'sale_cash', total_amount: 99000, paid_amount: 99000, status: 'crossed_out' },   // 0 (raturé ignoré)
+  { type: 'cash_adjustment', total_amount: 5000, paid_amount: 5000, notes: 'Apport fond de caisse', pen_color: 'blue' }, // +5 000
+  { type: 'cash_adjustment', total_amount: 2000, paid_amount: 2000, notes: 'Retrait gérant', pen_color: 'red' },         // -2 000
+]
+assert(getItemCashDelta(cashLedger[7]) === 0, 'Une écriture raturée (crossed_out) vaut strictement 0 F en caisse')
+assert(getItemCashDelta(cashLedger[1]) === 3000, 'Une vente à crédit n’ajoute en caisse que l’acompte encaissé')
+assert(getItemCashDelta(cashLedger[4]) === -1500, 'Un achat à crédit ne retire de la caisse que l’acompte versé')
+assert(calculateCash(cashLedger) === 14000, 'Solde total du tiroir-caisse exact (14 000 FCFA)')
+
+// ── TEST 5 : Valorisation Stock Exacte (Zéro Dérive d'Arrondi FCFA) ──
+console.log('\n--- 5. TEST VALORISATION STOCK (ZÉRO DÉRIVE D’ARRONDI) ---')
+const valCarton = calculateInfallibleValuation(8800, 24, 500, 24)
+assert(valCarton.unitCost === 367, 'Coût unitaire exact d’un carton 8 800 F / 24 = 367 F (jamais arrondi à 375 F)')
+assert(valCarton.immobilizedPurchaseValue === 8800, 'Valeur d’achat d’un carton complet = exactement 8 800 F')
+assert(valCarton.potentialRevenue === 12000, 'CA potentiel de 24 pièces à 500 F = 12 000 F')
+assert(valCarton.potentialNetProfit === 3200, 'Bénéfice net potentiel exact = 3 200 F')
 
 // ── BILAN ──
 console.log('\n============================================================')
